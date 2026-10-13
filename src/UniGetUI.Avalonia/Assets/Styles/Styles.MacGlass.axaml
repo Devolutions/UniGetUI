@@ -3,11 +3,24 @@
                     x:Class="UniGetUI.Avalonia.Assets.Styles.MacGlassStyles">
     <!-- macOS vibrancy overrides, merged only when MacGlassWindowHelper.IsGlassEnabled().
          The blur shows real content behind the window, so surfaces stay more opaque than Mica's. -->
+    <CornerRadius x:Key="MacGlassPanelCornerRadius">18</CornerRadius>
+
     <ResourceDictionary.ThemeDictionaries>
 
         <ResourceDictionary x:Key="Light">
-            <!-- Window tint over the vibrancy; raise the alpha to see less of what is behind. -->
-            <SolidColorBrush x:Key="MacGlassWindowTint"          Color="#A6F3F3F3"/>
+            <!-- Opaque window surface; only the sidebar panel cut out of it shows the vibrancy. -->
+            <SolidColorBrush x:Key="MacGlassWindowBackground"    Color="#F5F5F5"/>
+            <!-- Floating glass (sidebar panel, toolbar capsules) and the opaque overlay pane.
+                 The in-app content behind the overlay can't be blurred, so it stays opaque. -->
+            <SolidColorBrush x:Key="MacGlassPanelBackground"     Color="#B3F7F7F7"/>
+            <SolidColorBrush x:Key="MacGlassControlBackground"   Color="#59FFFFFF"/>
+            <SolidColorBrush x:Key="MacGlassOverlayBackground"   Color="#F0F0F0"/>
+            <LinearGradientBrush x:Key="MacGlassPanelBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#E6FFFFFF"/>
+                <GradientStop Offset="0.5" Color="#4DFFFFFF"/>
+                <GradientStop Offset="1" Color="#14000000"/>
+            </LinearGradientBrush>
+            <BoxShadows x:Key="MacGlassPanelShadow">0 4 16 0 #1A000000</BoxShadows>
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#12000000"/>
@@ -41,7 +54,17 @@
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="MacGlassWindowTint"          Color="#A6202020"/>
+            <SolidColorBrush x:Key="MacGlassWindowBackground"    Color="#232323"/>
+            <!-- Matches System Settings: the sidebar sits darker than the window, cards lighter. -->
+            <SolidColorBrush x:Key="MacGlassPanelBackground"     Color="#B30E0E0E"/>
+            <SolidColorBrush x:Key="MacGlassControlBackground"   Color="#4D000000"/>
+            <SolidColorBrush x:Key="MacGlassOverlayBackground"   Color="#1F2020"/>
+            <LinearGradientBrush x:Key="MacGlassPanelBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#2EFFFFFF"/>
+                <GradientStop Offset="0.5" Color="#0FFFFFFF"/>
+                <GradientStop Offset="1" Color="#1AFFFFFF"/>
+            </LinearGradientBrush>
+            <BoxShadows x:Key="MacGlassPanelShadow">0 6 20 0 #4D000000</BoxShadows>
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <SolidColorBrush x:Key="SettingsCardBackground"      Color="#12FFFFFF"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#26000000"/>

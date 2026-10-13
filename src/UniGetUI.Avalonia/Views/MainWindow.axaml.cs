@@ -56,6 +56,9 @@ public partial class MainWindow : Window
     // AXAML size would overflow past the top of the window (see SetupTitleBar).
     private const double MAC_TITLE_BAR_CONTROL_SIZE = 24;
 
+    // Gap between the window edge and the floating glass sidebar panel on macOS.
+    private const double MAC_GLASS_INSET = 8;
+
     // Centre line of the macOS traffic lights, measured from the top of the window: they sit centred in
     // the native 28 px NSTitlebarContainerView. This can't be read back from WindowDecorationMargin,
     // because ExtendClientAreaTitleBarHeightHint makes that report our requested 44 px instead.
@@ -574,8 +577,8 @@ public partial class MainWindow : Window
             // traffic lights' centre line (see ApplyMacTitleBarLayout / MAC_TRAFFIC_LIGHT_*).
             ExtendClientAreaToDecorationsHint = true;
             ExtendClientAreaTitleBarHeightHint = 44;
-            ApplyMacTitleBarControlSizes();
             MacGlassWindowHelper.Apply(this);
+            ApplyMacTitleBarControlSizes();
 
             // Drive height/inset from code rather than the AXAML bindings: in fullscreen the native
             // title bar is hidden and WindowDecorationMargin collapses to 0, which would clip the
@@ -596,7 +599,7 @@ public partial class MainWindow : Window
                 }
 
                 TitleBarGrid.Height = _macTitleBarHeight;
-                MainContentRoot.Margin = new Thickness(0, _macTitleBarHeight, 0, 0);
+                ApplyMacSidebarLayout();
 
                 if (fullScreen)
                 {
@@ -620,6 +623,11 @@ public partial class MainWindow : Window
 
             this.GetObservable(WindowStateProperty).SubscribeValue(_ => ApplyMacTitleBarLayout());
             this.GetObservable(WindowDecorationMarginProperty).SubscribeValue(_ => ApplyMacTitleBarLayout());
+            NavRail.GetObservable(IsVisibleProperty).SubscribeValue(_ => ApplyMacSidebarLayout());
+            NavDock.GetObservable(IsVisibleProperty).SubscribeValue(_ => ApplyMacSidebarLayout());
+            Classes.CollectionChanged += (_, _) => ApplyMacSidebarLayout();
+            SidebarGlass.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
+            MacWindowSurface.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
         }
         else if (OperatingSystem.IsWindows())
         {
@@ -675,6 +683,61 @@ public partial class MainWindow : Window
     /// a button centred on the traffic lights' centre line would overflow past the top of the window.
     /// The centred search pill is unaffected — it stays centred in the full 44 px bar.
     /// </summary>
+    // With the glass look the sidebar floats as an inset panel: the labelled dock runs full height
+    // around the traffic lights, while the narrow rail (and the overlay aligned to it) starts below them.
+    private void ApplyMacSidebarLayout()
+    {
+        double bar = _macTitleBarHeight;
+        bool glass = Classes.Contains(MacGlassWindowHelper.GLASS_CLASS);
+
+        if (!glass)
+        {
+            MacWindowSurface.IsVisible = false;
+            MainContentRoot.Margin = new Thickness(0, bar, 0, 0);
+            foreach (Control c in new Control[] { ContentRoot, NavRail, NavDock, NavFlyout })
+                c.ClearValue(MarginProperty);
+            NavDock.ClearValue(PaddingProperty);
+            SidebarGlass.IsVisible = false;
+            return;
+        }
+
+        var railMargin = new Thickness(MAC_GLASS_INSET, bar, MAC_GLASS_INSET, MAC_GLASS_INSET);
+        var dockMargin = new Thickness(MAC_GLASS_INSET);
+
+        MainContentRoot.Margin = default;
+        ContentRoot.Margin = new Thickness(0, bar, 0, 0);
+        NavRail.Margin = railMargin;
+        NavDock.Margin = dockMargin;
+        NavDock.Padding = new Thickness(0, bar - MAC_GLASS_INSET, 0, 0);
+        NavFlyout.Margin = new Thickness(MAC_GLASS_INSET, bar, 0, MAC_GLASS_INSET);
+
+        SidebarGlass.IsVisible = NavRail.IsVisible || NavDock.IsVisible;
+        SidebarGlass.Margin = NavDock.IsVisible ? dockMargin : railMargin;
+        MacWindowSurface.IsVisible = true;
+        UpdateMacWindowSurfaceClip();
+    }
+
+    // Punches the sidebar panel's rounded rect out of the opaque window surface, so the native
+    // vibrancy only shows through the panel (System Settings look) and the content stays solid.
+    private void UpdateMacWindowSurfaceClip()
+    {
+        if (!MacWindowSurface.IsVisible)
+            return;
+
+        if (!SidebarGlass.IsVisible
+            || SidebarGlass.TranslatePoint(default, MacWindowSurface) is not { } origin)
+        {
+            MacWindowSurface.Clip = null;
+            return;
+        }
+
+        double radius = SidebarGlass.CornerRadius.TopLeft;
+        MacWindowSurface.Clip = new CombinedGeometry(
+            GeometryCombineMode.Exclude,
+            new RectangleGeometry(new Rect(MacWindowSurface.Bounds.Size)),
+            new RectangleGeometry(new Rect(origin, SidebarGlass.Bounds.Size), radius, radius));
+    }
+
     private void ApplyMacTitleBarControlSizes()
     {
         foreach (Button button in new[] { BackButton, SidebarToggleButton })

@@ -22,6 +22,7 @@
     </Window.Resources>
     <Window.Styles>
         <Style Selector="Border#GlobalSearchContainer">
+            <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="Background" Value="{DynamicResource SearchBoxInactiveBackground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
         </Style>
@@ -58,6 +59,7 @@
              value, which would beat the .open setter). -->
         <Style Selector="Border#NavFlyout">
             <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource AppWindowBackground}"/>
         </Style>
         <Style Selector="Border#NavFlyout.open">
             <Setter Property="Opacity" Value="1"/>
@@ -170,8 +172,43 @@
         <Style Selector="Button.operation-output:pressed">
             <Setter Property="RenderTransform" Value="none"/>
         </Style>
+
+        <!-- macOS glass look (MacGlassWindowHelper.GLASS_CLASS): floating sidebar panel and
+             capsule search field. Declared last so they win over the base styles above. -->
+        <Style Selector="Border.mac-glass-panel">
+            <Setter Property="Background" Value="{DynamicResource MacGlassPanelBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource MacGlassPanelCornerRadius}"/>
+            <Setter Property="BoxShadow" Value="{DynamicResource MacGlassPanelShadow}"/>
+        </Style>
+        <Style Selector="Window.mac-glass Border#NavFlyout">
+            <Setter Property="Background" Value="{DynamicResource MacGlassOverlayBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource MacGlassPanelCornerRadius}"/>
+            <Setter Property="BoxShadow" Value="{DynamicResource MacGlassPanelShadow}"/>
+        </Style>
+        <Style Selector="Window.mac-glass Border#GlobalSearchContainer">
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
+        </Style>
+        <Style Selector="Window.mac-glass Border#GlobalSearchContainer:focus-within">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        </Style>
+        <Style Selector="Window.mac-glass Border#SearchFocusUnderline">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
     </Window.Styles>
     <Panel>
+        <!-- macOS glass: opaque window surface with the sidebar panel cut out (see UpdateMacWindowSurfaceClip). -->
+        <Border x:Name="MacWindowSurface"
+                Background="{DynamicResource MacGlassWindowBackground}"
+                IsVisible="False"
+                IsHitTestVisible="False"
+                automation:AutomationProperties.AccessibilityView="Raw"/>
+
         <!-- Solid inactive-state fallback, using the same theme resource as the #5111 Mica failure path. -->
         <Border x:Name="InactiveMicaFallback"
                 Background="{DynamicResource AppWindowBackground}"
@@ -192,6 +229,14 @@
               Margin="{Binding $parent[Window].WindowDecorationMargin}"
               Background="{DynamicResource MicaPageBackground}"
               ColumnDefinitions="Auto,*">
+
+            <!-- macOS glass: floating panel behind the rail/dock, placed by ApplyMacSidebarLayout. -->
+            <Border x:Name="SidebarGlass"
+                    Grid.Column="0"
+                    Classes="mac-glass-panel"
+                    IsVisible="False"
+                    IsHitTestVisible="False"
+                    automation:AutomationProperties.AccessibilityView="Raw"/>
 
             <!-- ── Icon rail (compact mode ≥800px, or docked-but-collapsed) ── -->
             <ContentControl x:Name="NavRail"
@@ -551,7 +596,6 @@
                     HorizontalAlignment="Left"
                     VerticalAlignment="Stretch"
                     ZIndex="10"
-                    Background="{DynamicResource AppWindowBackground}"
                     IsHitTestVisible="{Binding Sidebar.OverlayActive}"
                     Classes.open="{Binding Sidebar.OverlayActive}">
                 <Border.Transitions>
@@ -663,7 +707,6 @@
                     VerticalAlignment="Center"
                     Margin="0,0,40,0"
                     Height="32"
-                    CornerRadius="5"
                     BorderThickness="1"
                     ClipToBounds="True"
                     automation:AutomationProperties.AccessibilityView="Control">

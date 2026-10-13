@@ -11,10 +11,13 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// transparent window. Skipped under "Reduce transparency", keeping the solid Styles.Common look.</summary>
 internal static partial class MacGlassWindowHelper
 {
+    /// <summary>Class set on a window while its glass look is active; layout and styles key off it.</summary>
+    public const string GLASS_CLASS = "mac-glass";
+
     private const string ObjCRuntime = "/usr/lib/libobjc.A.dylib";
 
     // AppKit NSVisualEffectMaterial / NSVisualEffectBlendingMode values.
-    private const long NSVisualEffectMaterialUnderWindowBackground = 21;
+    private const long NSVisualEffectMaterialSidebar = 7;
     private const long NSVisualEffectBlendingModeBehindWindow = 0;
 
     private static bool? _reduceTransparency;
@@ -32,7 +35,8 @@ internal static partial class MacGlassWindowHelper
             return;
 
         window.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur };
-        window.Bind(Window.BackgroundProperty, window.GetResourceObservable("MacGlassWindowTint"));
+        window.Background = Brushes.Transparent;
+        window.Classes.Add(GLASS_CLASS);
         window.Opened += (_, _) => OnOpened(window);
     }
 
@@ -72,6 +76,7 @@ internal static partial class MacGlassWindowHelper
         }
 
         window.TransparencyLevelHint = new[] { WindowTransparencyLevel.None };
+        window.Classes.Remove(GLASS_CLASS);
         window.ClearValue(Window.BackgroundProperty);
         if (window.TryFindResource("AppWindowBackground", window.ActualThemeVariant, out object? bg) && bg is IBrush brush)
             window.Background = brush;
@@ -97,7 +102,7 @@ internal static partial class MacGlassWindowHelper
                 || objc_msgSend_IntPtr(view, sel_registerName("blendingMode")) != NSVisualEffectBlendingModeBehindWindow)
                 continue;
 
-            objc_msgSend_IntPtr_Long(view, sel_registerName("setMaterial:"), NSVisualEffectMaterialUnderWindowBackground);
+            objc_msgSend_IntPtr_Long(view, sel_registerName("setMaterial:"), NSVisualEffectMaterialSidebar);
         }
     }
 

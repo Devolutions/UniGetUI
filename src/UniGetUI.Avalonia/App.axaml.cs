@@ -40,10 +40,17 @@ public partial class App : Application
         if (MicaWindowHelper.IsMicaEnabled())
             ApplyWindowsMicaStyling();
         else if (MacGlassWindowHelper.IsGlassEnabled())
-            Resources.MergedDictionaries.Add(new MacGlassStyles());
+            ApplyMacGlassStyling();
 #if AVALONIA_DIAGNOSTICS_ENABLED
         this.AttachDeveloperTools();
 #endif
+    }
+
+    private void ApplyMacGlassStyling()
+    {
+        Resources.MergedDictionaries.Add(new MacGlassStyles());
+        Styles.Add(new MacGlassControlStyles());
+        MacGlassWindowHelper.EnablePopupGlass();
     }
 
     private void ApplyWindowsMicaStyling()

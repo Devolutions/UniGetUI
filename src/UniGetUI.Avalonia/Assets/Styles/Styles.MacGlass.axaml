@@ -5,17 +5,27 @@
          The blur shows real content behind the window, so surfaces stay more opaque than Mica's. -->
     <CornerRadius x:Key="MacGlassPanelCornerRadius">18</CornerRadius>
     <SolidColorBrush x:Key="MacGlassSelectionBackground" Color="{DynamicResource SystemAccentColor}" Opacity="0.68"/>
+    <CornerRadius x:Key="MacGlassMenuCornerRadius">10</CornerRadius>
+    <!-- Native menus highlight the hovered row with the accent colour and white text. -->
+    <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{DynamicResource SystemAccentColor}" Opacity="0.85"/>
+    <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed"     Color="{DynamicResource SystemAccentColor}"/>
+    <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="White"/>
+    <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed"     Color="White"/>
 
     <ResourceDictionary.ThemeDictionaries>
 
         <ResourceDictionary x:Key="Light">
             <!-- Opaque window surface; only the sidebar panel cut out of it shows the vibrancy. -->
             <SolidColorBrush x:Key="MacGlassWindowBackground"    Color="#F5F5F5"/>
+            <!-- Dialogs are opaque on macOS too; match the main window surface. -->
+            <SolidColorBrush x:Key="AppDialogBackground"         Color="#F5F5F5"/>
             <!-- Floating glass (sidebar panel, toolbar capsules) and the opaque overlay pane.
                  The in-app content behind the overlay can't be blurred, so it stays opaque. -->
             <SolidColorBrush x:Key="MacGlassPanelBackground"     Color="#B3F7F7F7"/>
             <SolidColorBrush x:Key="MacGlassControlBackground"   Color="#59FFFFFF"/>
             <SolidColorBrush x:Key="MacGlassOverlayBackground"   Color="#F0F0F0"/>
+            <!-- Tint over the native menu blur (popups get NSVisualEffectMaterialMenu). -->
+            <SolidColorBrush x:Key="MacGlassMenuBackground"      Color="#99F6F6F6"/>
             <LinearGradientBrush x:Key="MacGlassPanelBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
                 <GradientStop Offset="0" Color="#E6FFFFFF"/>
                 <GradientStop Offset="0.5" Color="#4DFFFFFF"/>
@@ -56,10 +66,12 @@
 
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="MacGlassWindowBackground"    Color="#232323"/>
+            <SolidColorBrush x:Key="AppDialogBackground"         Color="#232323"/>
             <!-- Matches System Settings: the sidebar sits darker than the window, cards lighter. -->
             <SolidColorBrush x:Key="MacGlassPanelBackground"     Color="#B30E0E0E"/>
             <SolidColorBrush x:Key="MacGlassControlBackground"   Color="#4D000000"/>
             <SolidColorBrush x:Key="MacGlassOverlayBackground"   Color="#1F2020"/>
+            <SolidColorBrush x:Key="MacGlassMenuBackground"      Color="#99262626"/>
             <LinearGradientBrush x:Key="MacGlassPanelBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
                 <GradientStop Offset="0" Color="#2EFFFFFF"/>
                 <GradientStop Offset="0.5" Color="#0FFFFFFF"/>

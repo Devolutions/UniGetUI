@@ -1,7 +1,10 @@
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Assets.Styles;
 using UniGetUI.Core.Logging;
 
@@ -18,10 +21,13 @@ internal static partial class MacGlassWindowHelper
 
     // AppKit NSVisualEffectMaterial / NSVisualEffectBlendingMode values.
     private const long NSVisualEffectMaterialSidebar = 7;
+    private const long NSVisualEffectMaterialMenu = 5;
+    private const long NSVisualEffectStateActive = 1;
     private const long NSVisualEffectBlendingModeBehindWindow = 0;
 
     private static bool? _reduceTransparency;
     private static bool _glassConfirmedUnavailable;
+    private static bool _popupGlassHooked;
 
     public static bool IsGlassEnabled()
         => OperatingSystem.IsMacOS()
@@ -38,6 +44,43 @@ internal static partial class MacGlassWindowHelper
         window.Background = Brushes.Transparent;
         window.Classes.Add(GLASS_CLASS);
         window.Opened += (_, _) => OnOpened(window);
+    }
+
+    /// <summary>Gives menus, flyouts and dropdowns the native menu blur with rounded corners.</summary>
+    public static void EnablePopupGlass()
+    {
+        if (!IsGlassEnabled() || _popupGlassHooked)
+            return;
+        _popupGlassHooked = true;
+
+        Control.LoadedEvent.AddClassHandler<PopupRoot>((root, _) => ApplyToPopup(root));
+    }
+
+    private static void ApplyToPopup(PopupRoot root)
+    {
+        // Tooltips keep their plain opaque look, as on macOS.
+        if (!IsGlassEnabled() || root.GetVisualDescendants().Any(c => c is ToolTip))
+            return;
+
+        root.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur };
+        root.Background = Brushes.Transparent;
+
+        // Avalonia (re)creates its blur view while applying the hint, so style it once that settled.
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                double radius = root.TryFindResource("MacGlassMenuCornerRadius", out object? r) && r is CornerRadius cr
+                    ? cr.TopLeft
+                    : 10;
+                StyleBehindWindowEffectViews(GetNSWindow(root), NSVisualEffectMaterialMenu, radius);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("Could not apply the macOS menu material to a popup");
+                Logger.Warn(ex);
+            }
+        });
     }
 
     private static void OnOpened(Window window)
@@ -73,6 +116,11 @@ internal static partial class MacGlassWindowHelper
                 if (app.Resources.MergedDictionaries[i] is MacGlassStyles)
                     app.Resources.MergedDictionaries.RemoveAt(i);
             }
+            for (int i = app.Styles.Count - 1; i >= 0; i--)
+            {
+                if (app.Styles[i] is MacGlassControlStyles)
+                    app.Styles.RemoveAt(i);
+            }
         }
 
         window.TransparencyLevelHint = new[] { WindowTransparencyLevel.None };
@@ -85,8 +133,12 @@ internal static partial class MacGlassWindowHelper
     // Avalonia creates its behind-window NSVisualEffectView with the deprecated, always-light
     // NSVisualEffectMaterialLight. A semantic material follows the window's light/dark appearance.
     private static void UseAdaptiveMaterial(Window window)
+        => StyleBehindWindowEffectViews(GetNSWindow(window), NSVisualEffectMaterialSidebar, 0);
+
+    // Sets the material of the window's behind-window NSVisualEffectViews; a non-zero radius also
+    // rounds them (always-active, like native menus) and re-derives the window shadow from that shape.
+    private static void StyleBehindWindowEffectViews(nint nsWindow, long material, double cornerRadius)
     {
-        nint nsWindow = GetNSWindow(window);
         if (nsWindow == 0)
             return;
 
@@ -102,11 +154,28 @@ internal static partial class MacGlassWindowHelper
                 || objc_msgSend_IntPtr(view, sel_registerName("blendingMode")) != NSVisualEffectBlendingModeBehindWindow)
                 continue;
 
-            objc_msgSend_IntPtr_Long(view, sel_registerName("setMaterial:"), NSVisualEffectMaterialSidebar);
+            objc_msgSend_IntPtr_Long(view, sel_registerName("setMaterial:"), material);
+            if (cornerRadius <= 0)
+                continue;
+
+            objc_msgSend_IntPtr_Long(view, sel_registerName("setState:"), NSVisualEffectStateActive);
+            objc_msgSend_IntPtr_Long(view, sel_registerName("setWantsLayer:"), 1);
+            nint layer = objc_msgSend_IntPtr(view, sel_registerName("layer"));
+            if (layer != 0)
+            {
+                objc_msgSend_IntPtr_Double(layer, sel_registerName("setCornerRadius:"), cornerRadius);
+                objc_msgSend_IntPtr_Long(layer, sel_registerName("setMasksToBounds:"), 1);
+            }
+        }
+
+        if (cornerRadius > 0)
+        {
+            objc_msgSend_IntPtr_Long(nsWindow, sel_registerName("setHasShadow:"), 1);
+            objc_msgSend_IntPtr(nsWindow, sel_registerName("invalidateShadow"));
         }
     }
 
-    private static nint GetNSWindow(Window window)
+    private static nint GetNSWindow(TopLevel window)
     {
         if (window.TryGetPlatformHandle() is not { Handle: not 0 } handle)
             return 0;
@@ -150,6 +219,9 @@ internal static partial class MacGlassWindowHelper
 
     [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
     private static partial nint objc_msgSend_IntPtr_Long(nint receiver, nint selector, long arg);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
+    private static partial nint objc_msgSend_IntPtr_Double(nint receiver, nint selector, double arg);
 
     [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
     [return: MarshalAs(UnmanagedType.U1)]

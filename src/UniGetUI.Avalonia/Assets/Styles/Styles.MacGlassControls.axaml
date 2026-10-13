@@ -1,0 +1,40 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        x:Class="UniGetUI.Avalonia.Assets.Styles.MacGlassControlStyles">
+    <!-- macOS menu geometry for the glass look: popups are separate visual roots, so these are
+         app-level and merged only while MacGlassWindowHelper.IsGlassEnabled(). -->
+
+    <Style Selector="MenuFlyoutPresenter, ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource MacGlassMenuBackground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource MacGlassMenuCornerRadius}"/>
+        <Setter Property="Padding" Value="0,5"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter MenuItem, ContextMenu MenuItem">
+        <Setter Property="Margin" Value="5,0"/>
+        <Setter Property="Padding" Value="8,2,8,3"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter Separator, ContextMenu Separator">
+        <Setter Property="Margin" Value="14,5"/>
+    </Style>
+    <!-- Highlighted rows invert to white content on the accent fill, as in native menus. -->
+    <Style Selector="MenuItem:pointerover controls|SvgIcon, MenuItem:selected controls|SvgIcon, ComboBoxItem:pointerover controls|SvgIcon">
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+
+    <Style Selector="ComboBox /template/ Border#PopupBorder">
+        <Setter Property="Background" Value="{DynamicResource MacGlassMenuBackground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource MacGlassMenuCornerRadius}"/>
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="Margin" Value="5,0"/>
+        <Setter Property="Padding" Value="8,2,8,3"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="CornerRadius" Value="6"/>
+    </Style>
+</Styles>

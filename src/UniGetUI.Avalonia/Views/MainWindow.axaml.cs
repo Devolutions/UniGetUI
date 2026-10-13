@@ -698,6 +698,8 @@ public partial class MainWindow : Window
                 c.ClearValue(MarginProperty);
             NavDock.ClearValue(PaddingProperty);
             SidebarGlass.IsVisible = false;
+            BackButton.Background = Brushes.Transparent;
+            BackButton.CornerRadius = new CornerRadius(4);
             return;
         }
 
@@ -715,6 +717,10 @@ public partial class MainWindow : Window
         SidebarGlass.Margin = NavDock.IsVisible ? dockMargin : railMargin;
         MacWindowSurface.IsVisible = true;
         UpdateMacWindowSurfaceClip();
+
+        // Back is a round glass button, like the back/forward capsule in System Settings.
+        BackButton.Bind(BackgroundProperty, this.GetResourceObservable("MacGlassControlBackground"));
+        BackButton.CornerRadius = new CornerRadius(MAC_TITLE_BAR_CONTROL_SIZE / 2);
     }
 
     // Punches the sidebar panel's rounded rect out of the opaque window surface, so the native

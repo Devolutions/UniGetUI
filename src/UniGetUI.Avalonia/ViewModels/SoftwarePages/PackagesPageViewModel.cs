@@ -388,8 +388,13 @@ public partial class PackagesPageViewModel : ViewModelBase
     }
 
     /// <summary>Adds a thin vertical separator to the toolbar.</summary>
-    public void AddToolbarSeparator(int index = -1)
+    /// <param name="subgroup">Separates closely related actions; the macOS glass toolbar omits it so
+    /// they share one capsule.</param>
+    public void AddToolbarSeparator(int index = -1, bool subgroup = false)
     {
+        if (subgroup && MacGlassWindowHelper.IsGlassEnabled())
+            return;
+
         object? borderResource = null;
         Application.Current?.Resources.TryGetResource(
             "AppBorderBrush",

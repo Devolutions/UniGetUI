@@ -86,10 +86,10 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         uninstallSelected.Click += (_, _) => _ = LaunchUninstallFromUpdates(vm.FilteredPackages.GetCheckedPackages());
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
-        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarSeparator(subgroup: !ViewModel.DisableReload);
         ViewModel.AddToolbarButton("options", CoreTools.Translate("Update options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
-        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarSeparator(subgroup: true);
         ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual update"),
             () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Update));
         ViewModel.AddToolbarSeparator();

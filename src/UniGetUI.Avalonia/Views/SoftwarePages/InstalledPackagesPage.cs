@@ -106,10 +106,10 @@ public class InstalledPackagesPage : AbstractPackagesPage
             vm.FilteredPackages.GetCheckedPackages(), TEL_InstallReferral.ALREADY_INSTALLED);
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
-        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarSeparator(subgroup: !ViewModel.DisableReload);
         ViewModel.AddToolbarButton("options", CoreTools.Translate("Uninstall options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
-        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarSeparator(subgroup: true);
         ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual uninstall"),
             () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Uninstall));
         ViewModel.AddToolbarSeparator();

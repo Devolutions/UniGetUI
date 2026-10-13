@@ -134,10 +134,10 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         }
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
-        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarSeparator(subgroup: !ViewModel.DisableReload);
         ViewModel.AddToolbarButton("options", CoreTools.Translate("Install options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem));
-        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarSeparator(subgroup: true);
         ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual install"),
             () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Install));
         ViewModel.AddToolbarSeparator();

@@ -4,6 +4,7 @@
     <!-- macOS vibrancy overrides, merged only when MacGlassWindowHelper.IsGlassEnabled().
          The blur shows real content behind the window, so surfaces stay more opaque than Mica's. -->
     <CornerRadius x:Key="MacGlassPanelCornerRadius">18</CornerRadius>
+    <SolidColorBrush x:Key="MacGlassSelectionBackground" Color="{DynamicResource SystemAccentColor}" Opacity="0.68"/>
 
     <ResourceDictionary.ThemeDictionaries>
 

@@ -153,6 +153,7 @@ public sealed class UiFontPolicyTests
     [InlineData("Segoe UI", "", "Segoe UI")]
     [InlineData("Segoe UI", "$Default", "Segoe UI")]
     [InlineData("Segoe UI", "Arial, Tahoma", "Segoe UI")]
+    [InlineData("Segoe UI", "avares://Fonts/Assets#Inter", "Segoe UI")]
     public void AppendTailFamily_AddsOnlyNewUsableFamilies(string chain, string? family, string expected)
     {
         Assert.Equal(expected, UiFontPolicy.AppendTailFamily(chain, family));

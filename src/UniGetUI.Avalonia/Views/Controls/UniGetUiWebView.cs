@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform;
@@ -24,7 +23,7 @@ public sealed class UniGetUiWebView : NativeWebView
         {
             base.OnGotFocus(e);
         }
-        catch (Exception ex) when (ex is ArgumentException or COMException)
+        catch (Exception ex)
         {
             Logger.Warn("The built-in browser refused keyboard focus");
             Logger.Warn(ex);

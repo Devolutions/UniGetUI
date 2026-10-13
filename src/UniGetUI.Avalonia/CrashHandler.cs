@@ -90,6 +90,25 @@ public static class CrashHandler
         }
     }
 
+    [SupportedOSPlatform("windows")]
+    internal static bool IsMissingBundledLibrary(Exception exception)
+    {
+        if (exception is not DllNotFoundException)
+            return false;
+
+        string message = exception.Message;
+        int start = message.IndexOf('\'');
+        int end = start < 0 ? -1 : message.IndexOf('\'', start + 1);
+        if (end <= start + 1)
+            return true;
+
+        string library = Path.GetFileName(message[(start + 1)..end]);
+        if (!library.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            library += ".dll";
+
+        return !File.Exists(Path.Join(Environment.SystemDirectory, library));
+    }
+
     public static void ReportFatalException(Exception e)
     {
         Debugger.Break();
@@ -99,7 +118,7 @@ public static class CrashHandler
             Exception? fileEx = e;
             while (fileEx is not null)
             {
-                if (fileEx is DllNotFoundException || (uint)fileEx.HResult is 0x80070002 or 0x8007007E or 0x802B000A)
+                if (IsMissingBundledLibrary(fileEx) || (uint)fileEx.HResult is 0x80070002 or 0x8007007E or 0x802B000A)
                 {
                     _reportMissingFiles(out bool showDetailedReport);
                     if (!showDetailedReport)

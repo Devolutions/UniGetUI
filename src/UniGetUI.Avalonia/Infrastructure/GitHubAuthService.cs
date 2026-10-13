@@ -60,7 +60,8 @@ internal sealed class GitHubAuthService
             _loginBackend.OnCancelled += BackgroundApiOnCancelled;
             await _loginBackend.Start();
 
-            CoreTools.Launch(oauthLoginUrl.ToString());
+            // ToString() unescapes the query; macOS `open` then re-escapes every '%' and corrupts redirect_uri.
+            CoreTools.Launch(oauthLoginUrl.AbsoluteUri);
 
             DateTime timeoutAt = DateTime.UtcNow.Add(LoginTimeout);
             while (_codeFromApi is null && !_loginWasCancelled && DateTime.UtcNow < timeoutAt)

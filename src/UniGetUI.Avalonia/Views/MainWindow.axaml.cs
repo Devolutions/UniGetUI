@@ -700,6 +700,7 @@ public partial class MainWindow : Window
             SidebarGlass.IsVisible = false;
             BackButton.Background = Brushes.Transparent;
             BackButton.CornerRadius = new CornerRadius(4);
+            TitleBarTextBlock.IsVisible = true;
             return;
         }
 
@@ -721,6 +722,9 @@ public partial class MainWindow : Window
         // Back is a round glass button, like the back/forward capsule in System Settings.
         BackButton.Bind(BackgroundProperty, this.GetResourceObservable("MacGlassControlBackground"));
         BackButton.CornerRadius = new CornerRadius(MAC_TITLE_BAR_CONTROL_SIZE / 2);
+
+        // Apple: don't title windows with the app name; the page header already names the view.
+        TitleBarTextBlock.IsVisible = Settings.Get(Settings.K.ShowVersionNumberOnTitlebar);
     }
 
     // Punches the sidebar panel's rounded rect out of the opaque window surface, so the native

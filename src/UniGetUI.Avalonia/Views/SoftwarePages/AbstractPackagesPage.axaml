@@ -118,6 +118,9 @@
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
          <Setter Property="BorderThickness" Value="0"/>
       </Style>
+      <Style Selector="StackPanel#MainActionPanel">
+         <Setter Property="Grid.Column" Value="1"/>
+      </Style>
       <Style Selector="Button#MainToolbarButtonDropdown Path">
          <Setter Property="Stroke" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
       </Style>
@@ -171,6 +174,13 @@
       <!-- Toolbar on the glass look: icon-only Filters; the main action's chevron is white on accent. -->
       <Style Selector="Window.mac-glass ToggleButton#ToggleFiltersButton TextBlock">
          <Setter Property="IsVisible" Value="False"/>
+      </Style>
+      <!-- Apple: one prominent action, on the trailing side of the toolbar. -->
+      <Style Selector="Window.mac-glass StackPanel#MainActionPanel">
+         <Setter Property="Grid.Column" Value="3"/>
+      </Style>
+      <Style Selector="Window.mac-glass Button#MainToolbarButton">
+         <Setter Property="Margin" Value="0,0,1,0"/>
       </Style>
       <Style Selector="Window.mac-glass Button#MainToolbarButtonDropdown Path">
          <Setter Property="Stroke" Value="White"/>
@@ -275,7 +285,7 @@
         <!-- ==================== TOOLBAR ROW ==================== -->
         <Grid Name="ToolbarRow"
               Grid.Row="1"
-              ColumnDefinitions="Auto,Auto,*"
+              ColumnDefinitions="Auto,Auto,*,Auto"
               ColumnSpacing="4"
               Margin="0">
 
@@ -304,8 +314,8 @@
                 </ToggleButton>
             </StackPanel>
 
-            <!-- Main action button + dropdown -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <!-- Main action button + dropdown (moved to the trailing column on the macOS glass look) -->
+            <StackPanel x:Name="MainActionPanel" Orientation="Horizontal">
                 <Button x:Name="MainToolbarButton"
                         Height="40"
                         Margin="-9,0,1,0"

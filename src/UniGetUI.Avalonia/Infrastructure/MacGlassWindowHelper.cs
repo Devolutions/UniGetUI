@@ -11,7 +11,7 @@ using UniGetUI.Core.Logging;
 namespace UniGetUI.Avalonia.Infrastructure;
 
 /// <summary>macOS counterpart of <see cref="MicaWindowHelper"/>: native vibrancy (AcrylicBlur) behind a
-/// transparent window. Skipped under "Reduce transparency", keeping the solid Styles.Common look.</summary>
+/// transparent window. Skipped under Reduce transparency or Increase contrast (solid Styles.Common look).</summary>
 internal static partial class MacGlassWindowHelper
 {
     /// <summary>Class set on a window while its glass look is active; layout and styles key off it.</summary>
@@ -25,14 +25,14 @@ internal static partial class MacGlassWindowHelper
     private const long NSVisualEffectStateActive = 1;
     private const long NSVisualEffectBlendingModeBehindWindow = 0;
 
-    private static bool? _reduceTransparency;
+    private static bool? _useSolidSurfaces;
     private static bool _glassConfirmedUnavailable;
     private static bool _popupGlassHooked;
 
     public static bool IsGlassEnabled()
         => OperatingSystem.IsMacOS()
            && !_glassConfirmedUnavailable
-           && !ShouldReduceTransparency();
+           && !ShouldUseSolidSurfaces();
 
     /// <summary>Requests the vibrancy backdrop. Call before the window is shown.</summary>
     public static void Apply(Window window)
@@ -185,27 +185,28 @@ internal static partial class MacGlassWindowHelper
             : objc_msgSend_IntPtr(handle.Handle, sel_registerName("window"));
     }
 
-    // [NSWorkspace sharedWorkspace].accessibilityDisplayShouldReduceTransparency, read once per session.
-    private static bool ShouldReduceTransparency()
+    // NSWorkspace's Reduce transparency and Increase contrast accessibility settings, read once per session.
+    private static bool ShouldUseSolidSurfaces()
     {
-        if (_reduceTransparency is { } cached)
+        if (_useSolidSurfaces is { } cached)
             return cached;
 
-        bool reduce = false;
+        bool solid = false;
         try
         {
             nint workspace = objc_msgSend_IntPtr(objc_getClass("NSWorkspace"), sel_registerName("sharedWorkspace"));
             if (workspace != 0)
-                reduce = objc_msgSend_Bool(workspace, sel_registerName("accessibilityDisplayShouldReduceTransparency"));
+                solid = objc_msgSend_Bool(workspace, sel_registerName("accessibilityDisplayShouldReduceTransparency"))
+                        || objc_msgSend_Bool(workspace, sel_registerName("accessibilityDisplayShouldIncreaseContrast"));
         }
         catch (Exception ex)
         {
-            Logger.Warn("Could not read the macOS Reduce transparency setting; assuming it is off");
+            Logger.Warn("Could not read the macOS transparency and contrast settings; assuming they are off");
             Logger.Warn(ex);
         }
 
-        _reduceTransparency = reduce;
-        return reduce;
+        _useSolidSurfaces = solid;
+        return solid;
     }
 
     [LibraryImport(ObjCRuntime, StringMarshalling = StringMarshalling.Utf8)]

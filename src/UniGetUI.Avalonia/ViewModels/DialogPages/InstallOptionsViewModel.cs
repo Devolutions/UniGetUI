@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Windows.Input;
 using Avalonia.Automation;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
@@ -384,8 +383,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         ForceKillChecked = Settings.Get(Settings.K.KillProcessesThatRefuseToDie);
 
         // Show fallback immediately, then replace with real icon if available
-        using var fallback = AssetLoader.Open(_fallbackIconUri);
-        PackageIcon = new Bitmap(fallback);
+        PackageIcon = AssetBitmapLoader.TryLoad(_fallbackIconUri);
         _ = LoadIconAsync();
 
         if (caps.SupportsCustomVersions)

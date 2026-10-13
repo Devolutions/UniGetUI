@@ -7,11 +7,13 @@ namespace UniGetUI.Avalonia.Infrastructure;
 
 internal static class AssetBitmapLoader
 {
-    public static Bitmap? TryLoad(string uri)
+    public static Bitmap? TryLoad(string uri) => TryLoad(new Uri(uri));
+
+    public static Bitmap? TryLoad(Uri uri)
     {
         try
         {
-            using var stream = AssetLoader.Open(new Uri(uri));
+            using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }
         catch (Exception ex)

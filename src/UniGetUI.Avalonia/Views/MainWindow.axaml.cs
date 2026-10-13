@@ -59,6 +59,10 @@ public partial class MainWindow : Window
     // Gap between the window edge and the floating glass sidebar panel on macOS.
     private const double MAC_GLASS_INSET = 8;
 
+    // Round close button on the leading edge of macOS sheets (in-window dialogs).
+    private const double MAC_SHEET_CLOSE_SIZE = 28;
+    private const double MAC_SHEET_CLOSE_INSET = 14;
+
     // Centre line of the macOS traffic lights, measured from the top of the window: they sit centred in
     // the native 28 px NSTitlebarContainerView. This can't be read back from WindowDecorationMargin,
     // because ExtendClientAreaTitleBarHeightHint makes that report our requested 44 px instead.
@@ -780,8 +784,28 @@ public partial class MainWindow : Window
 
         // Dialogs already render as in-window sheets; give them the rounder macOS 26 sheet shape.
         ModalSurface.CornerRadius = new CornerRadius(20);
-        ModalSurface.Bind(Border.BorderBrushProperty, this.GetResourceObservable("MacGlassPanelBorderBrush"));
-        ModalSurface.BorderThickness = new Thickness(1);
+        ModalOutline.CornerRadius = new CornerRadius(20);
+        ModalOutline.Bind(Border.BorderBrushProperty, this.GetResourceObservable("MacGlassPanelBorderBrush"));
+
+        // Sheet close: a round glass ✕ on the leading edge, not the red Windows caption button.
+        ModalCloseButton.Classes.Remove("caption");
+        ModalCloseButton.Classes.Remove("caption-close");
+        Grid.SetColumn(ModalCloseButton, 0);
+        ModalCloseButton.HorizontalAlignment = HorizontalAlignment.Left;
+        ModalCloseButton.VerticalAlignment = VerticalAlignment.Center;
+        ModalCloseButton.Margin = new Thickness(MAC_SHEET_CLOSE_INSET, 0, 0, 0);
+        ModalCloseButton.Width = MAC_SHEET_CLOSE_SIZE;
+        ModalCloseButton.Height = MAC_SHEET_CLOSE_SIZE;
+        ModalCloseButton.Padding = new Thickness(0);
+        ModalCloseButton.CornerRadius = new CornerRadius(MAC_SHEET_CLOSE_SIZE / 2);
+        ModalCloseButton.BorderThickness = new Thickness(1);
+        ModalCloseButton.Bind(BackgroundProperty, this.GetResourceObservable("MacGlassControlBackground"));
+        ModalCloseButton.Bind(BorderBrushProperty, this.GetResourceObservable("MacGlassPanelBorderBrush"));
+        if (ModalCloseButton.Content is SvgIcon glyph)
+        {
+            glyph.Width = 10;
+            glyph.Height = 10;
+        }
     }
 
     private void ApplyMacTitleBarControlSizes()
@@ -2001,7 +2025,11 @@ public partial class MainWindow : Window
         _modalTitleSubscription = dialog.GetObservable(ImmersiveDialog.TitleProperty)
             .SubscribeValue(title => ModalTitle.Text = title ?? "");
         ModalCloseButton.IsVisible = dialog.IsCloseButtonVisible;
-        ModalTitle.Margin = dialog.TitleMargin;
+        // On macOS the close button sits on the leading edge, so the title starts after it.
+        ModalTitle.Margin = OperatingSystem.IsMacOS() && dialog.IsCloseButtonVisible
+            ? new Thickness(MAC_SHEET_CLOSE_INSET + MAC_SHEET_CLOSE_SIZE + 12, dialog.TitleMargin.Top,
+                dialog.TitleMargin.Right, dialog.TitleMargin.Bottom)
+            : dialog.TitleMargin;
         ModalContent.Content = dialog;
         ModalLayer.IsVisible = true;
         UpdateModalSurfaceSize();

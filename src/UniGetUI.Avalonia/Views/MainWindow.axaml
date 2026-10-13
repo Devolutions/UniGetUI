@@ -977,7 +977,8 @@
                                     VerticalContentAlignment="Stretch"/>
                     <!-- Draw the outline above dialog content so opaque footer surfaces cannot
                          cover the antialiased inner edge of the rounded border. -->
-                    <Border Grid.RowSpan="2"
+                    <Border x:Name="ModalOutline"
+                            Grid.RowSpan="2"
                             BorderBrush="{DynamicResource AppBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="8"

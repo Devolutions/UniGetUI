@@ -2,8 +2,11 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using AvaloniaEdit;
+using UniGetUI.Avalonia.Extensions;
+using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
@@ -12,6 +15,9 @@ namespace UniGetUI.Avalonia.Views;
 // items reuse the sidebar commands and the same page actions as the keyboard shortcuts.
 public partial class MainWindow
 {
+    // Each item paired with when it applies; inapplicable items are greyed out, as in native menus.
+    private readonly List<(NativeMenuItem Item, Func<bool> IsEnabled)> _macMenuStates = [];
+
     private void SetupMacMenuBar()
     {
         if (!OperatingSystem.IsMacOS())
@@ -32,19 +38,26 @@ public partial class MainWindow
             ];
             for (int i = 0; i < appItems.Length; i++)
                 appMenu.Items.Insert(i, appItems[i]);
+            appMenu.Opening += (_, _) => UpdateMacMenuState();
         }
 
-        // Text editing also works inside dialogs; everything else waits until the dialog closes.
+        // Text commands apply to a focused text field or log editor, including inside dialogs.
         var edit = Submenu(CoreTools.Translate("Edit"),
-            TextAction(CoreTools.Translate("Undo"), t => t.Undo(), e => e.Undo(), Key.Z),
-            TextAction(CoreTools.Translate("Redo"), t => t.Redo(), e => e.Redo(), Key.Z, KeyModifiers.Shift),
+            TextAction(CoreTools.Translate("Undo"), t => t.Undo(), e => e.Undo(),
+                t => t.CanUndo, e => e.CanUndo, Key.Z),
+            TextAction(CoreTools.Translate("Redo"), t => t.Redo(), e => e.Redo(),
+                t => t.CanRedo, e => e.CanRedo, Key.Z, KeyModifiers.Shift),
             new NativeMenuItemSeparator(),
-            TextAction(CoreTools.Translate("Cut"), t => t.Cut(), e => e.Cut(), Key.X),
-            TextAction(CoreTools.Translate("Copy"), t => t.Copy(), e => e.Copy(), Key.C),
-            TextAction(CoreTools.Translate("Paste"), t => t.Paste(), e => e.Paste(), Key.V),
-            Action(CoreTools.Translate("Select all"), SelectAllForFocus, Key.A, allowInDialog: true),
+            TextAction(CoreTools.Translate("Cut"), t => t.Cut(), e => e.Cut(),
+                t => t.CanCut, e => !e.IsReadOnly && e.SelectionLength > 0, Key.X),
+            TextAction(CoreTools.Translate("Copy"), t => t.Copy(), e => e.Copy(),
+                t => t.CanCopy, e => e.SelectionLength > 0, Key.C),
+            TextAction(CoreTools.Translate("Paste"), t => t.Paste(), e => e.Paste(),
+                t => t.CanPaste, e => !e.IsReadOnly, Key.V),
+            Action(CoreTools.Translate("Select all"), SelectAllForFocus, Key.A,
+                enabled: () => FocusedTextBox() is not null || FocusedEditor() is not null || PageShortcutsAvailable()),
             new NativeMenuItemSeparator(),
-            Action(CoreTools.Translate("Find"), TriggerPageSearch, Key.F));
+            Action(CoreTools.Translate("Find"), TriggerPageSearch, Key.F, enabled: PageShortcutsAvailable));
 
         var view = Submenu(CoreTools.Translate("View"),
             Item(CoreTools.Translate("Discover Packages"), navigate, "Discover", Key.D1),
@@ -55,15 +68,15 @@ public partial class MainWindow
             new NativeMenuItemSeparator(),
             Item(CoreTools.Translate("Toggle navigation panel"), ViewModel.ToggleSidebarCommand, null, Key.S, KeyModifiers.Control),
             new NativeMenuItemSeparator(),
-            Action(CoreTools.Translate("Reload"), TriggerPageReload, Key.R),
-            Action(CoreTools.Translate("Package details"), TriggerPageDetails, Key.I));
+            Action(CoreTools.Translate("Reload"), TriggerPageReload, Key.R, enabled: PageShortcutsAvailable),
+            Action(CoreTools.Translate("Package details"), TriggerPageDetails, Key.I, enabled: PageShortcutsAvailable));
 
         var window = Submenu(CoreTools.Translate("Window"),
             Action(CoreTools.Translate("Minimize"), () => WindowState = WindowState.Minimized, Key.M,
-                allowInDialog: true),
+                enabled: () => true),
             Action(CoreTools.Translate("Zoom"), () => WindowState =
                 WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized,
-                allowInDialog: true));
+                enabled: () => true));
 
         var help = Submenu(CoreTools.Translate("Help"),
             Item(CoreTools.Translate("Help"), navigate, "Help"),
@@ -74,63 +87,84 @@ public partial class MainWindow
             Item(CoreTools.Translate("Operation history"), navigate, "OperationHistory"));
 
         NativeMenu.SetMenu(this, new NativeMenu { Items = { edit, view, window, help } });
+
+        // Refresh before a menu shows, and when focus, the page or the dialog state changes, so the
+        // key equivalents follow the same rules as the visible items.
+        AddHandler(GotFocusEvent, (_, _) => UpdateMacMenuState(), RoutingStrategies.Bubble, handledEventsToo: true);
+        ViewModel.CurrentPageChanged += (_, _) => UpdateMacMenuState();
+        ModalLayer.GetObservable(IsVisibleProperty).SubscribeValue(_ => UpdateMacMenuState());
+        UpdateMacMenuState();
     }
 
-    private Visual? FocusedVisual() => FocusManager?.GetFocusedElement() as Visual;
+    private void UpdateMacMenuState()
+    {
+        foreach (var (item, isEnabled) in _macMenuStates)
+            item.IsEnabled = isEnabled();
+    }
+
+    // Find, Reload, Package details and package Select All need a package page and no open dialog.
+    private bool PageShortcutsAvailable()
+        => !ModalLayer.IsVisible && ViewModel.CurrentPageContent is IKeyboardShortcutListener;
+
+    private TextBox? FocusedTextBox()
+        => (FocusManager?.GetFocusedElement() as Visual)?.FindAncestorOfType<TextBox>(includeSelf: true);
+
+    private TextEditor? FocusedEditor()
+        => (FocusManager?.GetFocusedElement() as Visual)?.FindAncestorOfType<TextEditor>(includeSelf: true);
 
     // ⌘A selects text in a focused field or editor, and every package on a package page otherwise.
     private void SelectAllForFocus()
     {
-        Visual? focused = FocusedVisual();
-        if (focused?.FindAncestorOfType<TextBox>(includeSelf: true) is { } textBox)
+        if (FocusedTextBox() is { } textBox)
             textBox.SelectAll();
-        else if (focused?.FindAncestorOfType<TextEditor>(includeSelf: true) is { } editor)
+        else if (FocusedEditor() is { } editor)
             editor.SelectAll();
-        else if (!ModalLayer.IsVisible)
+        else if (PageShortcutsAvailable())
             TriggerPageSelectAll();
     }
 
     // Routes a text command to the focused text box, or to the AvaloniaEdit log/JSON editor.
     private NativeMenuItem TextAction(string header, Action<TextBox> onTextBox, Action<TextEditor> onEditor,
+        Func<TextBox, bool> canTextBox, Func<TextEditor, bool> canEditor,
         Key key, KeyModifiers extraModifiers = KeyModifiers.None)
         => Action(header, () =>
         {
-            Visual? focused = FocusedVisual();
-            if (focused?.FindAncestorOfType<TextBox>(includeSelf: true) is { } textBox)
+            if (FocusedTextBox() is { } textBox)
                 onTextBox(textBox);
-            else if (focused?.FindAncestorOfType<TextEditor>(includeSelf: true) is { } editor)
+            else if (FocusedEditor() is { } editor)
                 onEditor(editor);
-        }, key, extraModifiers, allowInDialog: true);
+        }, key, extraModifiers, enabled: () => FocusedTextBox() is { } textBox ? canTextBox(textBox)
+            : FocusedEditor() is { } editor && canEditor(editor));
 
-    private static NativeMenuItem Submenu(string header, params NativeMenuItemBase[] items)
+    private NativeMenuItem Submenu(string header, params NativeMenuItemBase[] items)
     {
         var menu = new NativeMenu();
         foreach (var item in items)
             menu.Items.Add(item);
+        menu.Opening += (_, _) => UpdateMacMenuState();
         return new NativeMenuItem(header) { Menu = menu };
     }
 
     private NativeMenuItem Item(string header, ICommand command, string? parameter = null,
         Key? key = null, KeyModifiers extraModifiers = KeyModifiers.None)
-        => Action(header, () =>
-        {
-            if (command.CanExecute(parameter))
-                command.Execute(parameter);
-        }, key, extraModifiers);
+        => Action(header, () => command.Execute(parameter), key, extraModifiers,
+            enabled: () => !ModalLayer.IsVisible && command.CanExecute(parameter));
 
-    // Like Window_KeyDown, page and navigation commands don't run while an in-window dialog is open.
+    // By default, like Window_KeyDown, a command doesn't apply while an in-window dialog is open.
     private NativeMenuItem Action(string header, Action action, Key? key = null,
-        KeyModifiers extraModifiers = KeyModifiers.None, bool allowInDialog = false)
+        KeyModifiers extraModifiers = KeyModifiers.None, Func<bool>? enabled = null)
     {
+        Func<bool> isEnabled = enabled ?? (() => !ModalLayer.IsVisible);
         var item = new NativeMenuItem(header)
         {
             Gesture = key is { } k ? new KeyGesture(k, KeyModifiers.Meta | extraModifiers) : null,
         };
         item.Click += (_, _) =>
         {
-            if (allowInDialog || !ModalLayer.IsVisible)
+            if (isEnabled())
                 action();
         };
+        _macMenuStates.Add((item, isEnabled));
         return item;
     }
 }

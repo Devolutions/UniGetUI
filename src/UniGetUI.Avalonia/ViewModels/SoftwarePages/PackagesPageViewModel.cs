@@ -470,16 +470,23 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         if (e.ProceduralChange)
         {
+            var added = new List<PackageWrapper>();
             foreach (var pkg in e.AddedPackages)
             {
                 if (_wrappedPackages.Any(w => w.Package.GetVersionedHash() == pkg.GetVersionedHash())) continue;
-                _wrappedPackages.Add(new PackageWrapper(pkg, this));
+                var wrapper = new PackageWrapper(pkg, this);
+                _wrappedPackages.Add(wrapper);
+                added.Add(wrapper);
                 AddPackageToSourcesList(pkg);
             }
             var toRemove = _wrappedPackages
                 .Where(w => e.RemovedPackages.Any(r => r.GetVersionedHash() == w.Package.GetVersionedHash()))
                 .ToList();
             foreach (var wrapper in toRemove) { wrapper.Dispose(); _wrappedPackages.Remove(wrapper); }
+
+            var filter = BuildPackageFilter(out string query);
+            FilteredPackages.ApplyChanges(toRemove, added.Where(filter));
+            UpdateFilteredState(query);
         }
         else
         {
@@ -491,8 +498,8 @@ public partial class PackagesPageViewModel : ViewModelBase
                 _wrappedPackages.Add(new PackageWrapper(pkg, this));
                 AddPackageToSourcesList(pkg);
             }
+            FilterPackages();
         }
-        FilterPackages();
     }
 
     private void Loader_FinishedLoading(object? sender, EventArgs e)
@@ -639,26 +646,38 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
         else
         {
-            FilterPackages(fromQuery: true);
+            FilterPackages();
         }
     }
 
-    public void FilterPackages(bool fromQuery = false)
+    public void FilterPackages()
+    {
+        var filter = BuildPackageFilter(out string query);
+        var results = FilteredPackages.ApplyToList(_wrappedPackages.Where(filter)).ToList();
+
+        FilteredPackages.Clear();
+        foreach (var w in results) FilteredPackages.Add(w);
+
+        UpdateFilteredState(query);
+    }
+
+    private Func<PackageWrapper, bool> BuildPackageFilter(out string query)
     {
         var filters = new List<Func<string, string>>();
         if (!UpperLowerCase) filters.Add(FilterHelpers.NormalizeCase);
         if (IgnoreSpecialChars) filters.Add(FilterHelpers.NormalizeSpecialCharacters);
 
-        string query = _searchQuery;
-        foreach (var f in filters) query = f(query);
+        string normalizedQuery = _searchQuery;
+        foreach (var f in filters) normalizedQuery = f(normalizedQuery);
+        query = normalizedQuery;
 
         Func<IPackage, bool> matchFunc = SearchMode switch
         {
-            SearchMode.Name => pkg => FilterHelpers.NameContains(pkg, query, filters),
-            SearchMode.Id => pkg => FilterHelpers.IdContains(pkg, query, filters),
-            SearchMode.Exact => pkg => FilterHelpers.NameOrIdExactMatch(pkg, query, filters),
+            SearchMode.Name => pkg => FilterHelpers.NameContains(pkg, normalizedQuery, filters),
+            SearchMode.Id => pkg => FilterHelpers.IdContains(pkg, normalizedQuery, filters),
+            SearchMode.Exact => pkg => FilterHelpers.NameOrIdExactMatch(pkg, normalizedQuery, filters),
             SearchMode.Similar => _ => true,
-            _ => pkg => FilterHelpers.NameOrIdContains(pkg, query, filters),
+            _ => pkg => FilterHelpers.NameOrIdContains(pkg, normalizedQuery, filters),
         };
 
         var (visibleSources, visibleManagers) = GetSelectedSourceFilters();
@@ -673,13 +692,11 @@ public partial class PackagesPageViewModel : ViewModelBase
                         && visibleManagers.Contains(pkg.Manager)
                     );
 
-        var results = FilteredPackages.ApplyToList(
-            _wrappedPackages.Where(w => matchFunc(w.Package) && sourceFilter(w.Package))
-        ).ToList();
+        return w => matchFunc(w.Package) && sourceFilter(w.Package);
+    }
 
-        FilteredPackages.Clear();
-        foreach (var w in results) FilteredPackages.Add(w);
-
+    private void UpdateFilteredState(string query)
+    {
         UpdateSubtitle();
         PackageCountUpdated?.Invoke();
 
@@ -1073,7 +1090,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         MegaQueryVisible = false;
         _searchQuery = query?.Trim() ?? "";
-        FilterPackages(fromQuery: true);
+        FilterPackages();
     }
 
     // ─── Keyboard / search-box actions (called by the View's interface impls) ──
@@ -1104,7 +1121,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     public void HandleSearchSubmitted()
     {
         if (MegaQueryBoxEnabled) SubmitSearch();
-        else FilterPackages(fromQuery: true);
+        else FilterPackages();
     }
 
     // ─── Operation launchers ─────────────────────────────────────────────────

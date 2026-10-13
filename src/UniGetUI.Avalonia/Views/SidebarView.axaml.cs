@@ -51,6 +51,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     public SidebarView()
     {
         InitializeComponent();
+        PlatformShortcuts.AdaptAcceleratorKeys(this);
 
         NavigationPillTopCap.RenderTransform = _pillTopCapTranslate;
         _pillStemTransform.Children.Add(_pillStemScale);

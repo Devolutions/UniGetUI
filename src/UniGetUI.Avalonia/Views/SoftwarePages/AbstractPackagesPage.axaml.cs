@@ -481,7 +481,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         var pkg = SelectedItem;
         if (pkg is null) return;
 
-        bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        bool ctrl = PlatformShortcuts.HasPrimary(e.KeyModifiers);
         bool alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
 
         if (e.Key is Key.Enter or Key.Return)

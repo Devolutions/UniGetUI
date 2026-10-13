@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -17,6 +18,7 @@ public partial class InstallOptionsWindow : UniGetUI.Avalonia.Views.DialogPages.
         var vm = new InstallOptionsViewModel(package, operation, options);
         DataContext = vm;
         InitializeComponent();
+        PlatformShortcuts.AdaptAcceleratorKeys(this);
 
         vm.CloseRequested += (_, _) => Close();
     }

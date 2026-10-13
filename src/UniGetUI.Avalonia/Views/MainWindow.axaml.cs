@@ -193,6 +193,8 @@ public partial class MainWindow : Window
         }
         SetupTitleBar();
         SetupTitleBarFocusOpacity();
+        PlatformShortcuts.AdaptAcceleratorKeys(this);
+        SetupMacMenuBar();
         SetupResponsiveRail();
 
         RestoreGeometry();
@@ -318,7 +320,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        bool isCtrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        // ⌘ on macOS, Ctrl elsewhere; on macOS the menu bar also carries these as key equivalents.
+        bool isCtrl = PlatformShortcuts.HasPrimary(e.KeyModifiers);
         bool isShift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
         if (!isCtrl && !isShift && e.Key == Key.F1)
@@ -331,15 +334,15 @@ public partial class MainWindow : Window
         }
         else if (e.Key == Key.F5 || (e.Key == Key.R && isCtrl))
         {
-            (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.ReloadTriggered();
+            TriggerPageReload();
         }
         else if (e.Key == Key.F && isCtrl)
         {
-            (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SearchTriggered();
+            TriggerPageSearch();
         }
         else if (e.Key == Key.A && isCtrl)
         {
-            (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SelectAllTriggered();
+            TriggerPageSelectAll();
         }
         else if (isCtrl && !isShift && e.Key is Key.D1 or Key.D2 or Key.D3 or Key.D4 or Key.D5 or Key.D6)
         {
@@ -360,12 +363,20 @@ public partial class MainWindow : Window
             ShowMoreMenu();
             e.Handled = true;
         }
-        else if (isCtrl && !isShift && e.Key == Key.D)
+        else if (isCtrl && !isShift && (e.Key == Key.D || (OperatingSystem.IsMacOS() && e.Key == Key.I)))
         {
-            (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.DetailsTriggered();
+            TriggerPageDetails();
             e.Handled = true;
         }
     }
+
+    private void TriggerPageReload() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.ReloadTriggered();
+
+    private void TriggerPageSearch() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SearchTriggered();
+
+    private void TriggerPageSelectAll() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SelectAllTriggered();
+
+    private void TriggerPageDetails() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.DetailsTriggered();
 
     private void OnCurrentPageChanged(object? sender, PageType pageType)
     {
@@ -766,6 +777,11 @@ public partial class MainWindow : Window
         Grid.SetColumn(GlobalSearchContainer, 2);
         GlobalSearchContainer.HorizontalAlignment = HorizontalAlignment.Right;
         GlobalSearchContainer.Margin = new Thickness(0, 0, 12, 0);
+
+        // Dialogs already render as in-window sheets; give them the rounder macOS 26 sheet shape.
+        ModalSurface.CornerRadius = new CornerRadius(20);
+        ModalSurface.Bind(Border.BorderBrushProperty, this.GetResourceObservable("MacGlassPanelBorderBrush"));
+        ModalSurface.BorderThickness = new Thickness(1);
     }
 
     private void ApplyMacTitleBarControlSizes()

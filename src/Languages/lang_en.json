@@ -1,4 +1,13 @@
 {
+  "View": "View",
+  "Window": "Window",
+  "Zoom": "Zoom",
+  "Undo": "Undo",
+  "Redo": "Redo",
+  "Cut": "Cut",
+  "Copy": "Copy",
+  "Paste": "Paste",
+  "Find": "Find",
   "Catalog Editor": "Catalog Editor",
   "Tiles": "Tiles",
   "Rename catalog": "Rename catalog",

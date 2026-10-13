@@ -145,6 +145,19 @@ public sealed class UiFontPolicyTests
         Assert.Contains(family, families);
     }
 
+    [Theory]
+    [InlineData("Segoe UI", "Tahoma", "Segoe UI, Tahoma")]
+    [InlineData("Microsoft YaHei UI, Segoe UI", "segoe ui", "Microsoft YaHei UI, Segoe UI")]
+    [InlineData("Microsoft YaHei UI, Segoe UI", " Microsoft YaHei UI ", "Microsoft YaHei UI, Segoe UI")]
+    [InlineData("Segoe UI", null, "Segoe UI")]
+    [InlineData("Segoe UI", "", "Segoe UI")]
+    [InlineData("Segoe UI", "$Default", "Segoe UI")]
+    [InlineData("Segoe UI", "Arial, Tahoma", "Segoe UI")]
+    public void AppendTailFamily_AddsOnlyNewUsableFamilies(string chain, string? family, string expected)
+    {
+        Assert.Equal(expected, UiFontPolicy.AppendTailFamily(chain, family));
+    }
+
     [Fact]
     public void BuildFontManagerOptions_CarriesTheFallbackTable()
     {

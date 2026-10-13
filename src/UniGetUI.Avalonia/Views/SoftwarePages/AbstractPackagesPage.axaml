@@ -118,6 +118,9 @@
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
          <Setter Property="BorderThickness" Value="0"/>
       </Style>
+      <Style Selector="Button#MainToolbarButtonDropdown Path">
+         <Setter Property="Stroke" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+      </Style>
       <!-- Render the three-state "Select all" checkbox's indeterminate glyph as a dash instead of a square -->
       <Style Selector="CheckBox:indeterminate /template/ Path#CheckGlyph">
          <Setter Property="Data" Value="M0,0 H10 V2 H0 Z"/>
@@ -164,6 +167,13 @@
       </Style>
       <Style Selector="Window.mac-glass DataGrid#PackageList DataGridRow:selected controls|SvgIcon">
          <Setter Property="Foreground" Value="White"/>
+      </Style>
+      <!-- Toolbar on the glass look: icon-only Filters; the main action's chevron is white on accent. -->
+      <Style Selector="Window.mac-glass ToggleButton#ToggleFiltersButton TextBlock">
+         <Setter Property="IsVisible" Value="False"/>
+      </Style>
+      <Style Selector="Window.mac-glass Button#MainToolbarButtonDropdown Path">
+         <Setter Property="Stroke" Value="White"/>
       </Style>
       <Style Selector="Window.mac-glass DataGridColumnHeader">
          <Setter Property="Background" Value="Transparent"/>
@@ -317,7 +327,6 @@
                         automation:AutomationProperties.Name="{t:Translate More}"
                         CornerRadius="0,4,4,0">
                     <Path Data="M 0,0 L 4,4 L 8,0"
-                          Stroke="{DynamicResource TextFillColorPrimaryBrush}"
                           StrokeThickness="1.5"
                           StrokeJoin="Miter"
                           Fill="Transparent"
@@ -326,10 +335,9 @@
                 </Button>
             </StackPanel>
 
-            <!-- Toolbar (AppBarButtons added by subclass). The wrapper is unstyled except on the
-                 macOS glass look, where it hugs the buttons and draws one shared glass bar. -->
-            <Border x:Name="ToolbarGlass" Grid.Column="2">
+            <!-- Toolbar (AppBarButtons added by subclass) -->
             <controls:ToolbarOverflowPanel x:Name="ToolBar"
+                                           Grid.Column="2"
                                            Spacing="4"
                                            ClipToBounds="True">
                 <Button x:Name="ToolbarOverflowButton"
@@ -342,7 +350,6 @@
                                Margin="0,-4,0,0"/>
                 </Button>
             </controls:ToolbarOverflowPanel>
-            </Border>
 
         </Grid>
 

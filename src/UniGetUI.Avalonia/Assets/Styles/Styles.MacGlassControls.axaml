@@ -62,7 +62,14 @@
         <Setter Property="Foreground" Value="White"/>
     </Style>
 
-    <!-- Toolbar: capsule buttons, the main action as one fused capsule, no separator lines. -->
+    <!-- Toolbar, after Finder: icon-only buttons grouped on glass capsules (one per run between
+         separators), a compact 36px height, and the main action as an accent capsule. -->
+    <Style Selector="Window.mac-glass controls|ToolbarOverflowPanel#ToolBar">
+        <Setter Property="AlwaysCollapseLabels" Value="True"/>
+        <Setter Property="GroupBackground" Value="{DynamicResource MacGlassControlBackground}"/>
+        <Setter Property="GroupCornerRadius" Value="18"/>
+        <Setter Property="GroupVerticalInset" Value="2"/>
+    </Style>
     <Style Selector="#ToolbarRow Separator">
         <Setter Property="Opacity" Value="0"/>
     </Style>
@@ -70,28 +77,36 @@
                      #ToolbarRow Button:disabled /template/ ContentPresenter#PART_ContentPresenter,
                      #ToolbarRow ToggleButton:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
                      #ToolbarRow ToggleButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="CornerRadius" Value="20"/>
+        <Setter Property="CornerRadius" Value="18"/>
+        <Setter Property="Margin" Value="0,2"/>
     </Style>
     <Style Selector="Button#MainToolbarButton:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
                      Button#MainToolbarButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="CornerRadius" Value="20,0,0,20"/>
+        <Setter Property="CornerRadius" Value="18,0,0,18"/>
     </Style>
     <Style Selector="Button#MainToolbarButtonDropdown:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
                      Button#MainToolbarButtonDropdown:disabled /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="CornerRadius" Value="0,20,20,0"/>
+        <Setter Property="CornerRadius" Value="0,18,18,0"/>
     </Style>
-    <!-- Filters and the main action each sit on their own glass capsule; the remaining actions
-         share one glass bar, with flat buttons inside that only highlight on hover. -->
-    <Style Selector="#ToolbarRow ToggleButton:not(:disabled), #ToolbarRow ToggleButton:disabled,
-                     Button#MainToolbarButton:not(:disabled), Button#MainToolbarButton:disabled,
-                     Button#MainToolbarButtonDropdown:not(:disabled), Button#MainToolbarButtonDropdown:disabled">
+    <Style Selector="#ToolbarRow ToggleButton:not(:disabled), #ToolbarRow ToggleButton:disabled">
         <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>
     </Style>
-    <Style Selector="Window.mac-glass Border#ToolbarGlass">
-        <Setter Property="HorizontalAlignment" Value="Left"/>
-        <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>
-        <Setter Property="CornerRadius" Value="20"/>
-        <Setter Property="ClipToBounds" Value="True"/>
+    <Style Selector="Button#MainToolbarButton:not(:disabled), Button#MainToolbarButtonDropdown:not(:disabled)">
+        <Setter Property="Background" Value="{DynamicResource AccentButtonBackground}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button#MainToolbarButton:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                     Button#MainToolbarButtonDropdown:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentButtonBackgroundPointerOver}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button#MainToolbarButton:pressed /template/ ContentPresenter#PART_ContentPresenter,
+                     Button#MainToolbarButtonDropdown:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentButtonBackgroundPressed}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button#MainToolbarButton controls|SvgIcon">
+        <Setter Property="Foreground" Value="White"/>
     </Style>
 
     <!-- Switches: a large white knob that keeps its size in every state. -->

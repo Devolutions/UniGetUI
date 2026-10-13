@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 
 namespace UniGetUI.Avalonia.Views.Controls;
@@ -10,9 +11,41 @@ public sealed class ToolbarOverflowPanel : Panel
     public static readonly StyledProperty<double> SpacingProperty =
         AvaloniaProperty.Register<ToolbarOverflowPanel, double>(nameof(Spacing), 4.0);
 
+    /// <summary>Keeps labels collapsed at every width (icon-only toolbar).</summary>
+    public static readonly StyledProperty<bool> AlwaysCollapseLabelsProperty =
+        AvaloniaProperty.Register<ToolbarOverflowPanel, bool>(nameof(AlwaysCollapseLabels));
+
+    /// <summary>When set, each run of items between separators is drawn on a capsule of this brush.</summary>
+    public static readonly StyledProperty<IBrush?> GroupBackgroundProperty =
+        AvaloniaProperty.Register<ToolbarOverflowPanel, IBrush?>(nameof(GroupBackground));
+
+    public static readonly StyledProperty<double> GroupCornerRadiusProperty =
+        AvaloniaProperty.Register<ToolbarOverflowPanel, double>(nameof(GroupCornerRadius));
+
+    public static readonly StyledProperty<double> GroupVerticalInsetProperty =
+        AvaloniaProperty.Register<ToolbarOverflowPanel, double>(nameof(GroupVerticalInset));
+
     static ToolbarOverflowPanel()
     {
-        AffectsMeasure<ToolbarOverflowPanel>(SpacingProperty);
+        AffectsMeasure<ToolbarOverflowPanel>(SpacingProperty, AlwaysCollapseLabelsProperty);
+    }
+
+    // Panel.Render is sealed, so the group capsules come from a visual child kept behind the items.
+    private readonly GroupBackdrop _backdrop;
+
+    public ToolbarOverflowPanel()
+    {
+        _backdrop = new GroupBackdrop(this) { ZIndex = -1, IsHitTestVisible = false };
+        VisualChildren.Add(_backdrop);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == GroupBackgroundProperty
+            || change.Property == GroupCornerRadiusProperty
+            || change.Property == GroupVerticalInsetProperty)
+            _backdrop.InvalidateVisual();
     }
 
     private readonly List<Control> _items = new();
@@ -25,6 +58,30 @@ public sealed class ToolbarOverflowPanel : Panel
     {
         get => GetValue(SpacingProperty);
         set => SetValue(SpacingProperty, value);
+    }
+
+    public bool AlwaysCollapseLabels
+    {
+        get => GetValue(AlwaysCollapseLabelsProperty);
+        set => SetValue(AlwaysCollapseLabelsProperty, value);
+    }
+
+    public IBrush? GroupBackground
+    {
+        get => GetValue(GroupBackgroundProperty);
+        set => SetValue(GroupBackgroundProperty, value);
+    }
+
+    public double GroupCornerRadius
+    {
+        get => GetValue(GroupCornerRadiusProperty);
+        set => SetValue(GroupCornerRadiusProperty, value);
+    }
+
+    public double GroupVerticalInset
+    {
+        get => GetValue(GroupVerticalInsetProperty);
+        set => SetValue(GroupVerticalInsetProperty, value);
     }
 
     public Control? OverflowControl { get; set; }
@@ -73,6 +130,8 @@ public sealed class ToolbarOverflowPanel : Panel
             overflow.Arrange(new Rect(x, 0, overflowWidth, overflowWidth > 0 ? finalSize.Height : 0));
         }
 
+        _backdrop.Arrange(new Rect(finalSize));
+        _backdrop.InvalidateVisual();
         return finalSize;
     }
 
@@ -148,7 +207,14 @@ public sealed class ToolbarOverflowPanel : Panel
 
     private bool UpdateLabelState(double availableWidth)
     {
-        if (double.IsInfinity(availableWidth) || availableWidth <= 1 || LabelCollapseRequested is null) return false;
+        if (LabelCollapseRequested is null) return false;
+        if (AlwaysCollapseLabels)
+        {
+            if (_labelsCollapsed) return false;
+            ApplyLabelState(true);
+            return true;
+        }
+        if (double.IsInfinity(availableWidth) || availableWidth <= 1) return false;
 
         double rowWidth = RowWidth();
 
@@ -223,5 +289,38 @@ public sealed class ToolbarOverflowPanel : Panel
 
         while (count > 0 && _items[count - 1] is Separator) count--;
         return count;
+    }
+
+    private sealed class GroupBackdrop(ToolbarOverflowPanel owner) : Control
+    {
+        public override void Render(DrawingContext context)
+        {
+            if (owner.GroupBackground is not { } brush)
+                return;
+
+            // One capsule per run of visible items between separators.
+            Rect? group = null;
+            foreach (var child in owner.Children)
+            {
+                if (!child.IsVisible || child.Bounds.Width <= 0)
+                    continue;
+                if (child is Separator)
+                {
+                    DrawGroup(context, brush, group);
+                    group = null;
+                    continue;
+                }
+                group = group is { } current ? current.Union(child.Bounds) : child.Bounds;
+            }
+            DrawGroup(context, brush, group);
+        }
+
+        private void DrawGroup(DrawingContext context, IBrush brush, Rect? group)
+        {
+            if (group is not { } rect)
+                return;
+            double radius = owner.GroupCornerRadius;
+            context.DrawRectangle(brush, null, rect.Deflate(new Thickness(0, owner.GroupVerticalInset)), radius, radius);
+        }
     }
 }

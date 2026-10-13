@@ -1,0 +1,156 @@
+using System.Runtime.InteropServices;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Media;
+using UniGetUI.Avalonia.Assets.Styles;
+using UniGetUI.Core.Logging;
+
+namespace UniGetUI.Avalonia.Infrastructure;
+
+/// <summary>macOS counterpart of <see cref="MicaWindowHelper"/>: native vibrancy (AcrylicBlur) behind a
+/// transparent window. Skipped under "Reduce transparency", keeping the solid Styles.Common look.</summary>
+internal static partial class MacGlassWindowHelper
+{
+    private const string ObjCRuntime = "/usr/lib/libobjc.A.dylib";
+
+    // AppKit NSVisualEffectMaterial / NSVisualEffectBlendingMode values.
+    private const long NSVisualEffectMaterialUnderWindowBackground = 21;
+    private const long NSVisualEffectBlendingModeBehindWindow = 0;
+
+    private static bool? _reduceTransparency;
+    private static bool _glassConfirmedUnavailable;
+
+    public static bool IsGlassEnabled()
+        => OperatingSystem.IsMacOS()
+           && !_glassConfirmedUnavailable
+           && !ShouldReduceTransparency();
+
+    /// <summary>Requests the vibrancy backdrop. Call before the window is shown.</summary>
+    public static void Apply(Window window)
+    {
+        if (!IsGlassEnabled())
+            return;
+
+        window.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur };
+        window.Bind(Window.BackgroundProperty, window.GetResourceObservable("MacGlassWindowTint"));
+        window.Opened += (_, _) => OnOpened(window);
+    }
+
+    private static void OnOpened(Window window)
+    {
+        // A transparent window without a granted backdrop shows whatever is behind it unblurred,
+        // so drop back to the solid surfaces for the whole session if the request was refused.
+        if (window.ActualTransparencyLevel != WindowTransparencyLevel.AcrylicBlur)
+        {
+            Logger.Warn($"macOS vibrancy was not granted (got {window.ActualTransparencyLevel}); using solid surfaces");
+            FallBackToSolid(window);
+            return;
+        }
+
+        try
+        {
+            UseAdaptiveMaterial(window);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Could not switch the macOS vibrancy material; keeping Avalonia's default");
+            Logger.Warn(ex);
+        }
+    }
+
+    private static void FallBackToSolid(Window window)
+    {
+        _glassConfirmedUnavailable = true;
+
+        if (Application.Current is { } app)
+        {
+            for (int i = app.Resources.MergedDictionaries.Count - 1; i >= 0; i--)
+            {
+                if (app.Resources.MergedDictionaries[i] is MacGlassStyles)
+                    app.Resources.MergedDictionaries.RemoveAt(i);
+            }
+        }
+
+        window.TransparencyLevelHint = new[] { WindowTransparencyLevel.None };
+        window.ClearValue(Window.BackgroundProperty);
+        if (window.TryFindResource("AppWindowBackground", window.ActualThemeVariant, out object? bg) && bg is IBrush brush)
+            window.Background = brush;
+    }
+
+    // Avalonia creates its behind-window NSVisualEffectView with the deprecated, always-light
+    // NSVisualEffectMaterialLight. A semantic material follows the window's light/dark appearance.
+    private static void UseAdaptiveMaterial(Window window)
+    {
+        nint nsWindow = GetNSWindow(window);
+        if (nsWindow == 0)
+            return;
+
+        nint effectViewClass = objc_getClass("NSVisualEffectView");
+        nint contentView = objc_msgSend_IntPtr(nsWindow, sel_registerName("contentView"));
+        nint subviews = objc_msgSend_IntPtr(contentView, sel_registerName("subviews"));
+        long count = objc_msgSend_IntPtr(subviews, sel_registerName("count"));
+
+        for (long i = 0; i < count; i++)
+        {
+            nint view = objc_msgSend_IntPtr_Long(subviews, sel_registerName("objectAtIndex:"), i);
+            if (!objc_msgSend_Bool_IntPtr(view, sel_registerName("isKindOfClass:"), effectViewClass)
+                || objc_msgSend_IntPtr(view, sel_registerName("blendingMode")) != NSVisualEffectBlendingModeBehindWindow)
+                continue;
+
+            objc_msgSend_IntPtr_Long(view, sel_registerName("setMaterial:"), NSVisualEffectMaterialUnderWindowBackground);
+        }
+    }
+
+    private static nint GetNSWindow(Window window)
+    {
+        if (window.TryGetPlatformHandle() is not { Handle: not 0 } handle)
+            return 0;
+
+        return handle.HandleDescriptor == "NSWindow"
+            ? handle.Handle
+            : objc_msgSend_IntPtr(handle.Handle, sel_registerName("window"));
+    }
+
+    // [NSWorkspace sharedWorkspace].accessibilityDisplayShouldReduceTransparency, read once per session.
+    private static bool ShouldReduceTransparency()
+    {
+        if (_reduceTransparency is { } cached)
+            return cached;
+
+        bool reduce = false;
+        try
+        {
+            nint workspace = objc_msgSend_IntPtr(objc_getClass("NSWorkspace"), sel_registerName("sharedWorkspace"));
+            if (workspace != 0)
+                reduce = objc_msgSend_Bool(workspace, sel_registerName("accessibilityDisplayShouldReduceTransparency"));
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Could not read the macOS Reduce transparency setting; assuming it is off");
+            Logger.Warn(ex);
+        }
+
+        _reduceTransparency = reduce;
+        return reduce;
+    }
+
+    [LibraryImport(ObjCRuntime, StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint objc_getClass(string name);
+
+    [LibraryImport(ObjCRuntime, StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint sel_registerName(string name);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
+    private static partial nint objc_msgSend_IntPtr(nint receiver, nint selector);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
+    private static partial nint objc_msgSend_IntPtr_Long(nint receiver, nint selector, long arg);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    private static partial bool objc_msgSend_Bool(nint receiver, nint selector);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    private static partial bool objc_msgSend_Bool_IntPtr(nint receiver, nint selector, nint arg);
+}

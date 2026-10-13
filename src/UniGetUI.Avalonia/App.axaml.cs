@@ -35,9 +35,12 @@ public partial class App : Application
 
         // Windows 11 Mica look is opt-in per environment: only merge the translucent
         // surface overrides when Mica is actually usable (Win11 + transparency on).
-        // macOS, Linux, Windows 10, and transparency-off all keep the solid Styles.Common look.
+        // macOS gets its own vibrancy overrides (Styles.MacGlass) unless Reduce transparency is on;
+        // Linux, Windows 10, and transparency-off all keep the solid Styles.Common look.
         if (MicaWindowHelper.IsMicaEnabled())
             ApplyWindowsMicaStyling();
+        else if (MacGlassWindowHelper.IsGlassEnabled())
+            Resources.MergedDictionaries.Add(new MacGlassStyles());
 #if AVALONIA_DIAGNOSTICS_ENABLED
         this.AttachDeveloperTools();
 #endif

@@ -1,0 +1,78 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    x:Class="UniGetUI.Avalonia.Assets.Styles.MacGlassStyles">
+    <!-- macOS vibrancy overrides, merged only when MacGlassWindowHelper.IsGlassEnabled().
+         The blur shows real content behind the window, so surfaces stay more opaque than Mica's. -->
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Light">
+            <!-- Window tint over the vibrancy; raise the alpha to see less of what is behind. -->
+            <SolidColorBrush x:Key="MacGlassWindowTint"          Color="#A6F3F3F3"/>
+            <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
+            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
+            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#12000000"/>
+            <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#D9FFFFFF"/>
+            <SolidColorBrush x:Key="PackageListBackground"       Color="#8CFFFFFF"/>
+            <SolidColorBrush x:Key="PackageListBorderBrush"      Color="#12000000"/>
+            <SolidColorBrush x:Key="PackageListHeaderBackground" Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="AppSplitterBackground"       Color="#18000000"/>
+            <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="AppBorderBrush"              Color="#18000000"/>
+            <SolidColorBrush x:Key="AppBadgeBackground"          Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#80FFFFFF"/>
+            <!-- Expander chrome -->
+            <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#B3FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed"     Color="#C2FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled"    Color="#40FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderContentBackground"           Color="#4DFFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBorderBrush"           Color="#12000000"/>
+            <SolidColorBrush x:Key="ExpanderContentBorderBrush"          Color="#12000000"/>
+            <!-- Tab headers (selected tab matches the content panel so they read as one surface) -->
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelected"              Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselected"            Color="Transparent"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPointerOver" Color="#0F000000"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPointerOver"   Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPressed"     Color="#08000000"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPressed"       Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundDisabled"             Color="Transparent"/>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="MacGlassWindowTint"          Color="#A6202020"/>
+            <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
+            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#12FFFFFF"/>
+            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#26000000"/>
+            <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#1CFFFFFF"/>
+            <SolidColorBrush x:Key="PackageListBackground"       Color="#40000000"/>
+            <SolidColorBrush x:Key="PackageListBorderBrush"      Color="#14FFFFFF"/>
+            <SolidColorBrush x:Key="PackageListHeaderBackground" Color="#0DFFFFFF"/>
+            <SolidColorBrush x:Key="AppSplitterBackground"       Color="#66000000"/>
+            <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="AppBorderBrush"              Color="#15FFFFFF"/>
+            <SolidColorBrush x:Key="AppBadgeBackground"          Color="#66383838"/>
+            <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#662C2C2C"/>
+            <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#66393939"/>
+            <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#66181818"/>
+            <!-- Expander chrome -->
+            <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#12FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#1CFFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed"     Color="#24FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled"    Color="#08FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderContentBackground"           Color="#26000000"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBorderBrush"           Color="#26000000"/>
+            <SolidColorBrush x:Key="ExpanderContentBorderBrush"          Color="#26000000"/>
+            <!-- Tab headers -->
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelected"              Color="#12FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselected"            Color="Transparent"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPointerOver" Color="#1AFFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPointerOver"   Color="#12FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPressed"     Color="#0FFFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPressed"       Color="#12FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundDisabled"             Color="Transparent"/>
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

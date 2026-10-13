@@ -526,53 +526,13 @@
                             </StackPanel>
                         </Expander>
 
-                        <!-- Filter options expander -->
+                        <!-- Search options: how the title-bar search matches, folded so the pane leads with real filters -->
                         <Expander Classes="filter-pane-expander"
                                   IsExpanded="False"
                                   CornerRadius="8"
                                   Padding="16,8,16,8"
                                   Background="{DynamicResource FilterExpanderContentBackground}"
-                                  automation:AutomationProperties.Name="{t:Translate Filters}">
-                            <Expander.Header>
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                    <controls:SvgIcon Grid.Column="0"
-                                                      Path="avares://UniGetUI/Assets/Symbols/Filter.svg"
-                                                      Width="16" Height="16"
-                                                      VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1"
-                                               Text="{t:Translate Filters}"
-                                               FontSize="14"
-                                               FontWeight="SemiBold"
-                                               VerticalAlignment="Center"
-                                               TextWrapping="Wrap"/>
-                                </Grid>
-                            </Expander.Header>
-                            <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
-                                <CheckBox x:Name="InstantSearchCheckbox"
-                                          IsChecked="{Binding InstantSearch, Mode=TwoWay}"
-                                          automation:AutomationProperties.Name="{t:Translate Instant search}">
-                                    <TextBlock Text="{t:Translate Instant search}" TextWrapping="Wrap"/>
-                                </CheckBox>
-                                <CheckBox x:Name="UpperLowerCaseCheckbox"
-                                          IsChecked="{Binding UpperLowerCase, Mode=TwoWay}"
-                                          automation:AutomationProperties.Name="{t:Translate Distinguish between uppercase and lowercase}">
-                                    <TextBlock Text="{t:Translate Distinguish between uppercase and lowercase}" TextWrapping="Wrap"/>
-                                </CheckBox>
-                                <CheckBox x:Name="IgnoreSpecialCharsCheckbox"
-                                          IsChecked="{Binding IgnoreSpecialChars, Mode=TwoWay}"
-                                          automation:AutomationProperties.Name="{t:Translate Ignore special characters}">
-                                    <TextBlock Text="{t:Translate Ignore special characters}" TextWrapping="Wrap"/>
-                                </CheckBox>
-                            </StackPanel>
-                        </Expander>
-
-                        <!-- Search mode expander -->
-                        <Expander Classes="filter-pane-expander"
-                                  IsExpanded="True"
-                                  CornerRadius="8"
-                                  Padding="16,8,16,8"
-                                  Background="{DynamicResource FilterExpanderContentBackground}"
-                                  automation:AutomationProperties.Name="{t:Translate Search mode}">
+                                  automation:AutomationProperties.Name="{t:Translate Search options}">
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                     <controls:SvgIcon Grid.Column="0"
@@ -580,7 +540,7 @@
                                                       Width="16" Height="16"
                                                       VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1"
-                                               Text="{t:Translate Search mode}"
+                                               Text="{t:Translate Search options}"
                                                FontSize="14"
                                                FontWeight="SemiBold"
                                                VerticalAlignment="Center"
@@ -588,6 +548,12 @@
                                 </Grid>
                             </Expander.Header>
                             <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
+                                <TextBlock Text="{t:Translate Search mode}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Opacity="0.7"
+                                           Margin="0,0,0,2"
+                                           TextWrapping="Wrap"/>
                                 <RadioButton Classes="filter-radio"
                                              IsChecked="{Binding SearchMode_Name, Mode=TwoWay}"
                                              Content="{t:Translate Package Name}"
@@ -609,6 +575,22 @@
                                              IsEnabled="{Binding SimilarSearchEnabled}"
                                              Content="{t:Translate Show similar packages}"
                                              automation:AutomationProperties.Name="{t:Translate Show similar packages}"/>
+                                <Separator Margin="0,8"/>
+                                <CheckBox x:Name="InstantSearchCheckbox"
+                                          IsChecked="{Binding InstantSearch, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Instant search}">
+                                    <TextBlock Text="{t:Translate Instant search}" TextWrapping="Wrap"/>
+                                </CheckBox>
+                                <CheckBox x:Name="UpperLowerCaseCheckbox"
+                                          IsChecked="{Binding UpperLowerCase, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Distinguish between uppercase and lowercase}">
+                                    <TextBlock Text="{t:Translate Distinguish between uppercase and lowercase}" TextWrapping="Wrap"/>
+                                </CheckBox>
+                                <CheckBox x:Name="IgnoreSpecialCharsCheckbox"
+                                          IsChecked="{Binding IgnoreSpecialChars, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Ignore special characters}">
+                                    <TextBlock Text="{t:Translate Ignore special characters}" TextWrapping="Wrap"/>
+                                </CheckBox>
                             </StackPanel>
                         </Expander>
 

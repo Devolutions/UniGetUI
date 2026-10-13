@@ -643,6 +643,12 @@ public partial class MainWindow : Window
             NavDock.GetObservable(IsVisibleProperty).SubscribeValue(_ => ApplyMacSidebarLayout());
             Classes.CollectionChanged += (_, _) => ApplyMacSidebarLayout();
             SidebarGlass.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
+            NavFlyout.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
+            ViewModel.Sidebar.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(SidebarViewModel.OverlayActive))
+                    UpdateMacWindowSurfaceClip();
+            };
             MacWindowSurface.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
         }
         else if (OperatingSystem.IsWindows())
@@ -749,23 +755,36 @@ public partial class MainWindow : Window
 
     // Punches the sidebar panel's rounded rect out of the opaque window surface, so the native
     // vibrancy only shows through the panel (System Settings look) and the content stays solid.
+    // While the expanded overlay is open it is the hole, and the content beneath it is clipped
+    // away too, so the overlay shows the same glass instead of the page through a tint.
     private void UpdateMacWindowSurfaceClip()
     {
         if (!MacWindowSurface.IsVisible)
             return;
 
-        if (!SidebarGlass.IsVisible
-            || SidebarGlass.TranslatePoint(default, MacWindowSurface) is not { } origin)
+        bool overlay = ViewModel.Sidebar.OverlayActive;
+        Border? panel = overlay ? NavFlyout : SidebarGlass.IsVisible ? SidebarGlass : null;
+
+        foreach (var child in MainContentRoot.Children)
         {
-            MacWindowSurface.Clip = null;
-            return;
+            if (child != NavFlyout && child != FlyoutDismiss)
+                child.Clip = overlay ? ExcludePanel(child, NavFlyout) : null;
         }
 
-        double radius = SidebarGlass.CornerRadius.TopLeft;
-        MacWindowSurface.Clip = new CombinedGeometry(
+        MacWindowSurface.Clip = panel is null ? null : ExcludePanel(MacWindowSurface, panel);
+    }
+
+    // The control's own bounds minus the panel's rounded rect, in the control's coordinates.
+    private static Geometry? ExcludePanel(Visual target, Border panel)
+    {
+        if (panel.TranslatePoint(default, target) is not { } origin)
+            return null;
+
+        double radius = panel.CornerRadius.TopLeft;
+        return new CombinedGeometry(
             GeometryCombineMode.Exclude,
-            new RectangleGeometry(new Rect(MacWindowSurface.Bounds.Size)),
-            new RectangleGeometry(new Rect(origin, SidebarGlass.Bounds.Size), radius, radius));
+            new RectangleGeometry(new Rect(target.Bounds.Size)),
+            new RectangleGeometry(new Rect(origin, panel.Bounds.Size), radius, radius));
     }
 
     // macOS title-bar idioms: the sidebar.left toggle and a back chevron instead of the hamburger and

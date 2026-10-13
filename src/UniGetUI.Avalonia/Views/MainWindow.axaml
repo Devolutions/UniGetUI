@@ -183,7 +183,7 @@
             <Setter Property="BoxShadow" Value="{DynamicResource MacGlassPanelShadow}"/>
         </Style>
         <Style Selector="Window.mac-glass Border#NavFlyout">
-            <Setter Property="Background" Value="{DynamicResource MacGlassOverlayBackground}"/>
+            <Setter Property="Background" Value="{DynamicResource MacGlassPanelBackground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="{DynamicResource MacGlassPanelCornerRadius}"/>

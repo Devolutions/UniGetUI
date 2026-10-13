@@ -58,7 +58,7 @@
             <SolidColorBrush x:Key="MacGlassControlBackground"   Color="#17000000"/>
             <SolidColorBrush x:Key="MacGlassOverlayBackground"   Color="#F9F9F9"/>
             <!-- Tint over the native menu blur (popups get NSVisualEffectMaterialMenu). -->
-            <SolidColorBrush x:Key="MacGlassMenuBackground"      Color="#99F6F6F6"/>
+            <SolidColorBrush x:Key="MacGlassMenuBackground"      Color="#B8FAFAFA"/>
             <LinearGradientBrush x:Key="MacGlassPanelBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
                 <GradientStop Offset="0" Color="#0F000000"/>
                 <GradientStop Offset="1" Color="#1A000000"/>

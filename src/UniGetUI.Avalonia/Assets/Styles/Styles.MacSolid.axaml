@@ -1,0 +1,18 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    x:Class="UniGetUI.Avalonia.Assets.Styles.MacSolidStyles">
+    <!-- Merged over Styles.MacGlass while vibrancy is off (Reduce transparency, Increase contrast,
+         or no backdrop granted): the same macOS look with solid surfaces and firmer edges. -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="MacGlassPanelBackground"  Color="#F3F3F3"/>
+            <SolidColorBrush x:Key="MacGlassMenuBackground"   Color="#F6F6F6"/>
+            <SolidColorBrush x:Key="MacGlassPanelBorderBrush" Color="#33000000"/>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="MacGlassPanelBackground"  Color="#1A1A1A"/>
+            <SolidColorBrush x:Key="MacGlassMenuBackground"   Color="#2A2A2A"/>
+            <SolidColorBrush x:Key="MacGlassPanelBorderBrush" Color="#40FFFFFF"/>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

@@ -10,56 +10,120 @@ using UniGetUI.Core.Logging;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
-/// <summary>macOS counterpart of <see cref="MicaWindowHelper"/>: native vibrancy (AcrylicBlur) behind a
-/// transparent window. Skipped under Reduce transparency or Increase contrast (solid Styles.Common look).</summary>
+/// <summary>macOS look: Styles.MacGlass* plus native vibrancy (AcrylicBlur) behind the sidebar and menus.
+/// Under Reduce transparency or Increase contrast the look stays, with solid surfaces instead.</summary>
 internal static partial class MacGlassWindowHelper
 {
-    /// <summary>Class set on a window while its glass look is active; layout and styles key off it.</summary>
+    /// <summary>Class set on a window while the macOS look is active; layout and styles key off it.</summary>
     public const string GLASS_CLASS = "mac-glass";
 
     private const string ObjCRuntime = "/usr/lib/libobjc.A.dylib";
 
-    // AppKit NSVisualEffectMaterial / NSVisualEffectBlendingMode values.
+    // AppKit NSVisualEffectMaterial / NSVisualEffectBlendingMode / NSVisualEffectState values.
     private const long NSVisualEffectMaterialSidebar = 7;
     private const long NSVisualEffectMaterialMenu = 5;
     private const long NSVisualEffectStateActive = 1;
     private const long NSVisualEffectBlendingModeBehindWindow = 0;
 
-    private static bool? _useSolidSurfaces;
-    private static bool _glassConfirmedUnavailable;
-    private static bool _popupGlassHooked;
+    private static bool? _solidPreferred;
+    private static bool _vibrancyRefused;
+    private static Window? _window;
 
-    public static bool IsGlassEnabled()
-        => OperatingSystem.IsMacOS()
-           && !_glassConfirmedUnavailable
-           && !ShouldUseSolidSurfaces();
+    /// <summary>True on macOS: the macOS layout and control styles apply.</summary>
+    public static bool IsGlassEnabled() => OperatingSystem.IsMacOS();
 
-    /// <summary>Requests the vibrancy backdrop. Call before the window is shown.</summary>
+    /// <summary>True when the see-through vibrancy is used; false means solid surfaces.</summary>
+    public static bool IsVibrancyEnabled()
+        => IsGlassEnabled() && !_vibrancyRefused && !IsSolidPreferred();
+
+    /// <summary>Merges the macOS styles and hooks popups. Call once from App.Initialize.</summary>
+    public static void Initialize(Application app)
+    {
+        if (!IsGlassEnabled())
+            return;
+
+        app.Resources.MergedDictionaries.Add(new MacGlassStyles());
+        app.Styles.Add(new MacGlassControlStyles());
+        UpdateSolidOverrides(app);
+        Control.LoadedEvent.AddClassHandler<PopupRoot>((root, _) => ApplyToPopup(root));
+    }
+
+    /// <summary>Applies the macOS look to the main window. Call before the window is shown.</summary>
     public static void Apply(Window window)
     {
         if (!IsGlassEnabled())
             return;
 
-        window.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur };
-        window.Background = Brushes.Transparent;
+        _window = window;
         window.Classes.Add(GLASS_CLASS);
-        window.Opened += (_, _) => OnOpened(window);
+        ApplyVibrancyState(window);
+        window.Opened += (_, _) => VerifyVibrancy(window);
+        // Accessibility display settings can change while the app runs; pick them up on activation.
+        window.Activated += (_, _) => RefreshAccessibilityPreferences();
     }
 
-    /// <summary>Gives menus, flyouts and dropdowns the native menu blur with rounded corners.</summary>
-    public static void EnablePopupGlass()
+    private static void ApplyVibrancyState(Window window)
     {
-        if (!IsGlassEnabled() || _popupGlassHooked)
-            return;
-        _popupGlassHooked = true;
+        if (IsVibrancyEnabled())
+        {
+            window.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur };
+            window.Background = Brushes.Transparent;
+            Dispatcher.UIThread.Post(() => UseSidebarMaterial(window));
+        }
+        else
+        {
+            window.TransparencyLevelHint = new[] { WindowTransparencyLevel.None };
+            window.Bind(Window.BackgroundProperty, window.GetResourceObservable("MacGlassWindowBackground"));
+        }
+    }
 
-        Control.LoadedEvent.AddClassHandler<PopupRoot>((root, _) => ApplyToPopup(root));
+    // A transparent window without a granted backdrop shows whatever is behind it unblurred,
+    // so switch to solid surfaces for the rest of the session if the request was refused.
+    private static void VerifyVibrancy(Window window)
+    {
+        if (!IsVibrancyEnabled() || window.ActualTransparencyLevel == WindowTransparencyLevel.AcrylicBlur)
+            return;
+
+        Logger.Warn($"macOS vibrancy was not granted (got {window.ActualTransparencyLevel}); using solid surfaces");
+        _vibrancyRefused = true;
+        ApplyVibrancyState(window);
+        if (Application.Current is { } app)
+            UpdateSolidOverrides(app);
+    }
+
+    private static void RefreshAccessibilityPreferences()
+    {
+        bool before = IsVibrancyEnabled();
+        _solidPreferred = null;
+        if (IsVibrancyEnabled() == before)
+            return;
+
+        if (Application.Current is { } app)
+            UpdateSolidOverrides(app);
+        if (_window is { } window)
+            ApplyVibrancyState(window);
+    }
+
+    private static void UpdateSolidOverrides(Application app)
+    {
+        var dictionaries = app.Resources.MergedDictionaries;
+        int existing = -1;
+        for (int i = 0; i < dictionaries.Count; i++)
+        {
+            if (dictionaries[i] is MacSolidStyles)
+                existing = i;
+        }
+
+        if (IsVibrancyEnabled() && existing >= 0)
+            dictionaries.RemoveAt(existing);
+        else if (!IsVibrancyEnabled() && existing < 0)
+            dictionaries.Add(new MacSolidStyles());
     }
 
     private static void ApplyToPopup(PopupRoot root)
     {
-        // Tooltips keep their plain opaque look, as on macOS.
-        if (!IsGlassEnabled() || root.GetVisualDescendants().Any(c => c is ToolTip))
+        // Tooltips keep their plain opaque look, as on macOS; without vibrancy menus stay solid.
+        if (!IsVibrancyEnabled() || root.GetVisualDescendants().Any(c => c is ToolTip))
             return;
 
         root.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur };
@@ -83,20 +147,16 @@ internal static partial class MacGlassWindowHelper
         });
     }
 
-    private static void OnOpened(Window window)
+    // Avalonia creates its behind-window NSVisualEffectView with the deprecated, always-light
+    // NSVisualEffectMaterialLight. The sidebar material follows the window's light/dark appearance.
+    private static void UseSidebarMaterial(Window window)
     {
-        // A transparent window without a granted backdrop shows whatever is behind it unblurred,
-        // so drop back to the solid surfaces for the whole session if the request was refused.
-        if (window.ActualTransparencyLevel != WindowTransparencyLevel.AcrylicBlur)
-        {
-            Logger.Warn($"macOS vibrancy was not granted (got {window.ActualTransparencyLevel}); using solid surfaces");
-            FallBackToSolid(window);
+        if (!IsVibrancyEnabled())
             return;
-        }
 
         try
         {
-            UseAdaptiveMaterial(window);
+            StyleBehindWindowEffectViews(GetNSWindow(window), NSVisualEffectMaterialSidebar, 0);
         }
         catch (Exception ex)
         {
@@ -104,36 +164,6 @@ internal static partial class MacGlassWindowHelper
             Logger.Warn(ex);
         }
     }
-
-    private static void FallBackToSolid(Window window)
-    {
-        _glassConfirmedUnavailable = true;
-
-        if (Application.Current is { } app)
-        {
-            for (int i = app.Resources.MergedDictionaries.Count - 1; i >= 0; i--)
-            {
-                if (app.Resources.MergedDictionaries[i] is MacGlassStyles)
-                    app.Resources.MergedDictionaries.RemoveAt(i);
-            }
-            for (int i = app.Styles.Count - 1; i >= 0; i--)
-            {
-                if (app.Styles[i] is MacGlassControlStyles)
-                    app.Styles.RemoveAt(i);
-            }
-        }
-
-        window.TransparencyLevelHint = new[] { WindowTransparencyLevel.None };
-        window.Classes.Remove(GLASS_CLASS);
-        window.ClearValue(Window.BackgroundProperty);
-        if (window.TryFindResource("AppWindowBackground", window.ActualThemeVariant, out object? bg) && bg is IBrush brush)
-            window.Background = brush;
-    }
-
-    // Avalonia creates its behind-window NSVisualEffectView with the deprecated, always-light
-    // NSVisualEffectMaterialLight. A semantic material follows the window's light/dark appearance.
-    private static void UseAdaptiveMaterial(Window window)
-        => StyleBehindWindowEffectViews(GetNSWindow(window), NSVisualEffectMaterialSidebar, 0);
 
     // Sets the material of the window's behind-window NSVisualEffectViews; a non-zero radius also
     // rounds them (always-active, like native menus) and re-derives the window shadow from that shape.
@@ -185,10 +215,10 @@ internal static partial class MacGlassWindowHelper
             : objc_msgSend_IntPtr(handle.Handle, sel_registerName("window"));
     }
 
-    // NSWorkspace's Reduce transparency and Increase contrast accessibility settings, read once per session.
-    private static bool ShouldUseSolidSurfaces()
+    // NSWorkspace's Reduce transparency and Increase contrast settings; cleared on window activation.
+    private static bool IsSolidPreferred()
     {
-        if (_useSolidSurfaces is { } cached)
+        if (_solidPreferred is { } cached)
             return cached;
 
         bool solid = false;
@@ -205,7 +235,7 @@ internal static partial class MacGlassWindowHelper
             Logger.Warn(ex);
         }
 
-        _useSolidSurfaces = solid;
+        _solidPreferred = solid;
         return solid;
     }
 

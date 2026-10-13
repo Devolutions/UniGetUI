@@ -21,9 +21,9 @@
     <Style Selector="MenuFlyoutPresenter Separator, ContextMenu Separator">
         <Setter Property="Margin" Value="14,5"/>
     </Style>
-    <!-- Highlighted rows invert to white content on the accent fill, as in native menus. -->
+    <!-- Highlighted rows take the accent content colour on the accent fill, as in native menus. -->
     <Style Selector="MenuItem:pointerover controls|SvgIcon, MenuItem:selected controls|SvgIcon, ComboBoxItem:pointerover controls|SvgIcon">
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
     </Style>
 
     <Style Selector="ComboBox /template/ Border#PopupBorder">
@@ -58,8 +58,9 @@
                      Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="CornerRadius" Value="7"/>
     </Style>
-    <Style Selector="Button.accent controls|SvgIcon, Button.accent:pointerover controls|SvgIcon">
-        <Setter Property="Foreground" Value="White"/>
+    <!-- SvgIcon only honours state-style (or local) colours, hence the :not(:disabled) activators. -->
+    <Style Selector="Button.accent:not(:disabled) controls|SvgIcon">
+        <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
     </Style>
 
     <!-- Toolbar, after Finder: icon-only buttons grouped on glass capsules (one per run between
@@ -96,20 +97,20 @@
     </Style>
     <Style Selector="Button#MainToolbarButton:not(:disabled), Button#MainToolbarButtonDropdown:not(:disabled)">
         <Setter Property="Background" Value="{DynamicResource AccentButtonBackground}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
     </Style>
     <Style Selector="Button#MainToolbarButton:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                      Button#MainToolbarButtonDropdown:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource AccentButtonBackgroundPointerOver}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
     </Style>
     <Style Selector="Button#MainToolbarButton:pressed /template/ ContentPresenter#PART_ContentPresenter,
                      Button#MainToolbarButtonDropdown:pressed /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource AccentButtonBackgroundPressed}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
     </Style>
-    <Style Selector="Button#MainToolbarButton controls|SvgIcon">
-        <Setter Property="Foreground" Value="White"/>
+    <Style Selector="Button#MainToolbarButton:not(:disabled) controls|SvgIcon">
+        <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
     </Style>
 
     <!-- Switches: a large white knob that keeps its size in every state. -->
@@ -124,6 +125,10 @@
     <!-- macOS switches carry no Enabled/Disabled caption next to them. -->
     <Style Selector="TextBlock.toggle-state-label">
         <Setter Property="IsVisible" Value="False"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Fill" Value="White"/>
     </Style>
 
     <!-- Pop-up buttons show up/down arrows; scroll bars have no arrow buttons. -->

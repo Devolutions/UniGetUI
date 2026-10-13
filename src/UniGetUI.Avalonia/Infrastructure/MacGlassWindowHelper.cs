@@ -26,6 +26,7 @@ internal static partial class MacGlassWindowHelper
     private const long NSVisualEffectBlendingModeBehindWindow = 0;
 
     private static bool? _solidPreferred;
+    private static bool _increaseContrast;
     private static bool _vibrancyRefused;
     private static Window? _window;
 
@@ -45,6 +46,10 @@ internal static partial class MacGlassWindowHelper
         app.Resources.MergedDictionaries.Add(new MacGlassStyles());
         app.Styles.Add(new MacGlassControlStyles());
         UpdateSolidOverrides(app);
+        UpdateAccentForeground(app);
+        app.ActualThemeVariantChanged += (_, _) => UpdateAccentForeground(app);
+        if (app.PlatformSettings is { } platform)
+            platform.ColorValuesChanged += (_, _) => UpdateAccentForeground(app);
         Control.LoadedEvent.AddClassHandler<PopupRoot>((root, _) => ApplyToPopup(root));
     }
 
@@ -96,12 +101,20 @@ internal static partial class MacGlassWindowHelper
     private static void RefreshAccessibilityPreferences()
     {
         bool before = IsVibrancyEnabled();
+        bool contrastBefore = _increaseContrast;
         _solidPreferred = null;
         if (IsVibrancyEnabled() == before)
+        {
+            if (_increaseContrast != contrastBefore && Application.Current is { } current)
+                UpdateAccentForeground(current);
             return;
+        }
 
         if (Application.Current is { } app)
+        {
             UpdateSolidOverrides(app);
+            UpdateAccentForeground(app);
+        }
         if (_window is { } window)
         {
             ApplyVibrancyState(window);
@@ -124,6 +137,38 @@ internal static partial class MacGlassWindowHelper
             dictionaries.RemoveAt(existing);
         else if (!IsVibrancyEnabled() && existing < 0)
             dictionaries.Add(new MacSolidStyles());
+    }
+
+    // Text drawn on the accent is white unless that falls below 3:1 against it (the WCAG minimum for
+    // UI components and bold text; 4.5:1 under Increase Contrast), as with orange, yellow or green.
+    private static void UpdateAccentForeground(Application app)
+    {
+        if (!app.TryFindResource("SystemAccentColor", app.ActualThemeVariant, out object? value)
+            || value is not Color accent)
+            return;
+
+        double minimum = _increaseContrast ? 4.5 : 3.0;
+        app.Resources["MacAccentForegroundColor"] = ContrastRatio(Colors.White, accent) >= minimum
+            ? Colors.White
+            : Color.FromRgb(0x1D, 0x1D, 0x1F);
+    }
+
+    private static double ContrastRatio(Color a, Color b)
+    {
+        double la = RelativeLuminance(a), lb = RelativeLuminance(b);
+        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
+    }
+
+    // WCAG 2 relative luminance of an sRGB colour.
+    private static double RelativeLuminance(Color color)
+    {
+        static double Channel(byte value)
+        {
+            double c = value / 255.0;
+            return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        return 0.2126 * Channel(color.R) + 0.7152 * Channel(color.G) + 0.0722 * Channel(color.B);
     }
 
     private static void ApplyToPopup(PopupRoot root)
@@ -232,8 +277,11 @@ internal static partial class MacGlassWindowHelper
         {
             nint workspace = objc_msgSend_IntPtr(objc_getClass("NSWorkspace"), Sel.SharedWorkspace);
             if (workspace != 0)
-                solid = objc_msgSend_Bool(workspace, Sel.AccessibilityDisplayShouldReduceTransparency)
-                        || objc_msgSend_Bool(workspace, Sel.AccessibilityDisplayShouldIncreaseContrast);
+            {
+                _increaseContrast = objc_msgSend_Bool(workspace, Sel.AccessibilityDisplayShouldIncreaseContrast);
+                solid = _increaseContrast
+                        || objc_msgSend_Bool(workspace, Sel.AccessibilityDisplayShouldReduceTransparency);
+            }
         }
         catch (Exception ex)
         {

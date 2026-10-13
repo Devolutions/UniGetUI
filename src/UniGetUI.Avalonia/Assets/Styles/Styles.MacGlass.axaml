@@ -5,11 +5,15 @@
          The blur shows real content behind the window, so surfaces stay more opaque than Mica's. -->
     <CornerRadius x:Key="MacGlassPanelCornerRadius">18</CornerRadius>
     <CornerRadius x:Key="MacGlassMenuCornerRadius">10</CornerRadius>
-    <!-- Native menus highlight the hovered row with the accent colour and white text. -->
+    <!-- Text and glyphs drawn on the accent: white, or near-black for light accents (computed by
+         MacGlassWindowHelper from the accent's contrast; this is the default until then). -->
+    <Color x:Key="MacAccentForegroundColor">White</Color>
+    <SolidColorBrush x:Key="MacAccentForeground" Color="{DynamicResource MacAccentForegroundColor}"/>
+    <!-- Native menus highlight the hovered row with the accent colour and accent text. -->
     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{DynamicResource SystemAccentColor}" Opacity="0.85"/>
     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed"     Color="{DynamicResource SystemAccentColor}"/>
-    <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="White"/>
-    <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed"     Color="White"/>
+    <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="{DynamicResource MacAccentForegroundColor}"/>
+    <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed"     Color="{DynamicResource MacAccentForegroundColor}"/>
 
     <!-- Controls: rounder corners, a full focus ring, and the true system accent with white
          content (Fluent's dark theme uses a lighter accent with dark glyphs). -->
@@ -21,11 +25,11 @@
     <SolidColorBrush x:Key="AccentButtonBackground"            Color="{DynamicResource SystemAccentColor}"/>
     <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{DynamicResource SystemAccentColor}" Opacity="0.9"/>
     <SolidColorBrush x:Key="AccentButtonBackgroundPressed"     Color="{DynamicResource SystemAccentColor}" Opacity="0.8"/>
-    <SolidColorBrush x:Key="AccentButtonForeground"            Color="White"/>
-    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="White"/>
-    <SolidColorBrush x:Key="AccentButtonForegroundPressed"     Color="#CCFFFFFF"/>
-    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"   Color="White"/>
-    <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush" Color="#CCFFFFFF"/>
+    <SolidColorBrush x:Key="AccentButtonForeground"            Color="{DynamicResource MacAccentForegroundColor}"/>
+    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="{DynamicResource MacAccentForegroundColor}"/>
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed"     Color="{DynamicResource MacAccentForegroundColor}" Opacity="0.8"/>
+    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"   Color="{DynamicResource MacAccentForegroundColor}"/>
+    <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush" Color="{DynamicResource MacAccentForegroundColor}" Opacity="0.8"/>
     <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{DynamicResource SystemAccentColor}" Opacity="0.7"/>
     <SolidColorBrush x:Key="SearchBoxFocusedBorderBrush"   Color="{DynamicResource SystemAccentColor}" Opacity="0.7"/>
     <SolidColorBrush x:Key="ButtonBorderBrush"            Color="Transparent"/>

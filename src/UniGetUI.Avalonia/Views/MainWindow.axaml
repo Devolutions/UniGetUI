@@ -200,7 +200,7 @@
         <Style Selector="Window.mac-glass Border#SearchFocusUnderline">
             <Setter Property="IsVisible" Value="False"/>
         </Style>
-        <!-- Sidebar selection: a solid accent pill with white content, as in System Settings,
+        <!-- Sidebar selection: a solid accent pill with accent-content text, as in System Settings,
              replacing the WinUI leading-edge indicator. -->
         <Style Selector="Window.mac-glass Panel#NavigationSelectionPill">
             <Setter Property="Opacity" Value="0"/>
@@ -210,11 +210,11 @@
         </Style>
         <Style Selector="Window.mac-glass ListBoxItem.nav-item:selected /template/ ContentPresenter#ContentHost">
             <Setter Property="Background" Value="{DynamicResource MacGlassSelectionBackground}"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
             <Setter Property="CornerRadius" Value="10"/>
         </Style>
         <Style Selector="Window.mac-glass ListBoxItem.nav-item:selected controls|SvgIcon">
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>
         </Style>
         <Style Selector="Window.mac-glass ListBoxItem.nav-item:selected:pointerover /template/ ContentPresenter#ContentHost">
             <Setter Property="Background" Value="{DynamicResource MacGlassSelectionBackground}"/>

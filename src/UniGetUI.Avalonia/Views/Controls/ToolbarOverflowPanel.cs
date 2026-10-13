@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -40,6 +41,18 @@ public sealed class ToolbarOverflowPanel : Panel
     {
         _backdrop = new GroupBackdrop(this) { ZIndex = -1, IsHitTestVisible = false };
         VisualChildren.Add(_backdrop);
+    }
+
+    // Panel mirrors Children indices onto VisualChildren, so the backdrop (not one of the Children)
+    // must stay last for those indices to keep pointing at the matching visual.
+    protected override void ChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        base.ChildrenChanged(sender, e);
+        if (VisualChildren.Count > 0 && VisualChildren[^1] != _backdrop)
+        {
+            VisualChildren.Remove(_backdrop);
+            VisualChildren.Add(_backdrop);
+        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -303,16 +316,18 @@ public sealed class ToolbarOverflowPanel : Panel
 
     private sealed class GroupBackdrop(ToolbarOverflowPanel owner) : Control
     {
+        private Pen? _rimPen;
+
         public override void Render(DrawingContext context)
         {
             if (owner.GroupBackground is not { } brush)
                 return;
 
-            // One capsule per run of visible items between separators.
+            // One capsule per run of visible items between separators; the overflow button gets its own.
             Rect? group = null;
             foreach (var child in owner.Children)
             {
-                if (!child.IsVisible || child.Bounds.Width <= 0)
+                if (!child.IsVisible || child.Bounds.Width <= 0 || child == owner.OverflowControl)
                     continue;
                 if (child is Separator)
                 {
@@ -323,6 +338,8 @@ public sealed class ToolbarOverflowPanel : Panel
                 group = group is { } current ? current.Union(child.Bounds) : child.Bounds;
             }
             DrawGroup(context, brush, group);
+            if (owner.OverflowControl is { IsVisible: true } overflow && overflow.Bounds.Width > 0)
+                DrawGroup(context, brush, overflow.Bounds);
         }
 
         private void DrawGroup(DrawingContext context, IBrush brush, Rect? group)
@@ -330,10 +347,19 @@ public sealed class ToolbarOverflowPanel : Panel
             if (group is not { } rect)
                 return;
             double radius = owner.GroupCornerRadius;
-            IPen? rim = owner.GroupBorderBrush is { } border ? new Pen(border, 1) : null;
+            IPen? rim = RimPen();
             // Inset half the pen width so the 1px rim stays inside the capsule.
             Rect capsule = rect.Deflate(new Thickness(0, owner.GroupVerticalInset)).Deflate(rim is null ? 0 : 0.5);
             context.DrawRectangle(brush, rim, capsule, radius, radius);
+        }
+
+        private Pen? RimPen()
+        {
+            if (owner.GroupBorderBrush is not { } border)
+                return null;
+            if (_rimPen?.Brush != border)
+                _rimPen = new Pen(border, 1);
+            return _rimPen;
         }
     }
 }

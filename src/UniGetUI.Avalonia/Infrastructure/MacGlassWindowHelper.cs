@@ -64,6 +64,8 @@ internal static partial class MacGlassWindowHelper
 
     private static void ApplyVibrancyState(Window window)
     {
+        // Drop the solid-mode resource binding (or a previous value) before switching.
+        window.ClearValue(Window.BackgroundProperty);
         if (IsVibrancyEnabled())
         {
             window.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur };
@@ -101,7 +103,11 @@ internal static partial class MacGlassWindowHelper
         if (Application.Current is { } app)
             UpdateSolidOverrides(app);
         if (_window is { } window)
+        {
             ApplyVibrancyState(window);
+            // The backdrop request is re-made, so confirm it was granted once it settles.
+            Dispatcher.UIThread.Post(() => VerifyVibrancy(window), DispatcherPriority.Background);
+        }
     }
 
     private static void UpdateSolidOverrides(Application app)
@@ -173,35 +179,35 @@ internal static partial class MacGlassWindowHelper
             return;
 
         nint effectViewClass = objc_getClass("NSVisualEffectView");
-        nint contentView = objc_msgSend_IntPtr(nsWindow, sel_registerName("contentView"));
-        nint subviews = objc_msgSend_IntPtr(contentView, sel_registerName("subviews"));
-        long count = objc_msgSend_IntPtr(subviews, sel_registerName("count"));
+        nint contentView = objc_msgSend_IntPtr(nsWindow, Sel.ContentView);
+        nint subviews = objc_msgSend_IntPtr(contentView, Sel.Subviews);
+        long count = objc_msgSend_IntPtr(subviews, Sel.Count);
 
         for (long i = 0; i < count; i++)
         {
-            nint view = objc_msgSend_IntPtr_Long(subviews, sel_registerName("objectAtIndex:"), i);
-            if (!objc_msgSend_Bool_IntPtr(view, sel_registerName("isKindOfClass:"), effectViewClass)
-                || objc_msgSend_IntPtr(view, sel_registerName("blendingMode")) != NSVisualEffectBlendingModeBehindWindow)
+            nint view = objc_msgSend_IntPtr_Long(subviews, Sel.ObjectAtIndex, i);
+            if (!objc_msgSend_Bool_IntPtr(view, Sel.IsKindOfClass, effectViewClass)
+                || objc_msgSend_IntPtr(view, Sel.BlendingMode) != NSVisualEffectBlendingModeBehindWindow)
                 continue;
 
-            objc_msgSend_IntPtr_Long(view, sel_registerName("setMaterial:"), material);
+            objc_msgSend_IntPtr_Long(view, Sel.SetMaterial, material);
             if (cornerRadius <= 0)
                 continue;
 
-            objc_msgSend_IntPtr_Long(view, sel_registerName("setState:"), NSVisualEffectStateActive);
-            objc_msgSend_IntPtr_Long(view, sel_registerName("setWantsLayer:"), 1);
-            nint layer = objc_msgSend_IntPtr(view, sel_registerName("layer"));
+            objc_msgSend_IntPtr_Long(view, Sel.SetState, NSVisualEffectStateActive);
+            objc_msgSend_IntPtr_Long(view, Sel.SetWantsLayer, 1);
+            nint layer = objc_msgSend_IntPtr(view, Sel.Layer);
             if (layer != 0)
             {
-                objc_msgSend_IntPtr_Double(layer, sel_registerName("setCornerRadius:"), cornerRadius);
-                objc_msgSend_IntPtr_Long(layer, sel_registerName("setMasksToBounds:"), 1);
+                objc_msgSend_IntPtr_Double(layer, Sel.SetCornerRadius, cornerRadius);
+                objc_msgSend_IntPtr_Long(layer, Sel.SetMasksToBounds, 1);
             }
         }
 
         if (cornerRadius > 0)
         {
-            objc_msgSend_IntPtr_Long(nsWindow, sel_registerName("setHasShadow:"), 1);
-            objc_msgSend_IntPtr(nsWindow, sel_registerName("invalidateShadow"));
+            objc_msgSend_IntPtr_Long(nsWindow, Sel.SetHasShadow, 1);
+            objc_msgSend_IntPtr(nsWindow, Sel.InvalidateShadow);
         }
     }
 
@@ -212,7 +218,7 @@ internal static partial class MacGlassWindowHelper
 
         return handle.HandleDescriptor == "NSWindow"
             ? handle.Handle
-            : objc_msgSend_IntPtr(handle.Handle, sel_registerName("window"));
+            : objc_msgSend_IntPtr(handle.Handle, Sel.Window);
     }
 
     // NSWorkspace's Reduce transparency and Increase contrast settings; cleared on window activation.
@@ -224,10 +230,10 @@ internal static partial class MacGlassWindowHelper
         bool solid = false;
         try
         {
-            nint workspace = objc_msgSend_IntPtr(objc_getClass("NSWorkspace"), sel_registerName("sharedWorkspace"));
+            nint workspace = objc_msgSend_IntPtr(objc_getClass("NSWorkspace"), Sel.SharedWorkspace);
             if (workspace != 0)
-                solid = objc_msgSend_Bool(workspace, sel_registerName("accessibilityDisplayShouldReduceTransparency"))
-                        || objc_msgSend_Bool(workspace, sel_registerName("accessibilityDisplayShouldIncreaseContrast"));
+                solid = objc_msgSend_Bool(workspace, Sel.AccessibilityDisplayShouldReduceTransparency)
+                        || objc_msgSend_Bool(workspace, Sel.AccessibilityDisplayShouldIncreaseContrast);
         }
         catch (Exception ex)
         {
@@ -237,6 +243,29 @@ internal static partial class MacGlassWindowHelper
 
         _solidPreferred = solid;
         return solid;
+    }
+
+    // Selectors used on every popup and window, registered once on first use (macOS only).
+    private static class Sel
+    {
+        public static readonly nint AccessibilityDisplayShouldIncreaseContrast = sel_registerName("accessibilityDisplayShouldIncreaseContrast");
+        public static readonly nint AccessibilityDisplayShouldReduceTransparency = sel_registerName("accessibilityDisplayShouldReduceTransparency");
+        public static readonly nint BlendingMode = sel_registerName("blendingMode");
+        public static readonly nint ContentView = sel_registerName("contentView");
+        public static readonly nint Count = sel_registerName("count");
+        public static readonly nint InvalidateShadow = sel_registerName("invalidateShadow");
+        public static readonly nint IsKindOfClass = sel_registerName("isKindOfClass:");
+        public static readonly nint Layer = sel_registerName("layer");
+        public static readonly nint ObjectAtIndex = sel_registerName("objectAtIndex:");
+        public static readonly nint SetCornerRadius = sel_registerName("setCornerRadius:");
+        public static readonly nint SetHasShadow = sel_registerName("setHasShadow:");
+        public static readonly nint SetMasksToBounds = sel_registerName("setMasksToBounds:");
+        public static readonly nint SetMaterial = sel_registerName("setMaterial:");
+        public static readonly nint SetState = sel_registerName("setState:");
+        public static readonly nint SetWantsLayer = sel_registerName("setWantsLayer:");
+        public static readonly nint SharedWorkspace = sel_registerName("sharedWorkspace");
+        public static readonly nint Subviews = sel_registerName("subviews");
+        public static readonly nint Window = sel_registerName("window");
     }
 
     [LibraryImport(ObjCRuntime, StringMarshalling = StringMarshalling.Utf8)]

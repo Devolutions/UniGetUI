@@ -2,6 +2,8 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
+using AvaloniaEdit;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
@@ -32,14 +34,15 @@ public partial class MainWindow
                 appMenu.Items.Insert(i, appItems[i]);
         }
 
+        // Text editing also works inside dialogs; everything else waits until the dialog closes.
         var edit = Submenu(CoreTools.Translate("Edit"),
-            Action(CoreTools.Translate("Undo"), () => FocusedTextBox()?.Undo(), Key.Z),
-            Action(CoreTools.Translate("Redo"), () => FocusedTextBox()?.Redo(), Key.Z, KeyModifiers.Shift),
+            TextAction(CoreTools.Translate("Undo"), t => t.Undo(), e => e.Undo(), Key.Z),
+            TextAction(CoreTools.Translate("Redo"), t => t.Redo(), e => e.Redo(), Key.Z, KeyModifiers.Shift),
             new NativeMenuItemSeparator(),
-            Action(CoreTools.Translate("Cut"), () => FocusedTextBox()?.Cut(), Key.X),
-            Action(CoreTools.Translate("Copy"), () => FocusedTextBox()?.Copy(), Key.C),
-            Action(CoreTools.Translate("Paste"), () => FocusedTextBox()?.Paste(), Key.V),
-            Action(CoreTools.Translate("Select all"), SelectAllForFocus, Key.A),
+            TextAction(CoreTools.Translate("Cut"), t => t.Cut(), e => e.Cut(), Key.X),
+            TextAction(CoreTools.Translate("Copy"), t => t.Copy(), e => e.Copy(), Key.C),
+            TextAction(CoreTools.Translate("Paste"), t => t.Paste(), e => e.Paste(), Key.V),
+            Action(CoreTools.Translate("Select all"), SelectAllForFocus, Key.A, allowInDialog: true),
             new NativeMenuItemSeparator(),
             Action(CoreTools.Translate("Find"), TriggerPageSearch, Key.F));
 
@@ -56,9 +59,11 @@ public partial class MainWindow
             Action(CoreTools.Translate("Package details"), TriggerPageDetails, Key.I));
 
         var window = Submenu(CoreTools.Translate("Window"),
-            Action(CoreTools.Translate("Minimize"), () => WindowState = WindowState.Minimized, Key.M),
+            Action(CoreTools.Translate("Minimize"), () => WindowState = WindowState.Minimized, Key.M,
+                allowInDialog: true),
             Action(CoreTools.Translate("Zoom"), () => WindowState =
-                WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized));
+                WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized,
+                allowInDialog: true));
 
         var help = Submenu(CoreTools.Translate("Help"),
             Item(CoreTools.Translate("Help"), navigate, "Help"),
@@ -71,16 +76,31 @@ public partial class MainWindow
         NativeMenu.SetMenu(this, new NativeMenu { Items = { edit, view, window, help } });
     }
 
-    private TextBox? FocusedTextBox() => FocusManager?.GetFocusedElement() as TextBox;
+    private Visual? FocusedVisual() => FocusManager?.GetFocusedElement() as Visual;
 
-    // ⌘A selects text in a focused field, and every package on a package page otherwise.
+    // ⌘A selects text in a focused field or editor, and every package on a package page otherwise.
     private void SelectAllForFocus()
     {
-        if (FocusedTextBox() is { } textBox)
+        Visual? focused = FocusedVisual();
+        if (focused?.FindAncestorOfType<TextBox>(includeSelf: true) is { } textBox)
             textBox.SelectAll();
-        else
+        else if (focused?.FindAncestorOfType<TextEditor>(includeSelf: true) is { } editor)
+            editor.SelectAll();
+        else if (!ModalLayer.IsVisible)
             TriggerPageSelectAll();
     }
+
+    // Routes a text command to the focused text box, or to the AvaloniaEdit log/JSON editor.
+    private NativeMenuItem TextAction(string header, Action<TextBox> onTextBox, Action<TextEditor> onEditor,
+        Key key, KeyModifiers extraModifiers = KeyModifiers.None)
+        => Action(header, () =>
+        {
+            Visual? focused = FocusedVisual();
+            if (focused?.FindAncestorOfType<TextBox>(includeSelf: true) is { } textBox)
+                onTextBox(textBox);
+            else if (focused?.FindAncestorOfType<TextEditor>(includeSelf: true) is { } editor)
+                onEditor(editor);
+        }, key, extraModifiers, allowInDialog: true);
 
     private static NativeMenuItem Submenu(string header, params NativeMenuItemBase[] items)
     {
@@ -90,23 +110,27 @@ public partial class MainWindow
         return new NativeMenuItem(header) { Menu = menu };
     }
 
-    private static NativeMenuItem Item(string header, ICommand command, string? parameter = null,
+    private NativeMenuItem Item(string header, ICommand command, string? parameter = null,
         Key? key = null, KeyModifiers extraModifiers = KeyModifiers.None)
-        => new(header)
+        => Action(header, () =>
         {
-            Command = command,
-            CommandParameter = parameter,
-            Gesture = key is { } k ? new KeyGesture(k, KeyModifiers.Meta | extraModifiers) : null,
-        };
+            if (command.CanExecute(parameter))
+                command.Execute(parameter);
+        }, key, extraModifiers);
 
-    private static NativeMenuItem Action(string header, Action action, Key? key = null,
-        KeyModifiers extraModifiers = KeyModifiers.None)
+    // Like Window_KeyDown, page and navigation commands don't run while an in-window dialog is open.
+    private NativeMenuItem Action(string header, Action action, Key? key = null,
+        KeyModifiers extraModifiers = KeyModifiers.None, bool allowInDialog = false)
     {
         var item = new NativeMenuItem(header)
         {
             Gesture = key is { } k ? new KeyGesture(k, KeyModifiers.Meta | extraModifiers) : null,
         };
-        item.Click += (_, _) => action();
+        item.Click += (_, _) =>
+        {
+            if (allowInDialog || !ModalLayer.IsVisible)
+                action();
+        };
         return item;
     }
 }

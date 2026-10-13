@@ -731,7 +731,7 @@
                     ClipToBounds="True"
                     automation:AutomationProperties.AccessibilityView="Control">
                 <Panel>
-                    <Grid ColumnDefinitions="320,38">
+                    <Grid x:Name="GlobalSearchGrid" ColumnDefinitions="320,38">
                         <TextBox x:Name="GlobalSearchBox"
                                  Grid.Column="0"
                                  MinHeight="20"

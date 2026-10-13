@@ -59,6 +59,11 @@ public partial class MainWindow : Window
     // Gap between the window edge and the floating glass sidebar panel on macOS.
     private const double MAC_GLASS_INSET = 8;
 
+    // Trailing title-bar search field on macOS: its full width, and how far it may shrink.
+    private const double MAC_SEARCH_MAX_WIDTH = 358;
+    private const double MAC_SEARCH_MIN_WIDTH = 140;
+    private const double MAC_SEARCH_TRAILING_INSET = 12;
+
     // Round close button on the leading edge of macOS sheets (in-window dialogs).
     private const double MAC_SHEET_CLOSE_SIZE = 28;
     private const double MAC_SHEET_CLOSE_INSET = 14;
@@ -324,29 +329,36 @@ public partial class MainWindow : Window
             return;
         }
 
-        // ⌘ on macOS, Ctrl elsewhere; on macOS the menu bar also carries these as key equivalents.
+        // ⌘ on macOS, Ctrl elsewhere. Handled keys are marked so the macOS menu bar's key
+        // equivalents for the same actions don't run them a second time.
         bool isCtrl = PlatformShortcuts.HasPrimary(e.KeyModifiers);
         bool isShift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
         if (!isCtrl && !isShift && e.Key == Key.F1)
         {
             ViewModel.NavigateTo(PageType.Help);
+            e.Handled = true;
         }
-        else if ((e.Key is Key.Q or Key.W) && isCtrl)
+        // On macOS ⌘Q is the application menu's Quit; only ⌘W closes the window here.
+        else if (isCtrl && (e.Key == Key.W || (e.Key == Key.Q && !OperatingSystem.IsMacOS())))
         {
             Close();
+            e.Handled = true;
         }
         else if (e.Key == Key.F5 || (e.Key == Key.R && isCtrl))
         {
             TriggerPageReload();
+            e.Handled = true;
         }
         else if (e.Key == Key.F && isCtrl)
         {
             TriggerPageSearch();
+            e.Handled = true;
         }
         else if (e.Key == Key.A && isCtrl)
         {
             TriggerPageSelectAll();
+            e.Handled = true;
         }
         else if (isCtrl && !isShift && e.Key is Key.D1 or Key.D2 or Key.D3 or Key.D4 or Key.D5 or Key.D6)
         {
@@ -641,9 +653,9 @@ public partial class MainWindow : Window
             this.GetObservable(WindowDecorationMarginProperty).SubscribeValue(_ => ApplyMacTitleBarLayout());
             NavRail.GetObservable(IsVisibleProperty).SubscribeValue(_ => ApplyMacSidebarLayout());
             NavDock.GetObservable(IsVisibleProperty).SubscribeValue(_ => ApplyMacSidebarLayout());
-            Classes.CollectionChanged += (_, _) => ApplyMacSidebarLayout();
             SidebarGlass.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
             NavFlyout.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
+            NavFlyout.GetObservable(OpacityProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());
             ViewModel.Sidebar.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(SidebarViewModel.OverlayActive))
@@ -710,24 +722,6 @@ public partial class MainWindow : Window
     private void ApplyMacSidebarLayout()
     {
         double bar = _macTitleBarHeight;
-        bool glass = Classes.Contains(MacGlassWindowHelper.GLASS_CLASS);
-
-        if (!glass)
-        {
-            MacWindowSurface.IsVisible = false;
-            MainContentRoot.Margin = new Thickness(0, bar, 0, 0);
-            foreach (Control c in new Control[] { ContentRoot, NavRail, NavDock, NavFlyout })
-                c.ClearValue(MarginProperty);
-            NavDock.ClearValue(PaddingProperty);
-            SidebarGlass.IsVisible = false;
-            BackButton.Background = Brushes.Transparent;
-            BackButton.ClearValue(BorderBrushProperty);
-            BackButton.BorderThickness = new Thickness(0);
-            BackButton.CornerRadius = new CornerRadius(4);
-            TitleBarTextBlock.IsVisible = true;
-            return;
-        }
-
         var railMargin = new Thickness(MAC_GLASS_INSET, bar, MAC_GLASS_INSET, MAC_GLASS_INSET);
         var dockMargin = new Thickness(MAC_GLASS_INSET);
 
@@ -742,27 +736,18 @@ public partial class MainWindow : Window
         SidebarGlass.Margin = NavDock.IsVisible ? dockMargin : railMargin;
         MacWindowSurface.IsVisible = true;
         UpdateMacWindowSurfaceClip();
-
-        // Back is a round glass button, like the back/forward capsule in System Settings.
-        BackButton.Bind(BackgroundProperty, this.GetResourceObservable("MacGlassControlBackground"));
-        BackButton.Bind(BorderBrushProperty, this.GetResourceObservable("MacGlassPanelBorderBrush"));
-        BackButton.BorderThickness = new Thickness(1);
-        BackButton.CornerRadius = new CornerRadius(MAC_TITLE_BAR_CONTROL_SIZE / 2);
-
-        // Apple: don't title windows with the app name; the page header already names the view.
-        TitleBarTextBlock.IsVisible = Settings.Get(Settings.K.ShowVersionNumberOnTitlebar);
     }
 
     // Punches the sidebar panel's rounded rect out of the opaque window surface, so the native
     // vibrancy only shows through the panel (System Settings look) and the content stays solid.
-    // While the expanded overlay is open it is the hole, and the content beneath it is clipped
-    // away too, so the overlay shows the same glass instead of the page through a tint.
+    // While the expanded overlay shows (including its fade-out) it is the hole, and the content
+    // beneath it is clipped away too, so the overlay shows the same glass instead of the page.
     private void UpdateMacWindowSurfaceClip()
     {
         if (!MacWindowSurface.IsVisible)
             return;
 
-        bool overlay = ViewModel.Sidebar.OverlayActive;
+        bool overlay = ViewModel.Sidebar.OverlayActive || NavFlyout.Opacity > 0;
         Border? panel = overlay ? NavFlyout : SidebarGlass.IsVisible ? SidebarGlass : null;
 
         foreach (var child in MainContentRoot.Children)
@@ -797,9 +782,26 @@ public partial class MainWindow : Window
         if (BackButton.Content is global::Avalonia.Controls.Shapes.Path back)
             back.Data = Geometry.Parse("M10,1 L4,7 L10,13");
 
+        // Back is a round glass button, like the back/forward capsule in System Settings.
+        BackButton.Bind(BackgroundProperty, this.GetResourceObservable("MacGlassControlBackground"));
+        BackButton.Bind(BorderBrushProperty, this.GetResourceObservable("MacGlassPanelBorderBrush"));
+        BackButton.BorderThickness = new Thickness(1);
+        BackButton.CornerRadius = new CornerRadius(MAC_TITLE_BAR_CONTROL_SIZE / 2);
+
+        // Apple: don't title windows with the app name; the page header already names the view.
+        TitleBarTextBlock.IsVisible = Settings.Get(Settings.K.ShowVersionNumberOnTitlebar);
+
         Grid.SetColumn(GlobalSearchContainer, 2);
         GlobalSearchContainer.HorizontalAlignment = HorizontalAlignment.Right;
-        GlobalSearchContainer.Margin = new Thickness(0, 0, 12, 0);
+        GlobalSearchContainer.Margin = new Thickness(0, 0, MAC_SEARCH_TRAILING_INSET, 0);
+
+        // At the trailing end the field has only its column's width, so it shrinks on narrow windows.
+        GlobalSearchGrid.ColumnDefinitions[0].Width = GridLength.Star;
+        TitleBarGrid.GetObservable(BoundsProperty).SubscribeValue(_ =>
+        {
+            double available = TitleBarGrid.ColumnDefinitions[2].ActualWidth - MAC_SEARCH_TRAILING_INSET;
+            GlobalSearchContainer.Width = Math.Clamp(available, MAC_SEARCH_MIN_WIDTH, MAC_SEARCH_MAX_WIDTH);
+        });
 
         // Dialogs already render as in-window sheets; give them the rounder macOS 26 sheet shape.
         ModalSurface.CornerRadius = new CornerRadius(20);

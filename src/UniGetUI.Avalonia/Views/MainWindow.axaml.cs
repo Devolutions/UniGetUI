@@ -386,13 +386,18 @@ public partial class MainWindow : Window
         }
     }
 
-    private void TriggerPageReload() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.ReloadTriggered();
+    // The page that receives Reload/Find/Select All/Details, or null while a dialog is open; shared
+    // by the keyboard shortcuts and the macOS menu bar so both apply the same rule.
+    private IKeyboardShortcutListener? PageShortcutListener
+        => ModalLayer.IsVisible ? null : ViewModel.CurrentPageContent as IKeyboardShortcutListener;
 
-    private void TriggerPageSearch() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SearchTriggered();
+    private void TriggerPageReload() => PageShortcutListener?.ReloadTriggered();
 
-    private void TriggerPageSelectAll() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SelectAllTriggered();
+    private void TriggerPageSearch() => PageShortcutListener?.SearchTriggered();
 
-    private void TriggerPageDetails() => (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.DetailsTriggered();
+    private void TriggerPageSelectAll() => PageShortcutListener?.SelectAllTriggered();
+
+    private void TriggerPageDetails() => PageShortcutListener?.DetailsTriggered();
 
     private void OnCurrentPageChanged(object? sender, PageType pageType)
     {

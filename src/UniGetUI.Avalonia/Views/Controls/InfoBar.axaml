@@ -7,6 +7,9 @@
              x:DataType="vm:InfoBarViewModel">
 
     <UserControl.Styles>
+        <Style Selector="Border#BodyBorder">
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
         <Style Selector="Border.severity-success">
             <Setter Property="Background"   Value="{DynamicResource StatusSuccessBackground}"/>
             <Setter Property="BorderBrush"  Value="{DynamicResource StatusSuccessBorderBrush}"/>
@@ -47,13 +50,24 @@
                 </Animation>
             </Style.Animations>
         </Style>
+        <!-- macOS glass look: a neutral notification banner; the coloured icon carries the severity. -->
+        <Style Selector="Window.mac-glass Border#BodyBorder">
+            <Setter Property="Background" Value="{DynamicResource MacToastBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
+            <Setter Property="CornerRadius" Value="16"/>
+        </Style>
+        <Style Selector="Window.mac-glass Border#BodyBorder.body-focused">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        </Style>
+        <Style Selector="Window.mac-glass Border#SeverityStrip">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
     </UserControl.Styles>
 
     <Border x:Name="BodyBorder"
             IsVisible="{Binding IsOpen}"
             Tapped="Body_Tapped"
             BorderThickness="1"
-            CornerRadius="6"
             ClipToBounds="True"
             BoxShadow="{DynamicResource ToastShadow}"
             automation:AutomationProperties.AccessibilityView="Control"

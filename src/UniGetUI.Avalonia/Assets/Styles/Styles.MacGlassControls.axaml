@@ -80,8 +80,10 @@
                      Button#MainToolbarButtonDropdown:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="CornerRadius" Value="0,20,20,0"/>
     </Style>
-    <Style Selector="Button#MainToolbarButton, Button#MainToolbarButtonDropdown">
-        <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+    <!-- Every toolbar button rests on a glass capsule, as in macOS 26 toolbars. -->
+    <Style Selector="#ToolbarRow Button:not(:disabled), #ToolbarRow Button:disabled,
+                     #ToolbarRow ToggleButton:not(:disabled), #ToolbarRow ToggleButton:disabled">
+        <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>
     </Style>
 
     <!-- Switches: a large white knob that keeps its size in every state. -->

@@ -79,6 +79,7 @@
             <SolidColorBrush x:Key="ToggleSwitchFillOffDisabled"    Color="#14000000"/>
             <SolidColorBrush x:Key="SearchBoxInactiveBackground" Color="#17000000"/>
             <SolidColorBrush x:Key="SearchBoxFocusedBackground"  Color="#0F000000"/>
+            <SolidColorBrush x:Key="MacToastBackground"          Color="#F7F6F6F6"/>
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <SolidColorBrush x:Key="SettingsCardBackground"      Color="#08000000"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#0A000000"/>
@@ -140,6 +141,7 @@
             <SolidColorBrush x:Key="ToggleSwitchFillOffDisabled"    Color="#1AFFFFFF"/>
             <SolidColorBrush x:Key="SearchBoxInactiveBackground" Color="#4D000000"/>
             <SolidColorBrush x:Key="SearchBoxFocusedBackground"  Color="#66000000"/>
+            <SolidColorBrush x:Key="MacToastBackground"          Color="#F72C2C2C"/>
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <SolidColorBrush x:Key="SettingsCardBackground"      Color="#12FFFFFF"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#26000000"/>

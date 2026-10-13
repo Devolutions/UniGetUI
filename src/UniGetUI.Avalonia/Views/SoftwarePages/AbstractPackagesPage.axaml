@@ -149,6 +149,28 @@
          <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
          <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxFocusedBorderBrush}"/>
       </Style>
+
+      <!-- macOS glass look: accent selection pill with white content, and a plain header row
+           instead of the WinUI filled header bar. -->
+      <Style Selector="Window.mac-glass DataGrid#PackageList DataGridRow:selected,
+                       Window.mac-glass DataGrid#PackageList DataGridRow:selected:pointerover">
+         <Setter Property="Background" Value="{DynamicResource MacGlassSelectionBackground}"/>
+         <Setter Property="BorderBrush" Value="Transparent"/>
+         <Setter Property="Foreground" Value="White"/>
+      </Style>
+      <Style Selector="Window.mac-glass DataGrid#PackageList DataGridRow:selected /template/ Rectangle#BackgroundRectangle,
+                       Window.mac-glass DataGrid#PackageList DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+         <Setter Property="Fill" Value="Transparent"/>
+      </Style>
+      <Style Selector="Window.mac-glass DataGrid#PackageList DataGridRow:selected controls|SvgIcon">
+         <Setter Property="Foreground" Value="White"/>
+      </Style>
+      <Style Selector="Window.mac-glass DataGridColumnHeader">
+         <Setter Property="Background" Value="Transparent"/>
+         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+         <Setter Property="FontSize" Value="12"/>
+         <Setter Property="FontWeight" Value="SemiBold"/>
+      </Style>
    </UserControl.Styles>
 
    <UserControl.Resources>

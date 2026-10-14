@@ -1,6 +1,9 @@
+using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Serializable;
 using UniGetUI.PackageEngine.Interfaces;
 
@@ -78,11 +81,26 @@ internal static class SoftwareCatalog
 {
     public static string FilePath => Path.Combine(CoreData.UniGetUIGlobalDirectory, "SoftwareCatalog.json");
 
-    internal static async Task SaveAsync(string filePath, CatalogDefinition[] catalogs)
+    private static string Serialize(CatalogDefinition[] catalogs)
     {
         var document = new CatalogDocument { Version = 1, Catalogs = catalogs };
         string json = JsonSerializer.Serialize(document, CatalogJsonContext.Default.CatalogDocument);
         Parse(json);
+        return json;
+    }
+
+    /// <summary>
+    /// Saves through the macOS administrator prompt, for the root-owned machine-wide location.
+    /// Returns false when the user cancels the prompt.
+    /// </summary>
+    [SupportedOSPlatform("macos")]
+    internal static Task<bool> SaveWithAdminRightsAsync(string filePath, CatalogDefinition[] catalogs) =>
+        MacAdminFileInstaller.WriteAsync(Path.GetFullPath(filePath), Serialize(catalogs) + Environment.NewLine,
+            CoreTools.Translate("UniGetUI needs administrator rights to save the software catalog."));
+
+    internal static async Task SaveAsync(string filePath, CatalogDefinition[] catalogs)
+    {
+        string json = Serialize(catalogs);
         string destination = Path.GetFullPath(filePath);
         string temporary = Path.Combine(Path.GetDirectoryName(destination)!, $".catalog-{Guid.NewGuid():N}.tmp");
         try

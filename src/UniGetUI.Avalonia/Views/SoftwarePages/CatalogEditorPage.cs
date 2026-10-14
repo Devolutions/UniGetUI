@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -28,8 +29,8 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     private readonly CatalogEditorViewModel _document;
     private readonly CatalogPackagesLoader _loader;
     private CatalogEditorCatalog? _observedCatalog;
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private Button? _renameButton;
+    private Button? _addButton;
     private Button? _discardButton;
     private bool _pickingFile;
 
@@ -53,19 +54,18 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             NoMatches_BackgroundText = CoreTools.Translate("No packages match your filters"),
         }, vm =>
         {
-            var selector = new CatalogSelector(document) { MinWidth = 260, MaxWidth = double.PositiveInfinity };
-            vm.AddToolbarEntry(new ToolbarEntry(selector, "add_to", CoreTools.Translate("Select a catalog"),
+            var selector = new CatalogSelector(document, catalog => RemoveCatalogAsync(document, catalog))
+            { MinWidth = 260, MaxWidth = double.PositiveInfinity };
+            vm.AddToolbarEntry(new ToolbarEntry(selector, "catalog", CoreTools.Translate("Select a catalog"),
                 null, selector.ShowFlyoutAt), index: vm.ToolbarEntries.Count - 1);
         })
     {
         _document = document;
         _loader = loader;
         HideVersionColumn();
-        var options = new StackPanel { Spacing = 8, Margin = new Thickness(8, 0, 8, 12) };
-        options.Children.Add(_status);
-        SetPageOptions(options);
 
         document.PropertyChanged += DocumentChanged;
+        document.ErrorRaised += message => Dispatcher.UIThread.Post(() => _ = ShowErrorAsync(message));
         SyncCatalog();
         SyncStatus();
     }
@@ -81,19 +81,20 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
         SetMainButton("save_as", CoreTools.Translate("Save"), () => _ = SaveAsync(false));
-        vm.AddToolbarButton("add_to", CoreTools.Translate("New"), () => _ = NewAsync());
+        vm.AddToolbarButton("document_add", CoreTools.Translate("New file"), () => _ = NewAsync());
         vm.AddToolbarButton("open_folder", CoreTools.Translate("Open file"), () => _ = OpenAsync());
         vm.AddToolbarButton("save_as", CoreTools.Translate("Save as"), () => _ = SaveAsync(true));
         _discardButton = vm.AddToolbarButton("undo", CoreTools.Translate("Discard changes"),
             () => _ = DiscardChangesAsync());
-        vm.AddToolbarButton("add_to", CoreTools.Translate("New catalog"), () =>
+        vm.AddToolbarButton("collections_add", CoreTools.Translate("New catalog"), () =>
         {
             if (_document.CanEdit && !_pickingFile) _document.NewCatalog();
         });
+        _addButton = vm.AddToolbarButton("catalog_add", CoreTools.Translate("Add packages"), AddPackages);
         vm.AddToolbarButton("delete", CoreTools.Translate("Remove selection from catalog"), RemoveSelection);
         vm.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem));
-        _renameButton = vm.AddToolbarButton("options", CoreTools.Translate("Rename catalog"),
+        _renameButton = vm.AddToolbarButton("rename", CoreTools.Translate("Rename catalog"),
             () => _ = RenameCatalogAsync());
     }
 
@@ -153,9 +154,9 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
 
     private void SyncStatus()
     {
-        _status.Text = (_document.IsDirty ? CoreTools.Translate("Unsaved changes") + "\n" : "")
-            + _document.Message;
+        ViewModel.SubtitleSuffix = _document.IsDirty ? " · " + CoreTools.Translate("Unsaved changes") : "";
         _renameButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
+        _addButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
         _discardButton?.IsEnabled = _document.CanDiscardChanges && !_pickingFile;
         SetMainButtonState(_document.CanEdit && !_pickingFile, showDropdown: false);
     }
@@ -197,10 +198,46 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             catalog.Name = input.Text.Trim();
     }
 
+    private static async Task RemoveCatalogAsync(CatalogEditorViewModel document, CatalogEditorCatalog catalog)
+    {
+        if (!document.CanEdit) return;
+        if (catalog.Packages.Count > 0)
+        {
+            var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Remove catalog"),
+                new TextBlock
+                {
+                    Text = CoreTools.Translate("Remove catalog {0} and its {1} packages?", catalog.Name, catalog.Packages.Count),
+                    TextWrapping = TextWrapping.Wrap,
+                },
+                CoreTools.Translate("Remove"), CoreTools.Translate("Cancel"));
+            await dialog.ShowDialog(MainWindow.Instance!);
+            if (dialog.Result is not true) return;
+        }
+        document.RemoveCatalog(catalog);
+    }
+
     private async Task DiscardChangesAsync()
     {
         if (!_document.CanDiscardChanges || _pickingFile) return;
         if (await ConfirmDiscardAsync()) _document.DiscardChanges();
+    }
+
+    // Packages are added from Discover, which shares this editor's selected catalog.
+    private void AddPackages()
+    {
+        if (!_document.CanEdit || _pickingFile || _document.SelectedCatalog is not { } catalog
+            || GetMainWindow() is not { DataContext: MainWindowViewModel main }) return;
+        main.NavigateTo(PageType.Discover);
+        var hint = new InfoBarViewModel
+        {
+            Title = CoreTools.Translate("Add packages to {0}", catalog.Name),
+            Message = CoreTools.Translate("Search for packages, check the ones you want, then click Add selection to catalog."),
+            Severity = InfoBarSeverity.Informational,
+            IsClosable = true,
+            IsOpen = true,
+        };
+        hint.OnClosed = () => main.DismissToast(hint);
+        main.ShowToast(hint);
     }
 
     private void RemoveSelection()
@@ -225,7 +262,20 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
 
     private async Task NewAsync()
     {
-        if (await ConfirmDiscardAsync()) _document.NewDocument();
+        if (_document.IsBusy || _pickingFile) return;
+        // Starting a new file closes every catalog, so confirm even when nothing is unsaved.
+        if (_document.IsDirty || _document.Catalogs.Count > 0)
+        {
+            string text = _document.IsDirty
+                ? CoreTools.Translate("Discard unsaved catalog changes and start a new catalog file?")
+                : CoreTools.Translate("Close the current catalog file and start a new one? Use New catalog to add a catalog to this file instead.");
+            var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("New file"),
+                new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap },
+                CoreTools.Translate("New file"), CoreTools.Translate("Cancel"));
+            await dialog.ShowDialog(MainWindow.Instance!);
+            if (dialog.Result is not true) return;
+        }
+        _document.NewDocument();
     }
 
     private async Task OpenAsync()
@@ -271,10 +321,24 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
                 path = file.TryGetLocalPath()
                     ?? throw new IOException(CoreTools.Translate("Select a local catalog file."));
             }
-            await _document.SaveAsync(path);
+            if (await _document.SaveAsync(path))
+                GetMainWindow()?.ShowBanner(CoreTools.Translate("Catalog saved"), _document.FilePath,
+                    MainWindow.RuntimeNotificationLevel.Success);
         }
         catch (Exception ex) { ReportFileError(ex); }
         finally { _pickingFile = false; SyncStatus(); }
+    }
+
+    private static async Task ShowErrorAsync(string message)
+    {
+        if (GetMainWindow() is not { } window) return;
+        var text = new SelectableTextBlock { Text = message, TextWrapping = TextWrapping.Wrap };
+        var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Catalog Editor"), text,
+            CoreTools.Translate("Copy"), CoreTools.Translate("Close"))
+        { FocusPrimaryButton = false };
+        await dialog.ShowDialog(window);
+        if (dialog.Result is true && window.Clipboard is { } clipboard)
+            await clipboard.SetTextAsync(message);
     }
 
     private void ReportFileError(Exception ex)

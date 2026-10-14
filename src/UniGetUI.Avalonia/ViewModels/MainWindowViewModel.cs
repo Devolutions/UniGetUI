@@ -657,6 +657,8 @@ public partial class MainWindowViewModel : ViewModelBase
             "catalog" when Sidebar.SoftwareCatalogEnabled => PageType.Catalog,
             "catalog-editor" when Sidebar.SoftwareCatalogEnabled => PageType.CatalogEditor,
             "settings" => PageType.Settings,
+            // The admin-curated catalog is the simplest starting point, so it wins over the default pages.
+            _ when Sidebar.SoftwareCatalogEnabled => PageType.Catalog,
             _ => UpgradablePackagesLoader.Instance is { } l && l.Count() > 0 ? PageType.Updates : PageType.Discover,
         };
         NavigateTo(type);
@@ -690,20 +692,31 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => throw new InvalidDataException($"Unknown page type {type}"),
         };
 
+    /// <summary>
+    /// Pages reached with Ctrl/Cmd+1, +2, … in sidebar order; the More menu takes the next number.
+    /// </summary>
+    internal static PageType[] GetShortcutPages(bool catalogEnabled) => catalogEnabled
+        ? [PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles,
+            PageType.CatalogEditor, PageType.Settings, PageType.Managers]
+        : [PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles,
+            PageType.Settings, PageType.Managers];
+
+    public PageType[] ShortcutPages => GetShortcutPages(Sidebar.SoftwareCatalogEnabled);
+
     public static PageType GetNextPage(PageType type) =>
         GetNextPage(type, Settings.Get(Settings.K.EnableSoftwareCatalog));
 
     internal static PageType GetNextPage(PageType type, bool catalogEnabled) =>
         type switch
         {
+            PageType.Catalog => PageType.Discover,
             PageType.Discover => PageType.Updates,
             PageType.Updates => PageType.Installed,
             PageType.Installed => PageType.Bundles,
-            PageType.Bundles => catalogEnabled ? PageType.Catalog : PageType.Settings,
-            PageType.Catalog => catalogEnabled ? PageType.CatalogEditor : PageType.Settings,
+            PageType.Bundles => catalogEnabled ? PageType.CatalogEditor : PageType.Settings,
             PageType.CatalogEditor => PageType.Settings,
             PageType.Settings => PageType.Managers,
-            PageType.Managers => PageType.Discover,
+            PageType.Managers => catalogEnabled ? PageType.Catalog : PageType.Discover,
             _ => PageType.Discover,
         };
 
@@ -713,12 +726,12 @@ public partial class MainWindowViewModel : ViewModelBase
     internal static PageType GetPreviousPage(PageType type, bool catalogEnabled) =>
         type switch
         {
-            PageType.Discover => PageType.Managers,
+            PageType.Catalog => PageType.Managers,
+            PageType.Discover => catalogEnabled ? PageType.Catalog : PageType.Managers,
             PageType.Updates => PageType.Discover,
             PageType.Installed => PageType.Updates,
             PageType.Bundles => PageType.Installed,
-            PageType.Catalog => PageType.Bundles,
-            PageType.CatalogEditor => catalogEnabled ? PageType.Catalog : PageType.Bundles,
+            PageType.CatalogEditor => PageType.Bundles,
             PageType.Settings => catalogEnabled ? PageType.CatalogEditor : PageType.Bundles,
             PageType.Managers => PageType.Settings,
             _ => PageType.Discover,

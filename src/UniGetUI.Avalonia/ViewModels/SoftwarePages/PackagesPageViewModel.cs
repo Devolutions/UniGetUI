@@ -1043,6 +1043,18 @@ public partial class PackagesPageViewModel : ViewModelBase
     }
 
     // ─── Subtitle ─────────────────────────────────────────────────────────────
+    // Page-specific state appended to the subtitle, e.g. an editor's unsaved-changes marker.
+    private string _subtitleSuffix = "";
+    public string SubtitleSuffix
+    {
+        get => _subtitleSuffix;
+        set
+        {
+            _subtitleSuffix = value;
+            UpdateSubtitle();
+        }
+    }
+
     public void UpdateSubtitle()
     {
         if (Loader.IsLoading || (LoadsOnStart && Loader.HasPendingInitialLoad))
@@ -1063,13 +1075,13 @@ public partial class PackagesPageViewModel : ViewModelBase
             if (_showLastCheckedTime)
                 r += " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
 
-            Subtitle = r;
+            Subtitle = r + SubtitleSuffix;
         }
         else
         {
             Subtitle = _noPackagesSubtitleBase + (_showLastCheckedTime
                 ? " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture))
-                : "");
+                : "") + SubtitleSuffix;
         }
     }
 

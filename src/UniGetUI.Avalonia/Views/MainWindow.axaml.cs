@@ -361,23 +361,20 @@ public partial class MainWindow : Window
             TriggerPageSelectAll();
             e.Handled = true;
         }
-        else if (isCtrl && !isShift && e.Key is Key.D1 or Key.D2 or Key.D3 or Key.D4 or Key.D5 or Key.D6)
+        else if (isCtrl && !isShift && e.Key is >= Key.D1 and <= Key.D9
+                 && e.Key - Key.D1 <= ViewModel.ShortcutPages.Length)
         {
-            _focusSidebarSelectionOnNextPageChange = true;
-            ViewModel.NavigateTo(e.Key switch
+            var pages = ViewModel.ShortcutPages;
+            int index = e.Key - Key.D1;
+            if (index == pages.Length)
             {
-                Key.D1 => PageType.Discover,
-                Key.D2 => PageType.Updates,
-                Key.D3 => PageType.Installed,
-                Key.D4 => PageType.Bundles,
-                Key.D5 => PageType.Settings,
-                _ => PageType.Managers,
-            });
-            e.Handled = true;
-        }
-        else if (isCtrl && !isShift && e.Key == Key.D7)
-        {
-            ShowMoreMenu();
+                ShowMoreMenu();
+            }
+            else
+            {
+                _focusSidebarSelectionOnNextPageChange = true;
+                ViewModel.NavigateTo(pages[index]);
+            }
             e.Handled = true;
         }
         else if (isCtrl && !isShift && (e.Key == Key.D || (OperatingSystem.IsMacOS() && e.Key == Key.I)))

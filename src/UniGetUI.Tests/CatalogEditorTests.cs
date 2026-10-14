@@ -141,6 +141,31 @@ public class CatalogEditorTests : IDisposable
         Assert.Equal(2, vm.Catalogs.Count);
     }
 
+    [Fact]
+    public async Task DiscoverAddsSelectionToSeveralCatalogsAndReportsDuplicatesPerCatalog()
+    {
+        var vm = await LoadEditorAsync();
+        var manager = new SearchManager();
+        var source = new ManagerSource(manager, "private", new Uri("https://example.test/feed"));
+        var tool = new Package("Tool", "Company.Tool", "2.0", source, manager);
+        var other = new Package("Other", "Company.Other", "1.0", source, manager);
+        vm.Catalogs[1].Packages.Add(CatalogEntry.FromPackage(tool));
+
+        var results = vm.AddPackages([tool, other], [vm.Catalogs[0], vm.Catalogs[1]]);
+
+        Assert.Equal([vm.Catalogs[0], vm.Catalogs[1]], results.Select(r => r.Catalog));
+        Assert.Equal((2, 0), (results[0].Added, results[0].AlreadyPresent));
+        Assert.Equal((1, 1), (results[1].Added, results[1].AlreadyPresent));
+        Assert.Equal(3, vm.Catalogs[0].Packages.Count);
+        Assert.Equal(2, vm.Catalogs[1].Packages.Count);
+        Assert.True(vm.IsDirty);
+
+        var removed = vm.Catalogs[1];
+        vm.RemoveCatalog(removed);
+        Assert.Throws<InvalidOperationException>(() => vm.AddPackages([tool], [removed]));
+        Assert.Throws<InvalidOperationException>(() => vm.AddPackages([tool], []));
+    }
+
     [Theory]
     [InlineData("catalog-test")]
     [InlineData("CatalogTest")]
@@ -247,6 +272,29 @@ public class CatalogEditorTests : IDisposable
         vm.SelectedCatalog.Name = "Changed again";
         vm.DiscardChanges();
         Assert.Equal("Devolutions", vm.SelectedCatalog!.Name);
+    }
+
+    [Fact]
+    public async Task RemovingACatalogKeepsTheOthersAndSelectsANeighbour()
+    {
+        var vm = await LoadEditorAsync();
+        vm.NewCatalog();
+        var added = vm.SelectedCatalog!;
+        vm.RemoveCatalog(added);
+        Assert.True(vm.IsDirty);
+        Assert.Equal(["devolutions", "tools"], vm.Catalogs.Select(c => c.Id));
+        Assert.Equal("tools", vm.SelectedCatalog!.Id);
+
+        vm.RemoveCatalog(vm.Catalogs[0]);
+        Assert.Equal("tools", Assert.Single(vm.Catalogs).Id);
+        Assert.Equal("tools", vm.SelectedCatalog!.Id);
+        vm.RemoveCatalog(vm.Catalogs[0]);
+        Assert.Empty(vm.Catalogs);
+        Assert.Null(vm.SelectedCatalog);
+
+        vm.DiscardChanges();
+        Assert.Equal(["devolutions", "tools"], vm.Catalogs.Select(c => c.Id));
+        Assert.False(vm.IsDirty);
     }
 
     [Fact]

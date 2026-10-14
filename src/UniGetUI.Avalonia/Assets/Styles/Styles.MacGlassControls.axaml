@@ -82,6 +82,20 @@
         <Setter Property="CornerRadius" Value="18"/>
         <Setter Property="Margin" Value="0,2"/>
     </Style>
+    <!-- Grouped buttons sit inside a capsule with a 1px rim; keep their highlight inside that rim. -->
+    <Style Selector="controls|ToolbarOverflowPanel#ToolBar Button:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     controls|ToolbarOverflowPanel#ToolBar Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Margin" Value="1,3"/>
+    </Style>
+    <!-- A dropdown in a group (e.g. the catalog selector) blends into the capsule the same way. -->
+    <Style Selector="controls|ToolbarOverflowPanel#ToolBar ComboBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="18"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Margin" Value="1,3"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
     <Style Selector="Button#MainToolbarButton:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
                      Button#MainToolbarButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="CornerRadius" Value="18,0,0,18"/>
@@ -89,6 +103,10 @@
     <Style Selector="Button#MainToolbarButtonDropdown:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
                      Button#MainToolbarButtonDropdown:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="CornerRadius" Value="0,18,18,0"/>
+    </Style>
+    <Style Selector="Button#MainToolbarButton.standalone:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button#MainToolbarButton.standalone:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="CornerRadius" Value="18"/>
     </Style>
     <Style Selector="#ToolbarRow ToggleButton:not(:disabled), #ToolbarRow ToggleButton:disabled">
         <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>

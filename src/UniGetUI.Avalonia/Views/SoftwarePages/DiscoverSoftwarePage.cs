@@ -1,11 +1,14 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
@@ -51,19 +54,20 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     private static void AddCatalogToolbar(PackagesPageViewModel vm, CatalogEditorViewModel? document)
     {
         if (document is null) return;
-        var selector = new CatalogSelector(document);
-        var button = vm.AddToolbarButton("add_to", CoreTools.Translate("Add selection to catalog"),
+        // The target catalog is picked in a dialog when adding, so no selector sits in the toolbar.
+        var button = vm.AddToolbarButton("catalog_add", CoreTools.Translate("Add selection to catalog"),
             () => _ = AddSelectionToCatalogAsync(vm, document));
         ToolTip.SetShowOnDisabled(button, true);
-        vm.AddToolbarEntry(new ToolbarEntry(selector, "add_to", CoreTools.Translate("Select a catalog"), null,
-            selector.ShowFlyoutAt));
         void UpdateState()
         {
-            button.IsEnabled = document.CanEdit && document.HasSelectedCatalog
+            button.IsEnabled = document.CanEdit && document.Catalogs.Count > 0
                 && vm.FilteredPackages.GetCheckedPackages().Count > 0;
-            ToolTip.SetTip(selector, string.IsNullOrEmpty(document.Message) ? document.FilePath : document.Message);
+            ToolTip.SetTip(button, document.IsLoaded && document.Catalogs.Count == 0
+                ? CoreTools.Translate("Create a catalog in the Catalog Editor first.")
+                : CoreTools.Translate("Add selection to catalog"));
         }
         document.PropertyChanged += (_, _) => UpdateState();
+        document.Catalogs.CollectionChanged += (_, _) => UpdateState();
         vm.PackageCountUpdated += UpdateState;
         UpdateState();
     }
@@ -82,9 +86,18 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
             var packages = vm.FilteredPackages.GetCheckedPackages();
             if (packages.Count == 0) return;
             if (!await document.EnsureLoadedAsync()) return;
-            document.AddPackages(packages);
-            if (GetMainWindow()?.DataContext is MainWindowViewModel main)
+            var targets = await ChooseCatalogsAsync(document, packages.Count);
+            if (targets.Count == 0) return;
+            var results = document.AddPackages(packages, targets);
+            document.SelectedCatalog = targets[0];
+            if (GetMainWindow() is { DataContext: MainWindowViewModel main } window)
+            {
                 await main.NavigateToAsync(PageType.CatalogEditor);
+                window.ShowBanner(results.Count == 1
+                        ? CoreTools.Translate("Packages added to catalog")
+                        : CoreTools.Translate("Packages added to {0} catalogs", results.Count),
+                    DescribeAddResults(results), MainWindow.RuntimeNotificationLevel.Success);
+            }
         }
         catch (Exception ex)
         {
@@ -94,6 +107,59 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
             GetMainWindow()?.ShowBanner(CoreTools.Translate("Could not add packages to the catalog"),
                 ex.Message, MainWindow.RuntimeNotificationLevel.Error);
         }
+    }
+
+    // Asks which catalogs receive the selection; the one last used or open in the editor starts ticked.
+    private static async Task<IReadOnlyList<CatalogEditorCatalog>> ChooseCatalogsAsync(CatalogEditorViewModel document, int count)
+    {
+        if (GetMainWindow() is not { } window || document.Catalogs.Count == 0) return [];
+        var catalogs = document.Catalogs.ToList();
+        var initial = document.SelectedCatalog is { } current && catalogs.Contains(current) ? current : catalogs[0];
+        var boxes = catalogs.Select(c => new CheckBox { Content = c.Name, IsChecked = ReferenceEquals(c, initial) }).ToList();
+
+        var list = new StackPanel { Spacing = 2 };
+        foreach (var box in boxes) list.Children.Add(box);
+        var body = new StackPanel { Spacing = 8 };
+        body.Children.Add(new TextBlock
+        {
+            Text = CoreTools.Translate("Choose the catalogs to add the {0} selected packages to.", count),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        body.Children.Add(new ScrollViewer { Content = list, MaxHeight = 260 });
+
+        var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Add selection to catalog"), body,
+            CoreTools.Translate("Add"), CoreTools.Translate("Cancel"));
+        var confirm = dialog.GetControl<Button>("PrimaryButton");
+        void UpdateConfirm()
+        {
+            int ticked = boxes.Count(b => b.IsChecked == true);
+            string label = ticked <= 1 ? CoreTools.Translate("Add") : CoreTools.Translate("Add to {0} catalogs", ticked);
+            confirm.Content = label;
+            AutomationProperties.SetName(confirm, label);
+            confirm.IsEnabled = ticked > 0;
+        }
+        foreach (var box in boxes) box.IsCheckedChanged += (_, _) => UpdateConfirm();
+        UpdateConfirm();
+
+        await dialog.ShowDialog(window);
+        if (dialog.Result is not true || !document.CanEdit) return [];
+        return catalogs.Where((c, i) => boxes[i].IsChecked == true && document.Catalogs.Contains(c)).ToList();
+    }
+
+    private static string DescribeAddResults(IReadOnlyList<CatalogAddResult> results)
+    {
+        if (results.Count == 1)
+        {
+            var only = results[0];
+            string text = CoreTools.Translate("{0} packages added to catalog {1}. Save the catalog to keep your changes.", only.Added, only.Catalog.Name);
+            return only.AlreadyPresent == 0
+                ? text
+                : text + "\n" + CoreTools.Translate("{0} were already in the catalog.", only.AlreadyPresent);
+        }
+        var lines = results.Select(r => r.AlreadyPresent == 0
+            ? CoreTools.Translate("{0}: {1} added", r.Catalog.Name, r.Added)
+            : CoreTools.Translate("{0}: {1} added, {2} already there", r.Catalog.Name, r.Added, r.AlreadyPresent));
+        return string.Join("\n", lines.Append(CoreTools.Translate("Save the catalog to keep your changes.")));
     }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)

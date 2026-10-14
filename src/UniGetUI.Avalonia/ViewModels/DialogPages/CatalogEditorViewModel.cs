@@ -31,6 +31,8 @@ public partial class CatalogEditorCatalog : ViewModelBase
     public CatalogDefinition ToDefinition() => new() { Id = Id, Name = Name, Packages = Packages.ToArray() };
 }
 
+public sealed record CatalogAddResult(CatalogEditorCatalog Catalog, int Added, int AlreadyPresent);
+
 public partial class CatalogEditorViewModel : ViewModelBase
 {
     public ObservableCollection<CatalogEditorCatalog> Catalogs { get; } = [];
@@ -69,7 +71,14 @@ public partial class CatalogEditorViewModel : ViewModelBase
 
     internal CatalogEditorViewModel(Action<string?, AutomationLiveSetting> announce) => _announce = announce;
 
-    public void SetErrorMessage(string message) => SetMessage(message, AutomationLiveSetting.Assertive);
+    /// <summary>Raised with the text of every error, so the view can show it to the user.</summary>
+    public event Action<string>? ErrorRaised;
+
+    public void SetErrorMessage(string message)
+    {
+        SetMessage(message, AutomationLiveSetting.Assertive);
+        ErrorRaised?.Invoke(message);
+    }
 
     private void SetMessage(string message, AutomationLiveSetting liveSetting = AutomationLiveSetting.Polite)
     {
@@ -112,15 +121,34 @@ public partial class CatalogEditorViewModel : ViewModelBase
     {
         if (!CanEdit || SelectedCatalog is not { } catalog)
             throw new InvalidOperationException(CoreTools.Translate("Open or create a catalog before adding packages."));
-        int added = 0;
-        foreach (var package in packages)
+        return AddPackages(packages, [catalog])[0].Added;
+    }
+
+    /// <summary>
+    /// Adds <paramref name="packages"/> to each of <paramref name="catalogs"/>, skipping ones a catalog
+    /// already holds, and reports what happened per catalog.
+    /// </summary>
+    public IReadOnlyList<CatalogAddResult> AddPackages(IEnumerable<IPackage> packages, IReadOnlyList<CatalogEditorCatalog> catalogs)
+    {
+        if (!CanEdit || catalogs.Count == 0 || catalogs.Any(c => !Catalogs.Contains(c)))
+            throw new InvalidOperationException(CoreTools.Translate("Open or create a catalog before adding packages."));
+        var selection = packages.ToList();
+        var results = new List<CatalogAddResult>();
+        foreach (var catalog in catalogs)
         {
-            if (catalog.Packages.Any(p => p.Matches(package))) continue;
-            catalog.Packages.Add(CatalogEntry.FromPackage(package));
-            added++;
+            int added = 0;
+            foreach (var package in selection)
+            {
+                if (catalog.Packages.Any(p => p.Matches(package))) continue;
+                catalog.Packages.Add(CatalogEntry.FromPackage(package));
+                added++;
+            }
+            results.Add(new CatalogAddResult(catalog, added, selection.Count - added));
         }
-        Message = CoreTools.Translate("{0} packages added to catalog {1}. Save the catalog to keep your changes.", added, catalog.Name);
-        return added;
+        Message = results.Count == 1
+            ? CoreTools.Translate("{0} packages added to catalog {1}. Save the catalog to keep your changes.", results[0].Added, results[0].Catalog.Name)
+            : CoreTools.Translate("{0} packages added to {1} catalogs. Save the catalog to keep your changes.", results.Sum(r => r.Added), results.Count);
+        return results;
     }
 
     public bool CanEdit => IsLoaded && !IsBusy;
@@ -227,7 +255,19 @@ public partial class CatalogEditorViewModel : ViewModelBase
         try
         {
             var definitions = CopyCatalogs(Catalogs.Select(c => c.ToDefinition()));
-            await SoftwareCatalog.SaveAsync(path, definitions);
+            try
+            {
+                await SoftwareCatalog.SaveAsync(path, definitions);
+            }
+            catch (UnauthorizedAccessException) when (OperatingSystem.IsMacOS())
+            {
+                // The machine-wide catalog is root-owned on macOS; ask for an administrator instead.
+                if (!await SoftwareCatalog.SaveWithAdminRightsAsync(path, definitions))
+                {
+                    Message = CoreTools.Translate("The catalog was not saved.");
+                    return false;
+                }
+            }
             FilePath = Path.GetFullPath(path);
             _savedCatalogs = definitions;
             IsDirty = false;
@@ -306,6 +346,19 @@ public partial class CatalogEditorViewModel : ViewModelBase
         Catalogs.Add(catalog);
         SelectedCatalog = catalog;
         IsDirty = true;
+    }
+
+    public void RemoveCatalog(CatalogEditorCatalog catalog)
+    {
+        int index = Catalogs.IndexOf(catalog);
+        if (!CanEdit || index < 0) return;
+        bool wasSelected = ReferenceEquals(SelectedCatalog, catalog);
+        if (wasSelected) SelectedCatalog = null;
+        Catalogs.RemoveAt(index);
+        if (wasSelected)
+            SelectedCatalog = Catalogs.Count == 0 ? null : Catalogs[Math.Min(index, Catalogs.Count - 1)];
+        IsDirty = true;
+        Message = "";
     }
 
     [RelayCommand]

@@ -60,17 +60,19 @@ public partial class MainWindow
             new NativeMenuItemSeparator(),
             Action(CoreTools.Translate("Find"), TriggerPageSearch, Key.F, enabled: () => PageShortcutListener is not null));
 
-        var view = Submenu(CoreTools.Translate("View"),
-            Item(CoreTools.Translate("Discover Packages"), navigate, "Discover", Key.D1),
-            Item(CoreTools.Translate("Software Updates"), navigate, "Updates", Key.D2),
-            Item(CoreTools.Translate("Installed Packages"), navigate, "Installed", Key.D3),
-            Item(CoreTools.Translate("Package Bundles"), navigate, "Bundles", Key.D4),
-            Item(CoreTools.Translate("Package Managers"), navigate, "Managers", Key.D6),
+        // Settings is reached from the application menu (⌘,), so the View menu skips it.
+        NativeMenuItemBase[] pageItems = ViewModel.ShortcutPages
+            .Select((page, index) => (page, key: Key.D1 + index))
+            .Where(p => p.page != PageType.Settings)
+            .Select(p => (NativeMenuItemBase)Item(PageMenuTitle(p.page), navigate, p.page.ToString(), p.key))
+            .ToArray();
+        var view = Submenu(CoreTools.Translate("View"), [
+            .. pageItems,
             new NativeMenuItemSeparator(),
             Item(CoreTools.Translate("Toggle navigation panel"), ViewModel.ToggleSidebarCommand, null, Key.S, KeyModifiers.Control),
             new NativeMenuItemSeparator(),
             Action(CoreTools.Translate("Reload"), TriggerPageReload, Key.R, enabled: () => PageShortcutListener is not null),
-            Action(CoreTools.Translate("Package details"), TriggerPageDetails, Key.I, enabled: () => PageShortcutListener is not null));
+            Action(CoreTools.Translate("Package details"), TriggerPageDetails, Key.I, enabled: () => PageShortcutListener is not null)]);
 
         // macOS greys Minimize and Zoom out for a window in full screen.
         var window = Submenu(CoreTools.Translate("Window"),
@@ -144,6 +146,18 @@ public partial class MainWindow
                 onEditor(editor);
         }, key, extraModifiers, enabled: () => _menuTextBox is { } textBox ? canTextBox(textBox)
             : _menuEditor is { } editor && canEditor(editor));
+
+    private static string PageMenuTitle(PageType page) => page switch
+    {
+        PageType.Catalog => CoreTools.Translate("Software Catalog"),
+        PageType.Discover => CoreTools.Translate("Discover Packages"),
+        PageType.Updates => CoreTools.Translate("Software Updates"),
+        PageType.Installed => CoreTools.Translate("Installed Packages"),
+        PageType.Bundles => CoreTools.Translate("Package Bundles"),
+        PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
+        PageType.Managers => CoreTools.Translate("Package Managers"),
+        _ => CoreTools.Translate("Settings"),
+    };
 
     private NativeMenuItem Submenu(string header, params NativeMenuItemBase[] items)
     {

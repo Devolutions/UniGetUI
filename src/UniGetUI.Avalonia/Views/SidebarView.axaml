@@ -27,10 +27,22 @@
                  automation:AutomationProperties.Name="{t:Translate Navigation}"
                  Padding="8,10,8,0">
 
+            <!-- Software Catalog: first when enabled, as the curated starting point -->
+            <ListBoxItem x:Name="CatalogNavBtn" Tag="Catalog" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Software Catalog}"
+                         ToolTip.Tip="{t:Translate Software Catalog}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/catalog.svg"
+                                      Width="24" Height="24" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{t:Translate Software Catalog}" FontSize="14"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                </Grid>
+            </ListBoxItem>
+
             <!-- Discover Packages -->
             <ListBoxItem x:Name="DiscoverNavBtn" Tag="Discover" Classes="nav-item" Padding="4,2" CornerRadius="6"
                          automation:AutomationProperties.Name="{t:Translate Discover Packages}"
-                         automation:AutomationProperties.AcceleratorKey="Ctrl+1"
                          ToolTip.Tip="{t:Translate Discover Packages}">
                 <Panel>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
@@ -55,7 +67,6 @@
             <!-- Software Updates -->
             <ListBoxItem x:Name="UpdatesNavBtn" Tag="Updates" Classes="nav-item" Padding="4,2" CornerRadius="6"
                          automation:AutomationProperties.Name="{t:Translate Software Updates}"
-                         automation:AutomationProperties.AcceleratorKey="Ctrl+2"
                          ToolTip.Tip="{t:Translate Software Updates}">
                 <Panel>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
@@ -97,7 +108,6 @@
             <!-- Installed Packages -->
             <ListBoxItem x:Name="InstalledNavBtn" Tag="Installed" Classes="nav-item" Padding="4,2" CornerRadius="6"
                          automation:AutomationProperties.Name="{t:Translate Installed Packages}"
-                         automation:AutomationProperties.AcceleratorKey="Ctrl+3"
                          ToolTip.Tip="{t:Translate Installed Packages}">
                 <Panel>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
@@ -122,7 +132,6 @@
             <!-- Package Bundles -->
             <ListBoxItem x:Name="BundlesNavBtn" Tag="Bundles" Classes="nav-item" Padding="4,2" CornerRadius="6"
                          automation:AutomationProperties.Name="{t:Translate Package Bundles}"
-                         automation:AutomationProperties.AcceleratorKey="Ctrl+4"
                          ToolTip.Tip="{t:Translate Package Bundles}">
                 <Panel>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
@@ -145,23 +154,11 @@
                 </Panel>
             </ListBoxItem>
 
-            <ListBoxItem x:Name="CatalogNavBtn" Tag="Catalog" Classes="nav-item" Padding="4,2" CornerRadius="6"
-                         automation:AutomationProperties.Name="{t:Translate Software Catalog}"
-                         ToolTip.Tip="{t:Translate Software Catalog}">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
-                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/catalog.svg"
-                                      Width="24" Height="24" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{t:Translate Software Catalog}" FontSize="14"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
-                </Grid>
-            </ListBoxItem>
-
             <ListBoxItem x:Name="CatalogEditorNavBtn" Tag="CatalogEditor" Classes="nav-item" Padding="4,2" CornerRadius="6"
                         automation:AutomationProperties.Name="{t:Translate Catalog Editor}"
                         ToolTip.Tip="{t:Translate Catalog Editor}">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
-                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/add_to.svg"
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/catalog_add.svg"
                                       Width="24" Height="24" VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="1" Text="{t:Translate Catalog Editor}" FontSize="14"
                                VerticalAlignment="Center"
@@ -189,7 +186,6 @@
                 <ListBoxItem x:Name="SettingsNavBtn" Tag="Settings" Classes="nav-item" Padding="4,2" CornerRadius="6"
                              Tapped="SettingsNavBtn_Tapped"
                              automation:AutomationProperties.Name="{t:Translate Settings}"
-                             automation:AutomationProperties.AcceleratorKey="Ctrl+5"
                              ToolTip.Tip="{t:Translate Settings}">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
                         <controls:SvgIcon Grid.Column="0" x:Name="SettingsIcon" Path="avares://UniGetUI/Assets/Symbols/settings.svg" Width="24" Height="24" VerticalAlignment="Center" RenderTransformOrigin="50%,50%"/>
@@ -201,7 +197,6 @@
                 <!-- Package Managers -->
                 <ListBoxItem x:Name="ManagersNavBtn" Tag="Managers" Classes="nav-item" Padding="4,2" CornerRadius="6"
                              automation:AutomationProperties.Name="{t:Translate Package Managers}"
-                             automation:AutomationProperties.AcceleratorKey="Ctrl+6"
                              ToolTip.Tip="{t:Translate Package Managers}">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
                         <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/package_managers.svg" Width="24" Height="24" VerticalAlignment="Center"/>
@@ -213,7 +208,6 @@
                 <!-- More is kept selected while its flyout is open so its navigation pill remains visible. -->
                 <ListBoxItem x:Name="MoreNavBtn" Tag="More" Classes="nav-item" Padding="4,2" CornerRadius="6"
                              automation:AutomationProperties.Name="{t:Translate More}"
-                             automation:AutomationProperties.AcceleratorKey="Ctrl+7"
                              ToolTip.Tip="{t:Translate More}">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
                         <TextBlock Grid.Column="0" Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"

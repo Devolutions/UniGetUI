@@ -356,6 +356,9 @@ public abstract partial class AbstractPackagesPage : UserControl,
     {
         MainToolbarButton.IsEnabled = enabled;
         MainToolbarButtonDropdown.IsVisible = showDropdown;
+        // Without its dropdown half, the main button must round its trailing corners too.
+        MainToolbarButton.CornerRadius = showDropdown ? new CornerRadius(4, 0, 0, 4) : new CornerRadius(4);
+        MainToolbarButton.Classes.Set("standalone", !showDropdown);
     }
 
     // ─── Package selection ────────────────────────────────────────────────────

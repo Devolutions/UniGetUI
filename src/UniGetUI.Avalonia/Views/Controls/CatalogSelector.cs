@@ -1,8 +1,11 @@
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Tools;
 
@@ -15,7 +18,7 @@ public sealed class CatalogSelector : ComboBox
     private readonly CatalogEditorViewModel _document;
     private bool _syncing;
 
-    public CatalogSelector(CatalogEditorViewModel document)
+    public CatalogSelector(CatalogEditorViewModel document, Func<CatalogEditorCatalog, Task>? removeCatalog = null)
     {
         _document = document;
         MinWidth = 180;
@@ -25,25 +28,12 @@ public sealed class CatalogSelector : ComboBox
         PlaceholderText = CoreTools.Translate("Select a catalog");
         AutomationProperties.SetName(this, CoreTools.Translate("Catalog"));
         ItemsSource = document.Catalogs;
-        ItemTemplate = new FuncDataTemplate<CatalogEditorCatalog>((catalog, _) =>
-        {
-            var label = new TextBlock { Text = catalog?.Name };
-            if (catalog is not null)
-            {
-                void UpdateName(object? sender, PropertyChangedEventArgs e)
-                {
-                    if (e.PropertyName == nameof(CatalogEditorCatalog.Name))
-                        label.Text = catalog.Name;
-                }
-                label.AttachedToVisualTree += (_, _) =>
-                {
-                    label.Text = catalog.Name;
-                    catalog.PropertyChanged += UpdateName;
-                };
-                label.DetachedFromVisualTree += (_, _) => catalog.PropertyChanged -= UpdateName;
-            }
-            return label;
-        }, supportsRecycling: false);
+        SelectionBoxItemTemplate = new FuncDataTemplate<CatalogEditorCatalog>(
+            (catalog, _) => CreateLabel(catalog), supportsRecycling: false);
+        ItemTemplate = removeCatalog is null
+            ? SelectionBoxItemTemplate
+            : new FuncDataTemplate<CatalogEditorCatalog>(
+                (catalog, _) => CreateRemovableItem(catalog, removeCatalog), supportsRecycling: false);
         SelectionChanged += (_, _) =>
         {
             if (!_syncing && document.CanEdit)
@@ -56,6 +46,69 @@ public sealed class CatalogSelector : ComboBox
                 SyncSelection();
         };
         SyncSelection();
+    }
+
+    private static TextBlock CreateLabel(CatalogEditorCatalog? catalog)
+    {
+        var label = new TextBlock { Text = catalog?.Name, VerticalAlignment = VerticalAlignment.Center };
+        if (catalog is not null)
+        {
+            void UpdateName(object? sender, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(CatalogEditorCatalog.Name))
+                    label.Text = catalog.Name;
+            }
+            label.AttachedToVisualTree += (_, _) =>
+            {
+                label.Text = catalog.Name;
+                catalog.PropertyChanged += UpdateName;
+            };
+            label.DetachedFromVisualTree += (_, _) => catalog.PropertyChanged -= UpdateName;
+        }
+        return label;
+    }
+
+    private Control CreateRemovableItem(CatalogEditorCatalog? catalog, Func<CatalogEditorCatalog, Task> removeCatalog)
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        grid.Children.Add(CreateLabel(catalog));
+        if (catalog is null) return grid;
+
+        string tip = CoreTools.Translate("Remove catalog {0}", catalog.Name);
+        var remove = new Button
+        {
+            Width = 24,
+            Height = 24,
+            Padding = new Thickness(0),
+            Margin = new Thickness(8, 0, 0, 0),
+            CornerRadius = new CornerRadius(4),
+            BorderThickness = new Thickness(0),
+            Background = Brushes.Transparent,
+            IsEnabled = _document.CanEdit,
+            Content = new SvgIcon { Path = "avares://UniGetUI/Assets/Symbols/cross.svg", Width = 12, Height = 12 },
+        };
+        AutomationProperties.SetName(remove, tip);
+        ToolTip.SetTip(remove, tip);
+        Grid.SetColumn(remove, 1);
+        remove.Click += async (_, e) =>
+        {
+            e.Handled = true;
+            // Keep the list available so several catalogs can be removed in a row; it only steps
+            // aside for the confirmation that a catalog with packages asks for.
+            bool confirms = catalog.Packages.Count > 0;
+            if (confirms) IsDropDownOpen = false;
+            await removeCatalog(catalog);
+            if (_document.Catalogs.Count == 0)
+            {
+                IsDropDownOpen = false;
+                return;
+            }
+            // The open popup keeps shrunken rows after a removal; reopening it lays them out afresh.
+            IsDropDownOpen = false;
+            Dispatcher.UIThread.Post(() => IsDropDownOpen = true);
+        };
+        grid.Children.Add(remove);
+        return grid;
     }
 
     private void SyncSelection()

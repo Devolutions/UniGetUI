@@ -5,11 +5,29 @@ using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Interface;
+using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Tests;
 
-public class SoftwareCatalogTests
+public sealed class SoftwareCatalogTests : IDisposable
 {
+    // The catalog saves its view and sort, so keep that away from the real settings.
+    private readonly string _testRoot = Path.Combine(Path.GetTempPath(), nameof(SoftwareCatalogTests), Guid.NewGuid().ToString("N"));
+
+    public SoftwareCatalogTests()
+    {
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
+        Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+        CoreSettings.ResetSettings();
+    }
+
+    public void Dispose()
+    {
+        CoreSettings.ResetSettings();
+        CoreData.TEST_DataDirectoryOverride = null;
+        Directory.Delete(_testRoot, recursive: true);
+    }
+
     [Theory]
     [InlineData("clAuDe")]
     [InlineData("Anthropic.")]
@@ -48,7 +66,7 @@ public class SoftwareCatalogTests
     }
 
     [Fact]
-    public void CatalogDefaultsToTilesAndViewSwitchingPreservesPackagesAndFilters()
+    public void CatalogDefaultsToIconsAndViewSwitchingPreservesPackagesAndFilters()
     {
         var vm = new SoftwareCatalogViewModel
         {
@@ -56,9 +74,9 @@ public class SoftwareCatalogTests
             Query = "Claude",
         };
         vm.LoadCatalogs([new CatalogDefinition { Id = "test", Name = "Test", Packages = [Entry] }]);
-        Assert.Equal(3, vm.ViewModeIndex);
+        Assert.Equal(2, vm.ViewModeIndex);
         Assert.False(vm.IsFilterPaneOpen);
-        Assert.True(vm.IsTilesView);
+        Assert.True(vm.IsIconsView);
         var tile = Assert.Single(vm.Packages);
         for (int index = 0; index < 4; index++)
         {
@@ -71,6 +89,25 @@ public class SoftwareCatalogTests
             Assert.Equal("Claude", vm.Query);
             Assert.False(vm.HideUnavailablePackages);
         }
+    }
+
+    [Fact]
+    public void ViewModeAndSortAreRestoredByTheNextCatalog()
+    {
+        var first = new SoftwareCatalogViewModel { ViewModeIndex = 0 };
+        first.ToggleSort(CatalogSortField.Source);
+        first.ToggleSort(CatalogSortField.Source);
+        Assert.False(first.SortAscending);
+
+        var restored = new SoftwareCatalogViewModel();
+        Assert.Equal(0, restored.ViewModeIndex);
+        Assert.Equal(CatalogSortField.Source, restored.SortField);
+        Assert.False(restored.SortAscending);
+
+        restored.ToggleSort(CatalogSortField.Id);
+        var afterHeaderClick = new SoftwareCatalogViewModel();
+        Assert.Equal(CatalogSortField.Id, afterHeaderClick.SortField);
+        Assert.True(afterHeaderClick.SortAscending);
     }
 
     private const string EntryJson = """
@@ -624,17 +661,32 @@ public class SoftwareCatalogTests
         Assert.True(tile.CanInstall);
     }
 
+    [Fact]
+    public void NumberShortcutsFollowTheSidebarOrder()
+    {
+        Assert.Equal(
+            [PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles,
+                PageType.CatalogEditor, PageType.Settings, PageType.Managers],
+            MainWindowViewModel.GetShortcutPages(true));
+        Assert.Equal(
+            [PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles, PageType.Settings, PageType.Managers],
+            MainWindowViewModel.GetShortcutPages(false));
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void CatalogParticipatesInKeyboardPageCycleOnlyWhenEnabled(bool enabled)
     {
-        Assert.Equal(enabled ? PageType.Catalog : PageType.Settings, MainWindowViewModel.GetNextPage(PageType.Bundles, enabled));
-        Assert.Equal(enabled ? PageType.CatalogEditor : PageType.Settings, MainWindowViewModel.GetNextPage(PageType.Catalog, enabled));
+        // Enabled order: Catalog, Discover, Updates, Installed, Bundles, Catalog Editor, Settings, Managers.
+        Assert.Equal(PageType.Discover, MainWindowViewModel.GetNextPage(PageType.Catalog, enabled));
+        Assert.Equal(enabled ? PageType.CatalogEditor : PageType.Settings, MainWindowViewModel.GetNextPage(PageType.Bundles, enabled));
         Assert.Equal(PageType.Settings, MainWindowViewModel.GetNextPage(PageType.CatalogEditor, enabled));
+        Assert.Equal(enabled ? PageType.Catalog : PageType.Discover, MainWindowViewModel.GetNextPage(PageType.Managers, enabled));
+        Assert.Equal(enabled ? PageType.Catalog : PageType.Managers, MainWindowViewModel.GetPreviousPage(PageType.Discover, enabled));
+        Assert.Equal(PageType.Managers, MainWindowViewModel.GetPreviousPage(PageType.Catalog, enabled));
         Assert.Equal(enabled ? PageType.CatalogEditor : PageType.Bundles, MainWindowViewModel.GetPreviousPage(PageType.Settings, enabled));
-        Assert.Equal(enabled ? PageType.Catalog : PageType.Bundles, MainWindowViewModel.GetPreviousPage(PageType.CatalogEditor, enabled));
-        Assert.Equal(PageType.Bundles, MainWindowViewModel.GetPreviousPage(PageType.Catalog));
+        Assert.Equal(PageType.Bundles, MainWindowViewModel.GetPreviousPage(PageType.CatalogEditor, enabled));
     }
 
     [Fact]

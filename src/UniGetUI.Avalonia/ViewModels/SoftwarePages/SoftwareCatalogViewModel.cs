@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
@@ -85,7 +86,25 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsGridView))]
     [NotifyPropertyChangedFor(nameof(IsIconsView))]
     [NotifyPropertyChangedFor(nameof(IsTilesView))]
-    private int _viewModeIndex = 3;
+    private int _viewModeIndex = LoadViewModeIndex();
+
+    // Shares the per-page view and sort settings with the other package pages; Icons by default.
+    private const string ViewModeSettingKey = "SoftwarePages.SoftwareCatalogPage";
+    private const int DefaultViewModeIndex = 2;
+
+    private static int LoadViewModeIndex()
+    {
+        if (!Settings.DictionaryContainsKey<string, int>(Settings.K.PackageListViewMode, ViewModeSettingKey))
+            return DefaultViewModeIndex;
+        int saved = Settings.GetDictionaryItem<string, int>(Settings.K.PackageListViewMode, ViewModeSettingKey);
+        return saved is >= 0 and <= 3 ? saved : DefaultViewModeIndex;
+    }
+
+    partial void OnViewModeIndexChanged(int value)
+    {
+        if (value is >= 0 and <= 3)
+            Settings.SetDictionaryItem(Settings.K.PackageListViewMode, ViewModeSettingKey, value);
+    }
 
     public bool IsListView => ViewModeIndex == 0;
     public bool IsGridView => ViewModeIndex == 1;
@@ -414,10 +433,17 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SortFieldName))]
-    private CatalogSortField _sortField = CatalogSortField.Name;
+    private CatalogSortField _sortField = LoadSortField();
 
     [ObservableProperty]
-    private bool _sortAscending = true;
+    private bool _sortAscending =
+        !Settings.GetDictionaryItem<string, bool>(Settings.K.PackageListSortDescending, ViewModeSettingKey);
+
+    private static CatalogSortField LoadSortField()
+    {
+        int saved = Settings.GetDictionaryItem<string, int>(Settings.K.PackageListSortFieldIndex, ViewModeSettingKey);
+        return Enum.IsDefined((CatalogSortField)saved) ? (CatalogSortField)saved : CatalogSortField.Name;
+    }
 
     public string SortFieldName => SortField switch
     {
@@ -426,8 +452,20 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         _ => CoreTools.Translate("Name"),
     };
 
-    partial void OnSortFieldChanged(CatalogSortField value) => ApplyAvailabilityFilter();
-    partial void OnSortAscendingChanged(bool value) => ApplyAvailabilityFilter();
+    partial void OnSortFieldChanged(CatalogSortField value)
+    {
+        Settings.SetDictionaryItem(Settings.K.PackageListSortFieldIndex, ViewModeSettingKey, (int)value);
+        ApplyAvailabilityFilter();
+    }
+
+    partial void OnSortAscendingChanged(bool value)
+    {
+        SaveSortDirection(value);
+        ApplyAvailabilityFilter();
+    }
+
+    private static void SaveSortDirection(bool ascending) =>
+        Settings.SetDictionaryItem(Settings.K.PackageListSortDescending, ViewModeSettingKey, !ascending);
 
     [RelayCommand] private void SortByName() => SortField = CatalogSortField.Name;
     [RelayCommand] private void SortById() => SortField = CatalogSortField.Id;
@@ -442,6 +480,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         else
         {
             _sortAscending = true;
+            SaveSortDirection(true);
             OnPropertyChanged(nameof(SortAscending));
             SortField = field;
         }

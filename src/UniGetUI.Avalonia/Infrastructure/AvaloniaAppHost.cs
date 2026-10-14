@@ -1,6 +1,9 @@
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 #if WINDOWS
 using Avalonia.Win32;
@@ -134,7 +137,51 @@ public static class AvaloniaAppHost
             return;
         }
 
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        try
+        {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (ElementNotEnabledException ex)
+        {
+            ResumeAfterRefusedAutomation(ex);
+        }
+    }
+
+    /// <summary>
+    /// An accessibility client (VoiceOver, UI automation) invoking a disabled control makes Avalonia
+    /// throw <see cref="ElementNotEnabledException"/>. On macOS that escapes the native run loop with
+    /// no handler and would end the app, although the right outcome is to ignore the request. The
+    /// windows and lifetime are still intact, so log it and keep running the main loop until the
+    /// lifetime's normal exit.
+    /// </summary>
+    private static void ResumeAfterRefusedAutomation(ElementNotEnabledException first)
+    {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime)
+        {
+            ExceptionDispatchInfo.Capture(first).Throw();
+            return;
+        }
+        using var exited = new CancellationTokenSource();
+        lifetime.Exit += (_, e) =>
+        {
+            Environment.ExitCode = e.ApplicationExitCode;
+            exited.Cancel();
+        };
+        Exception? refused = first;
+        while (!exited.IsCancellationRequested)
+        {
+            Logger.Warn("An accessibility client tried to invoke a disabled control; ignoring it.");
+            Logger.Warn(refused!);
+            try
+            {
+                Dispatcher.UIThread.MainLoop(exited.Token);
+                refused = null;
+            }
+            catch (ElementNotEnabledException ex)
+            {
+                refused = ex;
+            }
+        }
     }
 
     /// <summary>

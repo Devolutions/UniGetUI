@@ -142,10 +142,19 @@
                     <TextBlock Text="{t:Translate Installed}" IsVisible="{Binding ShowInstalledLabel}"
                                FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,8"/>
                 </Panel>
-                <Button Grid.Column="1" Content="⋯" Width="32" Padding="0"
-                        HorizontalContentAlignment="Center" VerticalAlignment="Stretch"
+                <Button Grid.Column="1" Width="32" Padding="0"
+                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                        VerticalAlignment="Stretch"
                         ToolTip.Tip="{t:Translate More actions}"
                         automation:AutomationProperties.Name="{t:Translate More actions}">
+                    <!-- Drawn dots rather than a "⋯" glyph, whose font metrics sit it above centre. -->
+                    <StackPanel Orientation="Horizontal" Spacing="3"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                automation:AutomationProperties.AccessibilityView="Raw">
+                        <Ellipse Width="3.5" Height="3.5" Fill="{Binding $parent[Button].Foreground}"/>
+                        <Ellipse Width="3.5" Height="3.5" Fill="{Binding $parent[Button].Foreground}"/>
+                        <Ellipse Width="3.5" Height="3.5" Fill="{Binding $parent[Button].Foreground}"/>
+                    </StackPanel>
                     <Button.Flyout>
                         <MenuFlyout>
                             <MenuItem Header="{t:Translate Update}" IsVisible="{Binding ShowUpdate}" Command="{Binding UpdateCommand}"/>

@@ -536,12 +536,17 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontSize="30" FontWeight="Bold" Opacity="0.5"
-                           TextAlignment="Center" TextWrapping="Wrap"
-                           Text="{Binding BackgroundText}"
-                           IsVisible="{Binding HasBackgroundText}"
-                           IsHitTestVisible="False"/>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Margin="24,0"
+                            IsVisible="{Binding HasBackgroundText}">
+                    <TextBlock FontSize="30" FontWeight="Bold" Opacity="0.5"
+                               TextAlignment="Center" TextWrapping="Wrap"
+                               Text="{Binding BackgroundText}"
+                               IsHitTestVisible="False"/>
+                    <SelectableTextBlock FontSize="13" Opacity="0.7"
+                                         TextAlignment="Center" TextWrapping="Wrap"
+                                         Text="{Binding BackgroundDetail}"
+                                         IsVisible="{Binding HasBackgroundDetail}"/>
+                </StackPanel>
             </Panel>
         </Grid>
         <Grid Grid.Row="4" Margin="0,4" HorizontalAlignment="Right">

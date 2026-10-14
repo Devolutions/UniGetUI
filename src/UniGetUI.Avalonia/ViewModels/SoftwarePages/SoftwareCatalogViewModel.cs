@@ -126,9 +126,21 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 && MatchesQuery(p.Entry, query));
         }
     }
-    public string EmptyMessage => CoreTools.Translate(_allPackages.Count > 0
-        ? "No packages are available with the current filters."
-        : "No packages to display.");
+    public string EmptyMessage => _notConfigured
+        ? CoreTools.Translate("No software catalog has been set up on this device yet.")
+        : CoreTools.Translate(_allPackages.Count > 0
+            ? "No packages are available with the current filters."
+            : "No packages to display.");
+
+    // No catalog file at all is the normal state on most devices, not an error.
+    private bool _notConfigured;
+
+    // The path and technical reason under the headline; selectable so it can be copied.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBackgroundDetail))]
+    private string _backgroundDetail = "";
+
+    public bool HasBackgroundDetail => BackgroundDetail.Length > 0 && HasBackgroundText;
 
     public bool IsEmpty => !IsLoading && !HasError && Packages.Count == 0;
 
@@ -151,6 +163,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(BackgroundText));
         OnPropertyChanged(nameof(HasBackgroundText));
+        OnPropertyChanged(nameof(HasBackgroundDetail));
     }
 
     private bool IsSelectedByFilters(CatalogTileViewModel tile) =>
@@ -328,6 +341,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         try
         {
             var catalogs = await SoftwareCatalog.LoadAsync();
+            _notConfigured = false;
+            BackgroundDetail = "";
 
             // Fill a new map and swap it in at the end: the state timer reads _sources between
             // these slow awaits, and a half-filled map would mark tiles "source not enabled".
@@ -347,12 +362,27 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             else
                 LoadCatalogs(catalogs);
         }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            Logger.Info($"No software catalog at {SoftwareCatalog.FilePath}.");
+            _notConfigured = true;
+            LoadCatalogs([]);
+            BackgroundDetail = CoreTools.Translate("Expected at {0}", SoftwareCatalog.FilePath);
+        }
         catch (Exception ex)
         {
             Logger.Error("Could not load the software catalog.");
             Logger.Error(ex);
+            _notConfigured = false;
             LoadCatalogs([]);
-            ErrorMessage = CoreTools.Translate("The software catalog could not be loaded. Ask an administrator to check {0}, then try again.", SoftwareCatalog.FilePath);
+            BackgroundDetail = SoftwareCatalog.FilePath + "\n" + ex.Message;
+            ErrorMessage = ex switch
+            {
+                JsonException => CoreTools.Translate("The software catalog is not valid. Ask an administrator to fix it."),
+                UnauthorizedAccessException or IOException =>
+                    CoreTools.Translate("The software catalog could not be read. Ask an administrator to check its permissions."),
+                _ => CoreTools.Translate("The software catalog could not be loaded. Ask an administrator to check {0}, then try again.", SoftwareCatalog.FilePath),
+            };
         }
         finally
         {

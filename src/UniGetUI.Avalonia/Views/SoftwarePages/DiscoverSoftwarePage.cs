@@ -49,7 +49,11 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),
         NoMatches_BackgroundText = CoreTools.Translate("No results were found matching the input criteria"),
     }, vm => AddCatalogToolbar(vm, catalogEditor))
-    { }
+    {
+        _catalogEditor = catalogEditor;
+    }
+
+    private readonly CatalogEditorViewModel? _catalogEditor;
 
     private static void AddCatalogToolbar(PackagesPageViewModel vm, CatalogEditorViewModel? document)
     {
@@ -77,7 +81,9 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     public override async void OnEnter()
     {
         base.OnEnter();
-        if (GetMainWindow()?.DataContext is MainWindowViewModel { CatalogEditor: { } document })
+        // Use the document handed in at construction: when Discover is the startup page it is entered
+        // before the main window is registered, so looking it up through the window would find nothing.
+        if (_catalogEditor is { } document)
             await document.EnsureLoadedAsync();
     }
 

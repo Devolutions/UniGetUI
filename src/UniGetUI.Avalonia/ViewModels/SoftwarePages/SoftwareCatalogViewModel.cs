@@ -505,10 +505,13 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 .OfType<PackageOperation>()
                 .Where(o => o.Status is OperationStatus.InQueue or OperationStatus.Running)
                 .Select(o => o.Package));
+        bool sourcesMissing = false;
         foreach (var tile in _allPackages)
         {
             var manager = FindManager(tile.Entry);
             var source = FindSource(tile.Entry);
+            if (manager is not null && manager.IsReady() && !_sources.ContainsKey(manager.Id))
+                sourcesMissing = true;
             string? unavailableReason = manager is null
                 ? CoreTools.Translate("The package manager {0} is not available on this platform.", tile.Entry.ManagerName)
                 : !manager.IsEnabled()
@@ -528,6 +531,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 pending.Contains(tile.Entry));
         }
         ApplyAvailabilityFilter();
+        if (sourcesMissing && !IsLoading && PEInterface.AreManagersLoaded)
+            _ = RefreshAsync();
     }
 
     internal void ApplyAvailabilityFilter()
@@ -677,10 +682,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             }
             // Installed or queued meanwhile: nothing left to do.
             if (tile.IsInstalled || !tile.InventoryKnown || tile.IsPending) return;
-            string? pin = tile.Entry.Version.Length > 0 && manager.Capabilities.SupportsCustomVersions ? tile.Entry.Version : null;
-            if (tile.Entry.Version.Length > 0 && pin is null)
-                Logger.Warn($"{manager.DisplayName} cannot install a specific version; installing the latest {tile.Entry.Id} instead of {tile.Entry.Version}.");
-            await PackagesPageViewModel.LaunchInstall([package], version: pin);
+            await PackagesPageViewModel.LaunchInstall([package], version: PinnedVersion(tile.Entry, manager));
         }
         catch (Exception ex)
         {
@@ -703,6 +705,14 @@ public enum CatalogSortField { Name, Id, Source }
 
 public partial class SoftwareCatalogViewModel
 {
+    private static string? PinnedVersion(CatalogEntry entry, IPackageManager manager)
+    {
+        if (entry.Version.Length == 0) return null;
+        if (manager.Capabilities.SupportsCustomVersions) return entry.Version;
+        Logger.Warn($"{manager.DisplayName} cannot install a specific version; installing the latest {entry.Id} instead of {entry.Version}.");
+        return null;
+    }
+
     private static IPackage? FindInstalled(CatalogEntry entry) =>
         InstalledPackagesLoader.Instance?.Packages.FirstOrDefault(entry.MatchesInstalled);
 
@@ -726,15 +736,20 @@ public partial class SoftwareCatalogViewModel
         if (MainWindow.Instance is not { } window) return;
         // The details window's main action follows the tile: update, uninstall, or install (the pin as version).
         IPackage? package = null;
+        string? pin = null;
+        var installed = FindInstalled(tile.Entry);
         var role = OperationType.Install;
-        if (FindInstalled(tile.Entry) is { } installed)
+        if (installed is not null)
         {
             var upgradable = tile.HasUpdate ? installed.GetUpgradablePackage() : null;
             package = upgradable ?? installed;
             role = upgradable is null ? OperationType.Uninstall : OperationType.Update;
         }
         else if (FindManager(tile.Entry) is { } manager && FindSource(tile.Entry) is { } source)
+        {
             package = new Package(tile.Entry.Name, tile.Entry.Id, tile.Entry.Version, source, manager);
+            pin = tile.Entry.Version.Length > 0 && manager.Capabilities.SupportsCustomVersions ? tile.Entry.Version : null;
+        }
         if (package is null)
         {
             window.ShowBanner(CoreTools.Translate("Package unavailable"),
@@ -742,7 +757,22 @@ public partial class SoftwareCatalogViewModel
                 MainWindow.RuntimeNotificationLevel.Error);
             return;
         }
-        await new PackageDetailsWindow(package, role, TEL_InstallReferral.DIRECT_SEARCH).ShowDialog(window);
+        var dialog = new PackageDetailsWindow(package, role, TEL_InstallReferral.DIRECT_SEARCH) { InstallVersion = pin };
+        await dialog.ShowDialog(window);
+        if (!dialog.ShouldProceedWithOperation) return;
+        switch (role)
+        {
+            case OperationType.Install:
+                await InstallCommand.ExecuteAsync(tile);
+                break;
+            case OperationType.Update:
+                await InstalledPackagesPage.LaunchUpdate(installed);
+                break;
+            case OperationType.Uninstall:
+                await InstalledPackagesPage.LaunchUninstall([installed!]);
+                break;
+        }
+        UpdateStates();
     }
 }
 

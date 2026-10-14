@@ -686,5 +686,22 @@ public class CatalogEditorTests : IDisposable
         public Tuple<bool, string> GetExecutableFile() => Tuple.Create(false, "");
     }
 
+    [Fact]
+    public async Task OnlyAMissingCatalogCountsAsMissing()
+    {
+        Assert.True(CatalogEditorViewModel.IsMissing(FilePath));
+        Assert.True(CatalogEditorViewModel.IsMissing(Path.Combine(_directory, "absent", "catalog.json")));
+        await File.WriteAllTextAsync(FilePath, "{}");
+        Assert.False(CatalogEditorViewModel.IsMissing(FilePath));
+    }
+
+    [Fact]
+    public void ACatalogPathThatExistsButCannotBeOpenedIsNotMissing()
+    {
+        Directory.CreateDirectory(FilePath);
+        Assert.False(File.Exists(FilePath));
+        Assert.False(CatalogEditorViewModel.IsMissing(FilePath));
+    }
+
     public void Dispose() => Directory.Delete(_directory, true);
 }

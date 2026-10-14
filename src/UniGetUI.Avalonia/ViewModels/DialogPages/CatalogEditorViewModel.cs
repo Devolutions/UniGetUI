@@ -114,7 +114,7 @@ public partial class CatalogEditorViewModel : ViewModelBase
     // catalog can be created there instead of the editor opening disabled.
     private Task<bool> LoadOrStartAsync(string path)
     {
-        if (File.Exists(path)) return LoadAsync(path);
+        if (!IsMissing(path)) return LoadAsync(path);
         SelectedCatalog = null;
         Catalogs.Clear();
         FilePath = Path.GetFullPath(path);
@@ -122,6 +122,23 @@ public partial class CatalogEditorViewModel : ViewModelBase
         IsLoaded = true;
         IsDirty = false;
         return Task.FromResult(true);
+    }
+
+    internal static bool IsMissing(string path)
+    {
+        if (File.Exists(path)) return false;
+        try
+        {
+            using (File.OpenRead(path)) return false;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public void NewDocument()

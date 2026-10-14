@@ -265,10 +265,11 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         }
 
         string latest = CoreTools.Translate("Latest");
+        var initialItems = entry.Version.Length > 0 ? new List<string> { latest, entry.Version } : [latest];
         var picker = new ComboBox
         {
-            ItemsSource = new List<string> { latest },
-            SelectedIndex = 0,
+            ItemsSource = initialItems,
+            SelectedItem = initialItems[^1],
             IsEnabled = false,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             MinWidth = 280,

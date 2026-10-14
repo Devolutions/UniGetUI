@@ -51,6 +51,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     /// <summary>True when the user confirmed the main action (install/update/uninstall) without extras.</summary>
     public bool ShouldProceedWithOperation { get; private set; }
 
+    public string? InstallVersion { get; init; }
+
     private readonly PackageDetailsViewModel _vm;
     private readonly TEL_InstallReferral _referral;
     private InstallOptionsViewModel? _installVm;
@@ -1107,6 +1109,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             interactive: interactive,
             no_integrity: no_integrity,
             remove_data: remove_data);
+        if (role is OperationType.Install && !string.IsNullOrEmpty(InstallVersion))
+            opts.Version = InstallVersion;
 
         if (PackageOperation.HasPendingOperation(pkg, role)) return;
 

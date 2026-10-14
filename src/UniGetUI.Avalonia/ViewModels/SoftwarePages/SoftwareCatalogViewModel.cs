@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -178,8 +179,10 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     private string? _loadedSignature;
 
     // A stable fingerprint of the loaded catalogs, to skip rebuilding tiles when nothing changed.
+    private static readonly JsonTypeInfo<CatalogDocument> DocumentTypeInfo = CatalogJsonContext.Default.CatalogDocument;
+
     private static string Signature(IReadOnlyList<CatalogDefinition> catalogs) =>
-        JsonSerializer.Serialize(new CatalogDocument { Version = 1, Catalogs = [.. catalogs] }, CatalogJsonContext.Default.CatalogDocument);
+        JsonSerializer.Serialize(new CatalogDocument { Version = 1, Catalogs = [.. catalogs] }, DocumentTypeInfo);
 
     // Icons need the entry's manager and source; tiles that lacked them earlier get another try.
     private void EnsureIcons()

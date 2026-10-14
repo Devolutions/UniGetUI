@@ -120,6 +120,24 @@ internal static class SoftwareCatalog
 
     public static Task<CatalogDefinition[]> LoadAsync() => LoadAsync(FilePath);
 
+    /// <summary>
+    /// Whether the machine-wide catalog exists, loads and lists at least one package: only then is
+    /// it worth leading the navigation with. Missing, empty and broken catalogs all count as unset.
+    /// </summary>
+    public static bool HasUsableCatalog() => HasUsableCatalog(FilePath);
+
+    internal static bool HasUsableCatalog(string filePath)
+    {
+        try
+        {
+            return File.Exists(filePath) && Parse(File.ReadAllText(filePath)).Any(c => c.Packages.Length > 0);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return false;
+        }
+    }
+
     internal static async Task<CatalogDefinition[]> LoadAsync(string filePath)
     {
         await using var stream = File.OpenRead(filePath);

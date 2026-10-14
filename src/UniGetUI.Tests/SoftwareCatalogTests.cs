@@ -703,17 +703,35 @@ public sealed class SoftwareCatalogTests : IDisposable
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void CatalogParticipatesInKeyboardPageCycleOnlyWhenEnabled(bool enabled)
+    public void KeyboardPageCycleFollowsTheSidebarOrderInBothDirections(bool catalogEnabled)
     {
-        // Enabled order: Catalog, Discover, Updates, Installed, Bundles, Catalog Editor, Settings, Managers.
-        Assert.Equal(PageType.Discover, MainWindowViewModel.GetNextPage(PageType.Catalog, enabled));
-        Assert.Equal(enabled ? PageType.CatalogEditor : PageType.Settings, MainWindowViewModel.GetNextPage(PageType.Bundles, enabled));
-        Assert.Equal(PageType.Settings, MainWindowViewModel.GetNextPage(PageType.CatalogEditor, enabled));
-        Assert.Equal(enabled ? PageType.Catalog : PageType.Discover, MainWindowViewModel.GetNextPage(PageType.Managers, enabled));
-        Assert.Equal(enabled ? PageType.Catalog : PageType.Managers, MainWindowViewModel.GetPreviousPage(PageType.Discover, enabled));
-        Assert.Equal(PageType.Managers, MainWindowViewModel.GetPreviousPage(PageType.Catalog, enabled));
-        Assert.Equal(enabled ? PageType.CatalogEditor : PageType.Bundles, MainWindowViewModel.GetPreviousPage(PageType.Settings, enabled));
-        Assert.Equal(PageType.Bundles, MainWindowViewModel.GetPreviousPage(PageType.CatalogEditor, enabled));
+        var pages = MainWindowViewModel.GetShortcutPages(catalogEnabled);
+        for (int i = 0; i < pages.Length; i++)
+        {
+            var next = pages[(i + 1) % pages.Length];
+            Assert.Equal(next, MainWindowViewModel.GetNextPage(pages[i], catalogEnabled));
+            Assert.Equal(pages[i], MainWindowViewModel.GetPreviousPage(next, catalogEnabled));
+        }
+        Assert.Equal(PageType.Discover, MainWindowViewModel.GetNextPage(PageType.OwnLog, catalogEnabled));
+    }
+
+    [Fact]
+    public void OnlyACatalogWithPackagesCountsAsUsable()
+    {
+        string file = Path.Combine(_testRoot, "SoftwareCatalog.json");
+        Assert.False(SoftwareCatalog.HasUsableCatalog(file));
+
+        File.WriteAllText(file, "{ not json");
+        Assert.False(SoftwareCatalog.HasUsableCatalog(file));
+
+        File.WriteAllText(file, """{"version":1,"catalogs":[]}""");
+        Assert.False(SoftwareCatalog.HasUsableCatalog(file));
+
+        File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[]}]}""");
+        Assert.False(SoftwareCatalog.HasUsableCatalog(file));
+
+        File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[{"Id":"jq","Name":"jq","Version":"","Source":"Homebrew","ManagerName":"Homebrew"}]}]}""");
+        Assert.True(SoftwareCatalog.HasUsableCatalog(file));
     }
 
     [Fact]

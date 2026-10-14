@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
@@ -11,6 +12,11 @@ namespace UniGetUI.Avalonia.ViewModels;
 public partial class SidebarViewModel : ViewModelBase
 {
     public bool SoftwareCatalogEnabled { get; } = Settings.Get(Settings.K.EnableSoftwareCatalog);
+
+    // Only a catalog with packages to offer becomes the startup page; an unset or broken one would
+    // open the app on an empty page. Checked once at startup, like the setting itself.
+    public bool HasUsableCatalog { get; } =
+        Settings.Get(Settings.K.EnableSoftwareCatalog) && SoftwareCatalog.HasUsableCatalog();
 
     // ─── Badge properties ─────────────────────────────────────────────────────
     [ObservableProperty]

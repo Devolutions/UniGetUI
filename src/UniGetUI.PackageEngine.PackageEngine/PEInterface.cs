@@ -123,6 +123,14 @@ namespace UniGetUI.PackageEngine
             PackageBundlesLoader.Instance = new PackageBundlesLoader_I(Managers);
         }
 
+        private static volatile bool _managersLoaded;
+
+        /// <summary>True once <see cref="LoadManagers"/> has finished, including after a timeout.</summary>
+        public static bool AreManagersLoaded => _managersLoaded;
+
+        /// <summary>Raised once, from a background thread, when <see cref="AreManagersLoaded"/> becomes true.</summary>
+        public static event EventHandler? ManagersLoaded;
+
         public static void LoadManagers()
         {
             try
@@ -152,6 +160,11 @@ namespace UniGetUI.PackageEngine
             catch (Exception ex)
             {
                 Logger.Error(ex);
+            }
+            finally
+            {
+                _managersLoaded = true;
+                ManagersLoaded?.Invoke(null, EventArgs.Empty);
             }
         }
 

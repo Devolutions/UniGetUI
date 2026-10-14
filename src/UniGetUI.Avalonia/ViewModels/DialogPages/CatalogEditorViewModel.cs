@@ -103,7 +103,21 @@ public partial class CatalogEditorViewModel : ViewModelBase
     private CatalogDefinition[] _savedCatalogs = [];
 
     public Task<bool> EnsureLoadedAsync() =>
-        IsLoaded ? Task.FromResult(true) : _initialLoad ??= LoadAsync(FilePath);
+        IsLoaded ? Task.FromResult(true) : _initialLoad ??= LoadOrStartAsync(FilePath);
+
+    // No catalog deployed yet: start an empty document that saves to that path, so a first
+    // catalog can be created there instead of the editor opening disabled.
+    private Task<bool> LoadOrStartAsync(string path)
+    {
+        if (File.Exists(path)) return LoadAsync(path);
+        SelectedCatalog = null;
+        Catalogs.Clear();
+        FilePath = Path.GetFullPath(path);
+        _savedCatalogs = [];
+        IsLoaded = true;
+        IsDirty = false;
+        return Task.FromResult(true);
+    }
 
     public void NewDocument()
     {
@@ -257,6 +271,9 @@ public partial class CatalogEditorViewModel : ViewModelBase
             var definitions = CopyCatalogs(Catalogs.Select(c => c.ToDefinition()));
             try
             {
+                // The machine-wide folder belongs to UniGetUI; create it on first save (as root on macOS).
+                if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(SoftwareCatalog.FilePath), StringComparison.Ordinal))
+                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 await SoftwareCatalog.SaveAsync(path, definitions);
             }
             catch (UnauthorizedAccessException) when (OperatingSystem.IsMacOS())

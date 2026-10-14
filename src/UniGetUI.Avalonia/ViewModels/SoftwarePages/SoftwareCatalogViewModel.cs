@@ -20,7 +20,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages;
 
 public partial class SoftwareCatalogViewModel : ViewModelBase
 {
-    private readonly Dictionary<string, IReadOnlyList<IManagerSource>> _sources = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, IReadOnlyList<IManagerSource>> _sources = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<CatalogTileViewModel> _allPackages = [];
     private readonly Dictionary<(string Manager, string Source), SourceTreeNode> _catalogSources = [];
     private bool _updatingSourceSelection;
@@ -250,9 +250,33 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         }
     }
 
+    private bool _waitingForManagers;
+
+    private void OnManagersLoaded(object? sender, EventArgs e) => Dispatcher.UIThread.Post(() =>
+    {
+        if (!_waitingForManagers) return;
+        _waitingForManagers = false;
+        PEInterface.ManagersLoaded -= OnManagersLoaded;
+        IsLoading = false;
+        _ = RefreshAsync();
+    });
+
     [RelayCommand]
     public async Task RefreshAsync()
     {
+        // Until managers finish starting, every entry would look unavailable (and be hidden), so
+        // keep showing the loading state and refresh once they are ready.
+        if (!PEInterface.AreManagersLoaded)
+        {
+            IsLoading = true;
+            if (!_waitingForManagers)
+            {
+                _waitingForManagers = true;
+                PEInterface.ManagersLoaded += OnManagersLoaded;
+                if (PEInterface.AreManagersLoaded) OnManagersLoaded(null, EventArgs.Empty);
+            }
+            return;
+        }
         if (IsLoading) return;
         IsLoading = true;
         ErrorMessage = "";
@@ -260,15 +284,18 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         try
         {
             var catalogs = await SoftwareCatalog.LoadAsync();
-            _sources.Clear();
 
+            // Fill a new map and swap it in at the end: the state timer reads _sources between
+            // these slow awaits, and a half-filled map would mark tiles "source not enabled".
+            var sources = new Dictionary<string, IReadOnlyList<IManagerSource>>(StringComparer.OrdinalIgnoreCase);
             foreach (var manager in catalogs.SelectMany(c => c.Packages).Select(FindManager).OfType<IPackageManager>().Distinct())
             {
                 if (!manager.IsReady()) continue;
-                _sources[manager.Id] = manager.Capabilities.SupportsCustomSources
+                sources[manager.Id] = manager.Capabilities.SupportsCustomSources
                     ? await Task.Run(manager.SourcesHelper.GetSources)
                     : [manager.DefaultSource];
             }
+            _sources = sources;
 
             LoadCatalogs(catalogs);
         }
@@ -532,7 +559,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             || entry.Id.Contains(query, StringComparison.OrdinalIgnoreCase),
     };
 
-    [RelayCommand]
+    // Tiles share this command; each tile's IsBusy guards its own button, so other tiles stay usable.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task InstallAsync(CatalogTileViewModel? tile)
     {
         UpdateStates();

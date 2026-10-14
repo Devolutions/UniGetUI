@@ -256,7 +256,12 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Unsaved changes"),
             new TextBlock { Text = CoreTools.Translate("Discard unsaved catalog changes?"), TextWrapping = TextWrapping.Wrap },
             CoreTools.Translate("Discard changes"), CoreTools.Translate("Cancel"));
-        await dialog.ShowDialog(MainWindow.Instance!);
+        var window = MainWindow.Instance!;
+        // Quitting can ask while the window is hidden (macOS, tray); a dialog hosted in a hidden
+        // window never completes. Keep it shown afterwards so a cancelled quit can still save.
+        if (!window.IsVisible || window.WindowState == WindowState.Minimized)
+            window.ShowFromTray();
+        await dialog.ShowDialog(window);
         return dialog.Result is true;
     }
 

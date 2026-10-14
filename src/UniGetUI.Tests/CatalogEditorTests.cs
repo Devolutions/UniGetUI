@@ -222,6 +222,22 @@ public class CatalogEditorTests : IDisposable
     }
 
     [Fact]
+    public async Task MissingCatalogFileStartsAnEmptyEditableDocumentThatSavesThere()
+    {
+        string missing = Path.Combine(_directory, "not-deployed-yet.json");
+        var vm = new CatalogEditorViewModel { FilePath = missing };
+        Assert.True(await vm.EnsureLoadedAsync());
+        Assert.True(vm.CanEdit);
+        Assert.Empty(vm.Catalogs);
+        Assert.False(vm.IsDirty);
+        Assert.Equal(missing, vm.FilePath);
+
+        vm.NewCatalog();
+        Assert.True(await vm.SaveAsync(vm.FilePath));
+        Assert.Equal("catalog", Assert.Single(await SoftwareCatalog.LoadAsync(missing)).Id);
+    }
+
+    [Fact]
     public void CatalogPackageListPreservesUnavailableIdentitiesAndDoesNotTouchBundles()
     {
         var loader = new CatalogPackagesLoader();

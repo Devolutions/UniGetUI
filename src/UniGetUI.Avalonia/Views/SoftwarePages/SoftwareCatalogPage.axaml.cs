@@ -35,7 +35,11 @@ public partial class SoftwareCatalogPage : UserControl, IEnterLeaveListener, ISe
     {
         InitializeComponent();
         DataContext = _viewModel;
-        _stateTimer.Tick += (_, _) => _viewModel.UpdateStates();
+        _stateTimer.Tick += (_, _) =>
+        {
+            _viewModel.UpdateStates();
+            _viewModel.CheckForCatalogChanges();
+        };
 
         // Restore the per-page filter pane width from settings.
         var savedWidth = Settings.GetDictionaryItem<string, int>(Settings.K.SidepanelWidths, FilterPaneWidthKey);

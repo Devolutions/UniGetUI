@@ -268,6 +268,32 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
 
     private bool _waitingForManagers;
 
+    // What the catalog file looked like when it was last loaded: existence, size and write time.
+    private (bool Exists, long Length, DateTime WriteTime)? _fileStamp;
+
+    private static (bool, long, DateTime) ReadFileStamp()
+    {
+        try
+        {
+            var file = new FileInfo(SoftwareCatalog.FilePath);
+            return file.Exists ? (true, file.Length, file.LastWriteTimeUtc) : (false, 0, default);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return (false, 0, default);
+        }
+    }
+
+    /// <summary>
+    /// Reloads the catalog when its file was created, changed or removed since the last load, so
+    /// an administrator's deployment shows up without leaving the page.
+    /// </summary>
+    public void CheckForCatalogChanges()
+    {
+        if (IsLoading || _fileStamp is not { } loaded) return;
+        if (ReadFileStamp() != loaded) _ = RefreshAsync();
+    }
+
     private void OnManagersLoaded(object? sender, EventArgs e) => Dispatcher.UIThread.Post(() =>
     {
         if (!_waitingForManagers) return;
@@ -296,6 +322,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         if (IsLoading) return;
         IsLoading = true;
         ErrorMessage = "";
+        // Stamp before reading: a change made while loading is caught by the next check.
+        _fileStamp = ReadFileStamp();
         UpdateStates();
         try
         {

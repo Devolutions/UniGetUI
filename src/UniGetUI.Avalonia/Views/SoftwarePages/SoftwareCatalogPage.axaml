@@ -385,6 +385,8 @@
                                                 <TextBlock Text=" / " FontSize="12"/>
                                                 <TextBlock Text="{Binding Entry.Source}" FontSize="12"/>
                                             </StackPanel>
+                                            <TextBlock Text="{Binding PinnedVersionText}" IsVisible="{Binding HasPinnedVersion}" FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                         </StackPanel>
                                         <TextBlock Grid.Row="3" Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="12"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>

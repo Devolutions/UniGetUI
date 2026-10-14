@@ -613,7 +613,10 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             }
             // Installed or queued meanwhile: nothing left to do.
             if (tile.IsInstalled || !tile.InventoryKnown || tile.IsPending) return;
-            await PackagesPageViewModel.LaunchInstall([package]);
+            string? pin = tile.Entry.Version.Length > 0 && manager.Capabilities.SupportsCustomVersions ? tile.Entry.Version : null;
+            if (tile.Entry.Version.Length > 0 && pin is null)
+                Logger.Warn($"{manager.DisplayName} cannot install a specific version; installing the latest {tile.Entry.Id} instead of {tile.Entry.Version}.");
+            await PackagesPageViewModel.LaunchInstall([package], version: pin);
         }
         catch (Exception ex)
         {
@@ -662,8 +665,13 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
 
     public string SourceDisplay => $"{ManagerDisplayName}: {Entry.Source}";
 
-    // Views that show no status line surface it, with the source, in the tooltip.
-    public string ToolTipText => StatusText.Length == 0 ? SourceDisplay : SourceDisplay + "\n" + StatusText;
+    // An administrator can pin the version the catalog installs; empty means the latest.
+    public bool HasPinnedVersion => Entry.Version.Length > 0;
+    public string PinnedVersionText => HasPinnedVersion ? CoreTools.Translate("Version {0}", Entry.Version) : "";
+
+    // Views that show no status line surface it, with the source and pin, in the tooltip.
+    public string ToolTipText => string.Join("\n",
+        new[] { SourceDisplay, PinnedVersionText, StatusText }.Where(line => line.Length > 0));
 
     internal bool IconRequested { get; set; }
 

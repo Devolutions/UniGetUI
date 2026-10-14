@@ -92,6 +92,33 @@ public sealed class SoftwareCatalogTests : IDisposable
     }
 
     [Fact]
+    public void PinnedVersionIsShownOnTheTileAndUnpinnedEntriesShowNone()
+    {
+        var pinned = new CatalogTileViewModel(new CatalogEntry
+        {
+            Id = "is-number",
+            Name = "Is Number",
+            Version = "6.0.0",
+            Source = "npm",
+            ManagerName = "Npm",
+        });
+        Assert.True(pinned.HasPinnedVersion);
+        Assert.Equal("Version 6.0.0", pinned.PinnedVersionText);
+        Assert.Contains("Version 6.0.0", pinned.ToolTipText);
+
+        var latest = new CatalogTileViewModel(new CatalogEntry
+        {
+            Id = "is-number",
+            Name = "Is Number",
+            Source = "npm",
+            ManagerName = "Npm",
+        });
+        Assert.False(latest.HasPinnedVersion);
+        Assert.Equal("", latest.PinnedVersionText);
+        Assert.DoesNotContain("Version", latest.ToolTipText);
+    }
+
+    [Fact]
     public void ViewModeAndSortAreRestoredByTheNextCatalog()
     {
         var first = new SoftwareCatalogViewModel { ViewModeIndex = 0 };

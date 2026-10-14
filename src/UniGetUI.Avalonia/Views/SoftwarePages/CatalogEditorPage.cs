@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -63,7 +64,6 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     {
         _document = document;
         _loader = loader;
-        HideVersionColumn();
 
         document.PropertyChanged += DocumentChanged;
         document.ErrorRaised += message => Dispatcher.UIThread.Post(() =>
@@ -74,14 +74,6 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         });
         SyncCatalog();
         SyncStatus();
-    }
-
-    private void HideVersionColumn()
-    {
-        foreach (var col in PackageList.Columns)
-            if (col.Tag as string == "Version") col.IsVisible = false;
-        OrderByVersion_Menu.IsVisible = false;
-        if (ViewModel.SortFieldIndex == 2) ViewModel.SortFieldIndex = 0;
     }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)
@@ -98,6 +90,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         });
         _addButton = vm.AddToolbarButton("catalog_add", CoreTools.Translate("Add packages"), AddPackages);
         vm.AddToolbarButton("delete", CoreTools.Translate("Remove selection from catalog"), RemoveSelection);
+        vm.AddToolbarButton("version", CoreTools.Translate("Pin version"), () => _ = PinVersionAsync(SelectedItem));
         vm.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem));
         _renameButton = vm.AddToolbarButton("rename", CoreTools.Translate("Rename catalog"),
@@ -110,6 +103,9 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         var remove = new MenuItem { Header = CoreTools.Translate("Remove selection from catalog") };
         remove.Click += (_, _) => RemoveSelection();
         menu.Items.Add(remove);
+        var pin = new MenuItem { Header = CoreTools.Translate("Pin version") };
+        pin.Click += (_, _) => _ = PinVersionAsync(SelectedItem);
+        menu.Items.Add(pin);
         return menu;
     }
 
@@ -246,6 +242,85 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         };
         hint.OnClosed = () => main.DismissToast(hint);
         main.ShowToast(hint);
+    }
+
+    // Picks the version the catalog installs for a package: "Latest", or one the manager offers.
+    private async Task PinVersionAsync(IPackage? package)
+    {
+        if (!_document.CanEdit || _pickingFile || _document.SelectedCatalog is not { } catalog || package is null
+            || _loader.FindEntry(package) is not { } entry || GetMainWindow() is not { } window) return;
+        if (package is InvalidImportedPackage)
+        {
+            window.ShowBanner(CoreTools.Translate("Package unavailable"),
+                CoreTools.Translate("Enable this package's manager and source to pin its version."),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return;
+        }
+        if (!package.Manager.Capabilities.SupportsCustomVersions)
+        {
+            window.ShowBanner(CoreTools.Translate("Pin version"),
+                CoreTools.Translate("{0} cannot install a specific version, so this package always installs the latest version.", package.Manager.DisplayName),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return;
+        }
+
+        string latest = CoreTools.Translate("Latest");
+        var picker = new ComboBox
+        {
+            ItemsSource = new List<string> { latest },
+            SelectedIndex = 0,
+            IsEnabled = false,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            MinWidth = 280,
+        };
+        AutomationProperties.SetName(picker, CoreTools.Translate("Version"));
+        var status = new TextBlock { Text = CoreTools.Translate("Loading versions"), TextWrapping = TextWrapping.Wrap };
+        var body = new StackPanel { Spacing = 8 };
+        body.Children.Add(new TextBlock
+        {
+            Text = CoreTools.Translate("Choose the version of {0} that this catalog installs.", entry.Name),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        body.Children.Add(picker);
+        body.Children.Add(status);
+        var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Pin version"), body,
+            CoreTools.Translate("Pin version"), CoreTools.Translate("Cancel"));
+
+        async Task LoadVersionsAsync()
+        {
+            var items = new List<string> { latest };
+            try
+            {
+                items.AddRange(await Task.Run(() => package.Manager.DetailsHelper.GetVersions(package)));
+                status.IsVisible = false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not list the versions of {entry.Id}.");
+                Logger.Warn(ex);
+                status.Text = CoreTools.Translate("The available versions could not be loaded: {0}", ex.Message);
+            }
+            if (entry.Version.Length > 0 && !items.Contains(entry.Version)) items.Insert(1, entry.Version);
+            picker.ItemsSource = items;
+            picker.SelectedItem = entry.Version.Length > 0 ? entry.Version : latest;
+            picker.IsEnabled = true;
+        }
+        _ = LoadVersionsAsync();
+        await dialog.ShowDialog(window);
+
+        if (dialog.Result is not true || picker.SelectedItem is not string chosen || !_document.CanEdit) return;
+        string version = chosen == latest ? "" : chosen;
+        int index = catalog.Packages.IndexOf(entry);
+        if (version == entry.Version || index < 0) return;
+        // Replace the entry rather than mutating it, so the list and the unsaved-changes state update.
+        catalog.Packages[index] = new CatalogEntry
+        {
+            Id = entry.Id,
+            Name = entry.Name,
+            Version = version,
+            Source = entry.Source,
+            ManagerName = entry.ManagerName,
+        };
     }
 
     private void RemoveSelection()
@@ -391,6 +466,9 @@ internal sealed class CatalogPackagesLoader : AbstractPackageLoader
         foreach (var entry in entries)
         {
             var raw = entry.AsSerializable();
+            // The Version column shows an imported package's pinned install version, or "Latest".
+            raw.InstallationOptions.Version = entry.Version;
+            if (raw.Version.Length == 0) raw.Version = CoreTools.Translate("Latest");
             var manager = PEInterface.Managers.FirstOrDefault(entry.MatchesManager);
             if (manager is not null)
                 raw.ManagerName = manager.Name;

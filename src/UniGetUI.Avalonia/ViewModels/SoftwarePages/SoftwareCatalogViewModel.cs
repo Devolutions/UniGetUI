@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -34,7 +35,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     [ObservableProperty]
     private bool _groupByCatalog = true;
 
-    partial void OnGroupByCatalogChanged(bool value) => RebuildGroups();
+    partial void OnGroupByCatalogChanged(bool value) => ApplyAvailabilityFilter();
 
     [ObservableProperty]
     private bool _hideUnavailablePackages = true;
@@ -158,8 +159,31 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
 
     private readonly Dictionary<string, CatalogFilterNode> _catalogSelection = new(StringComparer.OrdinalIgnoreCase);
 
+    private string? _loadedSignature;
+
+    // A stable fingerprint of the loaded catalogs, to skip rebuilding tiles when nothing changed.
+    private static string Signature(IReadOnlyList<CatalogDefinition> catalogs) =>
+        JsonSerializer.Serialize(new CatalogDocument { Version = 1, Catalogs = [.. catalogs] }, CatalogJsonContext.Default.CatalogDocument);
+
+    // Icons need the entry's manager and source; tiles that lacked them earlier get another try.
+    private void EnsureIcons()
+    {
+        foreach (var tile in _allPackages)
+        {
+            if (tile.IconRequested) continue;
+            var manager = FindManager(tile.Entry);
+            var source = FindSource(tile.Entry);
+            if (manager is null || source is null) continue;
+            tile.IconRequested = true;
+            var package = InstalledPackagesLoader.Instance?.Packages.FirstOrDefault(tile.Entry.MatchesInstalled)
+                ?? new Package(tile.Entry.Name, tile.Entry.Id, tile.Entry.Version, source, manager);
+            _ = tile.LoadIconAsync(package);
+        }
+    }
+
     public void LoadCatalogs(IReadOnlyList<CatalogDefinition> catalogs)
     {
+        _loadedSignature = Signature(catalogs);
         var previous = CatalogNodes.ToDictionary(n => n.Definition.Id, n => n.IsSelected, StringComparer.OrdinalIgnoreCase);
         _catalogSelection.Clear();
         CatalogNodes.Clear();
@@ -178,19 +202,11 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 CatalogNodes.Add(node);
                 _catalogSelection.TryAdd(catalog.Id, node);
                 foreach (var entry in catalog.Packages)
-                {
-                    var tile = new CatalogTileViewModel(entry, catalog);
-                    _allPackages.Add(tile);
-                    var manager = FindManager(entry);
-                    var source = FindSource(entry);
-                    if (manager is null || source is null) continue;
-                    var package = InstalledPackagesLoader.Instance?.Packages.FirstOrDefault(entry.MatchesInstalled)
-                        ?? new Package(entry.Name, entry.Id, entry.Version, source, manager);
-                    _ = tile.LoadIconAsync(package);
-                }
+                    _allPackages.Add(new CatalogTileViewModel(entry, catalog));
             }
         }
         finally { _updatingCatalogSelection = false; }
+        EnsureIcons();
         BuildSourceNodes();
         UpdateStates();
         OnPropertyChanged(nameof(IsEmpty));
@@ -297,7 +313,11 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             }
             _sources = sources;
 
-            LoadCatalogs(catalogs);
+            // Rebuilding identical tiles would reset the scroll position and make icons blink.
+            if (_allPackages.Count > 0 && Signature(catalogs) == _loadedSignature)
+                EnsureIcons();
+            else
+                LoadCatalogs(catalogs);
         }
         catch (Exception ex)
         {
@@ -395,6 +415,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         ApplyAvailabilityFilter();
     }
 
+    private CatalogPackageIdentitySet? _lastInstalled;
+
     private IManagerSource? FindSource(CatalogEntry entry) =>
         FindManager(entry) is { } manager && _sources.TryGetValue(manager.Id, out var sources)
             ? sources.FirstOrDefault(s => string.Equals(s.Name, entry.Source, StringComparison.OrdinalIgnoreCase))
@@ -408,7 +430,12 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             return;
         }
         var loader = InstalledPackagesLoader.Instance;
-        var installed = new CatalogPackageIdentitySet(loader?.Packages ?? [], installedInventory: true);
+        // While the installed list reloads it is empty; keep the last complete one so installed
+        // tiles don't flip to a disabled Install for the whole reload.
+        bool inventoryLive = loader is { HasPendingInitialLoad: false, IsLoading: false };
+        var installed = inventoryLive
+            ? _lastInstalled = new CatalogPackageIdentitySet(loader!.Packages, installedInventory: true)
+            : _lastInstalled ?? new CatalogPackageIdentitySet([], installedInventory: true);
         var pending = new CatalogPackageIdentitySet(
             Avalonia.Infrastructure.AvaloniaOperationRegistry.OperationViewModels
                 .Select(o => o.Operation)
@@ -425,14 +452,15 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                     ? CoreTools.Translate("The package manager {0} is disabled. Enable it in Package Managers.", manager.DisplayName)
                     : !manager.IsReady()
                         ? CoreTools.Translate("The package manager {0} is not available or is still initializing.", manager.DisplayName)
-                        : source is null
-                            ? CoreTools.Translate("The source {0} is not enabled for {1}. Add it in Package Managers.", tile.Entry.Source, manager.DisplayName)
-                            : null;
+                        : source is not null ? null
+                        // Every manager lists at least its default source: none means the listing failed.
+                        : _sources.TryGetValue(manager.Id, out var listed) && listed.Count == 0
+                            ? CoreTools.Translate("The sources of {0} could not be listed. Check the log, then try again.", manager.DisplayName)
+                            : CoreTools.Translate("The source {0} is not enabled for {1}. Add it in Package Managers.", tile.Entry.Source, manager.DisplayName);
             tile.UpdateState(
                 installed.Contains(tile.Entry),
                 unavailableReason,
-                !IsLoading && loader is { HasPendingInitialLoad: false, IsLoading: false }
-                    && manager is { LastInstalledListingFailed: false },
+                (inventoryLive || _lastInstalled is not null) && manager is { LastInstalledListingFailed: false },
                 pending.Contains(tile.Entry));
         }
         ApplyAvailabilityFilter();
@@ -444,6 +472,9 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         var visible = _allPackages.Where(p => (!HideUnavailablePackages || p.UnavailableReason is null)
             && IsSelectedByFilters(p)
             && MatchesQuery(p.Entry, query)).ToArray();
+        // Without catalog groups, a package listed in several catalogs would show up repeatedly.
+        if (!GroupByCatalog)
+            visible = visible.DistinctBy(p => (p.Entry.Id.ToUpperInvariant(), SourceKey(p.Entry))).ToArray();
         visible = SortTiles(visible);
         if (!Packages.SequenceEqual(visible))
         {
@@ -516,7 +547,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     private static string SortKey(CatalogSortField field, CatalogTileViewModel t) => field switch
     {
         CatalogSortField.Id => t.Entry.Id,
-        CatalogSortField.Source => t.Entry.ManagerName + "/" + t.Entry.Source,
+        CatalogSortField.Source => t.ManagerDisplayName + "/" + t.Entry.Source,
         _ => t.Entry.Name,
     };
 
@@ -574,7 +605,14 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             var package = matches.FirstOrDefault(tile.Entry.Matches)
                 ?? throw new InvalidOperationException($"Package {tile.Entry.Id} was not found in {tile.Entry.ManagerName}/{tile.Entry.Source}.");
             UpdateStates();
-            if (tile.IsInstalled || tile.UnavailableReason is not null || !tile.InventoryKnown || tile.IsPending) return;
+            if (tile.UnavailableReason is { } reason)
+            {
+                MainWindow.Instance?.ShowBanner(CoreTools.Translate("Unable to install {0}", tile.Entry.Name), reason,
+                    MainWindow.RuntimeNotificationLevel.Error);
+                return;
+            }
+            // Installed or queued meanwhile: nothing left to do.
+            if (tile.IsInstalled || !tile.InventoryKnown || tile.IsPending) return;
             await PackagesPageViewModel.LaunchInstall([package]);
         }
         catch (Exception ex)
@@ -618,6 +656,17 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
     public string CatalogId { get; } = catalog?.Id ?? "";
     public string CatalogName { get; } = catalog?.Name ?? "";
 
+    // The file may name the manager by id or alias ("winps"); show the name users know.
+    public string ManagerDisplayName { get; } =
+        PEInterface.Managers.FirstOrDefault(entry.MatchesManager)?.DisplayName ?? entry.ManagerName;
+
+    public string SourceDisplay => $"{ManagerDisplayName}: {Entry.Source}";
+
+    // Views that show no status line surface it, with the source, in the tooltip.
+    public string ToolTipText => StatusText.Length == 0 ? SourceDisplay : SourceDisplay + "\n" + StatusText;
+
+    internal bool IconRequested { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCustomIcon))]
     private Bitmap? _iconBitmap;
@@ -647,21 +696,25 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
     [NotifyPropertyChangedFor(nameof(TitleOpacity))]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(ToolTipText))]
     private string? _unavailableReason;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(ToolTipText))]
     private bool _inventoryKnown;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(ToolTipText))]
     private bool _isPending;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(ToolTipText))]
     private bool _isBusy;
 
     public bool ShowInstall => !IsInstalled;

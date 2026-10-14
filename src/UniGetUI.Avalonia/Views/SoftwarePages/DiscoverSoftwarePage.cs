@@ -62,9 +62,11 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         {
             button.IsEnabled = document.CanEdit && document.Catalogs.Count > 0
                 && vm.FilteredPackages.GetCheckedPackages().Count > 0;
-            ToolTip.SetTip(button, document.IsLoaded && document.Catalogs.Count == 0
-                ? CoreTools.Translate("Create a catalog in the Catalog Editor first.")
-                : CoreTools.Translate("Add selection to catalog"));
+            ToolTip.SetTip(button, !document.IsLoaded && document.Message.Length > 0
+                ? document.Message
+                : document.IsLoaded && document.Catalogs.Count == 0
+                    ? CoreTools.Translate("Create a catalog in the Catalog Editor first.")
+                    : CoreTools.Translate("Add selection to catalog"));
         }
         document.PropertyChanged += (_, _) => UpdateState();
         document.Catalogs.CollectionChanged += (_, _) => UpdateState();
@@ -122,7 +124,9 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         var body = new StackPanel { Spacing = 8 };
         body.Children.Add(new TextBlock
         {
-            Text = CoreTools.Translate("Choose the catalogs to add the {0} selected packages to.", count),
+            Text = count == 1
+                ? CoreTools.Translate("Choose the catalogs to add the selected package to.")
+                : CoreTools.Translate("Choose the catalogs to add the {0} selected packages to.", count),
             TextWrapping = TextWrapping.Wrap,
         });
         body.Children.Add(new ScrollViewer { Content = list, MaxHeight = 260 });
@@ -151,10 +155,13 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         if (results.Count == 1)
         {
             var only = results[0];
-            string text = CoreTools.Translate("{0} packages added to catalog {1}. Save the catalog to keep your changes.", only.Added, only.Catalog.Name);
-            return only.AlreadyPresent == 0
-                ? text
-                : text + "\n" + CoreTools.Translate("{0} were already in the catalog.", only.AlreadyPresent);
+            string text = CatalogEditorViewModel.AddedToCatalogMessage(only.Added, only.Catalog.Name);
+            return only.AlreadyPresent switch
+            {
+                0 => text,
+                1 => text + "\n" + CoreTools.Translate("1 was already in the catalog."),
+                _ => text + "\n" + CoreTools.Translate("{0} were already in the catalog.", only.AlreadyPresent),
+            };
         }
         var lines = results.Select(r => r.AlreadyPresent == 0
             ? CoreTools.Translate("{0}: {1} added", r.Catalog.Name, r.Added)

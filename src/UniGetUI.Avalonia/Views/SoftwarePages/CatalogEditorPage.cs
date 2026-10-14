@@ -33,6 +33,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     private Button? _addButton;
     private Button? _discardButton;
     private bool _pickingFile;
+    private bool _saveFailed;
 
     public CatalogEditorPage(CatalogEditorViewModel document)
         : this(document, new CatalogPackagesLoader()) { }
@@ -65,7 +66,12 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         HideVersionColumn();
 
         document.PropertyChanged += DocumentChanged;
-        document.ErrorRaised += message => Dispatcher.UIThread.Post(() => _ = ShowErrorAsync(message));
+        document.ErrorRaised += message => Dispatcher.UIThread.Post(() =>
+        {
+            _saveFailed = true;
+            // Discover shares this document; only interrupt with a dialog while the editor is on screen.
+            if (TopLevel.GetTopLevel(this) is not null && IsEffectivelyVisible) _ = ShowErrorAsync(message);
+        });
         SyncCatalog();
         SyncStatus();
     }
@@ -206,7 +212,9 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Remove catalog"),
                 new TextBlock
                 {
-                    Text = CoreTools.Translate("Remove catalog {0} and its {1} packages?", catalog.Name, catalog.Packages.Count),
+                    Text = catalog.Packages.Count == 1
+                        ? CoreTools.Translate("Remove catalog {0} and its package?", catalog.Name)
+                        : CoreTools.Translate("Remove catalog {0} and its {1} packages?", catalog.Name, catalog.Packages.Count),
                     TextWrapping = TextWrapping.Wrap,
                 },
                 CoreTools.Translate("Remove"), CoreTools.Translate("Cancel"));
@@ -326,9 +334,23 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
                 path = file.TryGetLocalPath()
                     ?? throw new IOException(CoreTools.Translate("Select a local catalog file."));
             }
+            _saveFailed = false;
             if (await _document.SaveAsync(path))
                 GetMainWindow()?.ShowBanner(CoreTools.Translate("Catalog saved"), _document.FilePath,
                     MainWindow.RuntimeNotificationLevel.Success);
+            else if (!_saveFailed && GetMainWindow()?.DataContext is MainWindowViewModel main)
+            {
+                // No error was reported, so the administrator prompt was dismissed: say nothing was saved.
+                var notice = new InfoBarViewModel
+                {
+                    Title = CoreTools.Translate("The catalog was not saved."),
+                    Severity = InfoBarSeverity.Informational,
+                    IsClosable = true,
+                    IsOpen = true,
+                };
+                notice.OnClosed = () => main.DismissToast(notice);
+                main.ShowToast(notice);
+            }
         }
         catch (Exception ex) { ReportFileError(ex); }
         finally { _pickingFile = false; SyncStatus(); }

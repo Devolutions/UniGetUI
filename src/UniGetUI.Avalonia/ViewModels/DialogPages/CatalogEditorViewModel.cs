@@ -102,8 +102,13 @@ public partial class CatalogEditorViewModel : ViewModelBase
     private Task<bool>? _initialLoad;
     private CatalogDefinition[] _savedCatalogs = [];
 
-    public Task<bool> EnsureLoadedAsync() =>
-        IsLoaded ? Task.FromResult(true) : _initialLoad ??= LoadOrStartAsync(FilePath);
+    public Task<bool> EnsureLoadedAsync()
+    {
+        if (IsLoaded) return Task.FromResult(true);
+        // A failed load is retried on the next visit, so a file fixed or deployed later is picked up.
+        if (_initialLoad is { IsCompleted: true } done && !done.Result) _initialLoad = null;
+        return _initialLoad ??= LoadOrStartAsync(FilePath);
+    }
 
     // No catalog deployed yet: start an empty document that saves to that path, so a first
     // catalog can be created there instead of the editor opening disabled.
@@ -160,10 +165,16 @@ public partial class CatalogEditorViewModel : ViewModelBase
             results.Add(new CatalogAddResult(catalog, added, selection.Count - added));
         }
         Message = results.Count == 1
-            ? CoreTools.Translate("{0} packages added to catalog {1}. Save the catalog to keep your changes.", results[0].Added, results[0].Catalog.Name)
-            : CoreTools.Translate("{0} packages added to {1} catalogs. Save the catalog to keep your changes.", results.Sum(r => r.Added), results.Count);
+            ? AddedToCatalogMessage(results[0].Added, results[0].Catalog.Name)
+            : results.Sum(r => r.Added) == 1
+                ? CoreTools.Translate("1 package added to {0} catalogs. Save the catalog to keep your changes.", results.Count)
+                : CoreTools.Translate("{0} packages added to {1} catalogs. Save the catalog to keep your changes.", results.Sum(r => r.Added), results.Count);
         return results;
     }
+
+    internal static string AddedToCatalogMessage(int added, string catalogName) => added == 1
+        ? CoreTools.Translate("1 package added to catalog {0}. Save the catalog to keep your changes.", catalogName)
+        : CoreTools.Translate("{0} packages added to catalog {1}. Save the catalog to keep your changes.", added, catalogName);
 
     public bool CanEdit => IsLoaded && !IsBusy;
     public bool CanDiscardChanges => CanEdit && IsDirty;

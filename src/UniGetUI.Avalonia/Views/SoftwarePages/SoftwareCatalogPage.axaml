@@ -381,7 +381,7 @@
                                             <TextBlock Text="{Binding Entry.Id}" FontSize="12" TextWrapping="Wrap"
                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <TextBlock Text="{Binding Entry.ManagerName}" FontSize="12"/>
+                                                <TextBlock Text="{Binding ManagerDisplayName}" FontSize="12"/>
                                                 <TextBlock Text=" / " FontSize="12"/>
                                                 <TextBlock Text="{Binding Entry.Source}" FontSize="12"/>
                                             </StackPanel>
@@ -432,7 +432,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:CatalogTileViewModel">
                                     <StackPanel Spacing="2" VerticalAlignment="Center" Margin="8,0">
-                                        <TextBlock Text="{Binding Entry.ManagerName}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding ManagerDisplayName}" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding Entry.Source}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </DataTemplate>
@@ -472,15 +472,16 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:CatalogTileViewModel">
                                 <Border Width="350" MinHeight="124" Margin="4" Padding="12" CornerRadius="4"
-                                        Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        ToolTip.Tip="{Binding ToolTipText}">
                                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CatalogSmallIcon}"
                                                         VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Entry.Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                                       Opacity="{Binding TitleOpacity}" ToolTip.Tip="{Binding UnavailableReason}"/>
+                                                       Opacity="{Binding TitleOpacity}"/>
                                             <TextBlock Text="{Binding Entry.Id}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Entry.Source}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding SourceDisplay}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                         <ContentControl Grid.Column="2" Content="{Binding}"
                                                         ContentTemplate="{StaticResource CatalogInstallAction}" VerticalAlignment="Center"/>
@@ -509,7 +510,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:CatalogTileViewModel">
                                 <Border Width="160" MinHeight="196" Margin="4" Padding="8" CornerRadius="4"
-                                        Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        ToolTip.Tip="{Binding ToolTipText}">
                                     <StackPanel Spacing="8">
                                         <Panel Width="64" Height="64" HorizontalAlignment="Center" Opacity="{Binding TitleOpacity}">
                                             <Image Source="{Binding IconBitmap}" IsVisible="{Binding HasCustomIcon}" Stretch="Uniform"
@@ -518,8 +520,7 @@
                                                               Width="64" Height="64" IsVisible="{Binding !HasCustomIcon}"/>
                                         </Panel>
                                         <TextBlock Text="{Binding Entry.Name}" TextTrimming="CharacterEllipsis"
-                                                   TextAlignment="Center" Opacity="{Binding TitleOpacity}"
-                                                   ToolTip.Tip="{Binding UnavailableReason}"/>
+                                                   TextAlignment="Center" Opacity="{Binding TitleOpacity}"/>
                                         <TextBlock Text="{Binding Entry.Id}" FontSize="11" TextTrimming="CharacterEllipsis"
                                                    TextAlignment="Center"/>
                                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CatalogInstallAction}"/>

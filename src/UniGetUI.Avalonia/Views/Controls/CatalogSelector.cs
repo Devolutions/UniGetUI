@@ -74,7 +74,6 @@ public sealed class CatalogSelector : ComboBox
         grid.Children.Add(CreateLabel(catalog));
         if (catalog is null) return grid;
 
-        string tip = CoreTools.Translate("Remove catalog {0}", catalog.Name);
         var remove = new Button
         {
             Width = 24,
@@ -87,8 +86,24 @@ public sealed class CatalogSelector : ComboBox
             IsEnabled = _document.CanEdit,
             Content = new SvgIcon { Path = "avares://UniGetUI/Assets/Symbols/cross.svg", Width = 12, Height = 12 },
         };
-        AutomationProperties.SetName(remove, tip);
-        ToolTip.SetTip(remove, tip);
+        // Keep the name in the tooltip and accessible name current when the catalog is renamed.
+        void UpdateTip()
+        {
+            string tip = CoreTools.Translate("Remove catalog {0}", catalog.Name);
+            AutomationProperties.SetName(remove, tip);
+            ToolTip.SetTip(remove, tip);
+        }
+        void OnCatalogChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(CatalogEditorCatalog.Name)) UpdateTip();
+        }
+        remove.AttachedToVisualTree += (_, _) =>
+        {
+            UpdateTip();
+            catalog.PropertyChanged += OnCatalogChanged;
+        };
+        remove.DetachedFromVisualTree += (_, _) => catalog.PropertyChanged -= OnCatalogChanged;
+        UpdateTip();
         Grid.SetColumn(remove, 1);
         remove.Click += async (_, e) =>
         {
@@ -98,6 +113,8 @@ public sealed class CatalogSelector : ComboBox
             bool confirms = catalog.Packages.Count > 0;
             if (confirms) IsDropDownOpen = false;
             await removeCatalog(catalog);
+            // Cancelled: nothing changed, so leave the list closed as the dialog left it.
+            if (confirms && _document.Catalogs.Contains(catalog)) return;
             if (_document.Catalogs.Count == 0)
             {
                 IsDropDownOpen = false;

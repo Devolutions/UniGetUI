@@ -4,11 +4,14 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -215,7 +218,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 CatalogNodes.Add(node);
                 _catalogSelection.TryAdd(catalog.Id, node);
                 foreach (var entry in catalog.Packages)
-                    _allPackages.Add(new CatalogTileViewModel(entry, catalog));
+                    _allPackages.Add(new CatalogTileViewModel(entry, catalog) { Owner = this });
             }
         }
         finally { _updatingCatalogSelection = false; }
@@ -494,6 +497,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         var installed = inventoryLive
             ? _lastInstalled = new CatalogPackageIdentitySet(loader!.Packages, installedInventory: true)
             : _lastInstalled ?? new CatalogPackageIdentitySet([], installedInventory: true);
+        var upgradable = new CatalogPackageIdentitySet(
+            UpgradablePackagesLoader.Instance?.Packages ?? [], installedInventory: true);
         var pending = new CatalogPackageIdentitySet(
             Avalonia.Infrastructure.AvaloniaOperationRegistry.OperationViewModels
                 .Select(o => o.Operation)
@@ -515,6 +520,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                         : _sources.TryGetValue(manager.Id, out var listed) && listed.Count == 0
                             ? CoreTools.Translate("The sources of {0} could not be listed. Check the log, then try again.", manager.DisplayName)
                             : CoreTools.Translate("The source {0} is not enabled for {1}. Add it in Package Managers.", tile.Entry.Source, manager.DisplayName);
+            tile.HasUpdate = upgradable.Contains(tile.Entry);
             tile.UpdateState(
                 installed.Contains(tile.Entry),
                 unavailableReason,
@@ -695,6 +701,51 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
 
 public enum CatalogSortField { Name, Id, Source }
 
+public partial class SoftwareCatalogViewModel
+{
+    private static IPackage? FindInstalled(CatalogEntry entry) =>
+        InstalledPackagesLoader.Instance?.Packages.FirstOrDefault(entry.MatchesInstalled);
+
+    internal async Task UpdateTileAsync(CatalogTileViewModel tile)
+    {
+        if (FindInstalled(tile.Entry) is not { } installed) return;
+        await InstalledPackagesPage.LaunchUpdate(installed);
+        UpdateStates();
+    }
+
+    internal async Task UninstallTileAsync(CatalogTileViewModel tile)
+    {
+        if (FindInstalled(tile.Entry) is not { } installed || MainWindow.Instance is not { } window) return;
+        if (!await UninstallConfirmationDialog.ConfirmAsync(window, installed)) return;
+        await InstalledPackagesPage.LaunchUninstall([installed]);
+        UpdateStates();
+    }
+
+    internal async Task ShowTileDetailsAsync(CatalogTileViewModel tile)
+    {
+        if (MainWindow.Instance is not { } window) return;
+        // The details window's main action follows the tile: update, uninstall, or install (the pin as version).
+        IPackage? package = null;
+        var role = OperationType.Install;
+        if (FindInstalled(tile.Entry) is { } installed)
+        {
+            var upgradable = tile.HasUpdate ? installed.GetUpgradablePackage() : null;
+            package = upgradable ?? installed;
+            role = upgradable is null ? OperationType.Uninstall : OperationType.Update;
+        }
+        else if (FindManager(tile.Entry) is { } manager && FindSource(tile.Entry) is { } source)
+            package = new Package(tile.Entry.Name, tile.Entry.Id, tile.Entry.Version, source, manager);
+        if (package is null)
+        {
+            window.ShowBanner(CoreTools.Translate("Package unavailable"),
+                tile.UnavailableReason ?? CoreTools.Translate("Enable this package's manager and source to view its details."),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return;
+        }
+        await new PackageDetailsWindow(package, role, TEL_InstallReferral.DIRECT_SEARCH).ShowDialog(window);
+    }
+}
+
 public partial class CatalogFilterNode(CatalogDefinition definition) : ObservableObject
 {
     public CatalogDefinition Definition { get; } = definition;
@@ -733,6 +784,26 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
 
     internal bool IconRequested { get; set; }
 
+    internal SoftwareCatalogViewModel? Owner { get; init; }
+
+    // An installed catalog package can be updated, uninstalled or inspected instead of being a dead end.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUpdate))]
+    [NotifyPropertyChangedFor(nameof(ShowInstalledLabel))]
+    private bool _hasUpdate;
+
+    public bool ShowUpdate => IsInstalled && HasUpdate && !IsPending;
+    public bool ShowInstalledLabel => IsInstalled && !ShowUpdate;
+
+    [RelayCommand]
+    private Task Update() => Owner?.UpdateTileAsync(this) ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private Task Uninstall() => Owner?.UninstallTileAsync(this) ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private Task Details() => Owner?.ShowTileDetailsAsync(this) ?? Task.CompletedTask;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCustomIcon))]
     private Bitmap? _iconBitmap;
@@ -756,6 +827,8 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowInstall))]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdate))]
+    [NotifyPropertyChangedFor(nameof(ShowInstalledLabel))]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -775,6 +848,8 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(StatusText))]
     [NotifyPropertyChangedFor(nameof(ToolTipText))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdate))]
+    [NotifyPropertyChangedFor(nameof(ShowInstalledLabel))]
     private bool _isPending;
 
     [ObservableProperty]

@@ -383,7 +383,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
             await PackageBundlesLoader.Instance.AddPackagesAsync(packages);
     }
 
-    private static async Task LaunchUninstall(
+    internal static async Task LaunchUninstall(
         IEnumerable<IPackage> packages,
         bool? elevated = null,
         bool? interactive = null,
@@ -405,7 +405,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         }
     }
 
-    private static async Task LaunchUpdate(IPackage? package, bool? elevated = null)
+    internal static async Task LaunchUpdate(IPackage? package, bool? elevated = null)
     {
         // Updates must run on the upgradable instance: the installed one reports
         // NewVersionString == VersionString, which managers read as "nothing to do".

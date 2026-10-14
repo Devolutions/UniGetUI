@@ -129,15 +129,32 @@
             </Panel>
         </DataTemplate>
         <DataTemplate x:Key="CatalogInstallAction" x:DataType="vm:CatalogTileViewModel">
-            <Panel>
-                <Button Content="{t:Translate Install}" IsVisible="{Binding ShowInstall}" IsEnabled="{Binding CanInstall}"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        ToolTip.Tip="{Binding StatusText}" ToolTip.ShowOnDisabled="True"
-                        Command="{Binding $parent[UserControl].((vm:SoftwareCatalogViewModel)DataContext).InstallCommand}"
-                        CommandParameter="{Binding}"/>
-                <TextBlock Text="{t:Translate Installed}" IsVisible="{Binding IsInstalled}"
-                           FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,8"/>
-            </Panel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                <Panel>
+                    <Button Content="{t:Translate Install}" IsVisible="{Binding ShowInstall}" IsEnabled="{Binding CanInstall}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="{Binding StatusText}" ToolTip.ShowOnDisabled="True"
+                            Command="{Binding $parent[UserControl].((vm:SoftwareCatalogViewModel)DataContext).InstallCommand}"
+                            CommandParameter="{Binding}"/>
+                    <Button Content="{t:Translate Update}" IsVisible="{Binding ShowUpdate}" Classes="accent"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Command="{Binding UpdateCommand}"/>
+                    <TextBlock Text="{t:Translate Installed}" IsVisible="{Binding ShowInstalledLabel}"
+                               FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,8"/>
+                </Panel>
+                <Button Grid.Column="1" Content="⋯" Width="32" Padding="0"
+                        HorizontalContentAlignment="Center" VerticalAlignment="Stretch"
+                        ToolTip.Tip="{t:Translate More actions}"
+                        automation:AutomationProperties.Name="{t:Translate More actions}">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="{t:Translate Update}" IsVisible="{Binding ShowUpdate}" Command="{Binding UpdateCommand}"/>
+                            <MenuItem Header="{t:Translate Uninstall}" IsVisible="{Binding IsInstalled}" Command="{Binding UninstallCommand}"/>
+                            <MenuItem Header="{t:Translate Package details}" Command="{Binding DetailsCommand}"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
         </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>

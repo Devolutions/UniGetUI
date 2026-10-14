@@ -62,6 +62,7 @@
   "Add packages to {0}": "Add packages to {0}",
   "Search for packages, check the ones you want, then click Add selection to catalog.": "Search for packages, check the ones you want, then click Add selection to catalog.",
   "Packages added to catalog": "Packages added to catalog",
+  "More actions": "More actions",
   "No software catalog has been set up on this device yet.": "No software catalog has been set up on this device yet.",
   "Expected at {0}": "Expected at {0}",
   "The software catalog is not valid. Ask an administrator to fix it.": "The software catalog is not valid. Ask an administrator to fix it.",

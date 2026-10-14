@@ -92,6 +92,7 @@
   "Catalog saved": "Catalog saved",
   "The catalog was not saved.": "The catalog was not saved.",
   "UniGetUI needs administrator rights to save the software catalog.": "UniGetUI needs administrator rights to save the software catalog.",
+  "Could not copy the file to {0} as an administrator (robocopy exit code {1}).": "Could not copy the file to {0} as an administrator (robocopy exit code {1}).",
   "Remove": "Remove",
   "Remove catalog": "Remove catalog",
   "Remove catalog {0}": "Remove catalog {0}",

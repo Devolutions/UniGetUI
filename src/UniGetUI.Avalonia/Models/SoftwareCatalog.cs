@@ -1,4 +1,3 @@
-using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using UniGetUI.Avalonia.Infrastructure;
@@ -90,13 +89,22 @@ internal static class SoftwareCatalog
     }
 
     /// <summary>
-    /// Saves through the macOS administrator prompt, for the root-owned machine-wide location.
-    /// Returns false when the user cancels the prompt.
+    /// Saves through the administrator prompt (macOS password dialog, Windows UAC), for a
+    /// machine-wide location the user cannot write. Returns false when the user cancels the prompt.
     /// </summary>
-    [SupportedOSPlatform("macos")]
-    internal static Task<bool> SaveWithAdminRightsAsync(string filePath, CatalogDefinition[] catalogs) =>
-        MacAdminFileInstaller.WriteAsync(Path.GetFullPath(filePath), Serialize(catalogs) + Environment.NewLine,
-            CoreTools.Translate("UniGetUI needs administrator rights to save the software catalog."));
+    internal static Task<bool> SaveWithAdminRightsAsync(string filePath, CatalogDefinition[] catalogs)
+    {
+        string destination = Path.GetFullPath(filePath);
+        string contents = Serialize(catalogs) + Environment.NewLine;
+        if (OperatingSystem.IsWindows())
+            return WindowsAdminFileInstaller.WriteAsync(destination, contents);
+        if (OperatingSystem.IsMacOS())
+            return MacAdminFileInstaller.WriteAsync(destination, contents,
+                CoreTools.Translate("UniGetUI needs administrator rights to save the software catalog."));
+        throw new PlatformNotSupportedException();
+    }
+
+    internal static bool CanSaveWithAdminRights => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
 
     internal static async Task SaveAsync(string filePath, CatalogDefinition[] catalogs)
     {

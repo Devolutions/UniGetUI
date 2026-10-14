@@ -282,14 +282,15 @@ public partial class CatalogEditorViewModel : ViewModelBase
             var definitions = CopyCatalogs(Catalogs.Select(c => c.ToDefinition()));
             try
             {
-                // The machine-wide folder belongs to UniGetUI; create it on first save (as root on macOS).
-                if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(SoftwareCatalog.FilePath), StringComparison.Ordinal))
+                // The machine-wide folder belongs to UniGetUI; create it on first save (as an administrator when needed).
+                if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(SoftwareCatalog.FilePath),
+                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 await SoftwareCatalog.SaveAsync(path, definitions);
             }
-            catch (UnauthorizedAccessException) when (OperatingSystem.IsMacOS())
+            catch (UnauthorizedAccessException) when (SoftwareCatalog.CanSaveWithAdminRights)
             {
-                // The machine-wide catalog is root-owned on macOS; ask for an administrator instead.
+                // The machine-wide catalog can be admin-owned; ask for an administrator instead.
                 if (!await SoftwareCatalog.SaveWithAdminRightsAsync(path, definitions))
                 {
                     Message = CoreTools.Translate("The catalog was not saved.");

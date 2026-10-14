@@ -260,7 +260,9 @@ public class CatalogEditorTests : IDisposable
         var entry = new CatalogEntry { Id = "tool", Name = "Tool", ManagerName = "missing", Source = "private" };
         loader.Replace([entry]);
         var original = Assert.Single(loader.Packages);
-        var equivalent = new InvalidImportedPackage(entry.AsSerializable().GetInvalidEquivalent(), original.Source,
+        var raw = entry.AsSerializable();
+        raw.Version = original.VersionString;
+        var equivalent = new InvalidImportedPackage(raw.GetInvalidEquivalent(), original.Source,
             $"{entry.ManagerName}\0{entry.Source}\0{entry.Id}");
         Assert.NotSame(original, equivalent);
         Assert.Equal(original.GetVersionedHash(), equivalent.GetVersionedHash());

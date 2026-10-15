@@ -575,7 +575,7 @@
                                              IsEnabled="{Binding SimilarSearchEnabled}"
                                              Content="{t:Translate Show similar packages}"
                                              automation:AutomationProperties.Name="{t:Translate Show similar packages}"/>
-                                <Separator Margin="0,8"/>
+                                <Separator Margin="0,8" Background="{DynamicResource MenuDividerBrush}"/>
                                 <CheckBox x:Name="InstantSearchCheckbox"
                                           IsChecked="{Binding InstantSearch, Mode=TwoWay}"
                                           automation:AutomationProperties.Name="{t:Translate Instant search}">

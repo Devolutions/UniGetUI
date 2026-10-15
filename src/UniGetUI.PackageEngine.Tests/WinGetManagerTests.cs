@@ -994,6 +994,162 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void PingetPackageDetailsProviderSelectsTheInstallerOfTheConfiguredScope()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        List<PackageQuery> queries = [];
+        var provider = new PingetPackageDetailsProvider(
+            query =>
+            {
+                queries.Add(query);
+                return CreateScopedPingetShowResult(query.InstallScope);
+            },
+            installerSizeResolver: _ => 1234,
+            installerPreferenceResolver: _ => new(PackageScope.Machine, Architecture.x64)
+        );
+
+        provider.LoadPackageDetails(details, new TestNativeTaskLogger());
+
+        PackageQuery query = Assert.Single(queries);
+        Assert.Equal(PackageScope.Machine, query.InstallScope);
+        Assert.Equal(Architecture.x64, query.InstallerArchitecture);
+        Assert.Equal("https://example.test/machine.exe", details.InstallerUrl?.ToString());
+    }
+
+    [Fact]
+    public void PingetPackageDetailsProviderRetriesWithoutPreferenceWhenItExcludesEveryInstaller()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        List<PackageQuery> queries = [];
+        var provider = new PingetPackageDetailsProvider(
+            query =>
+            {
+                queries.Add(query);
+                ShowResult result = CreateScopedPingetShowResult(null, [PackageScope.User]);
+                return query.InstallScope is null
+                    ? result
+                    : result with { SelectedInstaller = null };
+            },
+            installerSizeResolver: _ => 1234,
+            installerPreferenceResolver: _ => new(PackageScope.Machine, Architecture.x64)
+        );
+
+        provider.LoadPackageDetails(details, new TestNativeTaskLogger());
+
+        Assert.Equal(2, queries.Count);
+        Assert.Null(queries[1].InstallScope);
+        Assert.Null(queries[1].InstallerArchitecture);
+        Assert.Equal("https://example.test/user.exe", details.InstallerUrl?.ToString());
+    }
+
+    [Fact]
+    public void PingetPackageDetailsProviderDoesNotRetryWhenThePreferenceExcludedNothing()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        int lookups = 0;
+        var provider = new PingetPackageDetailsProvider(
+            _ =>
+            {
+                lookups++;
+                return CreatePingetShowResult() with { SelectedInstaller = null };
+            },
+            installerSizeResolver: _ => 1234,
+            installerPreferenceResolver: _ => new(PackageScope.Machine, Architecture.x64)
+        );
+
+        provider.LoadPackageDetails(details, new TestNativeTaskLogger());
+
+        Assert.Equal(1, lookups);
+    }
+
+    [Theory]
+    [InlineData(PackageScope.Machine, Architecture.x64, "https://example.test/x64-machine.exe")]
+    [InlineData(PackageScope.User, Architecture.x64, "https://example.test/x64-user.exe")]
+    [InlineData(PackageScope.Machine, Architecture.arm64, "https://example.test/arm64-machine.exe")]
+    public void PingetCliPackageDetailsProviderSelectsTheInstallerOfTheConfiguredPreference(
+        string scope,
+        string architecture,
+        string expectedUrl
+    )
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        const string manifestJson = """
+            {
+              "PackageIdentifier": "Contoso.Tool",
+              "Installers": [
+                { "Architecture": "x64", "Scope": "user", "InstallerUrl": "https://example.test/x64-user.exe" },
+                { "Architecture": "arm64", "Scope": "machine", "InstallerUrl": "https://example.test/arm64-machine.exe" },
+                { "Architecture": "x64", "Scope": "machine", "InstallerUrl": "https://example.test/x64-machine.exe" }
+              ]
+            }
+            """;
+
+        PingetCliPackageDetailsProvider.ApplyManifestJson(
+            details,
+            manifestJson,
+            new InstallerPreference(scope, architecture),
+            installerSizeResolver: _ => 0
+        );
+
+        Assert.Equal(expectedUrl, details.InstallerUrl?.ToString());
+    }
+
+    [Fact]
+    public void PingetCliPackageDetailsProviderTreatsAnInstallerWithoutScopeAsMatching()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        const string manifestJson = """
+            {
+              "PackageIdentifier": "Contoso.Tool",
+              "Installers": [
+                { "Architecture": "x64", "InstallerUrl": "https://example.test/x64-any.exe" },
+                { "Architecture": "arm64", "Scope": "machine", "InstallerUrl": "https://example.test/arm64-machine.exe" }
+              ]
+            }
+            """;
+
+        PingetCliPackageDetailsProvider.ApplyManifestJson(
+            details,
+            manifestJson,
+            new InstallerPreference(PackageScope.Machine, Architecture.x64),
+            installerSizeResolver: _ => 0
+        );
+
+        Assert.Equal("https://example.test/x64-any.exe", details.InstallerUrl?.ToString());
+    }
+
+    [Fact]
+    public void PingetCliPackageDetailsProviderFallsBackWhenThePreferenceExcludesEveryInstaller()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        const string manifestJson = """
+            {
+              "PackageIdentifier": "Contoso.Tool",
+              "Installers": [
+                { "Architecture": "x64", "Scope": "user", "InstallerUrl": "https://example.test/x64-user.exe" }
+              ]
+            }
+            """;
+
+        PingetCliPackageDetailsProvider.ApplyManifestJson(
+            details,
+            manifestJson,
+            new InstallerPreference(PackageScope.Machine, Architecture.x86),
+            installerSizeResolver: _ => 0
+        );
+
+        Assert.Equal("https://example.test/x64-user.exe", details.InstallerUrl?.ToString());
+    }
+
+    private static Package CreateContosoToolPackage() =>
+        new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+
+    [Fact]
     public void TryGetInstallerUrlsCollectsEveryInstallerUrlWithoutDuplicates()
     {
         var package = CreatePingetQueryPackage();
@@ -2774,6 +2930,29 @@ public sealed class WinGetManagerTests : IDisposable
             },
             SelectedInstaller = installers.FirstOrDefault(),
             StructuredDocument = new Dictionary<string, object?>(),
+        };
+    }
+
+    private static ShowResult CreateScopedPingetShowResult(
+        string? requestedScope,
+        IReadOnlyList<string>? scopes = null
+    )
+    {
+        ShowResult result = CreatePingetShowResult();
+        Installer template = result.Manifest.Installers[0];
+        List<Installer> installers =
+        [
+            .. (scopes ?? [PackageScope.User, PackageScope.Machine]).Select(scope =>
+                template with { Scope = scope, Url = $"https://example.test/{scope}.exe" }
+            ),
+        ];
+
+        return result with
+        {
+            Manifest = result.Manifest with { Installers = installers },
+            SelectedInstaller = installers.FirstOrDefault(installer =>
+                requestedScope is null || installer.Scope == requestedScope
+            ),
         };
     }
 

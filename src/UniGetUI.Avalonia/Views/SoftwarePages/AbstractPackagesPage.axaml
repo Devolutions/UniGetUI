@@ -583,8 +583,8 @@
                                 </CheckBox>
                                 <CheckBox x:Name="UpperLowerCaseCheckbox"
                                           IsChecked="{Binding UpperLowerCase, Mode=TwoWay}"
-                                          automation:AutomationProperties.Name="{t:Translate Distinguish between uppercase and lowercase}">
-                                    <TextBlock Text="{t:Translate Distinguish between uppercase and lowercase}" TextWrapping="Wrap"/>
+                                          automation:AutomationProperties.Name="{t:Translate Case sensitive}">
+                                    <TextBlock Text="{t:Translate Case sensitive}" TextWrapping="Wrap"/>
                                 </CheckBox>
                                 <CheckBox x:Name="IgnoreSpecialCharsCheckbox"
                                           IsChecked="{Binding IgnoreSpecialChars, Mode=TwoWay}"

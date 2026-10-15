@@ -224,7 +224,7 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
             manifest.TryGetProperty("Installers", out JsonElement installers)
             && installers.ValueKind == JsonValueKind.Array
             && installers.GetArrayLength() > 0
-            && (installer = SelectInstaller(installers, preference)).ValueKind
+            && (installer = SelectInstaller(manifest, installers, preference)).ValueKind
                 == JsonValueKind.Object;
 
         SetIfMissing(value => details.Author = value, details.Author, GetString(manifest, "Author"));
@@ -284,21 +284,26 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
     }
 
     private static JsonElement SelectInstaller(
+        JsonElement manifest,
         JsonElement installers,
         InstallerPreference preference
     )
     {
-        return SelectInstaller(installers, preference.Scope, preference.Architecture)
-            ?? SelectInstaller(installers, null, null)
+        return SelectInstaller(manifest, installers, preference.Scope, preference.Architecture)
+            ?? SelectInstaller(manifest, installers, null, null)
             ?? installers[0];
     }
 
     private static JsonElement? SelectInstaller(
+        JsonElement manifest,
         JsonElement installers,
         string? scope,
         string? architecture
     )
     {
+        string? rootScope = GetString(manifest, "Scope");
+        string? rootMinimumOsVersion = GetString(manifest, "MinimumOSVersion");
+        IReadOnlyList<string>? rootPlatforms = GetStringArray(manifest, "Platform");
         string systemArchitecture = PingetPackageDetailsProvider.CurrentArchitecture();
         string[] preferredArchitectures = PingetPackageDetailsProvider.PreferredArchitectures(
             systemArchitecture
@@ -311,7 +316,17 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
             if (candidate.ValueKind != JsonValueKind.Object)
                 continue;
 
-            string? candidateScope = GetString(candidate, "Scope");
+            if (
+                !PingetPackageDetailsProvider.MatchesCurrentPlatform(
+                    GetStringArray(candidate, "Platform") ?? rootPlatforms
+                )
+                || !PingetPackageDetailsProvider.MatchesCurrentOsVersion(
+                    GetString(candidate, "MinimumOSVersion") ?? rootMinimumOsVersion
+                )
+            )
+                continue;
+
+            string? candidateScope = GetString(candidate, "Scope") ?? rootScope;
             if (
                 scope is not null
                 && candidateScope is not null
@@ -353,6 +368,21 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
         && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    private static IReadOnlyList<string>? GetStringArray(JsonElement element, string propertyName)
+    {
+        if (
+            !element.TryGetProperty(propertyName, out JsonElement value)
+            || value.ValueKind != JsonValueKind.Array
+        )
+            return null;
+
+        return value
+            .EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()!)
+            .ToArray();
+    }
 
     private static void SetIfMissing(
         Action<string> setValue,
@@ -512,7 +542,11 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
 
         return new InstallerPreference(
             WinGetPkgOperationHelper.GetEffectiveScope(package, options),
-            WinGetPkgOperationHelper.GetEffectiveArchitecture(package, options)
+            WinGetPkgOperationHelper.GetEffectiveArchitecture(
+                package,
+                options,
+                forUpdate: package.IsUpgradable
+            )
         );
     }
 
@@ -534,6 +568,41 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
                     StringComparison.OrdinalIgnoreCase
                 )
             )
+        );
+
+    internal static bool MatchesCurrentPlatform(IReadOnlyList<string>? platforms) =>
+        platforms is null
+        || platforms.Count == 0
+        || !OperatingSystem.IsWindows()
+        || platforms.Contains("Windows.Desktop", StringComparer.OrdinalIgnoreCase);
+
+    internal static bool MatchesCurrentOsVersion(
+        string? minimumOsVersion,
+        string? currentOsVersion = null
+    )
+    {
+        if (string.IsNullOrWhiteSpace(minimumOsVersion))
+            return true;
+
+        currentOsVersion ??= OperatingSystem.IsWindows()
+            ? Environment.OSVersion.Version.ToString()
+            : null;
+        if (string.IsNullOrWhiteSpace(currentOsVersion))
+            return true;
+
+        if (
+            TryParseOsVersion(minimumOsVersion, out Version? minimum)
+            && TryParseOsVersion(currentOsVersion, out Version? current)
+        )
+            return current >= minimum;
+
+        return minimumOsVersion.Equals(currentOsVersion, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryParseOsVersion(string value, [NotNullWhen(true)] out Version? version) =>
+        Version.TryParse(
+            string.Join('.', value.Split('.', StringSplitOptions.RemoveEmptyEntries).Take(4)),
+            out version
         );
 
     internal static string CurrentArchitecture() =>

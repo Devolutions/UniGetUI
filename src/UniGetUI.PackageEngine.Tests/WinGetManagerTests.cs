@@ -1141,6 +1141,121 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal("https://example.test/x64-user.exe", details.InstallerUrl?.ToString());
     }
 
+    [Fact]
+    public void PingetCliPackageDetailsProviderResolvesTheManifestRootScope()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        const string manifestJson = """
+            {
+              "PackageIdentifier": "Contoso.Tool",
+              "Scope": "user",
+              "Installers": [
+                { "Architecture": "x64", "InstallerUrl": "https://example.test/x64-inherited-user.exe" },
+                { "Architecture": "x64", "Scope": "machine", "InstallerUrl": "https://example.test/x64-machine.exe" }
+              ]
+            }
+            """;
+
+        PingetCliPackageDetailsProvider.ApplyManifestJson(
+            details,
+            manifestJson,
+            new InstallerPreference(PackageScope.Machine, Architecture.x64),
+            installerSizeResolver: _ => 0
+        );
+
+        Assert.Equal("https://example.test/x64-machine.exe", details.InstallerUrl?.ToString());
+    }
+
+    [Fact]
+    public void PingetCliPackageDetailsProviderSkipsInstallersThatNeedANewerWindows()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        const string manifestJson = """
+            {
+              "PackageIdentifier": "Contoso.Tool",
+              "Installers": [
+                { "Architecture": "x86", "InstallerUrl": "https://example.test/x86.exe" },
+                { "Architecture": "x64", "MinimumOSVersion": "99.0.0.0", "InstallerUrl": "https://example.test/x64-future.exe" }
+              ]
+            }
+            """;
+
+        PingetCliPackageDetailsProvider.ApplyManifestJson(
+            details,
+            manifestJson,
+            installerSizeResolver: _ => 0
+        );
+
+        Assert.Equal("https://example.test/x86.exe", details.InstallerUrl?.ToString());
+    }
+
+    [Fact]
+    public void PingetCliPackageDetailsProviderSkipsInstallersForAnotherPlatform()
+    {
+        var details = new PackageDetails(CreateContosoToolPackage());
+        const string manifestJson = """
+            {
+              "PackageIdentifier": "Contoso.Tool",
+              "Installers": [
+                { "Architecture": "x64", "Platform": ["Windows.Universal"], "InstallerUrl": "https://example.test/universal.exe" },
+                { "Architecture": "x64", "Platform": ["Windows.Desktop"], "InstallerUrl": "https://example.test/desktop.exe" }
+              ]
+            }
+            """;
+
+        PingetCliPackageDetailsProvider.ApplyManifestJson(
+            details,
+            manifestJson,
+            new InstallerPreference(null, Architecture.x64),
+            installerSizeResolver: _ => 0
+        );
+
+        Assert.Equal("https://example.test/desktop.exe", details.InstallerUrl?.ToString());
+    }
+
+    [Theory]
+    [InlineData("10.0.19045.0", "10.0.22000.0", false)]
+    [InlineData("10.0.22631.0", "10.0.22000.0", true)]
+    [InlineData("10.0.19045.0", null, true)]
+    [InlineData("10.0.19045.0", "10.0.19045", true)]
+    public void MatchesCurrentOsVersionComparesNumerically(
+        string currentOsVersion,
+        string? minimumOsVersion,
+        bool expected
+    )
+    {
+        Assert.Equal(
+            expected,
+            PingetPackageDetailsProvider.MatchesCurrentOsVersion(minimumOsVersion, currentOsVersion)
+        );
+    }
+
+    [Theory]
+    [InlineData("Contoso Tool 32-bit", "Contoso.Tool", false, Architecture.x64)]
+    [InlineData("Contoso Tool 32-bit", "Contoso.Tool", true, Architecture.x86)]
+    [InlineData("Contoso Tool", "Contoso.Tool.x64", true, Architecture.x64)]
+    [InlineData("Contoso Tool", "Contoso.Tool", true, Architecture.x64)]
+    public void GetEffectiveArchitectureAppliesTheUpdateOverrideOnlyForUpdates(
+        string name,
+        string id,
+        bool forUpdate,
+        string expected
+    )
+    {
+        var package = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithName(name)
+            .WithId(id)
+            .WithVersion("1.0.0")
+            .Build();
+        var options = new InstallOptions { Architecture = Architecture.x64 };
+
+        Assert.Equal(
+            expected,
+            WinGetPkgOperationHelper.GetEffectiveArchitecture(package, options, forUpdate)
+        );
+    }
+
     private static Package CreateContosoToolPackage() =>
         new PackageBuilder()
             .WithManager(new WinGet())

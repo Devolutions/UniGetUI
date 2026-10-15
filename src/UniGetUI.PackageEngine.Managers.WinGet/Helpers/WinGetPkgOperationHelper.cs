@@ -77,12 +77,29 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         };
     }
 
-    internal static string? GetEffectiveArchitecture(IPackage package, InstallOptions options)
+    internal static string? GetUpdateArchitectureOverride(IPackage package)
+    {
+        if (package.Name.Contains("64-bit") || package.Id.ToLower().Contains("x64"))
+            return Architecture.x64;
+
+        if (package.Name.Contains("32-bit") || package.Id.ToLower().Contains("x86"))
+            return Architecture.x86;
+
+        return null;
+    }
+
+    internal static string? GetEffectiveArchitecture(
+        IPackage package,
+        InstallOptions options,
+        bool forUpdate = false
+    )
     {
         if (package.OverridenOptions.WinGet_DropArchAndScope)
             return null;
 
-        return options.Architecture switch
+        string architecture =
+            (forUpdate ? GetUpdateArchitectureOverride(package) : null) ?? options.Architecture;
+        return architecture switch
         {
             Architecture.x86 => Architecture.x86,
             Architecture.x64 => Architecture.x64,
@@ -160,13 +177,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
         if (operation is OperationType.Update)
         {
-            if (package.Name.Contains("64-bit") || package.Id.ToLower().Contains("x64"))
+            if (GetUpdateArchitectureOverride(package) is { } updateArchitecture)
             {
-                options.Architecture = Architecture.x64;
-            }
-            else if (package.Name.Contains("32-bit") || package.Id.ToLower().Contains("x86"))
-            {
-                options.Architecture = Architecture.x86;
+                options.Architecture = updateArchitecture;
             }
             parameters.Add("--include-unknown");
 
@@ -347,7 +360,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 var options = InstallOptionsFactory.LoadApplicable(package);
                 if (
                     GetEffectiveScope(package, options) is not null
-                    || GetEffectiveArchitecture(package, options) is not null
+                    || GetEffectiveArchitecture(package, options, forUpdate: true) is not null
                 )
                 {
                     Logger.Warn(

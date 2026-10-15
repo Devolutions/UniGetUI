@@ -106,7 +106,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
-        InstallOptionsSaveButton.Click += (_, _) => _ = SaveInstallOptionsAsync();
+        InstallOptionsSaveButton.Click += (_, _) => _ = SaveInstallOptionsAndRefreshAsync();
         ContributeButton.Click += (_, _) => OpenUrl(ContributeUrl);
         PrevScreenshotButton.Click += (_, _) => NavigateScreenshot(-1);
         NextScreenshotButton.Click += (_, _) => NavigateScreenshot(1);
@@ -155,6 +155,12 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         };
         var embed = new InstallOptionsControl { DataContext = _installVm };
         InstallOptionsHolder.Content = embed;
+    }
+
+    private async Task SaveInstallOptionsAndRefreshAsync()
+    {
+        await SaveInstallOptionsAsync();
+        await _vm.RefreshDetailsAsync();
     }
 
     private async Task SaveInstallOptionsAsync()

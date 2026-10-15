@@ -241,6 +241,11 @@ public partial class PackageDetailsViewModel : ObservableObject
         _ = LoadIconAsync();
         _ = LoadScreenshotsAsync();
 
+        await RefreshDetailsAsync();
+    }
+
+    public async Task RefreshDetailsAsync()
+    {
         var details = Package.Details;
         if (!details.IsPopulated)
             await details.Load();

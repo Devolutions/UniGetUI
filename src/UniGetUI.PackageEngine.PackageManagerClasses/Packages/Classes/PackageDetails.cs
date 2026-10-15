@@ -20,6 +20,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public bool IsPopulated =>
             _populated && _populatedGeneration == InstallOptionsFactory.SavedGeneration;
 
+        private const int MaxLoadAttempts = 3;
         private bool _populated;
         private int _populatedGeneration;
 
@@ -129,10 +130,20 @@ namespace UniGetUI.PackageEngine.PackageClasses
         {
             try
             {
-                int generation = InstallOptionsFactory.SavedGeneration;
-                await Task.Run(() => Package.Manager.DetailsHelper.GetDetails(this));
-                _populatedGeneration = generation;
-                _populated = true;
+                for (int attempt = 0; ; attempt++)
+                {
+                    int generation = InstallOptionsFactory.SavedGeneration;
+                    await Task.Run(() => Package.Manager.DetailsHelper.GetDetails(this));
+                    if (
+                        generation == InstallOptionsFactory.SavedGeneration
+                        || attempt == MaxLoadAttempts - 1
+                    )
+                    {
+                        _populatedGeneration = generation;
+                        _populated = true;
+                        break;
+                    }
+                }
             }
             catch (Exception ex)
             {

@@ -51,6 +51,52 @@ public class PackageDetailsLoadTests
     }
 
     [Fact]
+    public async Task ALoadJoinedAfterAnOptionsSaveReturnsDetailsFetchedUnderTheNewOptions()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), nameof(PackageDetailsLoadTests), Guid.NewGuid().ToString("N"));
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(testRoot, "Data");
+        try
+        {
+            Directory.CreateDirectory(CoreData.UniGetUIInstallationOptionsDirectory);
+            int fetches = 0;
+            var firstFetchStarted = new TaskCompletionSource();
+            var releaseFirstFetch = new TaskCompletionSource();
+            var manager = new PackageManagerBuilder()
+                .ConfigureDetails(helper =>
+                    helper.PopulateDetails = details =>
+                    {
+                        int fetch = Interlocked.Increment(ref fetches);
+                        if (fetch == 1)
+                        {
+                            firstFetchStarted.SetResult();
+                            releaseFirstFetch.Task.Wait();
+                        }
+                        details.InstallerUrl = new Uri($"https://example.test/fetch-{fetch}.exe");
+                    })
+                .Build();
+            var package = new PackageBuilder().WithManager(manager).WithId("Contoso.Test").Build();
+
+            Task first = package.Details.Load();
+            await firstFetchStarted.Task;
+            InstallOptionsFactory.SaveForPackage(new InstallOptions { InstallationScope = PackageScope.Machine }, package);
+            Task joined = package.Details.Load();
+            releaseFirstFetch.SetResult();
+            await Task.WhenAll(first, joined);
+
+            Assert.Same(first, joined);
+            Assert.Equal(2, fetches);
+            Assert.Equal("https://example.test/fetch-2.exe", package.Details.InstallerUrl?.ToString());
+            Assert.True(package.Details.IsPopulated);
+        }
+        finally
+        {
+            CoreData.TEST_DataDirectoryOverride = null;
+            if (Directory.Exists(testRoot))
+                Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task SavingInstallOptionsMarksLoadedDetailsAsStale()
     {
         string testRoot = Path.Combine(Path.GetTempPath(), nameof(PackageDetailsLoadTests), Guid.NewGuid().ToString("N"));

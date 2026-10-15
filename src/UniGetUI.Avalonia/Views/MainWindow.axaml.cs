@@ -311,8 +311,8 @@ public partial class MainWindow : Window
 
         _focusSidebarSelectionOnNextPageChange = true;
         ViewModel.NavigateTo(e.KeyModifiers.HasFlag(KeyModifiers.Shift)
-            ? MainWindowViewModel.GetPreviousPage(ViewModel.CurrentPage_t, SoftwareCatalogEnabled)
-            : MainWindowViewModel.GetNextPage(ViewModel.CurrentPage_t, SoftwareCatalogEnabled));
+            ? MainWindowViewModel.GetPreviousPage(ViewModel.CurrentPage_t, ViewModel.ShortcutPages)
+            : MainWindowViewModel.GetNextPage(ViewModel.CurrentPage_t, ViewModel.ShortcutPages));
         e.Handled = true;
     }
 
@@ -564,6 +564,8 @@ public partial class MainWindow : Window
     // Re-reads the NavMenuMode setting so the layout switch applies live from the settings page.
     public void RefreshNavigationMode()
         => ViewModel.Sidebar.Mode = SidebarViewModel.ParseMode(Settings.GetValue(Settings.K.NavMenuMode));
+
+    public void ResetNavigationOrder() => ViewModel.Sidebar.ResetNavigationPages();
 
     // Let the splitter hover surface replace the separator visually without changing its layout thickness.
     private void OperationsSplitter_PointerEntered(object? sender, PointerEventArgs e)

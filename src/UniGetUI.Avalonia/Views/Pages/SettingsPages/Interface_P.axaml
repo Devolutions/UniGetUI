@@ -41,6 +41,13 @@
 
             <Border Height="16"/>
 
+            <settings:ButtonCard x:Name="NavigationOrderCard"
+                                 CornerRadius="8"
+                                 Text="{t:Translate Navigation menu order}"
+                                 ButtonText="{t:Translate Reset}"/>
+
+            <Border Height="16"/>
+
             <settings:TranslatedTextBlock Text="Rendering"
                                          FontSize="14"
                                          FontWeight="SemiBold"

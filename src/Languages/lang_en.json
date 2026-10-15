@@ -1974,5 +1974,8 @@
   "Previous screenshot": "Previous screenshot",
   "Next screenshot": "Next screenshot",
   "Screenshot {0} of {1}": "Screenshot {0} of {1}",
-  "Screenshot {0} of {1}, current": "Screenshot {0} of {1}, current"
+  "Screenshot {0} of {1}, current": "Screenshot {0} of {1}, current",
+  "Navigation menu order": "Navigation menu order",
+  "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Keyboard shortcuts follow the same order.": "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Keyboard shortcuts follow the same order.",
+  "{0} moved to position {1} of {2}": "{0} moved to position {1} of {2}"
 }

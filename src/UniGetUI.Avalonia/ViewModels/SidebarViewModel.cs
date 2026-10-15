@@ -18,6 +18,21 @@ public partial class SidebarViewModel : ViewModelBase
     public bool HasUsableCatalog { get; } =
         Settings.Get(Settings.K.EnableSoftwareCatalog) && SoftwareCatalog.HasUsableCatalog();
 
+    [ObservableProperty]
+    private PageType[] _navigationPages;
+
+    public void ReorderNavigationPages(IReadOnlyList<PageType> pages)
+    {
+        NavigationPageOrder.Save(pages);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled);
+    }
+
+    public void ResetNavigationPages()
+    {
+        NavigationPageOrder.Reset();
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled);
+    }
+
     // ─── Badge properties ─────────────────────────────────────────────────────
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdatesBadgeText))]
@@ -89,6 +104,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     public SidebarViewModel()
     {
+        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled);
         _wasDocked = Docked;
         _isPaneOpen = Docked && !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
     }

@@ -8,6 +8,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Platform;
 using Avalonia.Styling;
 
@@ -179,8 +180,8 @@ public class SvgIcon : Control
         return new ParsedSvg(geometries, viewBoxWidth, viewBoxHeight);
     }
 
-    private static readonly IBrush _darkFg = new SolidColorBrush(Color.Parse("#E8E8E8"));
-    private static readonly IBrush _lightFg = new SolidColorBrush(Color.Parse("#1E1E1E"));
+    private static readonly IBrush _darkFg = new ImmutableSolidColorBrush(Color.Parse("#E8E8E8"));
+    private static readonly IBrush _lightFg = new ImmutableSolidColorBrush(Color.Parse("#1E1E1E"));
 
     private static IBrush LookupThemeForeground() =>
         Application.Current?.ActualThemeVariant == ThemeVariant.Dark

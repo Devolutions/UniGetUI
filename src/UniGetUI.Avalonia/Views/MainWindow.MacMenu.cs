@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using AvaloniaEdit;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
@@ -18,6 +19,9 @@ public partial class MainWindow
     // Text target resolved once per refresh, so the Edit predicates don't each walk the tree.
     private TextBox? _menuTextBox;
     private TextEditor? _menuEditor;
+
+    private NativeMenu? _macViewMenu;
+    private NativeMenuItem[] _macPageItems = [];
 
     private void SetupMacMenuBar()
     {
@@ -60,14 +64,9 @@ public partial class MainWindow
             new NativeMenuItemSeparator(),
             Action(CoreTools.Translate("Find"), TriggerPageSearch, Key.F, enabled: () => PageShortcutListener is not null));
 
-        // Settings is reached from the application menu (⌘,), so the View menu skips it.
-        NativeMenuItemBase[] pageItems = ViewModel.ShortcutPages
-            .Select((page, index) => (page, key: Key.D1 + index))
-            .Where(p => p.page != PageType.Settings)
-            .Select(p => (NativeMenuItemBase)Item(PageMenuTitle(p.page), navigate, p.page.ToString(), p.key))
-            .ToArray();
+        _macPageItems = CreateMacPageItems();
         var view = Submenu(CoreTools.Translate("View"), [
-            .. pageItems,
+            .. _macPageItems,
             new NativeMenuItemSeparator(),
             Item(CoreTools.Translate("Toggle navigation panel"), ViewModel.ToggleSidebarCommand, null, Key.S, KeyModifiers.Control),
             new NativeMenuItemSeparator(),
@@ -90,7 +89,38 @@ public partial class MainWindow
             Item(CoreTools.Translate("Package Manager logs"), navigate, "ManagerLog"),
             Item(CoreTools.Translate("Operation history"), navigate, "OperationHistory"));
 
+        _macViewMenu = view.Menu;
+        sidebar.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SidebarViewModel.NavigationPages))
+                RefreshMacViewMenu();
+        };
         NativeMenu.SetMenu(this, new NativeMenu { Items = { edit, view, window, help } });
+        UpdateMacMenuState();
+    }
+
+    // Settings is reached from the application menu (⌘,), so the View menu skips it.
+    private NativeMenuItem[] CreateMacPageItems()
+        => ViewModel.ShortcutPages
+            .Select((page, index) => (page, key: Key.D1 + index))
+            .Where(p => p.page != PageType.Settings)
+            .Select(p => Item(PageMenuTitle(p.page), ViewModel.Sidebar.RequestNavigationCommand, p.page.ToString(), p.key))
+            .ToArray();
+
+    private void RefreshMacViewMenu()
+    {
+        if (_macViewMenu is null)
+            return;
+
+        foreach (var item in _macPageItems)
+        {
+            _macViewMenu.Items.Remove(item);
+            _macMenuStates.RemoveAll(state => state.Item == item);
+        }
+
+        _macPageItems = CreateMacPageItems();
+        for (int i = 0; i < _macPageItems.Length; i++)
+            _macViewMenu.Items.Insert(i, _macPageItems[i]);
         UpdateMacMenuState();
     }
 

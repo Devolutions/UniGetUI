@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Animation;
@@ -10,8 +11,10 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
 
@@ -32,6 +35,19 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private ListBoxItem? _pendingPillItem;
     private bool _pendingPillAnimate;
 
+    private ListBoxItem? _dragCandidate;
+    private Point _dragStart;
+    private bool _isDragging;
+    private ListBoxItem[] _dragItems = [];
+    private double[] _dragTops = [];
+    private int _dragFromIndex;
+    private int _dragTargetIndex;
+    private bool _dragHadFocus;
+    private TopLevel? _dragTopLevel;
+    private IPointer? _dragPointer;
+    private SidebarViewModel? _subscribedViewModel;
+
+    private const double DragThreshold = 6d;
     private const double PillHeight = 16d;
     private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(300);
 
@@ -64,6 +80,12 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         MoreNavBtn.AddHandler(KeyDownEvent, MoreNavBtn_KeyDown, RoutingStrategies.Tunnel);
 
+        NavListBox.AddHandler(PointerPressedEvent, NavListBox_PointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        NavListBox.AddHandler(PointerMovedEvent, NavListBox_PointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
+        NavListBox.AddHandler(PointerReleasedEvent, NavListBox_PointerReleased, RoutingStrategies.Tunnel, handledEventsToo: true);
+        NavListBox.AddHandler(KeyDownEvent, NavListBox_KeyDown, RoutingStrategies.Tunnel);
+        NavListBox.PointerCaptureLost += (_, _) => EndDrag(commit: false);
+
         if (FlyoutBase.GetAttachedFlyout(MoreNavBtn) is { } moreFlyout)
         {
             moreFlyout.Opened += (_, _) => _isMoreFlyoutOpen = true;
@@ -78,26 +100,282 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
+        UpdateViewModelSubscription(TopLevel.GetTopLevel(this) is not null);
         if (DataContext is SidebarViewModel vm)
         {
-            if (!vm.SoftwareCatalogEnabled)
-            {
-                NavListBox.Items.Remove(CatalogNavBtn);
-                NavListBox.Items.Remove(CatalogEditorNavBtn);
-            }
-            AssignShortcutKeys(MainWindowViewModel.GetShortcutPages(vm.SoftwareCatalogEnabled));
-
-            vm.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName == nameof(SidebarViewModel.SelectedPageType))
-                    SyncListBoxSelection(vm.SelectedPageType);
-            };
+            ApplyNavigationOrder(vm.NavigationPages);
             // The startup page may already be set before this view subscribes, so apply it now.
             SyncListBoxSelection(vm.SelectedPageType);
         }
     }
 
-    // Announces each item's Ctrl/Cmd+number shortcut, which shifts when the catalog is enabled.
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        UpdateViewModelSubscription(attached: true);
+        if (_subscribedViewModel is { } vm)
+        {
+            ApplyNavigationOrder(vm.NavigationPages);
+            SyncListBoxSelection(vm.SelectedPageType);
+        }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        EndDrag(commit: false);
+        UpdateViewModelSubscription(attached: false);
+    }
+
+    private void UpdateViewModelSubscription(bool attached)
+    {
+        SidebarViewModel? vm = attached ? DataContext as SidebarViewModel : null;
+        if (ReferenceEquals(vm, _subscribedViewModel))
+            return;
+
+        if (_subscribedViewModel is { } previous)
+            previous.PropertyChanged -= ViewModel_PropertyChanged;
+        _subscribedViewModel = vm;
+        vm?.PropertyChanged += ViewModel_PropertyChanged;
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (sender is not SidebarViewModel vm)
+            return;
+
+        if (args.PropertyName == nameof(SidebarViewModel.SelectedPageType))
+            SyncListBoxSelection(vm.SelectedPageType);
+        else if (args.PropertyName == nameof(SidebarViewModel.NavigationPages))
+        {
+            ApplyNavigationOrder(vm.NavigationPages);
+            SyncListBoxSelection(vm.SelectedPageType);
+        }
+    }
+
+    private void ApplyNavigationOrder(PageType[] pages)
+    {
+        ResetDragVisuals();
+        _lastNavItemSelectionWasAuto = true;
+        NavListBox.Items.Clear();
+        foreach (var page in pages)
+        {
+            if (NavButtonFor(page) is { } button)
+                NavListBox.Items.Add(button);
+        }
+        _lastNavItemSelectionWasAuto = false;
+        AssignShortcutKeys(MainWindowViewModel.GetShortcutPages(pages));
+    }
+
+    private void NavListBox_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _dragCandidate = null;
+        if (!e.GetCurrentPoint(NavListBox).Properties.IsLeftButtonPressed
+            || (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not { } item
+            || !NavListBox.Items.Contains(item))
+            return;
+
+        _dragCandidate = item;
+        _dragStart = e.GetPosition(DragSurface);
+    }
+
+    private Visual DragSurface => NavListBox.ItemsPanelRoot ?? (Visual)NavListBox;
+
+    private void NavListBox_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_dragCandidate is null)
+            return;
+
+        double offset = e.GetPosition(DragSurface).Y - _dragStart.Y;
+        if (!_isDragging)
+        {
+            if (Math.Abs(offset) < DragThreshold || !BeginDrag(_dragCandidate))
+                return;
+            _dragPointer = e.Pointer;
+            e.Pointer.Capture(NavListBox);
+        }
+
+        UpdateDrag(offset);
+        e.Handled = true;
+    }
+
+    private void NavListBox_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_isDragging)
+        {
+            _dragCandidate = null;
+            return;
+        }
+
+        EndDrag(commit: true);
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
+    private bool BeginDrag(ListBoxItem item)
+    {
+        ListBoxItem[] items = NavListBox.Items.OfType<ListBoxItem>().ToArray();
+        int from = Array.IndexOf(items, item);
+        double[] tops = new double[items.Length];
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (items[i].TranslatePoint(default, DragSurface) is not { } position)
+            {
+                _dragCandidate = null;
+                return false;
+            }
+            tops[i] = position.Y;
+        }
+        if (from < 0 || items.Length < 2)
+        {
+            _dragCandidate = null;
+            return false;
+        }
+
+        _dragItems = items;
+        _dragTops = tops;
+        _dragFromIndex = from;
+        for (int i = 0; i < _dragItems.Length; i++)
+        {
+            var transform = new TranslateTransform();
+            if (i != _dragFromIndex && !MotionPreference.ReducedMotion)
+            {
+                transform.Transitions =
+                [
+                    new DoubleTransition
+                    {
+                        Property = TranslateTransform.YProperty,
+                        Duration = TimeSpan.FromMilliseconds(150),
+                        Easing = new CubicEaseOut(),
+                    },
+                ];
+            }
+            _dragItems[i].RenderTransform = transform;
+        }
+
+        _isDragging = true;
+        _dragTargetIndex = _dragFromIndex;
+        _dragHadFocus = item.IsKeyboardFocusWithin;
+        _dragTopLevel = TopLevel.GetTopLevel(this);
+        _dragTopLevel?.AddHandler(KeyDownEvent, DragTopLevel_KeyDown, RoutingStrategies.Tunnel);
+        item.ZIndex = 1;
+        item.Opacity = 0.85;
+        _pillAnimationCancellation?.Cancel();
+        NavigationSelectionPill.IsVisible = false;
+        return true;
+    }
+
+    private void UpdateDrag(double offset)
+    {
+        ListBoxItem dragged = _dragItems[_dragFromIndex];
+        double fromTop = _dragTops[_dragFromIndex];
+        offset = Math.Clamp(offset, _dragTops[0] - fromTop, _dragTops[^1] - fromTop);
+        ((TranslateTransform)dragged.RenderTransform!).Y = offset;
+
+        double draggedCenter = fromTop + offset + (dragged.Bounds.Height / 2d);
+        int target = 0;
+        for (int i = 0; i < _dragItems.Length; i++)
+        {
+            double center = _dragTops[i] + (_dragItems[i].Bounds.Height / 2d);
+            if ((i < _dragFromIndex && center < draggedCenter) || (i > _dragFromIndex && center <= draggedCenter))
+                target++;
+        }
+        _dragTargetIndex = target;
+
+        double pitch = dragged.Bounds.Height + dragged.Margin.Top + dragged.Margin.Bottom;
+        for (int i = 0; i < _dragItems.Length; i++)
+        {
+            if (i == _dragFromIndex)
+                continue;
+            double shift = 0d;
+            if (_dragFromIndex < target && i > _dragFromIndex && i <= target)
+                shift = -pitch;
+            else if (target < _dragFromIndex && i >= target && i < _dragFromIndex)
+                shift = pitch;
+            ((TranslateTransform)_dragItems[i].RenderTransform!).Y = shift;
+        }
+    }
+
+    private void EndDrag(bool commit)
+    {
+        _dragCandidate = null;
+        if (!_isDragging)
+            return;
+        _isDragging = false;
+        _dragTopLevel?.RemoveHandler(KeyDownEvent, DragTopLevel_KeyDown);
+        _dragTopLevel = null;
+        _dragPointer = null;
+
+        int from = _dragFromIndex;
+        int target = _dragTargetIndex;
+        ListBoxItem dragged = _dragItems[from];
+
+        ResetDragVisuals();
+        if (!commit || target == from || !MoveNavItem(dragged, target - from, _dragHadFocus ? NavigationMethod.Pointer : null))
+            QueueSelectionPillUpdate(animate: false);
+    }
+
+    private void DragTopLevel_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not Key.Escape)
+            return;
+
+        IPointer? pointer = _dragPointer;
+        EndDrag(commit: false);
+        pointer?.Capture(null);
+        e.Handled = true;
+    }
+
+    private void NavListBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyModifiers != KeyModifiers.Alt || e.Key is not (Key.Up or Key.Down) || _isDragging
+            || (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not { } item
+            || !NavListBox.Items.Contains(item))
+            return;
+
+        MoveNavItem(item, e.Key is Key.Up ? -1 : 1, NavigationMethod.Directional);
+        e.Handled = true;
+    }
+
+    private bool MoveNavItem(ListBoxItem item, int offset, NavigationMethod? refocus)
+    {
+        if (ViewModel is not { } vm)
+            return false;
+
+        PageType[] pages = vm.NavigationPages;
+        int from = Array.FindIndex(pages, page => NavButtonFor(page) == item);
+        int target = Math.Clamp(from + offset, 0, pages.Length - 1);
+        if (from < 0 || target == from)
+            return false;
+
+        List<PageType> reordered = [.. pages];
+        reordered.RemoveAt(from);
+        reordered.Insert(target, pages[from]);
+        vm.ReorderNavigationPages(reordered);
+
+        if (refocus is { } method)
+            item.Focus(method);
+        AccessibilityAnnouncementService.Announce(CoreTools.Translate(
+            "{0} moved to position {1} of {2}",
+            AutomationProperties.GetName(item) ?? pages[from].ToString(),
+            target + 1,
+            pages.Length));
+        return true;
+    }
+
+    private void ResetDragVisuals()
+    {
+        foreach (var item in _dragItems)
+        {
+            item.RenderTransform = null;
+            item.ZIndex = 0;
+            item.Opacity = 1d;
+        }
+        _dragItems = [];
+        _dragTops = [];
+    }
+
+    // Announces each item's Ctrl/Cmd+number shortcut, which follows the sidebar order.
     private void AssignShortcutKeys(PageType[] pages)
     {
         string modifier = OperatingSystem.IsMacOS() ? "Cmd" : "Ctrl";
@@ -219,6 +497,9 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         Dispatcher.UIThread.Post(
             () =>
             {
+                if (_isDragging)
+                    return;
+
                 if ((targetItem ?? NavListBox.SelectedItem ?? FooterNavListBox.SelectedItem) is ListBoxItem item)
                 {
                     MoveSelectionPill(item, animate);

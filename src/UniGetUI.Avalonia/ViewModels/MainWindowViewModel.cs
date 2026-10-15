@@ -696,22 +696,18 @@ public partial class MainWindowViewModel : ViewModelBase
     /// The navigation pages in sidebar order: Ctrl/Cmd+1, +2, … follow it (the More menu takes the
     /// next number), and so does the previous/next page cycle.
     /// </summary>
-    internal static PageType[] GetShortcutPages(bool catalogEnabled) => catalogEnabled
-        ? [PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles,
-            PageType.CatalogEditor, PageType.Settings, PageType.Managers]
-        : [PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles,
-            PageType.Settings, PageType.Managers];
+    internal static PageType[] GetShortcutPages(IEnumerable<PageType> navigationPages)
+        => [.. navigationPages, PageType.Settings, PageType.Managers];
 
-    public PageType[] ShortcutPages => GetShortcutPages(Sidebar.SoftwareCatalogEnabled);
+    public PageType[] ShortcutPages => GetShortcutPages(Sidebar.NavigationPages);
 
-    internal static PageType GetNextPage(PageType type, bool catalogEnabled) => Step(type, catalogEnabled, +1);
+    internal static PageType GetNextPage(PageType type, PageType[] pages) => Step(type, pages, +1);
 
-    internal static PageType GetPreviousPage(PageType type, bool catalogEnabled) => Step(type, catalogEnabled, -1);
+    internal static PageType GetPreviousPage(PageType type, PageType[] pages) => Step(type, pages, -1);
 
     // Pages outside the sidebar order (logs, help, …) step to Discover.
-    private static PageType Step(PageType type, bool catalogEnabled, int direction)
+    private static PageType Step(PageType type, PageType[] pages, int direction)
     {
-        var pages = GetShortcutPages(catalogEnabled);
         int index = Array.IndexOf(pages, type);
         return index < 0 ? PageType.Discover : pages[(index + direction + pages.Length) % pages.Length];
     }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -694,25 +695,62 @@ public sealed class SoftwareCatalogTests : IDisposable
         Assert.Equal(
             [PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles,
                 PageType.CatalogEditor, PageType.Settings, PageType.Managers],
-            MainWindowViewModel.GetShortcutPages(true));
+            MainWindowViewModel.GetShortcutPages(NavigationPageOrder.DefaultPages(true)));
         Assert.Equal(
             [PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles, PageType.Settings, PageType.Managers],
-            MainWindowViewModel.GetShortcutPages(false));
+            MainWindowViewModel.GetShortcutPages(NavigationPageOrder.DefaultPages(false)));
+        Assert.Equal(
+            [PageType.Updates, PageType.Discover, PageType.Installed, PageType.Bundles, PageType.Settings, PageType.Managers],
+            MainWindowViewModel.GetShortcutPages(NavigationPageOrder.Resolve("Updates,Discover", false)));
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void KeyboardPageCycleFollowsTheSidebarOrderInBothDirections(bool catalogEnabled)
+    [InlineData(true, "")]
+    [InlineData(false, "")]
+    [InlineData(true, "Bundles,Updates,Catalog")]
+    [InlineData(false, "Bundles,Updates,Catalog")]
+    public void KeyboardPageCycleFollowsTheSidebarOrderInBothDirections(bool catalogEnabled, string stored)
     {
-        var pages = MainWindowViewModel.GetShortcutPages(catalogEnabled);
+        var pages = MainWindowViewModel.GetShortcutPages(NavigationPageOrder.Resolve(stored, catalogEnabled));
         for (int i = 0; i < pages.Length; i++)
         {
             var next = pages[(i + 1) % pages.Length];
-            Assert.Equal(next, MainWindowViewModel.GetNextPage(pages[i], catalogEnabled));
-            Assert.Equal(pages[i], MainWindowViewModel.GetPreviousPage(next, catalogEnabled));
+            Assert.Equal(next, MainWindowViewModel.GetNextPage(pages[i], pages));
+            Assert.Equal(pages[i], MainWindowViewModel.GetPreviousPage(next, pages));
         }
-        Assert.Equal(PageType.Discover, MainWindowViewModel.GetNextPage(PageType.OwnLog, catalogEnabled));
+        Assert.Equal(PageType.Discover, MainWindowViewModel.GetNextPage(PageType.OwnLog, pages));
+    }
+
+    [Theory]
+    [InlineData("", true, new[] { PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles, PageType.CatalogEditor })]
+    [InlineData("", false, new[] { PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles })]
+    [InlineData("Updates,Installed", true, new[] { PageType.Updates, PageType.Installed, PageType.Catalog, PageType.Discover, PageType.Bundles, PageType.CatalogEditor })]
+    [InlineData("CatalogEditor,Bundles,Catalog,Discover", false, new[] { PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed })]
+    [InlineData(" Bundles , Bogus,Settings,Bundles,,OwnLog,Null", false, new[] { PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed })]
+    public void StoredNavigationOrderResolvesToEveryVisiblePageOnce(string stored, bool catalogEnabled, PageType[] expected)
+        => Assert.Equal(expected, NavigationPageOrder.Resolve(stored, catalogEnabled));
+
+    [Fact]
+    public void ReorderingWithTheCatalogHiddenKeepsTheCatalogPagesInPlace()
+    {
+        var full = NavigationPageOrder.Resolve("Discover,Catalog,Updates,CatalogEditor,Installed,Bundles", true);
+        var merged = NavigationPageOrder.Merge(full, [PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed]);
+
+        Assert.Equal(
+            [PageType.Bundles, PageType.Catalog, PageType.Discover, PageType.CatalogEditor, PageType.Updates, PageType.Installed],
+            merged);
+        Assert.Equal(
+            [PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed],
+            NavigationPageOrder.Resolve(NavigationPageOrder.Serialize(merged), false));
+    }
+
+    [Fact]
+    public void TheDefaultNavigationOrderIsStoredAsUnset()
+    {
+        Assert.Equal("", NavigationPageOrder.Serialize(NavigationPageOrder.DefaultPages(true)));
+        Assert.Equal(
+            "Discover,Catalog,Updates,Installed,Bundles,CatalogEditor",
+            NavigationPageOrder.Serialize(NavigationPageOrder.Resolve("Discover", true)));
     }
 
     [Fact]

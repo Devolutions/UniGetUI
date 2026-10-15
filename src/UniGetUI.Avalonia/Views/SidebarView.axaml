@@ -27,6 +27,12 @@
                  automation:AutomationProperties.Name="{t:Translate Navigation}"
                  Padding="8,10,8,0">
 
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+
             <!-- Software Catalog: first when enabled, as the curated starting point -->
             <ListBoxItem x:Name="CatalogNavBtn" Tag="Catalog" Classes="nav-item" Padding="4,2" CornerRadius="6"
                          automation:AutomationProperties.Name="{t:Translate Software Catalog}"

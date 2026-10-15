@@ -60,5 +60,10 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         NavMenuModeSelector.Text = CoreTools.Translate("Navigation menu:");
         NavMenuModeSelector.ShowAddedItems();
         NavMenuModeSelector.ValueChanged += (_, _) => MainWindow.Instance?.RefreshNavigationMode();
+
+        NavigationOrderCard.Description = CoreTools.Translate(
+            "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Keyboard shortcuts follow the same order.",
+            OperatingSystem.IsMacOS() ? "Option+Up/Down" : "Alt+Up/Down");
+        NavigationOrderCard.Click += (_, _) => MainWindow.Instance?.ResetNavigationOrder();
     }
 }

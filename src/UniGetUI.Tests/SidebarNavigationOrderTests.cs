@@ -50,7 +50,7 @@ public sealed class SidebarNavigationOrderTests : IDisposable
 
         window.MouseDown(start, MouseButton.Left);
         for (int step = 1; step <= 10; step++)
-            window.MouseMove(start + ((end - start) * step / 10d));
+            window.MouseMove(start + ((end - start) * step / 10d), RawInputModifiers.LeftMouseButton);
         window.MouseUp(end, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
@@ -71,8 +71,8 @@ public sealed class SidebarNavigationOrderTests : IDisposable
         Point end = Center(window, Item(list, "Bundles"));
 
         window.MouseDown(start, MouseButton.Left);
-        window.MouseMove(start + new Point(0, 20));
-        window.MouseMove(end);
+        window.MouseMove(start + new Point(0, 20), RawInputModifiers.LeftMouseButton);
+        window.MouseMove(end, RawInputModifiers.LeftMouseButton);
         window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         window.MouseUp(end, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
@@ -159,12 +159,12 @@ public sealed class SidebarNavigationOrderTests : IDisposable
         Point start = Center(window, Item(list, "Discover"));
 
         window.MouseDown(start, MouseButton.Left);
-        window.MouseMove(start + new Point(0, 20));
+        window.MouseMove(start + new Point(0, 20), RawInputModifiers.LeftMouseButton);
         scrollViewer.Offset = new Vector(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
         Point end = Center(window, Item(list, "Bundles")) + new Point(0, 10);
-        window.MouseMove(end);
+        window.MouseMove(end, RawInputModifiers.LeftMouseButton);
         window.MouseUp(end, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
 
@@ -188,6 +188,91 @@ public sealed class SidebarNavigationOrderTests : IDisposable
         window.UpdateLayout();
         Assert.Equal(["Bundles", "Installed", "Updates", "Discover"], Items(list).Select(item => (string)item.Tag!));
         AssertAllPresented(list);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task PressingAPageNavigatesOnReleaseAndDraggingItDoesNotNavigate() => _session.Dispatch(() =>
+    {
+        var (window, vm, list) = ShowSidebar();
+        var view = (SidebarView)window.Content!;
+        var requests = new List<PageType>();
+        vm.NavigationRequested += (_, page) =>
+        {
+            requests.Add(page);
+            view.IsHitTestVisible = false;
+        };
+        Point start = Center(window, Item(list, "Updates"));
+        Point end = Center(window, Item(list, "Bundles")) + new Point(0, 10);
+
+        window.MouseDown(start, MouseButton.Left);
+        Assert.Empty(requests);
+        for (int step = 1; step <= 10; step++)
+            window.MouseMove(start + ((end - start) * step / 10d), RawInputModifiers.LeftMouseButton);
+        window.MouseUp(end, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Empty(requests);
+        Assert.Equal([PageType.Discover, PageType.Installed, PageType.Bundles, PageType.Updates], vm.NavigationPages);
+
+        Point click = Center(window, Item(list, "Installed"));
+        window.MouseDown(click, MouseButton.Left);
+        Assert.Empty(requests);
+        window.MouseUp(click, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal([PageType.Installed], requests);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task KeyboardSelectionStillNavigatesImmediately() => _session.Dispatch(() =>
+    {
+        var (window, vm, list) = ShowSidebar();
+        var requests = new List<PageType>();
+        vm.NavigationRequested += (_, page) => requests.Add(page);
+        Item(list, "Discover").Focus(NavigationMethod.Directional);
+
+        window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal([PageType.Updates], requests);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task HoveringAfterAMissedReleaseDoesNotStartADrag() => _session.Dispatch(() =>
+    {
+        var (window, vm, list) = ShowSidebar();
+        var requests = new List<PageType>();
+        vm.NavigationRequested += (_, page) => requests.Add(page);
+        Point start = Center(window, Item(list, "Updates"));
+
+        window.MouseDown(start, MouseButton.Left);
+        window.MouseMove(start + new Point(0, 2), RawInputModifiers.LeftMouseButton);
+        window.MouseMove(Center(window, Item(list, "Bundles")), RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.All(Items(list), item => Assert.Null(item.RenderTransform));
+        Assert.Empty(requests);
+        Assert.Null(list.SelectedItem);
+        Assert.Equal([PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles], vm.NavigationPages);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task ReleasingAfterTheSidebarScrollsDropsWhereThePointerIs() => _session.Dispatch(() =>
+    {
+        var (window, vm, list) = ShowSidebar(330);
+        var scrollViewer = list.GetVisualDescendants().OfType<ScrollViewer>().First();
+        Point start = Center(window, Item(list, "Discover"));
+        Point held = start + new Point(0, 20);
+
+        window.MouseDown(start, MouseButton.Left);
+        window.MouseMove(held, RawInputModifiers.LeftMouseButton);
+        scrollViewer.Offset = new Vector(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
+        Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout();
+        window.MouseUp(held, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(scrollViewer.Offset.Y > 0);
+        Assert.Equal([PageType.Updates, PageType.Discover, PageType.Installed, PageType.Bundles], vm.NavigationPages);
     }, CancellationToken.None);
 
     private static (Window Window, SidebarViewModel ViewModel, ListBox List) ShowSidebar(int height = 700)

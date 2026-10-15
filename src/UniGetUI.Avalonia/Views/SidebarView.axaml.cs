@@ -46,6 +46,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private TopLevel? _dragTopLevel;
     private IPointer? _dragPointer;
     private SidebarViewModel? _subscribedViewModel;
+    private PageType? _pendingPointerNavigation;
 
     private const double DragThreshold = 6d;
     private const double PillHeight = 16d;
@@ -170,6 +171,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private void NavListBox_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _dragCandidate = null;
+        _pendingPointerNavigation = null;
         if (!e.GetCurrentPoint(NavListBox).Properties.IsLeftButtonPressed
             || (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not { } item
             || !NavListBox.Items.Contains(item))
@@ -189,6 +191,11 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         double offset = e.GetPosition(DragSurface).Y - _dragStart.Y;
         if (!_isDragging)
         {
+            if (!e.GetCurrentPoint(NavListBox).Properties.IsLeftButtonPressed)
+            {
+                AbandonPointerPress();
+                return;
+            }
             if (Math.Abs(offset) < DragThreshold || !BeginDrag(_dragCandidate))
                 return;
             _dragPointer = e.Pointer;
@@ -204,9 +211,15 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         if (!_isDragging)
         {
             _dragCandidate = null;
+            if (_pendingPointerNavigation is { } page)
+            {
+                _pendingPointerNavigation = null;
+                ViewModel?.RequestNavigation(page.ToString());
+            }
             return;
         }
 
+        UpdateDrag(e.GetPosition(DragSurface).Y - _dragStart.Y);
         EndDrag(commit: true);
         e.Pointer.Capture(null);
         e.Handled = true;
@@ -255,6 +268,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         _isDragging = true;
         _dragTargetIndex = _dragFromIndex;
+        DiscardPendingPointerNavigation();
         _dragHadFocus = item.IsKeyboardFocusWithin;
         _dragTopLevel = TopLevel.GetTopLevel(this);
         _dragTopLevel?.AddHandler(KeyDownEvent, DragTopLevel_KeyDown, RoutingStrategies.Tunnel);
@@ -296,11 +310,29 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         }
     }
 
-    private void EndDrag(bool commit)
+    private void AbandonPointerPress()
     {
         _dragCandidate = null;
-        if (!_isDragging)
+        DiscardPendingPointerNavigation();
+    }
+
+    private void DiscardPendingPointerNavigation()
+    {
+        if (_pendingPointerNavigation is null)
             return;
+
+        _pendingPointerNavigation = null;
+        SyncListBoxSelection(ViewModel?.SelectedPageType ?? PageType.Null);
+    }
+
+    private void EndDrag(bool commit)
+    {
+        if (!_isDragging)
+        {
+            AbandonPointerPress();
+            return;
+        }
+        _dragCandidate = null;
         _isDragging = false;
         _dragTopLevel?.RemoveHandler(KeyDownEvent, DragTopLevel_KeyDown);
         _dragTopLevel = null;
@@ -444,7 +476,12 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             return;
         }
 
-        if (Enum.TryParse<PageType>(tag, out var pageType))
+        if (!Enum.TryParse<PageType>(tag, out var pageType))
+            return;
+
+        if (_dragCandidate is not null && ReferenceEquals(selectedItem, _dragCandidate))
+            _pendingPointerNavigation = pageType;
+        else
             ViewModel?.RequestNavigation(pageType.ToString());
     }
 

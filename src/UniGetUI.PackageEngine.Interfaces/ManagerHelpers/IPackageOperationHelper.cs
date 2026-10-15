@@ -54,5 +54,11 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
             InstallOptions options,
             OperationType operation
         );
+
+        public void ApplyOperationOverrides(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation
+        );
     }
 }

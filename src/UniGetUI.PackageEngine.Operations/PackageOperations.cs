@@ -446,6 +446,7 @@ namespace UniGetUI.PackageEngine.Operations
             // elevation, mirroring the local execution path where this runs as part of
             // building the process parameters.
             Package.Manager.OperationHelper.ApplyElevationRequirements(Package, Options, Role);
+            Package.Manager.OperationHelper.ApplyOperationOverrides(Package, Options, Role);
 
             bool requestElevated = RequiresAdminRights();
             _ranElevated = requestElevated ? 1 : 0;

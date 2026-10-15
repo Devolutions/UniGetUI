@@ -17,7 +17,11 @@ namespace UniGetUI.PackageEngine.PackageClasses
         /// Whether this PackageDetails instance has valid data or not.
         /// To load valid data, make use of the `Load()` method
         /// </summary>
-        public bool IsPopulated { get; private set; }
+        public bool IsPopulated =>
+            _populated && _populatedGeneration == InstallOptionsFactory.SavedGeneration;
+
+        private bool _populated;
+        private int _populatedGeneration;
 
         /// <summary>
         /// The description of the package
@@ -125,8 +129,10 @@ namespace UniGetUI.PackageEngine.PackageClasses
         {
             try
             {
+                int generation = InstallOptionsFactory.SavedGeneration;
                 await Task.Run(() => Package.Manager.DetailsHelper.GetDetails(this));
-                IsPopulated = true;
+                _populatedGeneration = generation;
+                _populated = true;
             }
             catch (Exception ex)
             {

@@ -22,6 +22,7 @@ using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageOperations;
+using BrokerApiArchitecture = Devolutions.Now.Policy.Api.Architecture;
 using BrokerApiCancelResponse = Devolutions.Now.Policy.Api.CancelResponse;
 using BrokerApiCapabilitiesResponse = Devolutions.Now.Policy.Api.CapabilitiesResponse;
 using BrokerApiConstants = Devolutions.Now.Policy.Api.BrokerApi;
@@ -1752,6 +1753,26 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task BrokeredOperationAppliesTheManagerOperationOverrides()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            StatusAfterCancel = BrokerApiOperationStatus.Completed,
+            CompletedExitCode = 0,
+        };
+
+        var result = await RunBrokeredOperationWithOutput(
+            transport,
+            configureOperationHelper: helper => helper.OperationOverridesAction =
+                (_, options, _) => options.Architecture = Architecture.x64);
+
+        Assert.Equal(OperationVeredict.Success, result.Veredict);
+        Assert.Equal(
+            BrokerApiArchitecture.X64,
+            DeserializeExecuteRequest(transport).Package.Architecture);
+    }
+
+    [Fact]
     public async Task BrokeredOperationRequestsStandardElevationByDefault()
     {
         var transport = new ScriptedBrokerTransport
@@ -2208,6 +2229,7 @@ public sealed class PackageOperationsTests
                 {
                     Manager = BrokerApiManagerName.Chocolatey,
                     Operations = [BrokerApiOperation.Install, BrokerApiOperation.Update, BrokerApiOperation.Uninstall],
+                    Architectures = [BrokerApiArchitecture.X86, BrokerApiArchitecture.X64],
                     SupportsCustomParameters = true,
                     SupportsCustomInstallLocation = true,
                     SupportsCaptureOutput = true,

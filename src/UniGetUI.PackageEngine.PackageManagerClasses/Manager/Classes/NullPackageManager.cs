@@ -190,5 +190,11 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             InstallOptions options,
             OperationType operation
         ) => throw new NotImplementedException();
+
+        public void ApplyOperationOverrides(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation
+        ) => throw new NotImplementedException();
     }
 }

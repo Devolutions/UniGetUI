@@ -1,3 +1,7 @@
+using UniGetUI.Core.Data;
+using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -44,5 +48,33 @@ public class PackageDetailsLoadTests
         await package.Details.Load();
 
         Assert.Equal(2, fetches);
+    }
+
+    [Fact]
+    public async Task SavingInstallOptionsMarksLoadedDetailsAsStale()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), nameof(PackageDetailsLoadTests), Guid.NewGuid().ToString("N"));
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(testRoot, "Data");
+        try
+        {
+            Directory.CreateDirectory(CoreData.UniGetUIInstallationOptionsDirectory);
+            var manager = new PackageManagerBuilder().Build();
+            var package = new PackageBuilder().WithManager(manager).WithId("Contoso.Test").Build();
+
+            await package.Details.Load();
+            Assert.True(package.Details.IsPopulated);
+
+            InstallOptionsFactory.SaveForPackage(new InstallOptions { InstallationScope = PackageScope.Machine }, package);
+            Assert.False(package.Details.IsPopulated);
+
+            await package.Details.Load();
+            Assert.True(package.Details.IsPopulated);
+        }
+        finally
+        {
+            CoreData.TEST_DataDirectoryOverride = null;
+            if (Directory.Exists(testRoot))
+                Directory.Delete(testRoot, recursive: true);
+        }
     }
 }

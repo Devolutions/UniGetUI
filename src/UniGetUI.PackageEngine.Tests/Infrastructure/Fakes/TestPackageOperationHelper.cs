@@ -25,6 +25,17 @@ public sealed class TestPackageOperationHelper(TestPackageManager manager)
         ElevationRequirementsAction?.Invoke(package, options, operation);
     }
 
+    public Action<IPackage, InstallOptions, OperationType>? OperationOverridesAction { get; set; }
+
+    public override void ApplyOperationOverrides(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation
+    )
+    {
+        OperationOverridesAction?.Invoke(package, options, operation);
+    }
+
     protected override IReadOnlyList<string> _getOperationParameters(
         IPackage package,
         InstallOptions options,

@@ -177,10 +177,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
         if (operation is OperationType.Update)
         {
-            if (GetUpdateArchitectureOverride(package) is { } updateArchitecture)
-            {
-                options.Architecture = updateArchitecture;
-            }
+            ApplyOperationOverrides(package, options, operation);
             parameters.Add("--include-unknown");
 
             if (!usePinget)
@@ -240,6 +237,21 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     /// <see cref="_getOperationParameters"/>) and the agent-broker path, so that the
     /// requested elevation matches regardless of where the operation runs.
     /// </summary>
+    public override void ApplyOperationOverrides(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation
+    )
+    {
+        if (
+            operation is OperationType.Update
+            && GetUpdateArchitectureOverride(package) is { } updateArchitecture
+        )
+        {
+            options.Architecture = updateArchitecture;
+        }
+    }
+
     public override void ApplyElevationRequirements(
         IPackage package,
         InstallOptions options,

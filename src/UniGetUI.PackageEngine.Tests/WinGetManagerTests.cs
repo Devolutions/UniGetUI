@@ -1256,6 +1256,28 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    [Theory]
+    [InlineData(OperationType.Update, Architecture.x86)]
+    [InlineData(OperationType.Install, Architecture.x64)]
+    public void ApplyOperationOverridesForcesThePackageArchitectureOnlyOnUpdate(
+        OperationType operation,
+        string expected
+    )
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool 32-bit")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+        var options = new InstallOptions { Architecture = Architecture.x64 };
+
+        manager.OperationHelper.ApplyOperationOverrides(package, options, operation);
+
+        Assert.Equal(expected, options.Architecture);
+    }
+
     private static Package CreateContosoToolPackage() =>
         new PackageBuilder()
             .WithManager(new WinGet())

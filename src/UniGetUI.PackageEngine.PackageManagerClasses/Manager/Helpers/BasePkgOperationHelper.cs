@@ -150,4 +150,11 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         OperationType operation
     )
     { }
+
+    public virtual void ApplyOperationOverrides(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation
+    )
+    { }
 }

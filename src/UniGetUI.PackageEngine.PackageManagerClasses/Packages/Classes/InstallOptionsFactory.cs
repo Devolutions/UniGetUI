@@ -21,6 +21,10 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public const string PackageIdPlaceholder = "%PACKAGE%";
         public const string PackageNamePlaceholder = "%NAME%";
 
+        private static int _savedGeneration;
+
+        public static int SavedGeneration => Volatile.Read(ref _savedGeneration);
+
         public static bool IsIdentityScopedOptionsFile(string fileName) =>
             StoragePath.IsIdentityScoped(fileName);
 
@@ -235,6 +239,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                 }
 
                 _optionsCache[key] = options.Copy();
+                Interlocked.Increment(ref _savedGeneration);
 
                 string fileContents = options.AsJsonString();
                 File.WriteAllText(filePath, fileContents);

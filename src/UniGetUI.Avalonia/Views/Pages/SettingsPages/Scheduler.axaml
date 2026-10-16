@@ -303,6 +303,38 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <settings:TranslatedTextBlock Text="Automatic update restrictions"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:CheckboxCard x:Name="AUPMeteredCard"
+                                   SettingName="DisableAUPOnMeteredConnections"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Do not automatically install updates when the network connection is metered}"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:CheckboxCard x:Name="AUPBatteryCard"
+                                   SettingName="DisableAUPOnBattery"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Do not automatically install updates when the device runs on battery}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="AUPBatterySaverCard"
+                                   SettingName="DisableAUPOnBatterySaver"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Do not automatically install updates when the battery saver is on}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="QuitAfterAutomaticUpdatesCard"
+                                   SettingName="QuitAfterAutomaticUpdates"
+                                   Text="{t:Translate Text='Quit UniGetUI once automatic updates have finished, if its window is not open'}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"/>
+
             <settings:TranslatedTextBlock Text="Related settings"
                                           FontSize="14"
                                           FontWeight="SemiBold"
@@ -314,7 +346,7 @@
                                    IsClickEnabled="True"
                                    Command="{Binding NavigateToUpdatesCommand}"
                                    Header="{t:Translate Package update preferences}"
-                                   Description="{t:Translate Text='Battery and metered connection restrictions, minimum update age, etc.'}"/>
+                                   Description="{t:Translate Text='Minimum update age, installer host change warnings, etc.'}"/>
 
             <settings:SettingsCard CornerRadius="0,0,8,8"
                                    IsClickEnabled="True"

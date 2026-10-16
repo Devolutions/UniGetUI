@@ -5,7 +5,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Tools;
-using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
@@ -18,7 +17,6 @@ public partial class UpdatesViewModel : ViewModelBase
 {
     public event EventHandler<Type>? NavigationRequested;
 
-    [ObservableProperty] private bool _isAutomaticUpdatesEnabled;
     [ObservableProperty] private bool _isCustomAgeSelected;
 
     /// <summary>Items for the minimum update age ComboboxCard, in display/value pairs.</summary>
@@ -40,7 +38,6 @@ public partial class UpdatesViewModel : ViewModelBase
 
     public void RefreshState()
     {
-        IsAutomaticUpdatesEnabled = MaintenanceScheduleStore.IsEnabled(MaintenanceTaskKind.InstallUpdates);
         IsCustomAgeSelected = CoreSettings.GetValue(CoreSettings.K.MinimumUpdateAge) == "custom";
     }
 

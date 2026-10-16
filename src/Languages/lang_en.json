@@ -1204,6 +1204,8 @@
   "Never": "Never",
   "Scheduled maintenance": "Scheduled maintenance",
   "Battery and metered connection restrictions, minimum update age, etc.": "Battery and metered connection restrictions, minimum update age, etc.",
+  "Minimum update age, installer host change warnings, etc.": "Minimum update age, installer host change warnings, etc.",
+  "Choose when updates are checked and installed, and when automatic installs are skipped or UniGetUI quits": "Choose when updates are checked and installed, and when automatic installs are skipped or UniGetUI quits",
   "Backup destination, file name and cloud backup account.": "Backup destination, file name and cloud backup account.",
   "Choose the days and hours when updates are checked and installed, and when backups are made": "Choose the days and hours when updates are checked and installed, and when backups are made",
   "Choose the days and hours when the backups are performed.": "Choose the days and hours when the backups are performed.",

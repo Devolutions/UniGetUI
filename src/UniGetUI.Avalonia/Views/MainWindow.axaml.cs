@@ -78,6 +78,9 @@ public partial class MainWindow : Window
     // gap — enough for the row to read as separate from the window buttons rather than crowding them.
     private const double MAC_TRAFFIC_LIGHT_INSET = 76;
 
+    // Space between the glass sidebar panel's edge and the close (red) button.
+    private const double MAC_TRAFFIC_LIGHT_PANEL_PADDING = 12;
+
     // Space between the zoom (green) button and the first title-bar control, when its frame can be read.
     private const double MAC_TRAFFIC_LIGHT_GAP = 14;
 
@@ -649,6 +652,11 @@ public partial class MainWindow : Window
                 }
                 else
                 {
+                    // Inset the window buttons inside the floating glass sidebar, on the bar's centre line (the
+                    // search field's), as System Settings does; macOS resets them on every layout pass.
+                    MacGlassWindowHelper.SetWindowButtonsPosition(
+                        this, MAC_GLASS_INSET + MAC_TRAFFIC_LIGHT_PANEL_PADDING, _macTitleBarHeight / 2);
+
                     // Pin the row to the traffic lights where macOS actually placed them: their position
                     // changes with the macOS version and the window state, so the constants are only a fallback.
                     Rect? zoom = MacGlassWindowHelper.GetZoomButtonFrame(this);

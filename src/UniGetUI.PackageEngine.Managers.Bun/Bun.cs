@@ -207,7 +207,24 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
         }
 
         internal static string GetGlobalPackagesDirectory(string userProfile)
-            => Path.Combine(userProfile, ".bun", "install", "global");
+            => GetGlobalPackagesDirectory(userProfile, Environment.GetEnvironmentVariable);
+
+        // Mirrors Bun's own lookup order: BUN_INSTALL_GLOBAL_DIR, then $BUN_INSTALL/install/global,
+        // then ~/.bun/install/global.
+        internal static string GetGlobalPackagesDirectory(
+            string userProfile,
+            Func<string, string?> getEnvironmentVariable)
+        {
+            string? globalDir = getEnvironmentVariable("BUN_INSTALL_GLOBAL_DIR");
+            if (!string.IsNullOrEmpty(globalDir))
+                return globalDir;
+
+            string? bunInstall = getEnvironmentVariable("BUN_INSTALL");
+            if (!string.IsNullOrEmpty(bunInstall))
+                return Path.Combine(bunInstall, "install", "global");
+
+            return Path.Combine(userProfile, ".bun", "install", "global");
+        }
 
         internal static bool HasGlobalPackageManifest(string globalDir)
             => Directory.Exists(globalDir) && File.Exists(Path.Combine(globalDir, "package.json"));

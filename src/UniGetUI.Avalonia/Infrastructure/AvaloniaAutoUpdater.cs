@@ -382,22 +382,24 @@ internal static partial class AvaloniaAutoUpdater
     private static int _activeAttempts;
     private static int _attemptsAwaitingConsent;
     private static TaskCompletionSource? _installerHandoff;
+    private static readonly TimeSpan InstallerHandoffTimeout = TimeSpan.FromMinutes(2);
 
     internal static bool IsBusy
         => Volatile.Read(ref _activeAttempts) > Volatile.Read(ref _attemptsAwaitingConsent);
 
-    internal static async Task WaitForInstallerHandoffAsync(TimeSpan timeout)
+    internal static async Task WaitForInstallerHandoffAsync()
     {
         if (_installerHandoff is not { } handoff)
             return;
 
+        LogUpdateInfo("Auto-updater: waiting for the ready update to be handed off before shutting down.");
         try
         {
-            await handoff.Task.WaitAsync(timeout);
+            await handoff.Task.WaitAsync(InstallerHandoffTimeout);
         }
         catch (TimeoutException)
         {
-            LogUpdateWarn("Auto-updater: the ready installer did not start before UniGetUI shut down.");
+            LogUpdateWarn($"Auto-updater: the ready update was not handed off within {InstallerHandoffTimeout.TotalMinutes:0} minutes, shutting down anyway.");
         }
     }
 

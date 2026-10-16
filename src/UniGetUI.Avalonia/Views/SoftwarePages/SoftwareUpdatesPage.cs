@@ -356,9 +356,14 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         }
     }
 
+    // Every row on this page is checked by default, so one click here could uninstall every package with an update.
     private static async Task LaunchUninstallFromUpdates(IEnumerable<IPackage> packages)
     {
-        foreach (var pkg in packages)
+        var list = packages.ToList();
+        if (list.Count == 0 || MainWindow.Instance is not { } window) return;
+        if (!await UninstallConfirmationDialog.ConfirmAsync(window, list)) return;
+
+        foreach (var pkg in list)
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Uninstall)) continue;

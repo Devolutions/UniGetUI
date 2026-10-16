@@ -47,6 +47,13 @@
                                    ForceInversion="True"
                                    Text="{t:Translate Do not automatically install updates when the battery saver is on}"
                                    BorderThickness="1,0,1,1"
+                                   CornerRadius="0"
+                                   IsEnabled="{Binding IsAutomaticUpdatesEnabled}"/>
+
+            <settings:CheckboxCard x:Name="QuitAfterAutomaticUpdatesCard"
+                                   SettingName="QuitAfterAutomaticUpdates"
+                                   Text="{t:Translate Text='Quit UniGetUI once automatic updates have finished, if its window is not open'}"
+                                   BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"
                                    IsEnabled="{Binding IsAutomaticUpdatesEnabled}"/>
 

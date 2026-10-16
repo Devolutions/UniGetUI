@@ -82,6 +82,7 @@ public static class SettingsSearchIndex
         new("Do not automatically install updates when the network connection is metered", ["metered connection"], typeof(Updates), "AUPMeteredCard"),
         new("Do not automatically install updates when the device runs on battery", ["battery"], typeof(Updates), "AUPBatteryCard"),
         new("Do not automatically install updates when the battery saver is on", ["battery saver"], typeof(Updates), "AUPBatterySaverCard"),
+        new("Quit UniGetUI once automatic updates have finished, if its window is not open", ["quit", "close", "exit after updates"], typeof(Updates), "QuitAfterAutomaticUpdatesCard"),
         new("Minimum age for updates", ["minimum age", "update security"], typeof(Updates), "MinimumUpdateAgeSelector"),
         new("Custom minimum age (days)", ["custom age"], typeof(Updates), "MinimumUpdateAgeCustomInput"),
         new("Warn me when the installer URL host changes between the installed version and the new version (WinGet only)", ["installer host", "url host"], typeof(Updates), "InstallerHostWarningCard"),

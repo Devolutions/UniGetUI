@@ -401,7 +401,12 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
                 .ToList();
 
-            if (upgradable.Count == 0) return;
+            if (upgradable.Count == 0)
+            {
+                if (shouldAutoInstall)
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish();
+                return;
+            }
 
             if (Settings.Get(Settings.K.DisableAUPOnBattery) && PowerConditions.IsOnBattery())
             {
@@ -422,12 +427,14 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             {
                 MaintenanceScheduler.MarkAutoInstallHandled();
                 await LaunchScheduledUpdate(upgradable);
+                QuitAfterAutomaticUpdates.QuitWhenOperationsFinish();
             }
             else if (CoreData.GetProcessArguments().Contains("--updateapps"))
             {
-                _ = AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
+                Task updateAll = AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
                 ShowUpgradingPackagesNotification(upgradable);
                 Logger.Warn("Automatic install of updates has been enabled via Command Line (user settings have been overriden)");
+                QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(updateAll);
             }
             else
             {

@@ -862,6 +862,7 @@
   "Do not automatically install updates when the network connection is metered": "Do not automatically install updates when the network connection is metered",
   "Do not automatically install updates when the device runs on battery": "Do not automatically install updates when the device runs on battery",
   "Do not automatically install updates when the battery saver is on": "Do not automatically install updates when the battery saver is on",
+  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Quit UniGetUI once automatic updates have finished, if its window is not open",
   "Only show updates that are at least the specified number of days old": "Only show updates that are at least the specified number of days old",
   "Warn me when the installer URL host changes between the installed version and the new version (WinGet only)": "Warn me when the installer URL host changes between the installed version and the new version (WinGet only)",
   "Change how UniGetUI handles install, update and uninstall operations.": "Change how UniGetUI handles install, update and uninstall operations.",

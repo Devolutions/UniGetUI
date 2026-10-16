@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+
 namespace UniGetUI.Core.Logging
 {
     public static class AppPaths
@@ -8,6 +12,15 @@ namespace UniGetUI.Core.Logging
         private const string PortableScratchDirectoryName = "Temp";
         private const string FirstRunMarkerFileName = "FirstRun.pending";
         private const string ScratchDirectoryName = "UniGetUI";
+        private const string ElevatedTempDirectoryName = "ElevatedWinGetTemp";
+        private const uint FileReadAttributes = 0x00000080;
+        private const uint FileShareAll = 0x00000007;
+        private const uint OpenExisting = 3;
+        private const uint FileFlagBackupSemantics = 0x02000000;
+        private const uint FileNameNormalized = 0x00000000;
+        private const int PathBufferLength = 1024;
+        private const string ExtendedPathPrefix = @"\\?\";
+        private const string ExtendedUncPathPrefix = @"\\?\UNC\";
         private const string BundledModernAppDirectoryName = "Avalonia";
         private const string WindowsExecutableName = "UniGetUI.exe";
         private const string BundledPingetExecutableName = "pinget.exe";
@@ -16,6 +29,7 @@ namespace UniGetUI.Core.Logging
         private static string? __installation_directory;
         private static volatile bool __portable_mode_resolved;
         private static string? __portable_data_directory;
+        private static (string Unresolved, string Resolved)? __elevated_temp_directory;
 
         [ThreadStatic]
         private static bool __resolving_portable_mode;
@@ -108,6 +122,106 @@ namespace UniGetUI.Core.Logging
             PortableDataDirectory is { } portableDirectory
                 ? Path.Join(portableDirectory, PortableScratchDirectoryName)
                 : Path.Join(Path.GetTempPath(), ScratchDirectoryName);
+
+        public static string ElevatedTempDirectory
+        {
+            get
+            {
+                string unresolved = Path.Join(ScratchDirectory, ElevatedTempDirectoryName);
+                if (__elevated_temp_directory is { } cached && cached.Unresolved == unresolved)
+                    return cached.Resolved;
+
+                string resolved = ResolveLinkedDirectories(unresolved);
+                __elevated_temp_directory = (unresolved, resolved);
+                return resolved;
+            }
+        }
+
+        public static string RedirectTempToElevatedDirectory(ProcessStartInfo startInfo)
+        {
+            string directory = ElevatedTempDirectory;
+            startInfo.Environment["TEMP"] = directory;
+            startInfo.Environment["TMP"] = directory;
+            return directory;
+        }
+
+        public static string ResolveLinkedDirectories(string path)
+        {
+            string fullPath = Path.GetFullPath(path);
+            if (!OperatingSystem.IsWindows())
+                return fullPath;
+
+            string existing = fullPath;
+            while (!Directory.Exists(existing))
+            {
+                string? parent = Path.GetDirectoryName(existing);
+                if (parent is null)
+                    return fullPath;
+                existing = parent;
+            }
+
+            string? resolved = GetFinalDirectoryPath(existing);
+            if (resolved is null)
+            {
+                Logger.Warn($"Could not resolve the links in {existing}, using the path as-is");
+                return fullPath;
+            }
+
+            return Path.Join(resolved, fullPath[existing.Length..]);
+        }
+
+        private static string? GetFinalDirectoryPath(string directory)
+        {
+            using SafeFileHandle handle = CreateFileW(
+                directory,
+                FileReadAttributes,
+                FileShareAll,
+                IntPtr.Zero,
+                OpenExisting,
+                FileFlagBackupSemantics,
+                IntPtr.Zero
+            );
+            if (handle.IsInvalid)
+                return null;
+
+            char[] buffer = new char[PathBufferLength];
+            uint length = GetFinalPathNameByHandleW(handle, buffer, (uint)buffer.Length, FileNameNormalized);
+            if (length >= buffer.Length)
+            {
+                buffer = new char[length];
+                length = GetFinalPathNameByHandleW(handle, buffer, (uint)buffer.Length, FileNameNormalized);
+            }
+
+            if (length is 0 || length >= buffer.Length)
+                return null;
+
+            string path = new(buffer, 0, (int)length);
+            if (path.StartsWith(ExtendedUncPathPrefix, StringComparison.Ordinal))
+                return @"\\" + path[ExtendedUncPathPrefix.Length..];
+
+            return path.StartsWith(ExtendedPathPrefix, StringComparison.Ordinal)
+                ? path[ExtendedPathPrefix.Length..]
+                : path;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern SafeFileHandle CreateFileW(
+            string lpFileName,
+            uint dwDesiredAccess,
+            uint dwShareMode,
+            IntPtr lpSecurityAttributes,
+            uint dwCreationDisposition,
+            uint dwFlagsAndAttributes,
+            IntPtr hTemplateFile
+        );
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern uint GetFinalPathNameByHandleW(
+            SafeFileHandle hFile,
+            [Out] char[] lpszFilePath,
+            uint cchFilePath,
+            uint dwFlags
+        );
 
         public static string ResolveInstallationDirectory(
             string executableDirectory,

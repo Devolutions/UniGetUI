@@ -93,15 +93,15 @@ public class InstalledPackagesPage : AbstractPackagesPage
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
 
         SetMainButton("delete", CoreTools.Translate("Uninstall selection"), () =>
-            _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages()));
+            _ = ConfirmAndLaunchUninstall(vm.FilteredPackages.GetCheckedPackages()));
 
         SetMainButtonDropdown(new MenuFlyout
         {
             Items = { uninstallAsAdmin, uninstallInteractive, new Separator(), downloadInstallers },
         });
 
-        uninstallAsAdmin.Click += (_, _) => _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
-        uninstallInteractive.Click += (_, _) => _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
+        uninstallAsAdmin.Click += (_, _) => _ = ConfirmAndLaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
+        uninstallInteractive.Click += (_, _) => _ = ConfirmAndLaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
         downloadInstallers.Click += (_, _) => _ = AvaloniaPackageOperationHelper.DownloadSelectedAsync(
             vm.FilteredPackages.GetCheckedPackages(), TEL_InstallReferral.ALREADY_INSTALLED);
 
@@ -144,7 +144,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
             Header = ShortcutHeader(CoreTools.Translate("Uninstall"), MainActionShortcut),
             Icon = LoadMenuIcon("delete"),
         };
-        menuUninstall.Click += (_, _) => _ = LaunchUninstall([SelectedItem!]);
+        menuUninstall.Click += (_, _) => _ = ConfirmAndLaunchUninstall([SelectedItem!]);
 
         _menuInstallationOptions = new MenuItem
         {
@@ -169,21 +169,21 @@ public class InstalledPackagesPage : AbstractPackagesPage
             Icon = LoadMenuIcon("uac"),
             IsVisible = OperatingSystem.IsWindows(),
         };
-        _menuAsAdmin.Click += (_, _) => _ = LaunchUninstall([SelectedItem!], elevated: true);
+        _menuAsAdmin.Click += (_, _) => _ = ConfirmAndLaunchUninstall([SelectedItem!], elevated: true);
 
         _menuInteractive = new MenuItem
         {
             Header = CoreTools.Translate("Interactive uninstall"),
             Icon = LoadMenuIcon("interactive"),
         };
-        _menuInteractive.Click += (_, _) => _ = LaunchUninstall([SelectedItem!], interactive: true);
+        _menuInteractive.Click += (_, _) => _ = ConfirmAndLaunchUninstall([SelectedItem!], interactive: true);
 
         _menuRemoveData = new MenuItem
         {
             Header = CoreTools.Translate("Uninstall and remove data"),
             Icon = LoadMenuIcon("close_round"),
         };
-        _menuRemoveData.Click += (_, _) => _ = LaunchUninstall([SelectedItem!], remove_data: true);
+        _menuRemoveData.Click += (_, _) => _ = ConfirmAndLaunchUninstall([SelectedItem!], remove_data: true);
 
         _menuUpdate = new MenuItem
         {
@@ -310,7 +310,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
     protected override void PerformMainPackageAction(IPackage? package)
     {
         if (package is null) return;
-        _ = LaunchUninstall([package]);
+        _ = ConfirmAndLaunchUninstall([package]);
     }
 
     protected override async Task ShowDetailsForPackage(IPackage? package)
@@ -337,7 +337,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         await InstallOptionsFactory.SaveForPackageAsync(opts, package);
 
         if (dialog.ShouldProceedWithOperation)
-            await LaunchUninstall([package]);
+            await ConfirmAndLaunchUninstall([package]);
     }
 
     // ─── WinGet malfunction banner ────────────────────────────────────────────
@@ -381,6 +381,22 @@ public class InstalledPackagesPage : AbstractPackagesPage
         GetMainWindow()?.Navigate(PageType.Bundles);
         if (PackageBundlesLoader.Instance is not null)
             await PackageBundlesLoader.Instance.AddPackagesAsync(packages);
+    }
+
+    // Uninstalling cannot be undone, so every page entry point confirms first: toolbar, context menu,
+    // Ctrl+Enter, double-click and the options dialog. The details window confirms in its own window,
+    // and the catalog before calling LaunchUninstall, so neither asks twice.
+    private static async Task ConfirmAndLaunchUninstall(
+        IEnumerable<IPackage> packages,
+        bool? elevated = null,
+        bool? interactive = null,
+        bool? remove_data = null)
+    {
+        var list = packages.ToList();
+        if (list.Count == 0 || MainWindow.Instance is not { } window) return;
+        if (!await UninstallConfirmationDialog.ConfirmAsync(window, list)) return;
+
+        await LaunchUninstall(list, elevated, interactive, remove_data);
     }
 
     internal static async Task LaunchUninstall(

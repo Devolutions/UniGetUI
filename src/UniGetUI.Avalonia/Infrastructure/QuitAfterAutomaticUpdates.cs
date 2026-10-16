@@ -10,7 +10,6 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class QuitAfterAutomaticUpdates
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
-    private const int RequiredIdleChecks = 2;
 
     private static int _waiting;
 
@@ -29,16 +28,21 @@ internal static class QuitAfterAutomaticUpdates
     {
         try
         {
-            if (launching is not null)
-                await launching;
+            AutomaticQuitDecision decision = await AutomaticQuitMonitor.RunAsync(
+                launching,
+                () => Task.Delay(PollInterval),
+                decide => Dispatcher.UIThread.InvokeAsync(decide).GetTask(),
+                Sample,
+                Quit);
 
-            int idleChecks = 0;
-            while (true)
+            switch (decision)
             {
-                await Task.Delay(PollInterval);
-                idleChecks = await Dispatcher.UIThread.InvokeAsync(() => EvaluateIdle(idleChecks));
-                if (idleChecks < 0)
-                    return;
+                case AutomaticQuitDecision.WindowVisible:
+                    Logger.Info("Automatic updates have finished, but UniGetUI will not quit because its window is open");
+                    break;
+                case AutomaticQuitDecision.UnsavedWork:
+                    Logger.Info("Automatic updates have finished, but UniGetUI will not quit because there is unsaved work");
+                    break;
             }
         }
         catch (Exception ex)
@@ -51,16 +55,17 @@ internal static class QuitAfterAutomaticUpdates
         }
     }
 
-    private static int EvaluateIdle(int idleChecks)
+    private static AutomaticQuitSnapshot? Sample()
     {
-        if (IsBusy())
-            return 0;
+        if (MainWindow.Instance is not { } window)
+            return null;
 
-        if (++idleChecks < RequiredIdleChecks)
-            return idleChecks;
-
-        QuitIfStillInBackground();
-        return -1;
+        return new AutomaticQuitSnapshot(
+            IsBusy: IsBusy(),
+            IsEnabled: Settings.Get(Settings.K.QuitAfterAutomaticUpdates),
+            IsAlreadyQuitting: window.IsQuitting,
+            IsWindowVisible: window.IsVisible,
+            HasUnsavedWork: window.HasUnsavedWork);
     }
 
     private static bool IsBusy()
@@ -70,27 +75,9 @@ internal static class QuitAfterAutomaticUpdates
             || BackupViewModel.IsBackupRunning
             || AvaloniaAutoUpdater.IsBusy;
 
-    private static void QuitIfStillInBackground()
+    private static void Quit()
     {
-        if (!Settings.Get(Settings.K.QuitAfterAutomaticUpdates))
-            return;
-
-        if (MainWindow.Instance is not { } window || window.IsQuitting)
-            return;
-
-        if (window.IsVisible)
-        {
-            Logger.Info("Automatic updates have finished, but UniGetUI will not quit because its window is open");
-            return;
-        }
-
-        if (window.HasUnsavedWork)
-        {
-            Logger.Info("Automatic updates have finished, but UniGetUI will not quit because there is unsaved work");
-            return;
-        }
-
         Logger.ImportantInfo("Automatic updates have finished, quitting UniGetUI as configured");
-        window.QuitApplication();
+        MainWindow.Instance?.QuitApplication();
     }
 }

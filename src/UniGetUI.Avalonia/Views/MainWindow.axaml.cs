@@ -2298,6 +2298,7 @@ public partial class MainWindow : Window
     private static async Task StopAndExitApplicationAsync()
     {
         Logger.Warn("Quitting UniGetUI");
+        await AvaloniaAutoUpdater.WaitForInstallerHandoffAsync(TimeSpan.FromSeconds(10));
         try
         {
             await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));

@@ -1,7 +1,9 @@
 using Avalonia.Threading;
+using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -31,14 +33,13 @@ internal static class QuitAfterAutomaticUpdates
                 await launching;
 
             int idleChecks = 0;
-            while (idleChecks < RequiredIdleChecks)
+            while (true)
             {
                 await Task.Delay(PollInterval);
-                bool busy = await Dispatcher.UIThread.InvokeAsync(IsBusy);
-                idleChecks = busy ? 0 : idleChecks + 1;
+                idleChecks = await Dispatcher.UIThread.InvokeAsync(() => EvaluateIdle(idleChecks));
+                if (idleChecks < 0)
+                    return;
             }
-
-            await Dispatcher.UIThread.InvokeAsync(QuitIfStillInBackground);
         }
         catch (Exception ex)
         {
@@ -50,9 +51,23 @@ internal static class QuitAfterAutomaticUpdates
         }
     }
 
+    private static int EvaluateIdle(int idleChecks)
+    {
+        if (IsBusy())
+            return 0;
+
+        if (++idleChecks < RequiredIdleChecks)
+            return idleChecks;
+
+        QuitIfStillInBackground();
+        return -1;
+    }
+
     private static bool IsBusy()
         => AvaloniaOperationRegistry.HasActiveOperations()
+            || AbstractOperation.QueueLength() > 0
             || MaintenanceScheduler.IsAnyTaskRunning
+            || BackupViewModel.IsBackupRunning
             || AvaloniaAutoUpdater.IsBusy;
 
     private static void QuitIfStillInBackground()

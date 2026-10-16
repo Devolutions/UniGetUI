@@ -134,7 +134,28 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private static Task DoLocalBackup(Visual? _) => DoLocalBackupStatic();
 
-    public static async Task<bool> DoLocalBackupStatic()
+    private static int _activeBackups;
+
+    public static bool IsBackupRunning => Volatile.Read(ref _activeBackups) > 0;
+
+    public static Task<bool> DoLocalBackupStatic() => TrackBackupAsync(DoLocalBackupCoreAsync);
+
+    public static Task<bool> DoCloudBackupStatic() => TrackBackupAsync(DoCloudBackupCoreAsync);
+
+    private static async Task<bool> TrackBackupAsync(Func<Task<bool>> backup)
+    {
+        Interlocked.Increment(ref _activeBackups);
+        try
+        {
+            return await backup();
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _activeBackups);
+        }
+    }
+
+    private static async Task<bool> DoLocalBackupCoreAsync()
     {
         try
         {
@@ -302,7 +323,7 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public static async Task<bool> DoCloudBackupStatic()
+    private static async Task<bool> DoCloudBackupCoreAsync()
     {
         try
         {

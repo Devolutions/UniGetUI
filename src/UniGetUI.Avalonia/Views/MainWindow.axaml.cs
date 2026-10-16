@@ -2274,6 +2274,8 @@ public partial class MainWindow : Window
 
     public bool IsQuitting => _shutdownCoordinator.IsQuitting;
 
+    internal bool HasUnsavedWork => ViewModel.HasUnsavedWork;
+
     public void QuitApplication() => _ = RequestQuitApplicationAsync();
 
     internal Task<bool> RequestQuitApplicationAsync(Action? onAuthorized = null) =>

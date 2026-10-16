@@ -284,6 +284,8 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
     private MainWindowViewModel? GetMainWindowViewModel() =>
         (TopLevel.GetTopLevel(this) is Window { DataContext: MainWindowViewModel vm }) ? vm : null;
 
+    public bool HasUnsavedWork => _currentContent is IAsyncLeaveGuard { HasUnsavedWork: true };
+
     public async Task<bool> CanLeaveAsync(
         PageLeaveReason reason,
         CancellationToken cancellationToken = default)

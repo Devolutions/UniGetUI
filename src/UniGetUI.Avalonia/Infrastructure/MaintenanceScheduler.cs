@@ -82,6 +82,15 @@ internal static class MaintenanceScheduler
 
     public static void MarkAutoInstallHandled() => _pendingInstallSince = null;
 
+    public static bool IsAnyTaskRunning
+    {
+        get
+        {
+            lock (RunningTasks)
+                return RunningTasks.Count > 0;
+        }
+    }
+
     public static bool ShouldRunAtAppStart(MaintenanceTaskKind kind)
     {
         var schedule = MaintenanceScheduleStore.Get(kind);

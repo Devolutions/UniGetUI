@@ -379,8 +379,26 @@ internal static partial class AvaloniaAutoUpdater
         }
     }
 
+    private static int _activeAttempts;
+    private static volatile bool _awaitingInstallConsent;
+
+    internal static bool IsBusy => Volatile.Read(ref _activeAttempts) > 0 && !_awaitingInstallConsent;
+
     // ------------------------------------------------------------------ core logic
     internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool manualCheck = false)
+    {
+        Interlocked.Increment(ref _activeAttempts);
+        try
+        {
+            return await CheckAndInstallUpdatesCoreAsync(autoLaunch, manualCheck);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _activeAttempts);
+        }
+    }
+
+    private static async Task<bool> CheckAndInstallUpdatesCoreAsync(bool autoLaunch, bool manualCheck)
     {
         ResetUpdateLog(manualCheck, autoLaunch);
         UpdaterOverrides overrides = LoadUpdaterOverrides();
@@ -639,15 +657,23 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         // Wait until user requests install, clicks the toast, or the window is being closed
-        while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
+        _awaitingInstallConsent = true;
+        try
         {
-            if (!manualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
+            while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
             {
-                LogUpdateWarn("Auto-updater: disabled while waiting for user \u2014 aborting.");
-                MarkAttemptFinished("aborted - auto-update disabled while waiting");
-                return true;
+                if (!manualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
+                {
+                    LogUpdateWarn("Auto-updater: disabled while waiting for user \u2014 aborting.");
+                    MarkAttemptFinished("aborted - auto-update disabled while waiting");
+                    return true;
+                }
+                await Task.Delay(500);
             }
-            await Task.Delay(500);
+        }
+        finally
+        {
+            _awaitingInstallConsent = false;
         }
 
         LogUpdateInfo("Installing update \u2014 launching installer.");

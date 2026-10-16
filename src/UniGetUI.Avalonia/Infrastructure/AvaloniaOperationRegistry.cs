@@ -315,10 +315,7 @@ public static class AvaloniaOperationRegistry
         // Let all remaining operations settle before making decisions
         await Task.Delay(500);
 
-        bool anyStillRunning = Operations.Any(
-            o => o.Status is OperationStatus.Running or OperationStatus.InQueue);
-
-        if (!anyStillRunning)
+        if (!HasActiveOperations())
         {
             var unknownShortcuts = GetPendingDesktopShortcuts();
 
@@ -336,6 +333,9 @@ public static class AvaloniaOperationRegistry
             }
         }
     }
+
+    public static bool HasActiveOperations()
+        => Operations.Any(o => o.Status is OperationStatus.Running or OperationStatus.InQueue);
 
     public static void PromptPendingShortcutsIfAny()
     {

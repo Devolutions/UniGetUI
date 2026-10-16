@@ -923,6 +923,10 @@ public partial class MainWindowViewModel : ViewModelBase
         return true;
     }
 
+    public bool HasUnsavedWork
+        => CurrentPageContent is IAsyncLeaveGuard { HasUnsavedWork: true }
+            || CatalogEditor is { IsBusy: true } or { IsDirty: true };
+
     public async Task<bool> CanShutdownAsync(CancellationToken cancellationToken = default)
     {
         await _navigationSemaphore.WaitAsync(cancellationToken);

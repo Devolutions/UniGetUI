@@ -97,6 +97,8 @@ public sealed partial class AgentPolicyInspector : UserControl, ISettingsPage, I
         _ = _viewModel.RefreshPageCommand.ExecuteAsync(null);
     }
 
+    public bool HasUnsavedWork => _activeEditorSession is not null;
+
     public async Task<bool> CanLeaveAsync(PageLeaveReason reason, CancellationToken cancellationToken = default)
     {
         if (_activeEditorSession is null) return true;

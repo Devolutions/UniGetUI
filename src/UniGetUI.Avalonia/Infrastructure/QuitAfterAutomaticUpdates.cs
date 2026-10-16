@@ -2,7 +2,6 @@ using Avalonia.Threading;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
-using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -35,7 +34,7 @@ internal static class QuitAfterAutomaticUpdates
             while (idleChecks < RequiredIdleChecks)
             {
                 await Task.Delay(PollInterval);
-                bool busy = await Dispatcher.UIThread.InvokeAsync(HasActiveOperations);
+                bool busy = await Dispatcher.UIThread.InvokeAsync(IsBusy);
                 idleChecks = busy ? 0 : idleChecks + 1;
             }
 
@@ -51,9 +50,10 @@ internal static class QuitAfterAutomaticUpdates
         }
     }
 
-    private static bool HasActiveOperations()
-        => AvaloniaOperationRegistry.Operations.Any(
-            o => o.Status is OperationStatus.Running or OperationStatus.InQueue);
+    private static bool IsBusy()
+        => AvaloniaOperationRegistry.HasActiveOperations()
+            || MaintenanceScheduler.IsAnyTaskRunning
+            || AvaloniaAutoUpdater.IsBusy;
 
     private static void QuitIfStillInBackground()
     {
@@ -66,6 +66,12 @@ internal static class QuitAfterAutomaticUpdates
         if (window.IsVisible)
         {
             Logger.Info("Automatic updates have finished, but UniGetUI will not quit because its window is open");
+            return;
+        }
+
+        if (window.HasUnsavedWork)
+        {
+            Logger.Info("Automatic updates have finished, but UniGetUI will not quit because there is unsaved work");
             return;
         }
 

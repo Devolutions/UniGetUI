@@ -401,12 +401,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
                 .ToList();
 
-            if (upgradable.Count == 0)
-            {
-                if (shouldAutoInstall)
-                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish();
-                return;
-            }
+            if (upgradable.Count == 0) return;
 
             if (Settings.Get(Settings.K.DisableAUPOnBattery) && PowerConditions.IsOnBattery())
             {
@@ -426,8 +421,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             else if (shouldAutoInstall)
             {
                 MaintenanceScheduler.MarkAutoInstallHandled();
-                await LaunchScheduledUpdate(upgradable);
-                QuitAfterAutomaticUpdates.QuitWhenOperationsFinish();
+                if (await LaunchScheduledUpdate(upgradable))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish();
             }
             else if (CoreData.GetProcessArguments().Contains("--updateapps"))
             {
@@ -447,7 +442,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         }
     }
 
-    private static async Task LaunchScheduledUpdate(IReadOnlyList<IPackage> upgradable)
+    private static async Task<bool> LaunchScheduledUpdate(IReadOnlyList<IPackage> upgradable)
     {
         bool markedOnly = MaintenanceScheduleStore.GetInstallTargets()
             is ScheduleInstallTargets.MarkedPackagesOnly;
@@ -474,6 +469,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
         if (skipped.Count > 0)
             ShowAvailableUpdatesNotification(skipped);
+
+        return targets.Count > 0;
     }
 
     private static void ShowAvailableUpdatesNotification(IReadOnlyList<IPackage> upgradable)

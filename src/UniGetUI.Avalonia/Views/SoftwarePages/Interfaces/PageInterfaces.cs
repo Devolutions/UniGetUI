@@ -32,6 +32,8 @@ public enum PageLeaveReason
 
 public interface IAsyncLeaveGuard
 {
+    bool HasUnsavedWork { get; }
+
     Task<bool> CanLeaveAsync(
         PageLeaveReason reason,
         CancellationToken cancellationToken = default);

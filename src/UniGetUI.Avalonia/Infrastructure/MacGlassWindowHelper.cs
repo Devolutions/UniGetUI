@@ -19,6 +19,9 @@ internal static partial class MacGlassWindowHelper
 
     private const string ObjCRuntime = "/usr/lib/libobjc.A.dylib";
 
+    // NSWindowButton value of the zoom (green) button.
+    private const long NSWindowZoomButton = 2;
+
     // AppKit NSVisualEffectMaterial / NSVisualEffectBlendingMode / NSVisualEffectState values.
     private const long NSVisualEffectMaterialSidebar = 7;
     private const long NSVisualEffectMaterialMenu = 5;
@@ -256,6 +259,75 @@ internal static partial class MacGlassWindowHelper
         }
     }
 
+    /// <summary>The zoom (green) button's frame in the window, in DIPs from the top-left corner, as macOS
+    /// actually placed it; null when it can't be read. The title-bar row aligns to it.</summary>
+    public static Rect? GetZoomButtonFrame(Window window)
+    {
+        if (!OperatingSystem.IsMacOS())
+            return null;
+
+        try
+        {
+            nint nsWindow = GetNSWindow(window);
+            if (nsWindow == 0)
+                return null;
+
+            nint zoom = objc_msgSend_IntPtr_Long(nsWindow, Sel.StandardWindowButton, NSWindowZoomButton);
+            nint contentView = objc_msgSend_IntPtr(nsWindow, Sel.ContentView);
+            if (zoom == 0 || contentView == 0)
+                return null;
+
+            NSRect frame = ConvertRect(zoom, GetRect(zoom, Sel.Bounds), contentView);
+            NSRect content = GetRect(contentView, Sel.Bounds);
+            if (frame.Width <= 0 || content.Height <= 0)
+                return null;
+
+            // AppKit views measure from the bottom-left unless flipped; Avalonia measures from the top-left.
+            double top = objc_msgSend_Bool(contentView, Sel.IsFlipped)
+                ? frame.Y
+                : content.Height - frame.Y - frame.Height;
+            return new Rect(frame.X, top, frame.Width, frame.Height);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Could not read the macOS window buttons' position; using the default title-bar inset");
+            Logger.Warn(ex);
+            return null;
+        }
+    }
+
+    // An NSRect comes back in registers on arm64 and through a hidden pointer (objc_msgSend_stret) on x64.
+    private static NSRect GetRect(nint receiver, nint selector)
+    {
+        if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            objc_msgSend_stret_Rect(out NSRect result, receiver, selector);
+            return result;
+        }
+
+        return objc_msgSend_Rect(receiver, selector);
+    }
+
+    private static NSRect ConvertRect(nint view, NSRect rect, nint toView)
+    {
+        if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            objc_msgSend_stret_Rect_Rect_IntPtr(out NSRect result, view, Sel.ConvertRectToView, rect, toView);
+            return result;
+        }
+
+        return objc_msgSend_Rect_Rect_IntPtr(view, Sel.ConvertRectToView, rect, toView);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly struct NSRect
+    {
+        public readonly double X;
+        public readonly double Y;
+        public readonly double Width;
+        public readonly double Height;
+    }
+
     private static nint GetNSWindow(TopLevel window)
     {
         if (window.TryGetPlatformHandle() is not { Handle: not 0 } handle)
@@ -299,9 +371,12 @@ internal static partial class MacGlassWindowHelper
         public static readonly nint AccessibilityDisplayShouldIncreaseContrast = sel_registerName("accessibilityDisplayShouldIncreaseContrast");
         public static readonly nint AccessibilityDisplayShouldReduceTransparency = sel_registerName("accessibilityDisplayShouldReduceTransparency");
         public static readonly nint BlendingMode = sel_registerName("blendingMode");
+        public static readonly nint Bounds = sel_registerName("bounds");
         public static readonly nint ContentView = sel_registerName("contentView");
+        public static readonly nint ConvertRectToView = sel_registerName("convertRect:toView:");
         public static readonly nint Count = sel_registerName("count");
         public static readonly nint InvalidateShadow = sel_registerName("invalidateShadow");
+        public static readonly nint IsFlipped = sel_registerName("isFlipped");
         public static readonly nint IsKindOfClass = sel_registerName("isKindOfClass:");
         public static readonly nint Layer = sel_registerName("layer");
         public static readonly nint ObjectAtIndex = sel_registerName("objectAtIndex:");
@@ -312,6 +387,7 @@ internal static partial class MacGlassWindowHelper
         public static readonly nint SetState = sel_registerName("setState:");
         public static readonly nint SetWantsLayer = sel_registerName("setWantsLayer:");
         public static readonly nint SharedWorkspace = sel_registerName("sharedWorkspace");
+        public static readonly nint StandardWindowButton = sel_registerName("standardWindowButton:");
         public static readonly nint Subviews = sel_registerName("subviews");
         public static readonly nint Window = sel_registerName("window");
     }
@@ -334,6 +410,18 @@ internal static partial class MacGlassWindowHelper
     [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
     [return: MarshalAs(UnmanagedType.U1)]
     private static partial bool objc_msgSend_Bool(nint receiver, nint selector);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
+    private static partial NSRect objc_msgSend_Rect(nint receiver, nint selector);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
+    private static partial NSRect objc_msgSend_Rect_Rect_IntPtr(nint receiver, nint selector, NSRect rect, nint view);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend_stret")]
+    private static partial void objc_msgSend_stret_Rect(out NSRect result, nint receiver, nint selector);
+
+    [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend_stret")]
+    private static partial void objc_msgSend_stret_Rect_Rect_IntPtr(out NSRect result, nint receiver, nint selector, NSRect rect, nint view);
 
     [LibraryImport(ObjCRuntime, EntryPoint = "objc_msgSend")]
     [return: MarshalAs(UnmanagedType.U1)]

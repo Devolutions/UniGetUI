@@ -78,6 +78,12 @@ public partial class MainWindow : Window
     // gap — enough for the row to read as separate from the window buttons rather than crowding them.
     private const double MAC_TRAFFIC_LIGHT_INSET = 76;
 
+    // Space between the zoom (green) button and the first title-bar control, when its frame can be read.
+    private const double MAC_TRAFFIC_LIGHT_GAP = 14;
+
+    // Last zoom button frame read on macOS; logged when it changes, to diagnose title-bar alignment.
+    private Rect? _lastMacZoomButtonFrame;
+
     // Last known macOS title-bar height; seeded with the requested height for the window's first layout
     // pass and while fullscreen reports a collapsed decoration margin.
     private double _macTitleBarHeight = 44;
@@ -643,19 +649,27 @@ public partial class MainWindow : Window
                 }
                 else
                 {
-                    // Pin the row to the traffic lights: top-aligned, offset so its centre line
-                    // matches theirs, and inset far enough to clear the close/minimise/zoom cluster.
+                    // Pin the row to the traffic lights where macOS actually placed them: their position
+                    // changes with the macOS version and the window state, so the constants are only a fallback.
+                    Rect? zoom = MacGlassWindowHelper.GetZoomButtonFrame(this);
+                    if (zoom != _lastMacZoomButtonFrame)
+                    {
+                        _lastMacZoomButtonFrame = zoom;
+                        Logger.Info($"macOS title bar: zoom button at {zoom?.ToString() ?? "unknown"}, window {WindowState}");
+                    }
+
+                    double inset = zoom is { } z ? z.Right + MAC_TRAFFIC_LIGHT_GAP : MAC_TRAFFIC_LIGHT_INSET;
+                    double centerY = zoom is { } c ? c.Center.Y : MAC_TRAFFIC_LIGHT_CENTER_Y;
                     HamburgerPanel.VerticalAlignment = VerticalAlignment.Top;
-                    HamburgerPanel.Margin = new Thickness(
-                        MAC_TRAFFIC_LIGHT_INSET,
-                        MAC_TRAFFIC_LIGHT_CENTER_Y - (MAC_TITLE_BAR_CONTROL_SIZE / 2),
-                        8,
-                        0);
+                    HamburgerPanel.Margin = new Thickness(inset, centerY - (MAC_TITLE_BAR_CONTROL_SIZE / 2), 8, 0);
                 }
             }
 
             this.GetObservable(WindowStateProperty).SubscribeValue(_ => ApplyMacTitleBarLayout());
             this.GetObservable(WindowDecorationMarginProperty).SubscribeValue(_ => ApplyMacTitleBarLayout());
+            // macOS lays the window buttons out again on resize and zoom; follow them.
+            this.GetObservable(ClientSizeProperty).SubscribeValue(_ => ApplyMacTitleBarLayout());
+            Opened += (_, _) => Dispatcher.UIThread.Post(ApplyMacTitleBarLayout, DispatcherPriority.Background);
             NavRail.GetObservable(IsVisibleProperty).SubscribeValue(_ => ApplyMacSidebarLayout());
             NavDock.GetObservable(IsVisibleProperty).SubscribeValue(_ => ApplyMacSidebarLayout());
             SidebarGlass.GetObservable(BoundsProperty).SubscribeValue(_ => UpdateMacWindowSurfaceClip());

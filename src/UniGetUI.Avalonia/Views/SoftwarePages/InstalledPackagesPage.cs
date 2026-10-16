@@ -337,7 +337,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         await InstallOptionsFactory.SaveForPackageAsync(opts, package);
 
         if (dialog.ShouldProceedWithOperation)
-            await LaunchUninstall([package]);
+            await ConfirmAndLaunchUninstall([package]);
     }
 
     // ─── WinGet malfunction banner ────────────────────────────────────────────
@@ -383,9 +383,9 @@ public class InstalledPackagesPage : AbstractPackagesPage
             await PackageBundlesLoader.Instance.AddPackagesAsync(packages);
     }
 
-    // Started straight from the page (toolbar, context menu, Ctrl+Enter, double-click): nothing else stands
-    // between the click and the uninstall, so confirm first. Details, options and catalog callers confirm or
-    // ask in their own dialog, and call LaunchUninstall directly.
+    // Uninstalling cannot be undone, so every page entry point confirms first: toolbar, context menu,
+    // Ctrl+Enter, double-click and the options dialog. The details window confirms in its own window,
+    // and the catalog before calling LaunchUninstall, so neither asks twice.
     private static async Task ConfirmAndLaunchUninstall(
         IEnumerable<IPackage> packages,
         bool? elevated = null,

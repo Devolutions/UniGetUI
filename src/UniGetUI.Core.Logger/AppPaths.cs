@@ -4,7 +4,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace UniGetUI.Core.Logging
 {
-    public static class AppPaths
+    public static partial class AppPaths
     {
         private const string PortableMarkerFileName = "ForceUniGetUIPortable";
         private const string PortableDataDirectoryName = "Settings";
@@ -18,6 +18,8 @@ namespace UniGetUI.Core.Logging
         private const uint OpenExisting = 3;
         private const uint FileFlagBackupSemantics = 0x02000000;
         private const uint FileNameNormalized = 0x00000000;
+        private const uint VolumeNameGuid = 0x00000001;
+        private const string VolumeGuidPathPrefix = @"\\?\Volume{";
         private const int PathBufferLength = 1024;
         private const string ExtendedPathPrefix = @"\\?\";
         private const string ExtendedUncPathPrefix = @"\\?\UNC\";
@@ -131,7 +133,9 @@ namespace UniGetUI.Core.Logging
                 if (__elevated_temp_directory is { } cached && cached.Unresolved == unresolved)
                     return cached.Resolved;
 
-                string resolved = ResolveLinkedDirectories(unresolved);
+                if (!TryResolveLinkedDirectories(unresolved, out string resolved))
+                    return resolved;
+
                 __elevated_temp_directory = new ElevatedTempDirectoryCache(unresolved, resolved);
                 return resolved;
             }
@@ -142,6 +146,16 @@ namespace UniGetUI.Core.Logging
         public static string RedirectTempToElevatedDirectory(ProcessStartInfo startInfo)
         {
             string directory = ElevatedTempDirectory;
+            try
+            {
+                Directory.CreateDirectory(directory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Logger.Warn($"Could not create the elevated temporary directory {directory}");
+                Logger.Warn(ex);
+            }
+
             startInfo.Environment["TEMP"] = directory;
             startInfo.Environment["TMP"] = directory;
             return directory;
@@ -149,55 +163,100 @@ namespace UniGetUI.Core.Logging
 
         public static string ResolveLinkedDirectories(string path)
         {
+            TryResolveLinkedDirectories(path, out string resolved);
+            return resolved;
+        }
+
+        private static bool TryResolveLinkedDirectories(string path, out string resolved)
+        {
             string fullPath = Path.GetFullPath(path);
+            resolved = fullPath;
             if (!OperatingSystem.IsWindows())
-                return fullPath;
+                return true;
 
             string existing = fullPath;
             while (!Directory.Exists(existing))
             {
                 string? parent = Path.GetDirectoryName(existing);
                 if (parent is null)
-                    return fullPath;
+                    return false;
                 existing = parent;
             }
 
-            string? resolved = GetFinalDirectoryPath(existing);
-            if (resolved is null)
+            string? finalPath = GetFinalDirectoryPath(existing);
+            if (finalPath is null)
             {
                 Logger.Warn($"Could not resolve the links in {existing}, using the path as-is");
-                return fullPath;
+                return false;
             }
 
-            return Path.Join(resolved, fullPath[existing.Length..]);
+            resolved = Path.Join(finalPath, fullPath[existing.Length..]);
+            return true;
         }
 
         private static string? GetFinalDirectoryPath(string directory)
         {
-            using SafeFileHandle handle = CreateFileW(
+            using SafeFileHandle handle = CreateFile(
                 directory,
                 FileReadAttributes,
                 FileShareAll,
-                IntPtr.Zero,
+                0,
                 OpenExisting,
                 FileFlagBackupSemantics,
-                IntPtr.Zero
+                0
             );
             if (handle.IsInvalid)
                 return null;
 
+            if (GetFinalPathName(handle, FileNameNormalized) is { } dosPath)
+                return StripExtendedPathPrefix(dosPath);
+
+            if (
+                GetFinalPathName(handle, VolumeNameGuid) is not { } guidPath
+                || !guidPath.StartsWith(VolumeGuidPathPrefix, StringComparison.OrdinalIgnoreCase)
+            )
+                return null;
+
+            int volumeEnd = guidPath.IndexOf('\\', VolumeGuidPathPrefix.Length);
+            if (volumeEnd < 0)
+                return null;
+
+            string? mountPath = GetVolumeMountPath(guidPath[..(volumeEnd + 1)]);
+            return mountPath is null ? null : Path.Join(mountPath, guidPath[(volumeEnd + 1)..]);
+        }
+
+        private static string? GetFinalPathName(SafeFileHandle handle, uint flags)
+        {
             char[] buffer = new char[PathBufferLength];
-            uint length = GetFinalPathNameByHandleW(handle, buffer, (uint)buffer.Length, FileNameNormalized);
+            uint length = GetFinalPathNameByHandle(handle, ref buffer[0], (uint)buffer.Length, flags);
             if (length >= buffer.Length)
             {
                 buffer = new char[length];
-                length = GetFinalPathNameByHandleW(handle, buffer, (uint)buffer.Length, FileNameNormalized);
+                length = GetFinalPathNameByHandle(handle, ref buffer[0], (uint)buffer.Length, flags);
             }
 
-            if (length is 0 || length >= buffer.Length)
-                return null;
+            return length is 0 || length >= buffer.Length ? null : new string(buffer, 0, (int)length);
+        }
 
-            string path = new(buffer, 0, (int)length);
+        private static string? GetVolumeMountPath(string volumeName)
+        {
+            char[] buffer = new char[PathBufferLength];
+            if (!GetVolumePathNamesForVolumeName(volumeName, ref buffer[0], (uint)buffer.Length, out uint required))
+            {
+                if (required <= buffer.Length)
+                    return null;
+
+                buffer = new char[required];
+                if (!GetVolumePathNamesForVolumeName(volumeName, ref buffer[0], (uint)buffer.Length, out _))
+                    return null;
+            }
+
+            int end = Array.IndexOf(buffer, '\0');
+            return end > 0 ? new string(buffer, 0, end) : null;
+        }
+
+        private static string StripExtendedPathPrefix(string path)
+        {
             if (path.StartsWith(ExtendedUncPathPrefix, StringComparison.Ordinal))
                 return @"\\" + path[ExtendedUncPathPrefix.Length..];
 
@@ -206,24 +265,42 @@ namespace UniGetUI.Core.Logging
                 : path;
         }
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern SafeFileHandle CreateFileW(
-            string lpFileName,
-            uint dwDesiredAccess,
-            uint dwShareMode,
-            IntPtr lpSecurityAttributes,
-            uint dwCreationDisposition,
-            uint dwFlagsAndAttributes,
-            IntPtr hTemplateFile
-        );
+        [LibraryImport(
+            "kernel32.dll",
+            EntryPoint = "CreateFileW",
+            SetLastError = true,
+            StringMarshalling = StringMarshalling.Utf16)]
+        private static partial SafeFileHandle CreateFile(
+            string fileName,
+            uint desiredAccess,
+            uint shareMode,
+            nint securityAttributes,
+            uint creationDisposition,
+            uint flagsAndAttributes,
+            nint templateFile);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern uint GetFinalPathNameByHandleW(
-            SafeFileHandle hFile,
-            [Out] char[] lpszFilePath,
-            uint cchFilePath,
-            uint dwFlags
-        );
+        [LibraryImport(
+            "kernel32.dll",
+            EntryPoint = "GetFinalPathNameByHandleW",
+            SetLastError = true,
+            StringMarshalling = StringMarshalling.Utf16)]
+        private static partial uint GetFinalPathNameByHandle(
+            SafeFileHandle file,
+            ref char filePath,
+            uint charCount,
+            uint flags);
+
+        [LibraryImport(
+            "kernel32.dll",
+            EntryPoint = "GetVolumePathNamesForVolumeNameW",
+            SetLastError = true,
+            StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetVolumePathNamesForVolumeName(
+            string volumeName,
+            ref char volumePathNames,
+            uint bufferLength,
+            out uint returnLength);
 
         public static string ResolveInstallationDirectory(
             string executableDirectory,

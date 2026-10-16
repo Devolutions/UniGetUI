@@ -150,11 +150,11 @@ namespace UniGetUI.Core.Logging.Tests
             Directory.CreateDirectory(version);
             string settingsJunction = Path.Join(version, "Settings");
             string currentJunction = Path.Join(_testRoot, "apps", "unigetui", "current");
-            CreateJunction(settingsJunction, persisted);
-            CreateJunction(currentJunction, version);
-
             try
             {
+                CreateJunction(settingsJunction, persisted);
+                CreateJunction(currentJunction, version);
+
                 string resolved = AppPaths.ResolveLinkedDirectories(
                     Path.Join(currentJunction, "Settings", "Temp", "ElevatedWinGetTemp"));
 
@@ -164,8 +164,11 @@ namespace UniGetUI.Core.Logging.Tests
             }
             finally
             {
-                Directory.Delete(currentJunction);
-                Directory.Delete(settingsJunction);
+                foreach (string junction in new[] { currentJunction, settingsJunction })
+                {
+                    if (Directory.Exists(junction))
+                        Directory.Delete(junction);
+                }
             }
         }
 
@@ -207,6 +210,7 @@ namespace UniGetUI.Core.Logging.Tests
             Assert.Equal(directory, startInfo.Environment["TEMP"]);
             Assert.Equal(directory, startInfo.Environment["TMP"]);
             Assert.EndsWith(Path.Join("Settings", "Temp", "ElevatedWinGetTemp"), directory);
+            Assert.True(Directory.Exists(directory));
         }
 
         private const int ErrorPrivilegeNotHeld = unchecked((int)0x80070522);

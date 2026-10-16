@@ -1,6 +1,7 @@
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 
 namespace UniGetUI.PackageEngine.PackageLoader
@@ -13,7 +14,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         // tags and renders thousands of packages, freezing the UI and spiking RAM.
         private const int MAX_RESULTS_PER_MANAGER = 100;
 
-        private string QUERY_TEXT = string.Empty;
+        private string? QUERY_TEXT;
         private volatile bool _pendingReload;
 
         public DiscoverablePackagesLoader(IReadOnlyList<IPackageManager> managers)
@@ -45,9 +46,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
             await ReloadPackages();
         }
 
+        public void ResetSearch()
+        {
+            QUERY_TEXT = null;
+            ClearPackages(emitFinishSignal: false);
+        }
+
         public override async Task ReloadPackages()
         {
-            if (QUERY_TEXT == "")
+            if (QUERY_TEXT is null)
             {
                 return;
             }
@@ -76,23 +83,38 @@ namespace UniGetUI.PackageEngine.PackageLoader
             => Settings.SetDictionaryItem(Settings.K.ExcludedSearchManagers, manager.Name, !searched);
 
         protected override bool WillQueryAnyManager()
-            => Managers.Any(manager => manager.IsReady() && IsManagerSearched(manager));
+        {
+            string? query = QUERY_TEXT;
+            return Managers.Any(manager =>
+                manager.IsReady() && IsManagerSearched(manager) && CanSearch(manager, query));
+        }
+
+        private static bool CanSearch(IPackageManager manager, string? query)
+            => query != string.Empty || manager.Capabilities.SupportsEmptySearchQuery;
 
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
-            if (!IsManagerSearched(manager))
+            string? query = QUERY_TEXT;
+            if (query is null || !IsManagerSearched(manager) || !CanSearch(manager, query))
             {
                 return [];
             }
 
-            string text = QUERY_TEXT;
-            text = CoreTools.EnsureSafeQueryString(text);
-            if (text == string.Empty)
+            string text = CoreTools.EnsureSafeQueryString(query);
+            if (text.Length == 0 && query.Length > 0)
             {
                 return [];
             }
 
             IReadOnlyList<IPackage> found = manager.FindPackages(text);
+            if (text.Length == 0)
+            {
+                return found
+                    .GroupBy(package => package.Source.Name)
+                    .SelectMany(group => group.Take(SearchLimits.MaxEmptyQueryResultsPerSource))
+                    .ToArray();
+            }
+
             return found.Count > MAX_RESULTS_PER_MANAGER
                 ? found.Take(MAX_RESULTS_PER_MANAGER).ToArray()
                 : found;

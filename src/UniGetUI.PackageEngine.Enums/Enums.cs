@@ -1,5 +1,10 @@
 namespace UniGetUI.PackageEngine.Enums
 {
+    public static class SearchLimits
+    {
+        public const int MaxEmptyQueryResultsPerSource = 100;
+    }
+
     /// <summary>
     /// Represents the installation scope of a package
     /// </summary>

@@ -1,5 +1,6 @@
 #if WINDOWS
 using UniGetUI.Core.Data;
+using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -284,6 +285,46 @@ public sealed class WinGetCliParsingTests : IDisposable
         Assert.Equal("msstore", packages[0].Source.Name);
         PackageAssert.Matches(packages[2], "VLC media player", "VideoLAN.VLC", "3.0.21");
         Assert.Equal("winget", packages[2].Source.Name);
+    }
+
+    [Fact]
+    public void ParseFoundPackagesAssignsTheQueriedSourceWhenTheSourceColumnIsOmitted()
+    {
+        var manager = new WinGet();
+        var fonts = new ManagerSource(manager, "winget-font", new Uri("https://cdn.winget.microsoft.com/fonts"));
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseFoundPackages(
+            manager,
+            Lines(
+                """
+                Name                               Id                      Version
+                ------------------------------------------------------------------
+                Microsoft Fluent Calibri and Sitka Microsoft.FluentFonts   1.0.0.0
+                CaskaydiaCove                      ryanoasis.CaskaydiaCove 3.4.0
+                """
+            ),
+            fonts
+        );
+
+        Assert.Equal(2, packages.Count);
+        PackageAssert.Matches(packages[1], "CaskaydiaCove", "ryanoasis.CaskaydiaCove", "3.4.0");
+        Assert.All(packages, package => Assert.Same(fonts, package.Source));
+    }
+
+    [Fact]
+    public void ParseExportedSourceNamesKeepsNamesThatContainSpaces()
+    {
+        IEnumerable<string> names = WinGetCliHelper.ParseExportedSourceNames(
+            [
+                """{"Arg":"https://storeedgefd.dsx.mp.microsoft.com/v9.0","Data":"","Explicit":false,"Identifier":"StoreEdgeFD","Name":"msstore","TrustLevel":["Trusted"],"Type":"Microsoft.Rest"}""",
+                """{"Arg":"https://cdn.winget.microsoft.com/cache","Data":"Microsoft.Winget.Source_8wekyb3d8bbwe","Explicit":false,"Identifier":"Microsoft.Winget.Source_8wekyb3d8bbwe","Name":"winget","TrustLevel":["Trusted","StoreOrigin"],"Type":"Microsoft.PreIndexed.Package"}""",
+                """{"Arg":"https://packages.contoso.test/api","Data":"","Explicit":true,"Identifier":"Private Feed","Name":"Private Feed","TrustLevel":["None"],"Type":"Microsoft.Rest"}""",
+                "",
+                "Failed when opening source(s); try the 'source reset' command if the problem persists.",
+            ]
+        );
+
+        Assert.Equal(["msstore", "winget", "Private Feed"], names);
     }
 
     [Fact]

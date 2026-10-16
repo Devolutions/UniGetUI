@@ -270,14 +270,14 @@
                            FontFamily="Segoe UI Variable Display"
                            TextWrapping="Wrap"
                            Text="{Binding PageTitle}"/>
+                <!-- Words and last-check time in the secondary text colour; the numbers are added stronger from code (UpdateSubtitleInlines) -->
                 <TextBlock x:Name="MainSubtitle"
                            MaxHeight="40"
                            HorizontalAlignment="Left"
                            FontSize="12"
                            FontWeight="Normal"
-                           Opacity="0.6"
-                           TextWrapping="Wrap"
-                           Text="{Binding Subtitle}"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"/>
             </StackPanel>
 
         </Grid>
@@ -717,7 +717,7 @@
                                   ItemsSource="{Binding FilteredPackages}"
                                   automation:AutomationProperties.AccessibilityView="Control"
                                   automation:AutomationProperties.Name="{Binding PageTitle}"
-                                  automation:AutomationProperties.HelpText="{Binding Subtitle}"
+                                  automation:AutomationProperties.HelpText="{Binding SubtitleAccessibleText}"
                                   AutoGenerateColumns="False"
                                   CanUserReorderColumns="True"
                                   CanUserResizeColumns="True"

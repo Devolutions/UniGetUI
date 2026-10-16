@@ -169,6 +169,46 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private string _pageTitle = "";
     [ObservableProperty] private string _pageIconPath = "";
     [ObservableProperty] private string _subtitle = "";
+
+    // Shown after the subtitle in a secondary tone: when the list was last checked, then the page suffix.
+    [ObservableProperty] private string _subtitleDetail = "";
+
+    // The whole subtitle as one sentence, for screen readers.
+    [ObservableProperty] private string _subtitleAccessibleText = "";
+
+    /// <summary>The subtitle cut around its numbers, so the page can draw them stronger than the words.</summary>
+    [ObservableProperty] private IReadOnlyList<SubtitleSegment> _subtitleSegments = [];
+
+    // The sentence is formatted with the real integers, so ICU plural selectors keep working (ru, lt, et, sq);
+    // the numbers are then found in the formatted text, wherever the translation placed them.
+    private void SetSubtitle(string text, params int[] values)
+    {
+        var segments = new List<SubtitleSegment>();
+        if (values.Length > 0)
+        {
+            string alternatives = string.Join('|', values
+                .Select(v => v.ToString(CultureInfo.CurrentCulture))
+                .Distinct()
+                .OrderByDescending(v => v.Length)
+                .Select(System.Text.RegularExpressions.Regex.Escape));
+            int last = 0;
+            foreach (System.Text.RegularExpressions.Match match in
+                     System.Text.RegularExpressions.Regex.Matches(text, $@"(?<!\d)(?:{alternatives})(?!\d)"))
+            {
+                if (match.Index > last) segments.Add(new SubtitleSegment(text[last..match.Index], false));
+                segments.Add(new SubtitleSegment(match.Value, true));
+                last = match.Index + match.Length;
+            }
+            if (last < text.Length) segments.Add(new SubtitleSegment(text[last..], false));
+        }
+        else
+        {
+            segments.Add(new SubtitleSegment(text, false));
+        }
+
+        SubtitleSegments = segments;
+        Subtitle = text;
+    }
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _backgroundTextVisible;
     [ObservableProperty] private bool _loadingImageVisible;
@@ -1059,30 +1099,34 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         if (Loader.IsLoading || (LoadsOnStart && Loader.HasPendingInitialLoad))
         {
-            Subtitle = _stillLoadingSubtitle;
+            SetSubtitle(_stillLoadingSubtitle);
+            SubtitleDetail = "";
+            SubtitleAccessibleText = Subtitle;
             return;
         }
 
+        SubtitleDetail = (_showLastCheckedTime
+            ? " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture))
+            : "") + SubtitleSuffix;
+
         if (Loader.Any())
         {
+            // {0} is everything the managers returned, {1} what the filters keep, as the sentence reads
             int selected = FilteredPackages.GetCheckedPackages().Count;
-            string r = CoreTools.Translate(
+            int found = _wrappedPackages.Count;
+            int matching = FilteredPackages.Count;
+            SetSubtitle(CoreTools.Translate(
                 "{0} packages were found, {1} of which match the specified filters.",
-                FilteredPackages.Count,
-                _wrappedPackages.Count
-            ) + " (" + CoreTools.Translate("{0} selected", selected) + ")";
-
-            if (_showLastCheckedTime)
-                r += " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
-
-            Subtitle = r + SubtitleSuffix;
+                found,
+                matching
+            ) + " (" + CoreTools.Translate("{0} selected", selected) + ")", found, matching, selected);
         }
         else
         {
-            Subtitle = _noPackagesSubtitleBase + (_showLastCheckedTime
-                ? " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture))
-                : "") + SubtitleSuffix;
+            SetSubtitle(_noPackagesSubtitleBase);
         }
+
+        SubtitleAccessibleText = Subtitle + SubtitleDetail;
     }
 
     // ─── Commands ─────────────────────────────────────────────────────────────
@@ -1202,3 +1246,6 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
     }
 }
+
+/// <summary>A piece of the page subtitle; <paramref name="IsValue"/> marks a number.</summary>
+public readonly record struct SubtitleSegment(string Text, bool IsValue);

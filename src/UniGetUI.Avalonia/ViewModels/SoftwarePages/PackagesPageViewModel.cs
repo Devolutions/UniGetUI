@@ -179,35 +179,35 @@ public partial class PackagesPageViewModel : ViewModelBase
     /// <summary>The subtitle cut around its numbers, so the page can draw them stronger than the words.</summary>
     [ObservableProperty] private IReadOnlyList<SubtitleSegment> _subtitleSegments = [];
 
-    // Private-use marks around each number: the translated sentence decides where the numbers go, the marks find them.
-    private const char VALUE_START = '\uE000';
-    private const char VALUE_END = '\uE001';
-
-    private static string MarkValue(int value) => $"{VALUE_START}{value}{VALUE_END}";
-
-    private void SetSubtitle(string marked)
+    // The sentence is formatted with the real integers, so ICU plural selectors keep working (ru, lt, et, sq);
+    // the numbers are then found in the formatted text, wherever the translation placed them.
+    private void SetSubtitle(string text, params int[] values)
     {
         var segments = new List<SubtitleSegment>();
-        var text = new System.Text.StringBuilder();
-        foreach (string part in marked.Split(VALUE_START))
+        if (values.Length > 0)
         {
-            int end = part.IndexOf(VALUE_END);
-            if (end >= 0)
+            string alternatives = string.Join('|', values
+                .Select(v => v.ToString(CultureInfo.CurrentCulture))
+                .Distinct()
+                .OrderByDescending(v => v.Length)
+                .Select(System.Text.RegularExpressions.Regex.Escape));
+            int last = 0;
+            foreach (System.Text.RegularExpressions.Match match in
+                     System.Text.RegularExpressions.Regex.Matches(text, $@"(?<!\d)(?:{alternatives})(?!\d)"))
             {
-                segments.Add(new SubtitleSegment(part[..end], true));
-                text.Append(part, 0, end);
+                if (match.Index > last) segments.Add(new SubtitleSegment(text[last..match.Index], false));
+                segments.Add(new SubtitleSegment(match.Value, true));
+                last = match.Index + match.Length;
             }
-
-            string words = end >= 0 ? part[(end + 1)..] : part;
-            if (words.Length > 0)
-            {
-                segments.Add(new SubtitleSegment(words, false));
-                text.Append(words);
-            }
+            if (last < text.Length) segments.Add(new SubtitleSegment(text[last..], false));
+        }
+        else
+        {
+            segments.Add(new SubtitleSegment(text, false));
         }
 
         SubtitleSegments = segments;
-        Subtitle = text.ToString();
+        Subtitle = text;
     }
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _backgroundTextVisible;
@@ -1113,11 +1113,13 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             // {0} is everything the managers returned, {1} what the filters keep, as the sentence reads
             int selected = FilteredPackages.GetCheckedPackages().Count;
+            int found = _wrappedPackages.Count;
+            int matching = FilteredPackages.Count;
             SetSubtitle(CoreTools.Translate(
                 "{0} packages were found, {1} of which match the specified filters.",
-                MarkValue(_wrappedPackages.Count),
-                MarkValue(FilteredPackages.Count)
-            ) + " (" + CoreTools.Translate("{0} selected", MarkValue(selected)) + ")");
+                found,
+                matching
+            ) + " (" + CoreTools.Translate("{0} selected", selected) + ")", found, matching, selected);
         }
         else
         {

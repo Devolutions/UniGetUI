@@ -302,7 +302,7 @@
   "Local": "Lokal",
   "OK": "OK",
   "Last checked: {0}": "Senast kontrollerad: {0}",
-  "{0} packages were found, {1} of which match the specified filters.": "{1}  paket hittades, varav {0} matchade filtret",
+  "{0} packages were found, {1} of which match the specified filters.": "{0}  paket hittades, varav {1} matchade filtret",
   "{0} selected": "{0} valda",
   "(Last checked: {0})": "(Kontrollerades senast: {0})",
   "All packages selected": "Alla paket valda",

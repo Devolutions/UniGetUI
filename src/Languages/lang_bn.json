@@ -302,7 +302,7 @@
   "Local": "স্থানীয়",
   "OK": "ঠিক আছে",
   "Last checked: {0}": "সর্বশেষ পরীক্ষা করা হয়েছে: {0}",
-  "{0} packages were found, {1} of which match the specified filters.": "{1} প্যাকেজ পাওয়া গেছে যার মধ্যে {0}টি নির্দিষ্ট ফিল্টারগুলির সাথে মেলে।",
+  "{0} packages were found, {1} of which match the specified filters.": "{0} প্যাকেজ পাওয়া গেছে যার মধ্যে {1}টি নির্দিষ্ট ফিল্টারগুলির সাথে মেলে।",
   "{0} selected": "{0} নির্বাচিত",
   "(Last checked: {0})": "(শেষ পরীক্ষা করা হয়েছেঃ {0})",
   "All packages selected": "সমস্ত প্যাকেজ নির্বাচিত",

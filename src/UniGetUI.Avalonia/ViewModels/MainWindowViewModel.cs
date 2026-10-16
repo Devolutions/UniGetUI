@@ -925,7 +925,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool HasUnsavedWork
         => CurrentPageContent is IAsyncLeaveGuard { HasUnsavedWork: true }
-            || CatalogEditor is { IsBusy: true } or { IsDirty: true };
+            || CatalogEditor is { IsBusy: true } or { IsDirty: true }
+            || BundlesPage.HasChangesToLose;
 
     public async Task<bool> CanShutdownAsync(CancellationToken cancellationToken = default)
     {

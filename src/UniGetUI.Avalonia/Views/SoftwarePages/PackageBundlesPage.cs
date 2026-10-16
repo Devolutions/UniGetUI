@@ -48,6 +48,8 @@ public class PackageBundlesPage : AbstractPackagesPage
     }
     public event EventHandler? UnsavedChangesStateChanged;
 
+    public bool HasChangesToLose => _loader.Any() && HasUnsavedChanges;
+
     public PackageBundlesPage() : base(new PackagesPageData
     {
         PageName = "SoftwarePages.PackageBundlesPage",
@@ -250,7 +252,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     }
 
     private async Task<bool> ConfirmDiscardingCurrentBundle()
-        => !(_loader.Any() && HasUnsavedChanges) || await AskLoseChanges();
+        => !HasChangesToLose || await AskLoseChanges();
 
     private void ClearCurrentBundle()
     {

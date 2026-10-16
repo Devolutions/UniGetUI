@@ -29,7 +29,7 @@ namespace UniGetUI.Core.Logging
         private static string? __installation_directory;
         private static volatile bool __portable_mode_resolved;
         private static string? __portable_data_directory;
-        private static (string Unresolved, string Resolved)? __elevated_temp_directory;
+        private static ElevatedTempDirectoryCache? __elevated_temp_directory;
 
         [ThreadStatic]
         private static bool __resolving_portable_mode;
@@ -132,10 +132,12 @@ namespace UniGetUI.Core.Logging
                     return cached.Resolved;
 
                 string resolved = ResolveLinkedDirectories(unresolved);
-                __elevated_temp_directory = (unresolved, resolved);
+                __elevated_temp_directory = new ElevatedTempDirectoryCache(unresolved, resolved);
                 return resolved;
             }
         }
+
+        private sealed record ElevatedTempDirectoryCache(string Unresolved, string Resolved);
 
         public static string RedirectTempToElevatedDirectory(ProcessStartInfo startInfo)
         {

@@ -179,8 +179,15 @@ namespace UniGetUI.Core.Logging.Tests
             string version = Path.Join(_testRoot, "apps", "unigetui", "2026.3.1");
             Directory.CreateDirectory(Path.Join(persisted, "Temp"));
             Directory.CreateDirectory(version);
-            Directory.CreateSymbolicLink(Path.Join(version, "Settings"), persisted);
-            Directory.CreateSymbolicLink(Path.Join(_testRoot, "apps", "unigetui", "current"), version);
+            try
+            {
+                Directory.CreateSymbolicLink(Path.Join(version, "Settings"), persisted);
+                Directory.CreateSymbolicLink(Path.Join(_testRoot, "apps", "unigetui", "current"), version);
+            }
+            catch (IOException ex) when (ex.HResult == ErrorPrivilegeNotHeld)
+            {
+                return;
+            }
 
             string resolved = AppPaths.ResolveLinkedDirectories(
                 Path.Join(_testRoot, "apps", "unigetui", "current", "Settings", "Temp"));
@@ -201,6 +208,8 @@ namespace UniGetUI.Core.Logging.Tests
             Assert.Equal(directory, startInfo.Environment["TMP"]);
             Assert.EndsWith(Path.Join("Settings", "Temp", "ElevatedWinGetTemp"), directory);
         }
+
+        private const int ErrorPrivilegeNotHeld = unchecked((int)0x80070522);
 
         private static void CreateJunction(string link, string target)
         {

@@ -758,6 +758,42 @@ public sealed class BunManagerTests
     }
 
     /// <summary>
+    /// Tests the global packages directory follows Bun's lookup order for its environment variables.
+    /// </summary>
+    [Fact]
+    public void GetGlobalPackagesDirectoryHonorsBunEnvironmentVariables()
+    {
+        string userProfile = Path.Combine("home", "user");
+        string globalDir = Path.Combine("custom", "global");
+        string bunInstall = Path.Combine("scoop", "persist", "bun");
+
+        Assert.Equal(
+            globalDir,
+            Bun.GetGlobalPackagesDirectory(
+                userProfile,
+                name => name switch
+                {
+                    "BUN_INSTALL_GLOBAL_DIR" => globalDir,
+                    "BUN_INSTALL" => bunInstall,
+                    _ => null,
+                }));
+
+        Assert.Equal(
+            Path.Combine(bunInstall, "install", "global"),
+            Bun.GetGlobalPackagesDirectory(
+                userProfile,
+                name => name == "BUN_INSTALL" ? bunInstall : null));
+
+        Assert.Equal(
+            Path.Combine(userProfile, ".bun", "install", "global"),
+            Bun.GetGlobalPackagesDirectory(userProfile, _ => null));
+
+        Assert.Equal(
+            Path.Combine(userProfile, ".bun", "install", "global"),
+            Bun.GetGlobalPackagesDirectory(userProfile, _ => ""));
+    }
+
+    /// <summary>
     /// Tests Bun install location defaults to the global Bun node_modules directory.
     /// </summary>
     [Fact]

@@ -381,7 +381,7 @@ internal static partial class AvaloniaAutoUpdater
 
     private static int _activeAttempts;
     private static int _attemptsAwaitingConsent;
-    private static TaskCompletionSource? _installerHandoff;
+    private static readonly InstallerHandoffTracker InstallerHandoffs = new();
     private static readonly TimeSpan InstallerHandoffTimeout = TimeSpan.FromMinutes(2);
 
     internal static bool IsBusy
@@ -389,18 +389,12 @@ internal static partial class AvaloniaAutoUpdater
 
     internal static async Task WaitForInstallerHandoffAsync()
     {
-        if (_installerHandoff is not { } handoff)
+        if (!InstallerHandoffs.HasPending)
             return;
 
         LogUpdateInfo("Auto-updater: waiting for the ready update to be handed off before shutting down.");
-        try
-        {
-            await handoff.Task.WaitAsync(InstallerHandoffTimeout);
-        }
-        catch (TimeoutException)
-        {
+        if (!await InstallerHandoffs.WaitForAllAsync(InstallerHandoffTimeout))
             LogUpdateWarn($"Auto-updater: the ready update was not handed off within {InstallerHandoffTimeout.TotalMinutes:0} minutes, shutting down anyway.");
-        }
     }
 
     // ------------------------------------------------------------------ core logic
@@ -675,8 +669,7 @@ internal static partial class AvaloniaAutoUpdater
             // On first launch in background we wait for user interaction
         }
 
-        var handoff = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _installerHandoff = handoff;
+        TaskCompletionSource handoff = InstallerHandoffs.Begin();
         try
         {
             // Wait until user requests install, clicks the toast, or the window is being closed
@@ -700,17 +693,16 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             LogUpdateInfo("Installing update \u2014 launching installer.");
-            await LaunchInstallerAsync(installerPath);
+            await LaunchInstallerAsync(installerPath, handoff);
             return true;
         }
         finally
         {
-            handoff.TrySetResult();
-            Interlocked.CompareExchange(ref _installerHandoff, null, handoff);
+            InstallerHandoffs.Complete(handoff);
         }
     }
 
-    private static async Task LaunchInstallerAsync(string installerLocation)
+    private static async Task LaunchInstallerAsync(string installerLocation, TaskCompletionSource handoff)
     {
         if (OperatingSystem.IsMacOS())
         {
@@ -787,7 +779,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         LogUpdateInfo($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
-        _installerHandoff?.TrySetResult();
+        InstallerHandoffs.Complete(handoff);
 
         RaiseStatus(
             CoreTools.Translate("UniGetUI is being updated..."),

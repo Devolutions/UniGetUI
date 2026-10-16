@@ -28,6 +28,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
     private MenuItem? _menuOpenInstallLocation;
+    private MenuItem? _menuReleaseNotes;
+    private IPackage? _releaseNotesPackage;
 
     public SoftwareUpdatesPage() : base(new PackagesPageData
     {
@@ -249,6 +251,13 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
+        _menuReleaseNotes = new MenuItem
+        {
+            Header = CoreTools.Translate("Release notes"),
+            Icon = LoadMenuIcon("megaphone"),
+        };
+        _menuReleaseNotes.Click += (_, _) => _ = ShowReleaseNotesForPackage(SelectedItem);
+
         var menu = new ContextMenu();
         menu.Items.Add(menuUpdate);
         menu.Items.Add(new Separator());
@@ -268,6 +277,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         menu.Items.Add(menuSkipVersion);
         menu.Items.Add(menuPause);
         menu.Items.Add(new Separator());
+        menu.Items.Add(_menuReleaseNotes);
         menu.Items.Add(menuDetails);
 
         return menu;
@@ -276,7 +286,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     protected override void WhenShowingContextMenu(IPackage package)
     {
         if (_menuAsAdmin is null || _menuInteractive is null || _menuSkipHash is null
-            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null)
+            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null
+            || _menuReleaseNotes is null)
         {
             Logger.Warn("Context menu items are null on SoftwareUpdatesPage");
             return;
@@ -289,7 +300,34 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         _menuDownloadInstaller.IsEnabled = caps.CanDownloadInstaller;
         _menuOpenInstallLocation.IsEnabled =
             package.Manager.DetailsHelper.GetInstallLocation(package) is not null;
+
+        _releaseNotesPackage = package;
+        if (!caps.SupportsReleaseNotes)
+            _menuReleaseNotes.IsEnabled = false;
+        else if (package.Details.IsPopulated)
+            _menuReleaseNotes.IsEnabled = HasReleaseNotes(package.Details);
+        else
+        {
+            _menuReleaseNotes.IsEnabled = false;
+            _ = UpdateReleaseNotesAvailabilityAsync(package);
+        }
     }
+
+    private async Task UpdateReleaseNotesAvailabilityAsync(IPackage package)
+    {
+        await package.Details.Load();
+        if (_menuReleaseNotes is not null && ReferenceEquals(_releaseNotesPackage, package))
+            _menuReleaseNotes.IsEnabled = HasReleaseNotes(package.Details);
+    }
+
+    private static bool HasReleaseNotes(IPackageDetails details) =>
+        GetReleaseNotesUrl(details) is not null || !string.IsNullOrWhiteSpace(details.ReleaseNotes);
+
+    private static Uri? GetReleaseNotesUrl(IPackageDetails details) =>
+        details.ReleaseNotesUrl is { IsAbsoluteUri: true } url
+        && (url.Scheme == Uri.UriSchemeHttps || url.Scheme == Uri.UriSchemeHttp)
+            ? url
+            : null;
 
     // ─── Abstract action overrides ────────────────────────────────────────────
     protected override void PerformMainPackageAction(IPackage? package)
@@ -333,6 +371,19 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         var path = package.Manager.DetailsHelper.GetInstallLocation(package);
         if (path is not null)
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+    }
+
+    private async Task ShowReleaseNotesForPackage(IPackage? package)
+    {
+        if (package is null) return;
+
+        if (!package.Details.IsPopulated)
+            await package.Details.Load();
+
+        if (GetReleaseNotesUrl(package.Details) is { } url)
+            CoreTools.Launch(url.AbsoluteUri);
+        else if (!string.IsNullOrWhiteSpace(package.Details.ReleaseNotes))
+            await ShowDetailsForPackage(package);
     }
 
     // ─── Operation launchers ──────────────────────────────────────────────────

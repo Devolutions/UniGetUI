@@ -26,6 +26,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 CanSkipIntegrityChecks = true,
                 SupportsCustomVersions = true,
                 CanDownloadInstaller = true,
+                SupportsReleaseNotes = true,
                 SupportsCustomScopes = true,
                 // Update-Module/Uninstall-Module (PowerShellGet) take no -Scope; only Install-Module does
                 SupportsCustomScopesOnUpdate = false,

@@ -33,6 +33,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool CanDownloadInstaller = false;
         public bool CanUninstallPreviousVersionsAfterUpdate = false;
         public bool CanListDependencies = false;
+        public bool SupportsReleaseNotes = false;
         public bool SupportsCustomVersions = false;
         public bool SupportsCustomArchitectures = false;
         public string[] SupportedCustomArchitectures = [];

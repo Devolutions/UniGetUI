@@ -32,6 +32,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
                 SupportsCustomSources = true,
                 SupportsPreRelease = true,
                 CanDownloadInstaller = true,
+                SupportsReleaseNotes = true,
                 CanListDependencies = true,
                 SupportsCustomPackageIcons = true,
                 CanUninstallPreviousVersionsAfterUpdate = true,

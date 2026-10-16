@@ -114,6 +114,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 CanRunInteractively = true,
                 SupportsCustomVersions = true,
                 CanDownloadInstaller = true,
+                SupportsReleaseNotes = true,
                 CanListDependencies = true,
                 SupportsCustomArchitectures = true,
                 SupportedCustomArchitectures =

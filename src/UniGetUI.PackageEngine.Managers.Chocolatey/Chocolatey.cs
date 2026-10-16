@@ -94,6 +94,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             {
                 CanRunAsAdmin = true,
                 CanDownloadInstaller = true,
+                SupportsReleaseNotes = true,
                 CanSkipIntegrityChecks = true,
                 CanRunInteractively = true,
                 SupportsCustomVersions = true,

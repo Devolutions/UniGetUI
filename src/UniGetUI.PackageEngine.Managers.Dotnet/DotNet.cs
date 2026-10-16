@@ -27,6 +27,7 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
             {
                 CanRunAsAdmin = true,
                 CanDownloadInstaller = true,
+                SupportsReleaseNotes = true,
                 SupportsCustomScopes = true,
                 SupportsCustomArchitectures = true,
                 SupportedCustomArchitectures =

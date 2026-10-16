@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -11,7 +13,7 @@ using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.PackageEngine.Managers.WingetManager;
 
-internal sealed class WinGetCliHelper : IWinGetManagerHelper
+internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
 {
     // "winget search a" returns ~12k results; cap to the most relevant to avoid the freeze/RAM spike.
     private const int MAX_SEARCH_RESULTS = 100;
@@ -273,13 +275,74 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
     {
         if (query.Length == 0)
         {
-            return Manager
-                .SourcesHelper.GetSources()
+            return GetSourcesForBrowse()
                 .SelectMany(source => SearchPackages(query, source, SearchLimits.MaxEmptyQueryResultsPerSource))
                 .ToArray();
         }
 
         return SearchPackages(query, null, MAX_SEARCH_RESULTS);
+    }
+
+    private List<IManagerSource> GetSourcesForBrowse()
+    {
+        using var _cliLock = WinGet.AcquireCliLock();
+        List<IManagerSource> sources = [];
+        using Process p = new()
+        {
+            StartInfo = new()
+            {
+                FileName = _cliExecutablePath,
+                Arguments = Manager.Status.ExecutableCallArgs + " source export",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+            },
+        };
+
+        IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListSources, p);
+
+        if (CoreTools.IsAdministrator())
+        {
+            string WinGetTemp = AppPaths.RedirectTempToElevatedDirectory(p.StartInfo);
+            logger.AddToStdErr(
+                $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
+            );
+        }
+
+        p.Start();
+
+        foreach (string name in ParseExportedSourceNames(ReadOutputLines(p, logger)))
+        {
+            sources.Add(Manager.SourcesHelper.Factory.GetSourceOrDefault(name));
+        }
+
+        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        p.WaitForExit();
+        logger.Close(p.ExitCode);
+        return sources;
+    }
+
+    internal static IEnumerable<string> ParseExportedSourceNames(IEnumerable<string> outputLines)
+    {
+        foreach (string line in outputLines)
+        {
+            string? name;
+            try
+            {
+                name = JsonSerializer.Deserialize(line, WinGetCliJsonContext.Default.WinGetExportedSource)?.Name;
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                yield return name;
+            }
+        }
     }
 
     private List<Package> SearchPackages(string query, IManagerSource? source, int count)
@@ -528,4 +591,9 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
         logger.Close(p.ExitCode);
         return sources;
     }
+
+    internal sealed record WinGetExportedSource(string? Name);
+
+    [JsonSerializable(typeof(WinGetExportedSource))]
+    internal sealed partial class WinGetCliJsonContext : JsonSerializerContext { }
 }

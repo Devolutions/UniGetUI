@@ -117,13 +117,26 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
         {
             return Manager
                 .SourcesHelper.GetSources()
-                .SelectMany(source => SearchPackages(
-                    $"search {Quote(query)} --source {Quote(source.Name)} --count {SearchLimits.MaxEmptyQueryResultsPerSource} --output json"
-                ))
+                .SelectMany(SearchSourceForBrowse)
                 .ToArray();
         }
 
         return SearchPackages($"search {Quote(query)} --output json");
+    }
+
+    private Package[] SearchSourceForBrowse(IManagerSource source)
+    {
+        try
+        {
+            return SearchPackages(
+                $"search {Quote(string.Empty)} --source {Quote(source.Name)} --count {SearchLimits.MaxEmptyQueryResultsPerSource} --output json"
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not list the packages of the WinGet source {source.Name}: {ex.Message}");
+            return [];
+        }
     }
 
     private Package[] SearchPackages(string arguments)

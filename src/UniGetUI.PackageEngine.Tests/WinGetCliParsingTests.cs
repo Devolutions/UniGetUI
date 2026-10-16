@@ -312,6 +312,22 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Fact]
+    public void ParseExportedSourceNamesKeepsNamesThatContainSpaces()
+    {
+        IEnumerable<string> names = WinGetCliHelper.ParseExportedSourceNames(
+            [
+                """{"Arg":"https://storeedgefd.dsx.mp.microsoft.com/v9.0","Data":"","Explicit":false,"Identifier":"StoreEdgeFD","Name":"msstore","TrustLevel":["Trusted"],"Type":"Microsoft.Rest"}""",
+                """{"Arg":"https://cdn.winget.microsoft.com/cache","Data":"Microsoft.Winget.Source_8wekyb3d8bbwe","Explicit":false,"Identifier":"Microsoft.Winget.Source_8wekyb3d8bbwe","Name":"winget","TrustLevel":["Trusted","StoreOrigin"],"Type":"Microsoft.PreIndexed.Package"}""",
+                """{"Arg":"https://packages.contoso.test/api","Data":"","Explicit":true,"Identifier":"Private Feed","Name":"Private Feed","TrustLevel":["None"],"Type":"Microsoft.Rest"}""",
+                "",
+                "Failed when opening source(s); try the 'source reset' command if the problem persists.",
+            ]
+        );
+
+        Assert.Equal(["msstore", "winget", "Private Feed"], names);
+    }
+
+    [Fact]
     public void ParseInstalledPackagesReadsCapturedJapaneseWinGetOutput()
     {
         var manager = new WinGet();

@@ -680,7 +680,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         foreach (var f in filters) normalizedQuery = f(normalizedQuery);
         query = normalizedQuery;
 
-        Func<IPackage, bool> matchFunc = SearchMode switch
+        Func<IPackage, bool> matchFunc = normalizedQuery.Length == 0 ? _ => true : SearchMode switch
         {
             SearchMode.Name => pkg => FilterHelpers.NameContains(pkg, normalizedQuery, filters),
             SearchMode.Id => pkg => FilterHelpers.IdContains(pkg, normalizedQuery, filters),

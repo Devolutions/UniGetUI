@@ -144,6 +144,126 @@ public sealed class DiscoverablePackagesLoaderTests : IDisposable
     }
 
     [Fact]
+    public async Task EmptyQueryOnlyQueriesManagersThatSupportIt()
+    {
+        List<string> alphaQueries = [];
+        int betaCalls = 0;
+
+        var alpha = new PackageManagerBuilder()
+            .WithName("Alpha")
+            .WithDisplayName("Alpha")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsEmptySearchQuery = true;
+                return capabilities;
+            })
+            .WithFindPackages((m, query) =>
+            {
+                alphaQueries.Add(query);
+                return [new PackageBuilder().WithManager(m).WithId("Alpha.Pkg").Build()];
+            })
+            .Build();
+
+        var beta = new PackageManagerBuilder()
+            .WithName("Beta")
+            .WithDisplayName("Beta")
+            .WithFindPackages((m, _) =>
+            {
+                betaCalls++;
+                return [new PackageBuilder().WithManager(m).WithId("Beta.Pkg").Build()];
+            })
+            .Build();
+
+        _ = new InstalledPackagesLoader([alpha, beta]);
+        _ = new UpgradablePackagesLoader([alpha, beta]);
+        var loader = new ProbeLoader([alpha, beta]);
+
+        await loader.ReloadPackages("");
+
+        Assert.Equal([""], alphaQueries);
+        Assert.Equal(0, betaCalls);
+        Assert.Equal("Alpha.Pkg", Assert.Single(loader.Packages).Id);
+
+        loader.SetManagerSearched(alpha, false);
+        Assert.False(loader.WillQuery());
+    }
+
+    [Fact]
+    public async Task EmptyQueryCapsResultsPerSourceSoLaterSourcesAreNotCrowdedOut()
+    {
+        var alpha = new PackageManagerBuilder()
+            .WithName("Alpha")
+            .WithDisplayName("Alpha")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsEmptySearchQuery = true;
+                return capabilities;
+            })
+            .WithFindPackages((m, _) =>
+            {
+                var publicSource = new SourceBuilder().WithManager(m).WithName("public").Build();
+                var privateSource = new SourceBuilder().WithManager(m).WithName("private").Build();
+                return Enumerable.Range(0, 150)
+                    .Select(i => new PackageBuilder().WithManager(m).WithSource(publicSource).WithId($"Public.{i}").Build())
+                    .Concat(Enumerable.Range(0, 5)
+                        .Select(i => new PackageBuilder().WithManager(m).WithSource(privateSource).WithId($"Private.{i}").Build()))
+                    .ToArray();
+            })
+            .Build();
+
+        _ = new InstalledPackagesLoader([alpha]);
+        _ = new UpgradablePackagesLoader([alpha]);
+        var loader = new DiscoverablePackagesLoader([alpha]);
+
+        await loader.ReloadPackages("");
+        Assert.Equal(105, loader.Packages.Count);
+        Assert.Equal(5, loader.Packages.Count(package => package.Source.Name == "private"));
+
+        await loader.ReloadPackages("pkg");
+        Assert.Equal(100, loader.Packages.Count);
+    }
+
+    [Fact]
+    public async Task NothingIsQueriedBeforeASearchOrForAnUnsafeOnlyQuery()
+    {
+        int alphaCalls = 0;
+        var alpha = new PackageManagerBuilder()
+            .WithName("Alpha")
+            .WithDisplayName("Alpha")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsEmptySearchQuery = true;
+                return capabilities;
+            })
+            .WithFindPackages((m, _) =>
+            {
+                alphaCalls++;
+                return [new PackageBuilder().WithManager(m).WithId("Alpha.Pkg").Build()];
+            })
+            .Build();
+
+        _ = new InstalledPackagesLoader([alpha]);
+        _ = new UpgradablePackagesLoader([alpha]);
+        var loader = new DiscoverablePackagesLoader([alpha]);
+
+        await loader.ReloadPackages();
+        Assert.Equal(0, alphaCalls);
+
+        await loader.ReloadPackages(";|&");
+        Assert.Equal(0, alphaCalls);
+        Assert.Empty(loader.Packages);
+
+        await loader.ReloadPackages("");
+        Assert.Equal(1, alphaCalls);
+
+        loader.ResetSearch();
+        Assert.Empty(loader.Packages);
+        await loader.ReloadPackages();
+        Assert.Equal(1, alphaCalls);
+        Assert.Empty(loader.Packages);
+    }
+
+    [Fact]
     public void SearchScopeIsReadFromAndWrittenToDisk()
     {
         var alpha = new PackageManagerBuilder().WithName("Alpha").WithDisplayName("Alpha").Build();

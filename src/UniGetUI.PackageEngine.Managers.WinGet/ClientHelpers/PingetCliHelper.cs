@@ -113,10 +113,22 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
-        SearchResponse result = RunJson<SearchResponse>(
-            LoggableTaskType.FindPackages,
-            $"search {Quote(query)} --output json"
-        );
+        if (query.Length == 0)
+        {
+            return Manager
+                .SourcesHelper.GetSources()
+                .SelectMany(source => SearchPackages(
+                    $"search {Quote(query)} --source {Quote(source.Name)} --count {SearchLimits.MaxEmptyQueryResultsPerSource} --output json"
+                ))
+                .ToArray();
+        }
+
+        return SearchPackages($"search {Quote(query)} --output json");
+    }
+
+    private Package[] SearchPackages(string arguments)
+    {
+        SearchResponse result = RunJson<SearchResponse>(LoggableTaskType.FindPackages, arguments);
 
         return result
             .Matches.Select(match =>

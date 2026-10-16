@@ -74,6 +74,20 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
     }
 
     [Test]
+    public async Task DiscoverPage_EmptySearchListsOnlyManagersThatSupportIt()
+    {
+        await ResetAsync(TuiPageIds.Discover);
+        await EnterPage();
+        await Key(K.Enter);
+        await WaitUntilAsync(
+            () => DiscoverablePackagesLoader.Instance.IsLoaded && !DiscoverablePackagesLoader.Instance.IsLoading,
+            "the empty search to finish");
+
+        NAssert.That(DiscoverablePackagesLoader.Instance.Packages, Is.Not.Empty);
+        NAssert.That(DiscoverablePackagesLoader.Instance.Packages.Select(p => p.Manager.Name).Distinct(), Is.EquivalentTo(new[] { "Winget" }));
+    }
+
+    [Test]
     public async Task InstalledPage_UninstallAsksForConfirmation()
     {
         await ResetAsync(TuiPageIds.Installed);

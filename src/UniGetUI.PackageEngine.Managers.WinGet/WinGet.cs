@@ -128,6 +128,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 SupportsCustomSources = true,
                 SupportsCustomPackageIcons = true,
                 SupportsCustomPackageScreenshots = true,
+                SupportsEmptySearchQuery = true,
                 Sources = new SourceCapabilities
                 {
                     KnowsPackageCount = false,

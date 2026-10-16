@@ -271,6 +271,19 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
+        if (query.Length == 0)
+        {
+            return Manager
+                .SourcesHelper.GetSources()
+                .SelectMany(source => SearchPackages(query, source, SearchLimits.MaxEmptyQueryResultsPerSource))
+                .ToArray();
+        }
+
+        return SearchPackages(query, null, MAX_SEARCH_RESULTS);
+    }
+
+    private List<Package> SearchPackages(string query, IManagerSource? source, int count)
+    {
         using var _cliLock = WinGet.AcquireCliLock();
         List<Package> Packages = [];
         using Process p = new()
@@ -282,8 +295,10 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                     Manager.Status.ExecutableCallArgs
                     + " search \""
                     + query
-                    + "\" --count "
-                    + MAX_SEARCH_RESULTS
+                    + "\""
+                    + (source is null ? "" : " --source \"" + source.Name + "\"")
+                    + " --count "
+                    + count
                     + " --accept-source-agreements "
                     + WinGet.GetProxyArgument(),
                 RedirectStandardOutput = true,
@@ -306,7 +321,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
         p.Start();
 
-        Packages.AddRange(ParseFoundPackages(Manager, ReadOutputLines(p, logger)));
+        Packages.AddRange(ParseFoundPackages(Manager, ReadOutputLines(p, logger), source));
 
         logger.AddToStdErr(p.StandardError.ReadToEnd());
         p.WaitForExit();
@@ -317,7 +332,8 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
     internal static IReadOnlyList<Package> ParseFoundPackages(
         WinGet manager,
-        IEnumerable<string> outputLines
+        IEnumerable<string> outputLines,
+        IManagerSource? queriedSource = null
     )
     {
         List<Package> packages = [];
@@ -338,7 +354,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
                 IManagerSource source =
                     sourceName.Length == 0
-                        ? manager.DefaultSource
+                        ? queriedSource ?? manager.DefaultSource
                         : manager.SourcesHelper.Factory.GetSourceOrDefault(sourceName);
 
                 packages.Add(new Package(name, id, version, source, manager));

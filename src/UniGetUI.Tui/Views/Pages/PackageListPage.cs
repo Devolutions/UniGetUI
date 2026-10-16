@@ -182,7 +182,7 @@ internal sealed class PackageListPage : UserControl, ITuiPage
     private AbstractPackageLoader? _subscribed;
     private bool _dirty;
     private DateTime _lastLoadTime = DateTime.Now;
-    private string _submittedQuery = string.Empty;
+    private string? _submittedQuery;
 
     public PackageListPage(PackagePageKind kind)
     {
@@ -600,7 +600,7 @@ internal sealed class PackageListPage : UserControl, ITuiPage
     {
         if (_kind == PackagePageKind.Discover)
         {
-            if (_submittedQuery.Length > 0) _ = DiscoverablePackagesLoader.Instance.ReloadPackages(_submittedQuery);
+            if (_submittedQuery is not null) _ = DiscoverablePackagesLoader.Instance.ReloadPackages(_submittedQuery);
             return;
         }
 
@@ -669,14 +669,9 @@ internal sealed class PackageListPage : UserControl, ITuiPage
     {
         string query = (_search.Text ?? string.Empty).Trim();
         _submittedQuery = query;
-        if (query.Length == 0)
-        {
-            DiscoverablePackagesLoader.Instance.ClearPackages(emitFinishSignal: false);
-            Refresh();
-            return;
-        }
-
-        _status.Text = CoreTools.Translate("Searching for \"{0}\"…", query);
+        _status.Text = query.Length == 0
+            ? CoreTools.Translate("Loading packages") + "…"
+            : CoreTools.Translate("Searching for \"{0}\"…", query);
         DiscoverablePackagesLoader.Instance.ClearPackages(emitFinishSignal: false);
         _ = DiscoverablePackagesLoader.Instance.ReloadPackages(query);
     }
@@ -858,7 +853,7 @@ internal sealed class PackageListPage : UserControl, ITuiPage
         }
 
         string query = (_search.Text ?? string.Empty).Trim();
-        if (_kind == PackagePageKind.Discover && query != _submittedQuery) query = _submittedQuery;
+        if (_kind == PackagePageKind.Discover && query != _submittedQuery) query = _submittedQuery ?? string.Empty;
         var filtered = snapshot.Where(p => MatchesQuery(p, query) && MatchesSources(p));
         List<IPackage> ordered = Sort(filtered).ToList();
 
@@ -1020,7 +1015,7 @@ internal sealed class PackageListPage : UserControl, ITuiPage
         {
             _status.Text = _kind switch
             {
-                PackagePageKind.Discover => _submittedQuery.Length == 0
+                PackagePageKind.Discover => _submittedQuery is null
                     ? CoreTools.Translate("Search for packages to start") + "."
                     : CoreTools.Translate("No results were found matching the input criteria"),
                 PackagePageKind.Updates => CoreTools.Translate("Hooray! No updates were found."),

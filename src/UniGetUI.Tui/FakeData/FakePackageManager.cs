@@ -41,6 +41,7 @@ internal sealed class FakePackageManager : PackageManager
             SupportedCustomArchitectures = profile.SupportsArchitectures ? ["x86", "x64", "arm64"] : [],
             SupportsCustomScopes = profile.SupportsScopes,
             SupportsPreRelease = profile.SupportsVersions,
+            SupportsEmptySearchQuery = profile.Name == "Winget",
             SupportsCustomLocations = true,
             SupportsCustomSources = profile.SupportsSources,
             SupportsCustomPackageIcons = false,

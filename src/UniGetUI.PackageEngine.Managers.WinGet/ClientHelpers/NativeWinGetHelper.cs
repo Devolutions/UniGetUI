@@ -184,7 +184,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         List<Package> packages = [];
         INativeTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.FindPackages);
         Dictionary<
-            (PackageCatalogReference, PackageMatchField),
+            (PackageCatalogReference, PackageMatchField?),
             Task<FindPackagesResult>
         > FindPackageTasks = [];
 
@@ -203,24 +203,27 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             ConnectResult result = CatalogReference.Connect();
             if (result.Status == ConnectResultStatus.Ok)
             {
-                foreach (
-                    var filter_type in new[]
-                    {
-                        PackageMatchField.Name,
-                        PackageMatchField.Id,
-                        PackageMatchField.Moniker,
-                    }
-                )
+                PackageMatchField?[] filterTypes = query.Length == 0
+                    ? [null]
+                    : [PackageMatchField.Name, PackageMatchField.Id, PackageMatchField.Moniker];
+                foreach (PackageMatchField? filter_type in filterTypes)
                 {
                     FindPackagesOptions PackageFilters = Factory.CreateFindPackagesOptions();
 
-                    logger.Log("Generating filters...");
-                    // Name filter
-                    PackageMatchFilter FilterName = Factory.CreatePackageMatchFilter();
-                    FilterName.Field = filter_type;
-                    FilterName.Value = query;
-                    FilterName.Option = PackageFieldMatchOption.ContainsCaseInsensitive;
-                    PackageFilters.Filters.Add(FilterName);
+                    if (filter_type is { } field)
+                    {
+                        logger.Log("Generating filters...");
+                        // Name filter
+                        PackageMatchFilter FilterName = Factory.CreatePackageMatchFilter();
+                        FilterName.Field = field;
+                        FilterName.Value = query;
+                        FilterName.Option = PackageFieldMatchOption.ContainsCaseInsensitive;
+                        PackageFilters.Filters.Add(FilterName);
+                    }
+                    else
+                    {
+                        PackageFilters.ResultLimit = (uint)SearchLimits.MaxEmptyQueryResultsPerSource;
+                    }
 
                     try
                     {

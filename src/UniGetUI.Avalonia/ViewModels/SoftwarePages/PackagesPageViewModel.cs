@@ -618,7 +618,10 @@ public partial class PackagesPageViewModel : ViewModelBase
             {
                 MegaQueryText = "";
                 MegaQueryVisible = true;
-                Loader?.ClearPackages(emitFinishSignal: false);
+                if (Loader is DiscoverablePackagesLoader discoverLoader)
+                    discoverLoader.ResetSearch();
+                else
+                    Loader?.ClearPackages(emitFinishSignal: false);
             }
             else
             {
@@ -719,7 +722,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             bool noQuery = string.IsNullOrWhiteSpace(query);
             BackgroundText = noQuery ? NoPackagesText : NoMatchesText;
-            BackgroundTextVisible = !MegaQueryBoxEnabled || !noQuery;
+            BackgroundTextVisible = !MegaQueryBoxEnabled || !noQuery || !MegaQueryVisible;
             LoadingImageVisible = false;
             NoPackagesImageVisible = noQuery && BackgroundTextVisible && NoPackagesImage is not null;
         }

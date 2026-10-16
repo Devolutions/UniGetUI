@@ -6,6 +6,7 @@ using Avalonia.Animation.Easings;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -84,7 +85,13 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 SyncFiltersButtonName();
                 UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen, animate: true);
             }
+            // Set last by UpdateSubtitle, so the segments and the detail are both current by then
+            if (args.PropertyName is nameof(PackagesPageViewModel.SubtitleAccessibleText))
+            {
+                UpdateSubtitleInlines();
+            }
         };
+        UpdateSubtitleInlines();
         SyncFiltersButtonName();
         SyncOrderByButtonName();
 
@@ -409,6 +416,28 @@ public abstract partial class AbstractPackagesPage : UserControl,
         AutomationProperties.SetName(
             OrderByButton,
             CoreTools.Translate("{0}: {1}, {2}", CoreTools.Translate("Order by"), ViewModel.SortFieldName, direction));
+    }
+
+    // The numbers are the information that changes: semibold in the body text colour, the words keep the secondary tone
+    private void UpdateSubtitleInlines()
+    {
+        var inlines = new InlineCollection();
+        foreach (SubtitleSegment segment in ViewModel.SubtitleSegments)
+        {
+            var run = new Run(segment.Text);
+            if (segment.IsValue)
+            {
+                run.FontWeight = FontWeight.SemiBold;
+                run.Bind(TextElement.ForegroundProperty, this.GetResourceObservable("TextFillColorPrimaryBrush"));
+            }
+            inlines.Add(run);
+        }
+
+        if (ViewModel.SubtitleDetail.Length > 0)
+            inlines.Add(new Run(ViewModel.SubtitleDetail));
+
+        MainSubtitle.Inlines = inlines;
+        AutomationProperties.SetName(MainSubtitle, ViewModel.SubtitleAccessibleText);
     }
 
     private void UpdateSortMenuChecks()

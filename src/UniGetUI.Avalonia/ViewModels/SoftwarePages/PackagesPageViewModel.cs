@@ -169,6 +169,46 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private string _pageTitle = "";
     [ObservableProperty] private string _pageIconPath = "";
     [ObservableProperty] private string _subtitle = "";
+
+    // Shown after the subtitle in a secondary tone: when the list was last checked, then the page suffix.
+    [ObservableProperty] private string _subtitleDetail = "";
+
+    // The whole subtitle as one sentence, for screen readers.
+    [ObservableProperty] private string _subtitleAccessibleText = "";
+
+    /// <summary>The subtitle cut around its numbers, so the page can draw them stronger than the words.</summary>
+    [ObservableProperty] private IReadOnlyList<SubtitleSegment> _subtitleSegments = [];
+
+    // Private-use marks around each number: the translated sentence decides where the numbers go, the marks find them.
+    private const char VALUE_START = '\uE000';
+    private const char VALUE_END = '\uE001';
+
+    private static string MarkValue(int value) => $"{VALUE_START}{value}{VALUE_END}";
+
+    private void SetSubtitle(string marked)
+    {
+        var segments = new List<SubtitleSegment>();
+        var text = new System.Text.StringBuilder();
+        foreach (string part in marked.Split(VALUE_START))
+        {
+            int end = part.IndexOf(VALUE_END);
+            if (end >= 0)
+            {
+                segments.Add(new SubtitleSegment(part[..end], true));
+                text.Append(part, 0, end);
+            }
+
+            string words = end >= 0 ? part[(end + 1)..] : part;
+            if (words.Length > 0)
+            {
+                segments.Add(new SubtitleSegment(words, false));
+                text.Append(words);
+            }
+        }
+
+        SubtitleSegments = segments;
+        Subtitle = text.ToString();
+    }
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _backgroundTextVisible;
     [ObservableProperty] private bool _loadingImageVisible;
@@ -1059,30 +1099,32 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         if (Loader.IsLoading || (LoadsOnStart && Loader.HasPendingInitialLoad))
         {
-            Subtitle = _stillLoadingSubtitle;
+            SetSubtitle(_stillLoadingSubtitle);
+            SubtitleDetail = "";
+            SubtitleAccessibleText = Subtitle;
             return;
         }
 
+        SubtitleDetail = (_showLastCheckedTime
+            ? " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture))
+            : "") + SubtitleSuffix;
+
         if (Loader.Any())
         {
+            // {0} is everything the managers returned, {1} what the filters keep, as the sentence reads
             int selected = FilteredPackages.GetCheckedPackages().Count;
-            string r = CoreTools.Translate(
+            SetSubtitle(CoreTools.Translate(
                 "{0} packages were found, {1} of which match the specified filters.",
-                FilteredPackages.Count,
-                _wrappedPackages.Count
-            ) + " (" + CoreTools.Translate("{0} selected", selected) + ")";
-
-            if (_showLastCheckedTime)
-                r += " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
-
-            Subtitle = r + SubtitleSuffix;
+                MarkValue(_wrappedPackages.Count),
+                MarkValue(FilteredPackages.Count)
+            ) + " (" + CoreTools.Translate("{0} selected", MarkValue(selected)) + ")");
         }
         else
         {
-            Subtitle = _noPackagesSubtitleBase + (_showLastCheckedTime
-                ? " " + CoreTools.Translate("(Last checked: {0})", _lastLoadTime.ToString(CultureInfo.CurrentCulture))
-                : "") + SubtitleSuffix;
+            SetSubtitle(_noPackagesSubtitleBase);
         }
+
+        SubtitleAccessibleText = Subtitle + SubtitleDetail;
     }
 
     // ─── Commands ─────────────────────────────────────────────────────────────
@@ -1202,3 +1244,6 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
     }
 }
+
+/// <summary>A piece of the page subtitle; <paramref name="IsValue"/> marks a number.</summary>
+public readonly record struct SubtitleSegment(string Text, bool IsValue);

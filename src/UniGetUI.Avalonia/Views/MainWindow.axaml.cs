@@ -293,6 +293,16 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
+        // The lifetime only closes the window for a session end that App let through, and cancelling
+        // here would still make Avalonia abort the logout.
+        if (e.CloseReason == WindowCloseReason.OSShutdown)
+        {
+            _allowClose = true;
+            ReleaseWindowResources();
+            base.OnClosing(e);
+            return;
+        }
+
         if (!_allowClose && (OperatingSystem.IsMacOS() || !Settings.Get(Settings.K.DisableSystemTray)))
         {
             e.Cancel = true;
@@ -2297,6 +2307,8 @@ public partial class MainWindow : Window
     public bool IsQuitting => _shutdownCoordinator.IsQuitting;
 
     internal bool HasUnsavedWork => ViewModel.HasUnsavedWork;
+
+    internal bool CanQuitWithoutAsking => ViewModel.CanShutdownWithoutAsking;
 
     public void QuitApplication() => _ = RequestQuitApplicationAsync();
 

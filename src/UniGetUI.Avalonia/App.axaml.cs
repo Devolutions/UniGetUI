@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -186,14 +187,15 @@ public partial class App : Application
         AvaloniaAppHost.SecondaryInstanceArgsReceived += args =>
             HandleSecondaryInstanceArgs(mainWindow, args);
 
-        desktop.ShutdownRequested += (_, e) =>
-        {
-            if (mainWindow.IsQuitting)
-                return;
+        desktop.ShutdownRequested += (_, e) => HandleShutdownRequest(
+            e,
+            mainWindow.IsQuitting,
+            fromSessionManager: OperatingSystem.IsLinux(),
+            mainWindow.CanQuitWithoutAsking,
+            mainWindow.QuitApplication);
 
-            e.Cancel = true;
-            mainWindow.QuitApplication();
-        };
+        if (OperatingSystem.IsLinux())
+            QuitOnTerminationSignals(mainWindow);
 
         if (Current?.TryGetFeature<IActivatableLifetime>() is { } activatable)
         {
@@ -221,6 +223,57 @@ public partial class App : Application
             mainWindow.Show();
 
         _ = StartupAsync(mainWindow, desktop.Args ?? []);
+    }
+
+    /// <summary>
+    /// Routes the lifetime's shutdown request through <see cref="MainWindow.QuitApplication"/>, which
+    /// asks about unsaved work before it exits.
+    /// </summary>
+    /// <remarks>
+    /// On Linux only the X session manager raises the request, for a logout, restart or shutdown, and
+    /// Avalonia passes `e.Cancel` straight back to it. Cancelling makes the session manager abort the
+    /// logout even though the quit that follows exits the app anyway, so when the quit would not ask
+    /// anything the request is let through and the lifetime closes the windows itself.
+    /// </remarks>
+    internal static void HandleShutdownRequest(
+        ShutdownRequestedEventArgs e,
+        bool isQuitting,
+        bool fromSessionManager,
+        bool canQuitWithoutAsking,
+        Action quit)
+    {
+        if (isQuitting || (fromSessionManager && canQuitWithoutAsking))
+            return;
+
+        e.Cancel = true;
+        quit();
+    }
+
+    // A registration that gets collected stops handling its signal.
+    private static PosixSignalRegistration[]? _terminationSignals;
+
+    /// <summary>
+    /// systemd stops the processes left in a session with SIGTERM, and a terminal sends SIGINT on
+    /// Ctrl+C. The IPC server's host handles both too, but it only stops itself and cancels the
+    /// default termination, which left the app running.
+    /// </summary>
+    private static void QuitOnTerminationSignals(MainWindow mainWindow)
+    {
+        void Quit(PosixSignalContext context) =>
+            HandleTerminationSignal(context, () => Dispatcher.UIThread.Post(mainWindow.QuitApplication));
+
+        _terminationSignals =
+        [
+            PosixSignalRegistration.Create(PosixSignal.SIGTERM, Quit),
+            PosixSignalRegistration.Create(PosixSignal.SIGINT, Quit),
+        ];
+    }
+
+    internal static void HandleTerminationSignal(PosixSignalContext context, Action quit)
+    {
+        // The runtime would otherwise end the process before the quit has saved anything.
+        context.Cancel = true;
+        quit();
     }
 
     private static async Task StartupAsync(MainWindow mainWindow, string[] args)

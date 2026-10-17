@@ -923,10 +923,15 @@ public partial class MainWindowViewModel : ViewModelBase
         return true;
     }
 
-    public bool HasUnsavedWork
-        => CurrentPageContent is IAsyncLeaveGuard { HasUnsavedWork: true }
-            || CatalogEditor is { IsBusy: true } or { IsDirty: true }
-            || BundlesPage.HasChangesToLose;
+    public bool HasUnsavedWork => !CanShutdownWithoutAsking || BundlesPage.HasChangesToLose;
+
+    /// <summary>
+    /// Whether <see cref="CanShutdownAsync"/> would allow the shutdown without a prompt, for callers
+    /// that need the answer straight away.
+    /// </summary>
+    public bool CanShutdownWithoutAsking
+        => CurrentPageContent is not IAsyncLeaveGuard { HasUnsavedWork: true }
+            && CatalogEditor is not ({ IsBusy: true } or { IsDirty: true });
 
     public async Task<bool> CanShutdownAsync(CancellationToken cancellationToken = default)
     {

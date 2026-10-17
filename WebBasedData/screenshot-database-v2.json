@@ -27675,6 +27675,21 @@
       "icon": "",
       "images": []
     },
+    "nbt-explorer": {
+      "icon": "https://i.postimg.cc/BZFQ1C1R/NBTExplorer.png",
+      "images": []
+    },
+    "nbt-studio": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/nbt-studio-alt.png",
+      "images": [
+        "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/screenshots/nbt-studio-1.png",
+        "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/screenshots/nbt-studio-2.png",
+        "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/screenshots/nbt-studio-3.png",
+        "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/screenshots/nbt-studio-4.png",
+        "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/screenshots/nbt-studio-5.png",
+        "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/screenshots/nbt-studio-6.png"
+      ]
+    },
     "nbtexplorer": {
       "icon": "https://i.postimg.cc/BZFQ1C1R/NBTExplorer.png",
       "images": []

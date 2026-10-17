@@ -27675,6 +27675,10 @@
       "icon": "",
       "images": []
     },
+    "nbt-explorer": {
+      "icon": "https://i.postimg.cc/BZFQ1C1R/NBTExplorer.png",
+      "images": []
+    },
     "nbt-studio": {
       "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/nbt-studio-alt.png",
       "images": [

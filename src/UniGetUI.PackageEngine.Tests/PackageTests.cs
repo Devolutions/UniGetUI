@@ -64,6 +64,10 @@ public sealed class NewerVersionIsInstalledTests : IDisposable
     // onto the final release must remain visible rather than being read as 2.0.0.1 >= 2.0.0.
     [InlineData("2.0.0_rc1", "2.0.0", false)]
     [InlineData("2.0.0_beta2", "2.0.0", false)]
+    [InlineData("37149234619", "38756550835", false)]
+    [InlineData("38756550835", "37149234619", true)]
+    [InlineData("99999999999999999999", "100000000000000000000", false)]
+    [InlineData("1.0.0+20260101123456", "1.0.1", false)]
     public async Task NewerVersionIsInstalled_ReturnsExpectedResult(string installedVersions, string newVersion, bool expected)
     {
         var manager = new PackageManagerBuilder().Build();

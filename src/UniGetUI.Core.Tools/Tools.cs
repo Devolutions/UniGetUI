@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -534,10 +535,10 @@ namespace UniGetUI.Core.Tools
         {
             public static readonly Version Null = new(-1, -1, -1, -1);
 
-            public readonly int Major;
-            public readonly int Minor;
-            public readonly int Patch;
-            public readonly int Remainder;
+            public readonly BigInteger Major;
+            public readonly BigInteger Minor;
+            public readonly BigInteger Patch;
+            public readonly BigInteger Remainder;
 
             /// <summary>
             /// Segments past the fourth, with trailing zeroes trimmed so that equal versions
@@ -546,12 +547,23 @@ namespace UniGetUI.Core.Tools
             /// (e.g. a build revision on a four-part version: 1.2.3.4_1 vs 1.2.3.4_2) order
             /// correctly instead of collapsing into Remainder.
             /// </summary>
-            private readonly int[]? _extraSegments;
+            private readonly BigInteger[]? _extraSegments;
 
-            public Version(int major, int minor = 0, int patch = 0, int remainder = 0)
+            public Version(
+                BigInteger major,
+                BigInteger minor = default,
+                BigInteger patch = default,
+                BigInteger remainder = default
+            )
                 : this(major, minor, patch, remainder, null) { }
 
-            private Version(int major, int minor, int patch, int remainder, int[]? extraSegments)
+            private Version(
+                BigInteger major,
+                BigInteger minor,
+                BigInteger patch,
+                BigInteger remainder,
+                BigInteger[]? extraSegments
+            )
             {
                 Major = major;
                 Minor = minor;
@@ -564,16 +576,16 @@ namespace UniGetUI.Core.Tools
             /// Builds a Version from an arbitrary number of segments. Segments past the fourth are
             /// retained for comparison rather than being folded into Remainder.
             /// </summary>
-            internal static Version FromSegments(IReadOnlyList<int> segments)
+            internal static Version FromSegments(IReadOnlyList<BigInteger> segments)
             {
                 int count = segments.Count;
                 while (count > 4 && segments[count - 1] == 0)
                     count--;
 
-                int[]? extra = null;
+                BigInteger[]? extra = null;
                 if (count > 4)
                 {
-                    extra = new int[count - 4];
+                    extra = new BigInteger[count - 4];
                     for (int i = 4; i < count; i++)
                         extra[i - 4] = segments[i];
                 }
@@ -586,12 +598,14 @@ namespace UniGetUI.Core.Tools
                     extra
                 );
 
-                static int Segment(IReadOnlyList<int> values, int index) =>
-                    index < values.Count ? values[index] : 0;
+                static BigInteger Segment(IReadOnlyList<BigInteger> values, int index) =>
+                    index < values.Count ? values[index] : BigInteger.Zero;
             }
 
-            private int ExtraSegment(int index) =>
-                _extraSegments is not null && index < _extraSegments.Length ? _extraSegments[index] : 0;
+            private BigInteger ExtraSegment(int index) =>
+                _extraSegments is not null && index < _extraSegments.Length
+                    ? _extraSegments[index]
+                    : BigInteger.Zero;
 
             public int CompareTo(object? other_) => other_ is Version other ? CompareTo(other) : 0;
 
@@ -732,25 +746,34 @@ namespace UniGetUI.Core.Tools
                 // Collect every segment rather than capping at four. Capping used to append the
                 // surplus digits to the fourth segment, which inflated it: 1.2.3.4_1 became
                 // 1.2.3.41 and so compared as greater than the newer 1.2.3.5, hiding the update.
-                List<string> segmentDigits = [""];
+                List<BigInteger> numbers = [];
+                StringBuilder digits = new();
+                bool gapInSegment = false;
+                bool spliced = false;
                 bool first = true;
 
                 foreach (char c in version)
                 {
                     if (char.IsDigit(c))
-                        segmentDigits[^1] += c;
+                    {
+                        spliced |= gapInSegment;
+                        digits.Append(c);
+                    }
                     else if (!first && separators.Contains(c))
-                        segmentDigits.Add("");
+                    {
+                        numbers.Add(ParseVersionSegment(digits.ToString(), spliced));
+                        digits.Clear();
+                        gapInSegment = false;
+                        spliced = false;
+                    }
+                    else if (digits.Length > 0)
+                    {
+                        gapInSegment = true;
+                    }
                     first = false;
                 }
 
-                int[] numbers = new int[segmentDigits.Count];
-                for (int i = 0; i < numbers.Length; i++)
-                {
-                    if (int.TryParse(segmentDigits[i], out int val))
-                        numbers[i] = val;
-                }
-
+                numbers.Add(ParseVersionSegment(digits.ToString(), spliced));
                 return Version.FromSegments(numbers);
             }
             catch
@@ -758,6 +781,24 @@ namespace UniGetUI.Core.Tools
                 Logger.Warn($"Failed to parse version {version} to float");
                 return CoreTools.Version.Null;
             }
+        }
+
+        private static BigInteger ParseVersionSegment(string digits, bool spliced)
+        {
+            if (spliced)
+                return int.TryParse(digits, out int small) ? small : BigInteger.Zero;
+
+            if (long.TryParse(digits, out long value))
+                return value;
+
+            return BigInteger.TryParse(
+                digits,
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out BigInteger large
+            )
+                ? large
+                : BigInteger.Zero;
         }
 
         public static System.Version NormalizeVersionForComparison(System.Version version)

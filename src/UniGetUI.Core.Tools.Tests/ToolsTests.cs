@@ -415,6 +415,54 @@ namespace UniGetUI.Core.Tools.Tests
             Assert.Equal(CoreTools.Version.Null, v);
         }
 
+        [Theory]
+        [InlineData("37149234619", "38756550835")]
+        [InlineData("1.2147483648", "1.2147483649")]
+        [InlineData("20260101.120000000001", "20260101.120000000002")]
+        [InlineData("99999999999999999999", "100000000000000000000")]
+        [InlineData("1.20260101120000000000001", "1.20260101120000000000002")]
+        public void TestGetVersionStringAsFloat_WithSegmentsBeyondInt32_OrdersCorrectly(
+            string older,
+            string newer
+        )
+        {
+            Assert.True(
+                CoreTools.VersionStringToStruct(older) < CoreTools.VersionStringToStruct(newer)
+            );
+        }
+
+        [Theory]
+        [InlineData("1.0.0+20260101123456", 1, 0, 0)]
+        [InlineData("1.0 (20260101123456)", 1, 0, 0)]
+        [InlineData("2.0.0+42", 2, 0, 42)]
+        [InlineData("1.0.0+2147483647", 1, 0, 2147483647)]
+        [InlineData("1.0.0+2147483648", 1, 0, 0)]
+        public void TestGetVersionStringAsFloat_WithSplicedDigitRuns_KeepsInt32Limit(
+            string version,
+            int major,
+            int minor,
+            int patch
+        )
+        {
+            Assert.Equal(
+                new CoreTools.Version(major, minor, patch),
+                CoreTools.VersionStringToStruct(version)
+            );
+        }
+
+        [Theory]
+        [InlineData("20250301123456", "2.0.0")]
+        [InlineData("37149234619", "1.0.0")]
+        public void TestGetVersionStringAsFloat_WithLongNumericScheme_RanksAboveDottedVersions(
+            string numericScheme,
+            string dotted
+        )
+        {
+            Assert.True(
+                CoreTools.VersionStringToStruct(numericScheme) > CoreTools.VersionStringToStruct(dotted)
+            );
+        }
+
         // An underscore introducing a pre-release tag rather than a numeric revision must keep
         // reporting as unknown, as it did before '_' became a segment separator. Parsing these
         // would rank the pre-release above the final release and hide the 2.0.0_rc1 -> 2.0.0

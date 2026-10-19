@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -7,6 +8,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
@@ -88,6 +90,9 @@ public partial class InstallOptionsControl : UserControl
             .OfType<Button>()
             .FirstOrDefault(button => button.Name == "NextTabButton");
         if (previous is null || next is null) return;
+
+        AutomationProperties.SetName(previous, CoreTools.Translate("Scroll tab list backward"));
+        AutomationProperties.SetName(next, CoreTools.Translate("Scroll tab list forward"));
 
         // Decide overflow against the full header width, not the reduced viewport while the
         // chevrons are visible, otherwise the buttons can latch themselves on.

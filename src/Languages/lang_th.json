@@ -1092,5 +1092,7 @@
   "Package name": "ชื่อแพ็กเกจ",
   "No subfolder": "ไม่มีโฟลเดอร์ย่อย",
   "Enter a name for the new source": "กรอกชื่อสำหรับซอร์ซใหม่",
-  "Enter a complete source URL, including the protocol (for example https://)": "กรอก URL ของซอร์ซให้ครบถ้วน รวมถึงโปรโตคอล (ตัวอย่างเช่น https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "กรอก URL ของซอร์ซให้ครบถ้วน รวมถึงโปรโตคอล (ตัวอย่างเช่น https://)",
+  "Scroll tab list backward": "เลื่อนรายการแท็บไปข้างหลัง",
+  "Scroll tab list forward": "เลื่อนรายการแท็บไปข้างหน้า"
 }

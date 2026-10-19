@@ -1088,5 +1088,7 @@
   "Package name": "软件包名称",
   "No subfolder": "无子文件夹",
   "Enter a name for the new source": "请输入新源的名称",
-  "Enter a complete source URL, including the protocol (for example https://)": "请输入完整的源 URL，包括协议（例如 https://）"
+  "Enter a complete source URL, including the protocol (for example https://)": "请输入完整的源 URL，包括协议（例如 https://）",
+  "Scroll tab list backward": "向后滚动选项卡列表",
+  "Scroll tab list forward": "向前滚动选项卡列表"
 }

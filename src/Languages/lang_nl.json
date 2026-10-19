@@ -1091,5 +1091,7 @@
   "Package name": "Pakketnaam",
   "No subfolder": "Geen submap",
   "Enter a name for the new source": "Voer een naam in voor de nieuwe bron",
-  "Enter a complete source URL, including the protocol (for example https://)": "Voer een volledige bron-URL in, inclusief het protocol (bijvoorbeeld https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Voer een volledige bron-URL in, inclusief het protocol (bijvoorbeeld https://)",
+  "Scroll tab list backward": "Tabbladlijst terug scrollen",
+  "Scroll tab list forward": "Tabbladlijst vooruit scrollen"
 }

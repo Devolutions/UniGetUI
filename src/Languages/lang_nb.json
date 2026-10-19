@@ -1091,5 +1091,7 @@
   "Package name": "Pakkenavn",
   "No subfolder": "Ingen undermappe",
   "Enter a name for the new source": "Skriv inn et navn på den nye kilden",
-  "Enter a complete source URL, including the protocol (for example https://)": "Skriv inn en fullstendig kilde-URL, inkludert protokollen (for eksempel https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Skriv inn en fullstendig kilde-URL, inkludert protokollen (for eksempel https://)",
+  "Scroll tab list backward": "Rull fanelisten bakover",
+  "Scroll tab list forward": "Rull fanelisten fremover"
 }

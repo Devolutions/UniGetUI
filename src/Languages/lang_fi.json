@@ -1091,5 +1091,7 @@
   "Package name": "Paketin nimi",
   "No subfolder": "Ei alikansiota",
   "Enter a name for the new source": "Kirjoita nimi uudelle lähteelle",
-  "Enter a complete source URL, including the protocol (for example https://)": "Kirjoita lähteen täydellinen URL-osoite protokollan kanssa (esimerkiksi https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Kirjoita lähteen täydellinen URL-osoite protokollan kanssa (esimerkiksi https://)",
+  "Scroll tab list backward": "Vieritä välilehtiluetteloa taaksepäin",
+  "Scroll tab list forward": "Vieritä välilehtiluetteloa eteenpäin"
 }

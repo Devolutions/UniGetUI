@@ -1087,5 +1087,7 @@
   "Package name": "패키지 이름",
   "No subfolder": "하위 폴더 없음",
   "Enter a name for the new source": "새 소스의 이름을 입력하세요",
-  "Enter a complete source URL, including the protocol (for example https://)": "프로토콜을 포함한 전체 소스 URL을 입력하세요 (예: https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "프로토콜을 포함한 전체 소스 URL을 입력하세요 (예: https://)",
+  "Scroll tab list backward": "탭 목록을 뒤로 스크롤",
+  "Scroll tab list forward": "탭 목록을 앞으로 스크롤"
 }

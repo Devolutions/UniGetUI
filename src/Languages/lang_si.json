@@ -1092,5 +1092,7 @@
   "Package name": "පැකේජ නාමය",
   "No subfolder": "උපෆෝල්ඩරයක් නැත",
   "Enter a name for the new source": "නව මූලාශ්‍රය සඳහා නමක් ඇතුල් කරන්න",
-  "Enter a complete source URL, including the protocol (for example https://)": "ප්‍රොටොකෝලය ඇතුළුව මූලාශ්‍රයේ සම්පූර්ණ URL ලිපිනය ඇතුල් කරන්න (උදාහරණයක් ලෙස https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "ප්‍රොටොකෝලය ඇතුළුව මූලාශ්‍රයේ සම්පූර්ණ URL ලිපිනය ඇතුල් කරන්න (උදාහරණයක් ලෙස https://)",
+  "Scroll tab list backward": "ටැබ් ලැයිස්තුව පසුපසට අනුචලනය කරන්න",
+  "Scroll tab list forward": "ටැබ් ලැයිස්තුව ඉදිරියට අනුචලනය කරන්න"
 }

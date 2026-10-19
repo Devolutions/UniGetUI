@@ -1092,5 +1092,7 @@
   "Package name": "Paket adı",
   "No subfolder": "Alt klasör yok",
   "Enter a name for the new source": "Yeni kaynak için bir ad girin",
-  "Enter a complete source URL, including the protocol (for example https://)": "Protokol dahil kaynağın tam URL'sini girin (örneğin https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Protokol dahil kaynağın tam URL'sini girin (örneğin https://)",
+  "Scroll tab list backward": "Sekme listesini geri kaydır",
+  "Scroll tab list forward": "Sekme listesini ileri kaydır"
 }

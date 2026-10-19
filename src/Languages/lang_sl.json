@@ -1092,5 +1092,7 @@
   "Package name": "Ime paketa",
   "No subfolder": "Brez podmape",
   "Enter a name for the new source": "Vnesite ime novega vira",
-  "Enter a complete source URL, including the protocol (for example https://)": "Vnesite celoten URL vira, vključno s protokolom (na primer https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Vnesite celoten URL vira, vključno s protokolom (na primer https://)",
+  "Scroll tab list backward": "Pomakni seznam zavihkov nazaj",
+  "Scroll tab list forward": "Pomakni seznam zavihkov naprej"
 }

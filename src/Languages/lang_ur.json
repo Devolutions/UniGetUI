@@ -1092,5 +1092,7 @@
   "Package name": "پیکیج کا نام",
   "No subfolder": "کوئی ذیلی فولڈر نہیں",
   "Enter a name for the new source": "نئے ماخذ کے لیے نام درج کریں",
-  "Enter a complete source URL, including the protocol (for example https://)": "پروٹوکول سمیت ماخذ کا مکمل URL درج کریں (مثلاً https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "پروٹوکول سمیت ماخذ کا مکمل URL درج کریں (مثلاً https://)",
+  "Scroll tab list backward": "ٹیب فہرست کو پیچھے اسکرول کریں",
+  "Scroll tab list forward": "ٹیب فہرست کو آگے اسکرول کریں"
 }

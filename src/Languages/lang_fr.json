@@ -1091,5 +1091,7 @@
   "Package name": "Nom du paquet",
   "No subfolder": "Aucun sous-dossier",
   "Enter a name for the new source": "Entrez un nom pour la nouvelle source",
-  "Enter a complete source URL, including the protocol (for example https://)": "Entrez l'URL complète de la source, protocole inclus (par exemple https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Entrez l'URL complète de la source, protocole inclus (par exemple https://)",
+  "Scroll tab list backward": "Faire défiler la liste des onglets vers l'arrière",
+  "Scroll tab list forward": "Faire défiler la liste des onglets vers l'avant"
 }

@@ -1091,5 +1091,7 @@
   "Package name": "Naziv paketa",
   "No subfolder": "Bez podmape",
   "Enter a name for the new source": "Unesite naziv novog izvora",
-  "Enter a complete source URL, including the protocol (for example https://)": "Unesite potpuni URL izvora, uključujući protokol (na primjer https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Unesite potpuni URL izvora, uključujući protokol (na primjer https://)",
+  "Scroll tab list backward": "Pomakni popis kartica unatrag",
+  "Scroll tab list forward": "Pomakni popis kartica naprijed"
 }

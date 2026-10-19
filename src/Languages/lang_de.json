@@ -1091,5 +1091,7 @@
   "Package name": "Paketname",
   "No subfolder": "Kein Unterordner",
   "Enter a name for the new source": "Einen Namen für die neue Quelle eingeben",
-  "Enter a complete source URL, including the protocol (for example https://)": "Eine vollständige Quell-URL einschließlich Protokoll eingeben (zum Beispiel https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Eine vollständige Quell-URL einschließlich Protokoll eingeben (zum Beispiel https://)",
+  "Scroll tab list backward": "Registerkartenliste zurückblättern",
+  "Scroll tab list forward": "Registerkartenliste vorblättern"
 }

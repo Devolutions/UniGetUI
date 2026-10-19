@@ -1091,5 +1091,7 @@
   "Package name": "პაკეტის სახელი",
   "No subfolder": "ქვესაქაღალდის გარეშე",
   "Enter a name for the new source": "შეიყვანეთ ახალი წყაროს სახელი",
-  "Enter a complete source URL, including the protocol (for example https://)": "შეიყვანეთ წყაროს სრული URL პროტოკოლის ჩათვლით (მაგალითად https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "შეიყვანეთ წყაროს სრული URL პროტოკოლის ჩათვლით (მაგალითად https://)",
+  "Scroll tab list backward": "ჩანართების სიის უკან გადახვევა",
+  "Scroll tab list forward": "ჩანართების სიის წინ გადახვევა"
 }

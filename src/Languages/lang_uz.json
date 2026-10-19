@@ -1002,5 +1002,7 @@
     "Please wait while {0} is being installed. This may take several minutes.": "{0} o‘rnatilayotganda kuting. Bu bir necha daqiqa vaqt olishi mumkin.",
     "The installer finished, but {0} could not be found on your system.": "O‘rnatuvchi ishini yakunladi, ammo {0} tizimingizda topilmadi.",
     "{0} could not be installed. The installer exited with code {1}.": "{0} o‘rnatilmadi. O‘rnatuvchi {1} kodi bilan chiqib ketdi.",
-    "You can try again, or install it manually with the command below.": "Qayta urinib ko‘rishingiz yoki uni quyidagi buyruq bilan qo‘lda o‘rnatishingiz mumkin."
+    "You can try again, or install it manually with the command below.": "Qayta urinib ko‘rishingiz yoki uni quyidagi buyruq bilan qo‘lda o‘rnatishingiz mumkin.",
+    "Scroll tab list backward": "Varaqlar roʻyxatini orqaga aylantirish",
+    "Scroll tab list forward": "Varaqlar roʻyxatini oldinga aylantirish"
 }

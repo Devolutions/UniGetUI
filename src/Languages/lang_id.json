@@ -1091,5 +1091,7 @@
   "Package name": "Nama paket",
   "No subfolder": "Tanpa subfolder",
   "Enter a name for the new source": "Masukkan nama untuk sumber baru",
-  "Enter a complete source URL, including the protocol (for example https://)": "Masukkan URL sumber lengkap, termasuk protokolnya (misalnya https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Masukkan URL sumber lengkap, termasuk protokolnya (misalnya https://)",
+  "Scroll tab list backward": "Gulir daftar tab ke belakang",
+  "Scroll tab list forward": "Gulir daftar tab ke depan"
 }

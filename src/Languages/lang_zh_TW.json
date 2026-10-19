@@ -1093,5 +1093,7 @@
   "Package name": "套件名稱",
   "No subfolder": "無子資料夾",
   "Enter a name for the new source": "請輸入新來源的名稱",
-  "Enter a complete source URL, including the protocol (for example https://)": "請輸入完整的來源網址，包括通訊協定（例如 https://）"
+  "Enter a complete source URL, including the protocol (for example https://)": "請輸入完整的來源網址，包括通訊協定（例如 https://）",
+  "Scroll tab list backward": "向後捲動索引標籤清單",
+  "Scroll tab list forward": "向前捲動索引標籤清單"
 }

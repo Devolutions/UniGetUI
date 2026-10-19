@@ -1087,5 +1087,7 @@
   "Package name": "Nombre del paquete",
   "No subfolder": "Sin subcarpeta",
   "Enter a name for the new source": "Introduce un nombre para la nueva fuente",
-  "Enter a complete source URL, including the protocol (for example https://)": "Introduce la URL completa de la fuente, incluido el protocolo (por ejemplo https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Introduce la URL completa de la fuente, incluido el protocolo (por ejemplo https://)",
+  "Scroll tab list backward": "Desplazar la lista de pestañas hacia atrás",
+  "Scroll tab list forward": "Desplazar la lista de pestañas hacia adelante"
 }

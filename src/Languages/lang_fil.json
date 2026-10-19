@@ -1091,5 +1091,7 @@
   "Package name": "Pangalan ng package",
   "No subfolder": "Walang subfolder",
   "Enter a name for the new source": "Maglagay ng pangalan para sa bagong source",
-  "Enter a complete source URL, including the protocol (for example https://)": "Ilagay ang kumpletong URL ng source, kasama ang protocol (halimbawa https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Ilagay ang kumpletong URL ng source, kasama ang protocol (halimbawa https://)",
+  "Scroll tab list backward": "I-scroll pabalik ang listahan ng tab",
+  "Scroll tab list forward": "I-scroll pasulong ang listahan ng tab"
 }

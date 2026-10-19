@@ -1091,5 +1091,7 @@
   "Package name": "Nome del pacchetto",
   "No subfolder": "Nessuna sottocartella",
   "Enter a name for the new source": "Inserisci un nome per la nuova sorgente",
-  "Enter a complete source URL, including the protocol (for example https://)": "Inserisci l'URL completo della sorgente, incluso il protocollo (ad esempio https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Inserisci l'URL completo della sorgente, incluso il protocollo (ad esempio https://)",
+  "Scroll tab list backward": "Scorri l'elenco delle schede indietro",
+  "Scroll tab list forward": "Scorri l'elenco delle schede avanti"
 }

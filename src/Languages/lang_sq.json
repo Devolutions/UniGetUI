@@ -1092,5 +1092,7 @@
   "Package name": "Emri i paketit",
   "No subfolder": "Pa nëndosje",
   "Enter a name for the new source": "Shkruaj një emër për burimin e ri",
-  "Enter a complete source URL, including the protocol (for example https://)": "Shkruaj URL-në e plotë të burimit, përfshirë protokollin (për shembull https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Shkruaj URL-në e plotë të burimit, përfshirë protokollin (për shembull https://)",
+  "Scroll tab list backward": "Rrëshqit listën e skedave prapa",
+  "Scroll tab list forward": "Rrëshqit listën e skedave përpara"
 }

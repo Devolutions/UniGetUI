@@ -1091,5 +1091,7 @@
   "Package name": "Paketo pavadinimas",
   "No subfolder": "Be poaplankio",
   "Enter a name for the new source": "Įveskite naujo šaltinio pavadinimą",
-  "Enter a complete source URL, including the protocol (for example https://)": "Įveskite visą šaltinio URL su protokolu (pavyzdžiui https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Įveskite visą šaltinio URL su protokolu (pavyzdžiui https://)",
+  "Scroll tab list backward": "Slinkti skirtukų sąrašą atgal",
+  "Scroll tab list forward": "Slinkti skirtukų sąrašą pirmyn"
 }

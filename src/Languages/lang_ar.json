@@ -1091,5 +1091,7 @@
   "Package name": "اسم الحزمة",
   "No subfolder": "بدون مجلد فرعي",
   "Enter a name for the new source": "أدخل اسمًا للمصدر الجديد",
-  "Enter a complete source URL, including the protocol (for example https://)": "أدخل عنوان URL كاملاً للمصدر، بما في ذلك البروتوكول (مثل https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "أدخل عنوان URL كاملاً للمصدر، بما في ذلك البروتوكول (مثل https://)",
+  "Scroll tab list backward": "تمرير قائمة علامات التبويب للخلف",
+  "Scroll tab list forward": "تمرير قائمة علامات التبويب للأمام"
 }

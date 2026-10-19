@@ -1091,5 +1091,7 @@
   "Package name": "Pakkenamn",
   "No subfolder": "Inga undermappe",
   "Enter a name for the new source": "Skriv inn eit namn på den nye kjelda",
-  "Enter a complete source URL, including the protocol (for example https://)": "Skriv inn ein fullstendig kjelde-URL, inkludert protokollen (til dømes https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Skriv inn ein fullstendig kjelde-URL, inkludert protokollen (til dømes https://)",
+  "Scroll tab list backward": "Rull fanelista bakover",
+  "Scroll tab list forward": "Rull fanelista framover"
 }

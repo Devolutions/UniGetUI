@@ -1092,5 +1092,7 @@
   "Package name": "Numele pachetului",
   "No subfolder": "Fără subfolder",
   "Enter a name for the new source": "Introdu un nume pentru noua sursă",
-  "Enter a complete source URL, including the protocol (for example https://)": "Introdu URL-ul complet al sursei, inclusiv protocolul (de exemplu https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Introdu URL-ul complet al sursei, inclusiv protocolul (de exemplu https://)",
+  "Scroll tab list backward": "Derulează lista de file înapoi",
+  "Scroll tab list forward": "Derulează lista de file înainte"
 }

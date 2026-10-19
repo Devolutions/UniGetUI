@@ -1091,5 +1091,7 @@
   "Package name": "Nomo de la pakaĵo",
   "No subfolder": "Neniu subdosierujo",
   "Enter a name for the new source": "Enigu nomon por la nova fonto",
-  "Enter a complete source URL, including the protocol (for example https://)": "Enigu kompletan URL-on de la fonto, inkluzive la protokolon (ekzemple https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Enigu kompletan URL-on de la fonto, inkluzive la protokolon (ekzemple https://)",
+  "Scroll tab list backward": "Rulumi la langetaron malantaŭen",
+  "Scroll tab list forward": "Rulumi la langetaron antaŭen"
 }

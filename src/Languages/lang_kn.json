@@ -1091,5 +1091,7 @@
   "Package name": "ಪ್ಯಾಕೇಜ್ ಹೆಸರು",
   "No subfolder": "ಉಪಫೋಲ್ಡರ್ ಇಲ್ಲ",
   "Enter a name for the new source": "ಹೊಸ ಮೂಲಕ್ಕೆ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
-  "Enter a complete source URL, including the protocol (for example https://)": "ಪ್ರೋಟೋಕಾಲ್ ಸೇರಿದಂತೆ ಮೂಲದ ಸಂಪೂರ್ಣ URL ಅನ್ನು ನಮೂದಿಸಿ (ಉದಾಹರಣೆಗೆ https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "ಪ್ರೋಟೋಕಾಲ್ ಸೇರಿದಂತೆ ಮೂಲದ ಸಂಪೂರ್ಣ URL ಅನ್ನು ನಮೂದಿಸಿ (ಉದಾಹರಣೆಗೆ https://)",
+  "Scroll tab list backward": "ಟ್ಯಾಬ್ ಪಟ್ಟಿಯನ್ನು ಹಿಂದಕ್ಕೆ ಸ್ಕ್ರಾಲ್ ಮಾಡಿ",
+  "Scroll tab list forward": "ಟ್ಯಾಬ್ ಪಟ್ಟಿಯನ್ನು ಮುಂದಕ್ಕೆ ಸ್ಕ್ರಾಲ್ ಮಾಡಿ"
 }

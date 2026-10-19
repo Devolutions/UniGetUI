@@ -1091,5 +1091,7 @@
   "Package name": "Όνομα πακέτου",
   "No subfolder": "Χωρίς υποφάκελο",
   "Enter a name for the new source": "Εισαγάγετε ένα όνομα για τη νέα πηγή",
-  "Enter a complete source URL, including the protocol (for example https://)": "Εισαγάγετε την πλήρη διεύθυνση URL της πηγής, συμπεριλαμβανομένου του πρωτοκόλλου (για παράδειγμα https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Εισαγάγετε την πλήρη διεύθυνση URL της πηγής, συμπεριλαμβανομένου του πρωτοκόλλου (για παράδειγμα https://)",
+  "Scroll tab list backward": "Κύλιση λίστας καρτελών προς τα πίσω",
+  "Scroll tab list forward": "Κύλιση λίστας καρτελών προς τα εμπρός"
 }

@@ -1092,5 +1092,7 @@
   "Package name": "Имя пакета",
   "No subfolder": "Без подпапки",
   "Enter a name for the new source": "Введите имя нового источника",
-  "Enter a complete source URL, including the protocol (for example https://)": "Введите полный URL источника, включая протокол (например, https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Введите полный URL источника, включая протокол (например, https://)",
+  "Scroll tab list backward": "Прокрутить список вкладок назад",
+  "Scroll tab list forward": "Прокрутить список вкладок вперёд"
 }

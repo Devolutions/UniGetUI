@@ -1091,5 +1091,7 @@
   "Package name": "Nom del paquet",
   "No subfolder": "Cap subcarpeta",
   "Enter a name for the new source": "Escriviu un nom per a la nova font",
-  "Enter a complete source URL, including the protocol (for example https://)": "Escriviu l'URL completa de la font, incloent-hi el protocol (per exemple https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Escriviu l'URL completa de la font, incloent-hi el protocol (per exemple https://)",
+  "Scroll tab list backward": "Desplaça la llista de pestanyes enrere",
+  "Scroll tab list forward": "Desplaça la llista de pestanyes endavant"
 }

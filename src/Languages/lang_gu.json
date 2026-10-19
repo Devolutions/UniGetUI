@@ -1091,5 +1091,7 @@
   "Package name": "પેકેજનું નામ",
   "No subfolder": "કોઈ ઉપફોલ્ડર નથી",
   "Enter a name for the new source": "નવા સ્ત્રોત માટે નામ દાખલ કરો",
-  "Enter a complete source URL, including the protocol (for example https://)": "પ્રોટોકોલ સહિત સ્ત્રોતનું સંપૂર્ણ URL દાખલ કરો (ઉદાહરણ તરીકે https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "પ્રોટોકોલ સહિત સ્ત્રોતનું સંપૂર્ણ URL દાખલ કરો (ઉદાહરણ તરીકે https://)",
+  "Scroll tab list backward": "ટૅબ સૂચિ પાછળ સ્ક્રોલ કરો",
+  "Scroll tab list forward": "ટૅબ સૂચિ આગળ સ્ક્રોલ કરો"
 }

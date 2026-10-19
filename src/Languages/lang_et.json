@@ -1091,5 +1091,7 @@
   "Package name": "Paketi nimi",
   "No subfolder": "Alamkausta pole",
   "Enter a name for the new source": "Sisestage uue allika nimi",
-  "Enter a complete source URL, including the protocol (for example https://)": "Sisestage allika täielik URL koos protokolliga (näiteks https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Sisestage allika täielik URL koos protokolliga (näiteks https://)",
+  "Scroll tab list backward": "Keri vahekaartide loendit tagasi",
+  "Scroll tab list forward": "Keri vahekaartide loendit edasi"
 }

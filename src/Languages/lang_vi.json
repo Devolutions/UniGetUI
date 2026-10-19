@@ -1092,5 +1092,7 @@
   "Package name": "Tên gói",
   "No subfolder": "Không có thư mục con",
   "Enter a name for the new source": "Nhập tên cho nguồn mới",
-  "Enter a complete source URL, including the protocol (for example https://)": "Nhập URL nguồn đầy đủ, bao gồm cả giao thức (ví dụ https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Nhập URL nguồn đầy đủ, bao gồm cả giao thức (ví dụ https://)",
+  "Scroll tab list backward": "Cuộn danh sách thẻ về sau",
+  "Scroll tab list forward": "Cuộn danh sách thẻ về trước"
 }

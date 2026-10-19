@@ -1091,5 +1091,7 @@
   "Package name": "Назва пакета",
   "No subfolder": "Без укладзенай папкі",
   "Enter a name for the new source": "Увядзіце назву новай крыніцы",
-  "Enter a complete source URL, including the protocol (for example https://)": "Увядзіце поўны URL крыніцы, уключаючы пратакол (напрыклад, https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Увядзіце поўны URL крыніцы, уключаючы пратакол (напрыклад, https://)",
+  "Scroll tab list backward": "Пракруціць спіс укладак назад",
+  "Scroll tab list forward": "Пракруціць спіс укладак наперад"
 }

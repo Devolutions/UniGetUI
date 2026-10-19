@@ -1092,5 +1092,7 @@
   "Package name": "தொகுப்பின் பெயர்",
   "No subfolder": "துணைக் கோப்புறை இல்லை",
   "Enter a name for the new source": "புதிய மூலத்திற்கு ஒரு பெயரை உள்ளிடவும்",
-  "Enter a complete source URL, including the protocol (for example https://)": "நெறிமுறை உட்பட மூலத்தின் முழு URL ஐ உள்ளிடவும் (எடுத்துக்காட்டாக https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "நெறிமுறை உட்பட மூலத்தின் முழு URL ஐ உள்ளிடவும் (எடுத்துக்காட்டாக https://)",
+  "Scroll tab list backward": "தாவல் பட்டியலைப் பின்னோக்கி உருட்டு",
+  "Scroll tab list forward": "தாவல் பட்டியலை முன்னோக்கி உருட்டு"
 }

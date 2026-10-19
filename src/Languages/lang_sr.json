@@ -1092,5 +1092,7 @@
   "Package name": "Име пакета",
   "No subfolder": "Без подфасцикле",
   "Enter a name for the new source": "Унеси назив новог извора",
-  "Enter a complete source URL, including the protocol (for example https://)": "Унеси потпун УРЛ извора, укључујући протокол (на пример https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Унеси потпун УРЛ извора, укључујући протокол (на пример https://)",
+  "Scroll tab list backward": "Помери листу картица уназад",
+  "Scroll tab list forward": "Помери листу картица унапред"
 }

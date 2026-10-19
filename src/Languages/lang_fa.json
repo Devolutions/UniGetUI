@@ -1091,5 +1091,7 @@
   "Package name": "نام بسته",
   "No subfolder": "بدون زیرپوشه",
   "Enter a name for the new source": "یک نام برای منبع جدید وارد کنید",
-  "Enter a complete source URL, including the protocol (for example https://)": "نشانی کامل منبع را همراه با پروتکل وارد کنید (برای مثال https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "نشانی کامل منبع را همراه با پروتکل وارد کنید (برای مثال https://)",
+  "Scroll tab list backward": "پیمایش فهرست زبانه‌ها به عقب",
+  "Scroll tab list forward": "پیمایش فهرست زبانه‌ها به جلو"
 }

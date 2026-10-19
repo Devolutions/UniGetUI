@@ -1091,5 +1091,7 @@
   "Package name": "שם החבילה",
   "No subfolder": "ללא תת-תיקייה",
   "Enter a name for the new source": "הזן שם עבור המקור החדש",
-  "Enter a complete source URL, including the protocol (for example https://)": "הזן כתובת URL מלאה של המקור, כולל הפרוטוקול (לדוגמה https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "הזן כתובת URL מלאה של המקור, כולל הפרוטוקול (לדוגמה https://)",
+  "Scroll tab list backward": "גלילת רשימת הכרטיסיות אחורה",
+  "Scroll tab list forward": "גלילת רשימת הכרטיסיות קדימה"
 }

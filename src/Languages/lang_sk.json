@@ -1092,5 +1092,7 @@
   "Package name": "Názov balíčka",
   "No subfolder": "Bez podpriečinka",
   "Enter a name for the new source": "Zadajte názov nového zdroja",
-  "Enter a complete source URL, including the protocol (for example https://)": "Zadajte úplnú URL zdroja vrátane protokolu (napríklad https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Zadajte úplnú URL zdroja vrátane protokolu (napríklad https://)",
+  "Scroll tab list backward": "Posunúť zoznam kariet dozadu",
+  "Scroll tab list forward": "Posunúť zoznam kariet dopredu"
 }

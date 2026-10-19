@@ -31,6 +31,7 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
 
         ButtonActivationGuard.Install();
+        TabControlFocusGuard.Install();
         UiAutomationGuard.Install();
         SmoothScrollManager.Install();
 

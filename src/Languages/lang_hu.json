@@ -1091,5 +1091,7 @@
   "Package name": "Csomag neve",
   "No subfolder": "Nincs almappa",
   "Enter a name for the new source": "Adja meg az új forrás nevét",
-  "Enter a complete source URL, including the protocol (for example https://)": "Adja meg a forrás teljes URL-jét a protokollal együtt (például https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Adja meg a forrás teljes URL-jét a protokollal együtt (például https://)",
+  "Scroll tab list backward": "Lapfüllista görgetése vissza",
+  "Scroll tab list forward": "Lapfüllista görgetése előre"
 }

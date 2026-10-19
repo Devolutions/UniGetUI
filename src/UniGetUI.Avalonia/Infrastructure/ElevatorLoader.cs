@@ -53,15 +53,7 @@ internal static class ElevatorLoader
                 return;
             }
 
-            var (gsudoFound, gsudoPath) = await CoreTools.WhichAsync("gsudo.exe");
-            if (gsudoFound)
-            {
-                CoreData.ElevatorPath = gsudoPath;
-                Logger.Warn($"UniGetUI Elevator was not found, using GSudo at {CoreData.ElevatorPath}");
-                return;
-            }
-
-            Logger.Error("UniGetUI Elevator was not found and GSudo is not installed; operations that require administrator rights will fail.");
+            Logger.Error("UniGetUI Elevator was not found; operations that require administrator rights will fail.");
 #endif
         }
         catch (Exception ex)

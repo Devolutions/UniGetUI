@@ -32,6 +32,13 @@ namespace UniGetUI.Interface
     {
         public string SessionId { get; } = Guid.NewGuid().ToString("N");
         public string SessionKind { get; init; } = IpcTransportOptions.GuiSessionKind;
+
+        /// <summary>
+        /// Whether the host's default console lifetime handles SIGINT and SIGTERM. It cancels the
+        /// termination on every signal, so an app that quits on those signals itself turns it off.
+        /// </summary>
+        public bool HandlesTerminationSignals { get; init; } = true;
+
         public event EventHandler<EventArgs>? OnUpgradeAll;
         public event EventHandler<string>? OnUpgradeAllForManager;
         public Func<IpcAppInfo>? AppInfoProvider;
@@ -67,6 +74,8 @@ namespace UniGetUI.Interface
                 ApplicationName = typeof(IpcServer).Assembly.FullName,
             });
             builder.Services.AddCors();
+            if (!HandlesTerminationSignals)
+                LeaveTerminationSignalsToTheApp(builder.Services);
             builder.WebHost.UseKestrel(ConfigureTransport);
 #if !DEBUG
             builder.WebHost.UseSetting(WebHostDefaults.SuppressStatusMessagesKey, "true");
@@ -2144,6 +2153,16 @@ namespace UniGetUI.Interface
                 CleanupTransportEndpoint();
                 IpcTransportOptions.DeletePersistedMetadata(SessionId);
             }
+        }
+
+        internal static void LeaveTerminationSignalsToTheApp(IServiceCollection services) =>
+            services.AddSingleton<IHostLifetime, NoOpHostLifetime>();
+
+        private sealed class NoOpHostLifetime : IHostLifetime
+        {
+            public Task WaitForStartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+            public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

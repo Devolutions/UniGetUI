@@ -251,16 +251,20 @@ public partial class App : Application
 
     // A registration that gets collected stops handling its signal.
     private static PosixSignalRegistration[]? _terminationSignals;
+    private static int _terminationSignalsReceived;
 
     /// <summary>
     /// systemd stops the processes left in a session with SIGTERM, and a terminal sends SIGINT on
-    /// Ctrl+C. The IPC server's host handles both too, but it only stops itself and cancels the
-    /// default termination, which left the app running.
+    /// Ctrl+C. The IPC server's host leaves both to this handler on Linux, because its default
+    /// lifetime cancels the termination on every signal, which left the app running.
     /// </summary>
     private static void QuitOnTerminationSignals(MainWindow mainWindow)
     {
         void Quit(PosixSignalContext context) =>
-            HandleTerminationSignal(context, () => Dispatcher.UIThread.Post(mainWindow.QuitApplication));
+            HandleTerminationSignal(
+                context,
+                ref _terminationSignalsReceived,
+                () => Dispatcher.UIThread.Post(mainWindow.QuitApplication));
 
         _terminationSignals =
         [
@@ -269,8 +273,12 @@ public partial class App : Application
         ];
     }
 
-    internal static void HandleTerminationSignal(PosixSignalContext context, Action quit)
+    internal static void HandleTerminationSignal(PosixSignalContext context, ref int signalsReceived, Action quit)
     {
+        // A later signal takes the default termination, so a quit held up by a prompt can be forced.
+        if (Interlocked.Increment(ref signalsReceived) > 1)
+            return;
+
         // The runtime would otherwise end the process before the quit has saved anything.
         context.Cancel = true;
         quit();

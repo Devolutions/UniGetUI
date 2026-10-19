@@ -1,6 +1,11 @@
 using System.Runtime.InteropServices;
 using Avalonia.Controls.ApplicationLifetimes;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting.Internal;
 using UniGetUI.Avalonia;
+using UniGetUI.Interface;
 
 namespace UniGetUI.Tests;
 
@@ -60,11 +65,40 @@ public class AppShutdownRequestTests
     public void TerminationSignal_QuitsInsteadOfEndingTheProcess(PosixSignal signal)
     {
         var context = new PosixSignalContext(signal);
+        int signalsReceived = 0;
         int quits = 0;
 
-        App.HandleTerminationSignal(context, () => quits++);
+        App.HandleTerminationSignal(context, ref signalsReceived, () => quits++);
 
         Assert.True(context.Cancel);
         Assert.Equal(1, quits);
+    }
+
+    [Theory]
+    [InlineData(PosixSignal.SIGTERM)]
+    [InlineData(PosixSignal.SIGINT)]
+    public void SecondTerminationSignal_EndsTheProcess(PosixSignal signal)
+    {
+        var first = new PosixSignalContext(signal);
+        var second = new PosixSignalContext(signal);
+        int signalsReceived = 0;
+        int quits = 0;
+
+        App.HandleTerminationSignal(first, ref signalsReceived, () => quits++);
+        App.HandleTerminationSignal(second, ref signalsReceived, () => quits++);
+
+        Assert.True(first.Cancel);
+        Assert.False(second.Cancel);
+        Assert.Equal(1, quits);
+    }
+
+    [Fact]
+    public void IpcHostThatLeavesSignalsToTheApp_DoesNotUseTheConsoleLifetime()
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        IpcServer.LeaveTerminationSignalsToTheApp(builder.Services);
+        using var app = builder.Build();
+
+        Assert.IsNotType<ConsoleLifetime>(app.Services.GetRequiredService<IHostLifetime>());
     }
 }

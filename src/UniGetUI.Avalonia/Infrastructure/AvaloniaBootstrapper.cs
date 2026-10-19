@@ -203,6 +203,8 @@ internal static class AvaloniaBootstrapper
             _ipcApi = new IpcServer
             {
                 SessionKind = IpcTransportOptions.GuiSessionKind,
+                // On Linux, App quits on SIGTERM and SIGINT itself.
+                HandlesTerminationSignals = !OperatingSystem.IsLinux(),
             };
             _ipcApi.AppInfoProvider = () =>
                 Dispatcher.UIThread.InvokeAsync(GetAppInfo).GetAwaiter().GetResult();

@@ -683,7 +683,7 @@ namespace UniGetUI.Core.Tools
                 hash.Add(Minor);
                 hash.Add(Patch);
                 hash.Add(Remainder);
-                foreach (int segment in _extraSegments ?? [])
+                foreach (BigInteger segment in _extraSegments ?? [])
                     hash.Add(segment);
                 return hash.ToHashCode();
             }

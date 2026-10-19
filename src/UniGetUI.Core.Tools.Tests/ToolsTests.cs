@@ -450,6 +450,17 @@ namespace UniGetUI.Core.Tools.Tests
             );
         }
 
+        [Fact]
+        public void TestGetVersionStringAsFloat_WithExtraSegmentBeyondInt32_HashesConsistently()
+        {
+            CoreTools.Version a = CoreTools.VersionStringToStruct("1.2.3.4.37149234619");
+            CoreTools.Version b = CoreTools.VersionStringToStruct("1.2.3.4.37149234619.0");
+
+            Assert.Equal(a, b);
+            Assert.Equal(a.GetHashCode(), b.GetHashCode());
+            Assert.NotEqual(a, CoreTools.VersionStringToStruct("1.2.3.4.38756550835"));
+        }
+
         [Theory]
         [InlineData("20250301123456", "2.0.0")]
         [InlineData("37149234619", "1.0.0")]

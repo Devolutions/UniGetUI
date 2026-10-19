@@ -2124,15 +2124,10 @@ namespace UniGetUI.Core.Tools
 
         private static IEnumerable<string> EnumerateSearchDirectories(string pathValue)
         {
-            if (OperatingSystem.IsWindows())
-            {
-                yield return Environment.CurrentDirectory;
-            }
-
             foreach (string pathEntry in pathValue.Split(Path.PathSeparator))
             {
                 string normalizedEntry = NormalizeSearchDirectory(pathEntry);
-                if (normalizedEntry.Length is not 0)
+                if (Path.IsPathFullyQualified(normalizedEntry))
                 {
                     yield return normalizedEntry;
                 }
@@ -2143,7 +2138,7 @@ namespace UniGetUI.Core.Tools
         {
             if (string.IsNullOrWhiteSpace(pathEntry))
             {
-                return Environment.CurrentDirectory;
+                return string.Empty;
             }
 
             return pathEntry.Trim().Trim('"');

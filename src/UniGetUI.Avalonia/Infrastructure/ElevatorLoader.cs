@@ -30,37 +30,63 @@ internal static class ElevatorLoader
                 return;
             }
 
-            if (SecureSettings.Get(SecureSettings.K.ForceUserGSudo))
-            {
-                var res = await CoreTools.WhichAsync("gsudo.exe");
-                if (res.Item1)
-                {
-                    CoreData.ElevatorPath = res.Item2;
-                    Logger.Warn($"Using user GSudo (forced by user) at {CoreData.ElevatorPath}");
-                    return;
-                }
-            }
-
-#if DEBUG
-            Logger.Warn($"Using system GSudo since UniGetUI Elevator is not available in DEBUG builds");
-            CoreData.ElevatorPath = (await CoreTools.WhichAsync("gsudo.exe")).Item2;
-#else
-            string? bundledPath = ResolveBundledElevatorPath(CoreData.UniGetUIExecutableDirectory);
-            if (bundledPath is not null)
-            {
-                CoreData.ElevatorPath = bundledPath;
-                Logger.Debug($"Using built-in UniGetUI Elevator at {CoreData.ElevatorPath}");
-                return;
-            }
-
-            Logger.Error("UniGetUI Elevator was not found; operations that require administrator rights will fail.");
-#endif
+            CoreData.ElevatorPath = await ResolveWindowsElevatorPathAsync(
+                CoreData.UniGetUIExecutableDirectory,
+                SecureSettings.Get(SecureSettings.K.ForceUserGSudo),
+                UseSystemGSudo
+            );
         }
         catch (Exception ex)
         {
             Logger.Error("Elevator/GSudo failed to be loaded!");
             Logger.Error(ex);
         }
+    }
+
+#if DEBUG
+    private const bool UseSystemGSudo = true;
+#else
+    private const bool UseSystemGSudo = false;
+#endif
+
+    internal static async Task<string> ResolveWindowsElevatorPathAsync(
+        string executableDirectory,
+        bool forceUserGSudo,
+        bool useSystemGSudo
+    )
+    {
+        if (forceUserGSudo)
+        {
+            var (found, path) = await CoreTools.WhichAsync("gsudo.exe");
+            if (found)
+            {
+                Logger.Warn($"Using user GSudo (forced by user) at {path}");
+                return path;
+            }
+        }
+
+        if (useSystemGSudo)
+        {
+            var (found, path) = await CoreTools.WhichAsync("gsudo.exe");
+            if (found)
+            {
+                Logger.Warn($"Using system GSudo at {path} since UniGetUI Elevator is not available in DEBUG builds");
+                return path;
+            }
+
+            Logger.Error("GSudo was not found and UniGetUI Elevator is not available in DEBUG builds; operations that require administrator rights will fail.");
+            return string.Empty;
+        }
+
+        string? bundledPath = ResolveBundledElevatorPath(executableDirectory);
+        if (bundledPath is not null)
+        {
+            Logger.Debug($"Using built-in UniGetUI Elevator at {bundledPath}");
+            return bundledPath;
+        }
+
+        Logger.Error("UniGetUI Elevator was not found; operations that require administrator rights will fail.");
+        return string.Empty;
     }
 
     internal static string? ResolveBundledElevatorPath(string executableDirectory)

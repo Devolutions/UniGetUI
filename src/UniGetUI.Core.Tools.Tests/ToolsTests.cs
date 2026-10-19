@@ -200,6 +200,40 @@ namespace UniGetUI.Core.Tools.Tests
         }
 
         [Fact]
+        public void TestWhichIgnoresTheCurrentDirectoryAndRelativePathEntries()
+        {
+            string tempDirectory = CreateTemporaryDirectory();
+            string commandName = OperatingSystem.IsWindows()
+                ? "unigetui-cwd-test.exe"
+                : "unigetui-cwd-test";
+            string? oldPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process);
+            string oldDirectory = Environment.CurrentDirectory;
+
+            try
+            {
+                CreateCommandFile(Path.Combine(tempDirectory, commandName));
+                Environment.CurrentDirectory = tempDirectory;
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    string.Join(Path.PathSeparator, "", ".", "\"\"", " "),
+                    EnvironmentVariableTarget.Process
+                );
+
+                Assert.Empty(CoreTools.WhichMultiple(commandName));
+            }
+            finally
+            {
+                Environment.CurrentDirectory = oldDirectory;
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    oldPath,
+                    EnvironmentVariableTarget.Process
+                );
+                Directory.Delete(tempDirectory, true);
+            }
+        }
+
+        [Fact]
         public void TestWhichFunctionResolvesPathextOnWindows()
         {
             if (!OperatingSystem.IsWindows())

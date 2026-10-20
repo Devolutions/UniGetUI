@@ -14,6 +14,12 @@ public sealed class SemanticVersionTests
     [InlineData("10.0.11", "2.1.0")]
     [InlineData("11.0.0-preview.7", "11.0.0-preview.6")]
     [InlineData("1.0.0-beta", "1.0.0-alpha.9")]
+    [InlineData("2026.3.2", "2026.3.2-beta3")]
+    [InlineData("2026.3.2.0", "2026.3.2-beta3")]
+    [InlineData("2026.3.2-beta3", "2026.3.2-beta2")]
+    [InlineData("2026.3.2-beta2", "2026.3.2-beta1")]
+    [InlineData("2026.3.2-beta10", "2026.3.2-beta2")]
+    [InlineData("2.0.0-rc10", "2.0.0-rc2")]
     public void HigherVersionsCompareGreater(string higher, string lower)
     {
         Assert.True(SemanticVersion.TryParse(higher, out var parsedHigher));

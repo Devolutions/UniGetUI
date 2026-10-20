@@ -19,8 +19,10 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
-# Derive four-part version: 3.3.7 -> 3.3.7.0, 3.4.0-beta1 -> 3.4.0.0
-$CleanVersion = ($Version -Split '-')[0]   # strip prerelease tag
+$Version = $Version.Trim().TrimStart('v', 'V')
+
+# Derive four-part version: 3.3.7 -> 3.3.7.0, 2026.3.2-beta1 -> 2026.3.2.0
+$CleanVersion = (($Version -Split '\+')[0] -Split '-')[0]   # strip build metadata and prerelease tag
 $Parts = $CleanVersion -Split '\.'
 while ($Parts.Count -lt 4) { $Parts += '0' }
 $FourPartVersion = ($Parts[0..3]) -Join '.'
@@ -87,7 +89,7 @@ Set-LinesByPrefix -FilePath (Join-Path $RepoRoot "UniGetUI.iss") -Replacements @
 }
 
 # --- app.manifest (only the assemblyIdentity version, not manifestVersion) ---
-$ManifestPath = Join-Path $RepoRoot "src" "UniGetUI" "app.manifest"
+$ManifestPath = Join-Path $RepoRoot "src" "UniGetUI.Avalonia" "app.manifest"
 if (Test-Path $ManifestPath) {
     $content = Get-Content $ManifestPath -Raw -Encoding utf8BOM
     $content = $content -Replace '(?s)(<assemblyIdentity\b.*?\bversion\s*=\s*")[^"]*(")', "`${1}$FourPartVersion`${2}"

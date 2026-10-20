@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (required, e.g. 2026.1.0)'
+        description: 'Release version (required, e.g. 2026.3.2 or 2026.3.2-beta1)'
         required: true
       draft-release:
         description: 'Create the GitHub Release as a draft'
@@ -33,6 +33,7 @@ jobs:
       package-env: ${{ steps.info.outputs.package-env }}
       package-version: ${{ steps.info.outputs.package-version }}
       onedrive-version: ${{ steps.info.outputs.onedrive-version }}
+      is-prerelease: ${{ steps.info.outputs.is-prerelease }}
       draft-release: ${{ steps.info.outputs.draft-release }}
       skip-publish: ${{ steps.info.outputs.skip-publish }}
       dry-run: ${{ steps.info.outputs.dry-run }}
@@ -65,22 +66,29 @@ jobs:
             $DryRun = $true # force dry run when publishing outside production environment
           }
 
-          $PackageVersion = '${{ inputs.version }}'
+          $PackageVersion = '${{ inputs.version }}'.Trim().TrimStart('v', 'V')
           if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
             throw "The workflow_dispatch version input is required."
           }
 
-          echo "package-env=$PackageEnv" >> $Env:GITHUB_OUTPUT
-          $OneDriveVersion = "$PackageVersion.0"
+          $VersionParts = $PackageVersion -split '-', 2
+          $BaseVersion = $VersionParts[0]
+          $PrereleaseSuffix = if ($VersionParts.Count -gt 1) { "-$($VersionParts[1])" } else { "" }
+          $IsPrerelease = $VersionParts.Count -gt 1
+          $BaseSegments = $BaseVersion -split '\.'
+          $FourPartBase = if ($BaseSegments.Count -eq 3) { "$BaseVersion.0" } else { $BaseVersion }
+          $OneDriveVersion = "$FourPartBase$PrereleaseSuffix"
 
+          echo "package-env=$PackageEnv" >> $Env:GITHUB_OUTPUT
           echo "package-version=$PackageVersion" >> $Env:GITHUB_OUTPUT
           echo "onedrive-version=$OneDriveVersion" >> $Env:GITHUB_OUTPUT
+          echo "is-prerelease=$($IsPrerelease.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
           echo "draft-release=$($DraftRelease.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
           echo "skip-publish=$($SkipPublish.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
           echo "dry-run=$($DryRun.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
 
           echo "::notice::Environment: $PackageEnv"
-          echo "::notice::Version: $PackageVersion"
+          echo "::notice::Version: $PackageVersion (OneDrive: $OneDriveVersion, Prerelease: $IsPrerelease)"
           echo "::notice::DraftRelease: $DraftRelease"
           echo "::notice::DryRun: $DryRun"
 
@@ -845,6 +853,7 @@ jobs:
         working-directory: output
         run: |
           $PackageVersion = '${{ needs.preflight.outputs.package-version }}'
+          $IsPrerelease = [System.Boolean]::Parse('${{ needs.preflight.outputs.is-prerelease }}')
           $DraftRelease = [System.Boolean]::Parse('${{ needs.preflight.outputs.draft-release }}')
           $DryRun = [System.Boolean]::Parse('${{ needs.preflight.outputs.dry-run }}')
 
@@ -855,7 +864,6 @@ jobs:
           $ReleaseTag = "v$PackageVersion"
           $ReleaseTitle = "UniGetUI v${PackageVersion}"
           $Repository = $Env:GITHUB_REPOSITORY
-          $DraftArg = if ($DraftRelease) { '--draft' } else { $null }
 
           # De-duplicate by basename: release asset names must be unique (e.g. two sizes.md would 422).
           $Files = Get-ChildItem -Path . -Recurse -File | Where-Object {
@@ -864,14 +872,14 @@ jobs:
 
           if ($DryRun) {
             Write-Host "Dry Run: skipping GitHub release creation!"
-            Write-Host "Would create release $ReleaseTag with title '$ReleaseTitle' (draft=$DraftRelease)"
+            Write-Host "Would create release $ReleaseTag with title '$ReleaseTitle' (draft=$DraftRelease, prerelease=$IsPrerelease)"
             $Files | ForEach-Object { Write-Host "  - $($_.FullName)" }
           } else {
-            if ($DraftArg) {
-              & gh release create $ReleaseTag --repo $Repository --title $ReleaseTitle $DraftArg $Files.FullName
-            } else {
-              & gh release create $ReleaseTag --repo $Repository --title $ReleaseTitle $Files.FullName
-            }
+            $ReleaseArgs = @('release', 'create', $ReleaseTag, '--repo', $Repository, '--title', $ReleaseTitle)
+            if ($DraftRelease) { $ReleaseArgs += '--draft' }
+            if ($IsPrerelease) { $ReleaseArgs += '--prerelease' }
+            $ReleaseArgs += $Files.FullName
+            & gh @ReleaseArgs
           }
 
       - name: Check out Devolutions/actions

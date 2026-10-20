@@ -309,7 +309,96 @@ public sealed class AutoUpdaterTests
         Version fallback = new(9, 9, 9, 9);
 
         Assert.Equal(new Version(1, 2, 3), AutoUpdaterHelpers.ParseVersionOrFallback("v1.2.3", fallback));
+        Assert.Equal(new Version(2026, 3, 2), AutoUpdaterHelpers.ParseVersionOrFallback("2026.3.2-beta1", fallback));
         Assert.Equal(fallback, AutoUpdaterHelpers.ParseVersionOrFallback("not-a-version", fallback));
+    }
+
+    [Theory]
+    [InlineData("2026.3.1", "2026.3.2-beta1", true)]
+    [InlineData("2026.3.2-beta1", "2026.3.2-beta2", true)]
+    [InlineData("2026.3.2-beta2", "2026.3.2-beta3", true)]
+    [InlineData("2026.3.2-beta2", "2026.3.2-beta10", true)]
+    [InlineData("2026.3.2-beta3", "2026.3.2", true)]
+    [InlineData("2026.3.2-beta3", "2026.3.2.0", true)]
+    [InlineData("2026.3.2", "2026.3.3-beta1", true)]
+    [InlineData("2026.3.2-beta1", "2026.3.2-beta1", false)]
+    [InlineData("2026.3.2-beta1", "2026.3.2.0-beta1", false)]
+    [InlineData("2026.3.2-beta2", "2026.3.2-beta1", false)]
+    [InlineData("2026.3.2", "2026.3.2.0", false)]
+    [InlineData("2026.3.2", "2026.3.2-beta3", false)]
+    [InlineData("2026.3.2.0", "2026.3.2-beta3", false)]
+    public void IsUpdateAvailable_OrdersBetaProgressionAndFinalReleaseCorrectly(
+        string currentVersion,
+        string availableVersion,
+        bool expectedUpgradable
+    )
+    {
+        Assert.Equal(
+            expectedUpgradable,
+            AutoUpdaterHelpers.IsUpdateAvailable(currentVersion, availableVersion)
+        );
+    }
+
+    [Theory]
+    [InlineData("2026.3.2", "2026.3.2.0", true)]
+    [InlineData("v2026.3.2", "2026.3.2.0", true)]
+    [InlineData("2026.3.2-beta1", "2026.3.2-beta1", true)]
+    [InlineData("2026.3.2-beta1", "2026.3.2.0-beta1", true)]
+    [InlineData("2026.3.2-beta1", "2026.3.2-beta2", false)]
+    [InlineData("2026.3.2-beta1", "2026.3.2", false)]
+    [InlineData("2026.3.2-beta1", "2026.3.2.0", false)]
+    public void VersionsMatch_DistinguishesPrereleaseAndNormalizesFourPartVersions(
+        string left,
+        string right,
+        bool expectedMatch
+    )
+    {
+        Assert.Equal(expectedMatch, AutoUpdaterHelpers.VersionsMatch(left, right));
+        Assert.Equal(expectedMatch, AvaloniaAutoUpdater.VersionsMatch(left, right));
+    }
+
+    [Theory]
+    [InlineData("2026.3.2-beta1", true)]
+    [InlineData("2026.3.2-beta2", true)]
+    [InlineData("2026.3.2.0-rc1", true)]
+    [InlineData("2026.3.2", false)]
+    [InlineData("2026.3.2.0", false)]
+    [InlineData("not-a-version", false)]
+    public void IsPreReleaseVersion_DetectsPreReleaseStrings(string? rawVersion, bool expected)
+    {
+        Assert.Equal(expected, AutoUpdaterHelpers.IsPreReleaseVersion(rawVersion));
+    }
+
+    [Fact]
+    public void SelectChannel_ChoosesExpectedChannelAcrossStableAndBetaCycles()
+    {
+        var stableOld = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.1.0" };
+        var betaNew = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.2-beta2" };
+        var stableFinal = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.2.0" };
+
+        // Stable user always gets Current
+        Assert.Same(
+            stableOld,
+            AutoUpdaterHelpers.SelectChannel(stableOld, betaNew, useBeta: false)
+        );
+
+        // Beta user gets Beta when Beta is ahead of Current (2026.3.2-beta2 > 2026.3.1.0)
+        Assert.Same(
+            betaNew,
+            AutoUpdaterHelpers.SelectChannel(stableOld, betaNew, useBeta: true)
+        );
+
+        // Beta user gets Current when stable final ships (2026.3.2.0 > 2026.3.2-beta2)
+        Assert.Same(
+            stableFinal,
+            AutoUpdaterHelpers.SelectChannel(stableFinal, betaNew, useBeta: true)
+        );
+
+        // Beta user falls back to Current if Beta channel is absent
+        Assert.Same(
+            stableFinal,
+            AutoUpdaterHelpers.SelectChannel(stableFinal, beta: null, useBeta: true)
+        );
     }
 
     [Theory]

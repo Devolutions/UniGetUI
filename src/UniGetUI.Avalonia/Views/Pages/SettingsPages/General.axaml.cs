@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Language;
@@ -46,6 +47,23 @@ public sealed partial class General : UserControl, ISettingsPage
         LanguageSelector.ShowAddedItems();
         LanguageSelector.ValueChanged += (s, e) => RestartRequired?.Invoke(s, e);
         LanguageSelector.Description = BuildTranslatorDescription();
+
+        GeneralUpdaterCard.Click += (_, _) =>
+            _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
+        GeneralUpdaterCard.StateChanged += (_, _) =>
+        {
+            if (GeneralUpdaterCard.Checked)
+            {
+                _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: false);
+            }
+        };
+        EnableUniGetUIBetaCard.StateChanged += (_, _) =>
+        {
+            if (EnableUniGetUIBetaCard.Checked && !CoreSettings.Get(CoreSettings.K.DisableAutoUpdateWingetUI))
+            {
+                _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: false);
+            }
+        };
     }
 
     private static StackPanel BuildTranslatorDescription()

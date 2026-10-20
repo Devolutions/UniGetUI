@@ -1312,7 +1312,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         bool useBeta = Settings.Get(Settings.K.EnableUniGetUIBeta);
-        ProductInfoChannel? channel = useBeta ? product.Beta : product.Current;
+        ProductInfoChannel? channel = SelectChannel(product, useBeta);
         if (channel is null)
         {
             throw new KeyNotFoundException(
@@ -1326,15 +1326,21 @@ internal static partial class AvaloniaAutoUpdater
             throw new InvalidOperationException($"Installer URL is not allowed: {installer.Url}");
         }
 
-        Version current = ParseVersionOrFallback(
+        Version currentFallback = new(0, 0, 0, CoreData.BuildNumber);
+        SemanticVersion current = AutoUpdaterHelpers.ParseUpdaterVersionOrFallback(
             CoreData.VersionName,
-            new Version(0, 0, 0, CoreData.BuildNumber)
+            currentFallback,
+            message => LogUpdateWarn(message)
         );
-        Version available = ParseVersionOrFallback(channel.Version, new Version(0, 0, 0, 0));
+        SemanticVersion available = AutoUpdaterHelpers.ParseUpdaterVersionOrFallback(
+            channel.Version,
+            new Version(0, 0, 0, 0),
+            message => LogUpdateWarn(message)
+        );
         bool upgradable = available > current;
 
         LogUpdateDebug(
-            $"ProductInfo check: current={current}, available={available}, upgradable={upgradable}"
+            $"ProductInfo check: current={current} (raw='{CoreData.VersionName}'), available={available} (raw='{channel.Version}'), beta={useBeta}, upgradable={upgradable}"
         );
 
         return new UpdateCandidate(upgradable, channel.Version, installer.Hash, installer.Url, "ProductInfo");
@@ -1638,51 +1644,38 @@ internal static partial class AvaloniaAutoUpdater
         && f.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase)
         && f.Url.Contains(osToken, StringComparison.OrdinalIgnoreCase);
 
-    private static Version ParseVersionOrFallback(string raw, Version fallback)
+    private static ProductInfoChannel? SelectChannel(ProductInfoProduct product, bool useBeta)
     {
-        string sanitized = raw.Trim().TrimStart('v', 'V');
-        if (Version.TryParse(sanitized, out Version? parsed))
+        if (!useBeta)
         {
-            return CoreTools.NormalizeVersionForComparison(parsed);
+            return product.Current;
         }
 
-        LogUpdateWarn($"Could not parse version '{raw}', using fallback '{fallback}'");
-        return fallback;
+        if (product.Beta is null)
+        {
+            return product.Current;
+        }
+
+        if (product.Current is null)
+        {
+            return product.Beta;
+        }
+
+        return AutoUpdaterHelpers.IsUpdateAvailable(product.Current.Version, product.Beta.Version)
+            ? product.Beta
+            : product.Current;
     }
 
-    internal static bool IsDefaultDevVersion(string? rawVersion)
-    {
-        if (string.IsNullOrWhiteSpace(rawVersion))
-        {
-            return false;
-        }
+    private static Version ParseVersionOrFallback(string raw, Version fallback) =>
+        AutoUpdaterHelpers.ParseVersionOrFallback(raw, fallback, message => LogUpdateWarn(message));
 
-        string sanitized = rawVersion.Trim().TrimStart('v', 'V');
-        if (!Version.TryParse(sanitized, out Version? parsed))
-        {
-            return false;
-        }
+    internal static bool IsDefaultDevVersion(string? rawVersion) =>
+        AutoUpdaterHelpers.IsDefaultDevVersion(rawVersion);
 
-        return parsed.Major == 1
-            && parsed.Minor == 0
-            && parsed.Build <= 0
-            && parsed.Revision <= 0;
-    }
-
-    // Normalize trailing zero components so "2026.1.11" and "2026.1.11.0" compare equal.
-    private static bool VersionsMatch(string a, string b)
-    {
-        string sa = a.Trim().TrimStart('v', 'V');
-        string sb = b.Trim().TrimStart('v', 'V');
-
-        if (Version.TryParse(sa, out Version? va) && Version.TryParse(sb, out Version? vb))
-        {
-            return CoreTools.NormalizeVersionForComparison(va)
-                .Equals(CoreTools.NormalizeVersionForComparison(vb));
-        }
-
-        return string.Equals(sa, sb, StringComparison.OrdinalIgnoreCase);
-    }
+    // Normalize trailing zero components and prerelease labels so "2026.1.11" / "2026.1.11.0"
+    // and "2026.3.2-beta1" / "2026.3.2.0-beta1" compare equal.
+    internal static bool VersionsMatch(string a, string b) =>
+        AutoUpdaterHelpers.VersionsMatch(a, b);
 
     private static string NormalizeThumbprint(string thumbprint) =>
         new(thumbprint.ToLowerInvariant().Where(char.IsAsciiHexDigit).ToArray());

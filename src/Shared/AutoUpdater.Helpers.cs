@@ -74,21 +74,194 @@ internal static class AutoUpdaterHelpers
         return match;
     }
 
-    internal static Version ParseVersionOrFallback(string rawVersion, Version fallbackVersion)
+    internal static Version ParseVersionOrFallback(
+        string? rawVersion,
+        Version fallbackVersion,
+        Action<string>? logWarning = null
+    )
     {
-        if (Version.TryParse(rawVersion, out Version? parsed))
+        if (TryExtractNormalizedCoreVersion(rawVersion, out Version? normalized, out _))
         {
-            return CoreTools.NormalizeVersionForComparison(parsed);
+            return normalized!;
+        }
+
+        string message = $"Could not parse version '{rawVersion}', using fallback '{fallbackVersion}'";
+        if (logWarning is not null)
+        {
+            logWarning(message);
+        }
+        else
+        {
+            Logger.Warn(message);
+        }
+
+        return fallbackVersion;
+    }
+
+    internal static bool TryParseUpdaterVersion(string? rawVersion, out SemanticVersion version)
+    {
+        version = SemanticVersion.Invalid(rawVersion ?? string.Empty);
+        if (!TryExtractNormalizedCoreVersion(rawVersion, out Version? normalizedCore, out string? preRelease))
+        {
+            return false;
+        }
+
+        string canonical = preRelease is not null
+            ? $"{normalizedCore}-{preRelease}"
+            : normalizedCore!.ToString();
+
+        return SemanticVersion.TryParse(canonical, SemVerLabels.CaseInsensitive, out version);
+    }
+
+    internal static SemanticVersion ParseUpdaterVersionOrFallback(
+        string? rawVersion,
+        Version fallbackVersion,
+        Action<string>? logWarning = null
+    )
+    {
+        if (TryParseUpdaterVersion(rawVersion, out SemanticVersion parsed))
+        {
+            return parsed;
+        }
+
+        string message = $"Could not parse version '{rawVersion}', using fallback '{fallbackVersion}'";
+        if (logWarning is not null)
+        {
+            logWarning(message);
+        }
+        else
+        {
+            Logger.Warn(message);
+        }
+
+        return SemanticVersion.TryParse(
+            fallbackVersion.ToString(),
+            SemVerLabels.CaseInsensitive,
+            out SemanticVersion fallback
+        )
+            ? fallback
+            : SemanticVersion.Invalid(rawVersion ?? string.Empty);
+    }
+
+    internal static int CompareUpdaterVersions(
+        string? currentRaw,
+        string? availableRaw,
+        Version? currentFallback = null,
+        Action<string>? logWarning = null
+    )
+    {
+        SemanticVersion current = ParseUpdaterVersionOrFallback(
+            currentRaw,
+            currentFallback ?? new Version(0, 0, 0, 0),
+            logWarning
+        );
+        SemanticVersion available = ParseUpdaterVersionOrFallback(
+            availableRaw,
+            new Version(0, 0, 0, 0),
+            logWarning
+        );
+        return current.CompareTo(available);
+    }
+
+    internal static bool IsUpdateAvailable(
+        string? currentRaw,
+        string? availableRaw,
+        Version? currentFallback = null,
+        Action<string>? logWarning = null
+    ) => CompareUpdaterVersions(currentRaw, availableRaw, currentFallback, logWarning) < 0;
+
+    internal static bool VersionsMatch(string? a, string? b)
+    {
+        if (
+            TryParseUpdaterVersion(a, out SemanticVersion va)
+            && TryParseUpdaterVersion(b, out SemanticVersion vb)
+        )
+        {
+            return va.CompareTo(vb) == 0;
+        }
+
+        string sa = (a ?? string.Empty).Trim().TrimStart('v', 'V');
+        string sb = (b ?? string.Empty).Trim().TrimStart('v', 'V');
+        return string.Equals(sa, sb, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool IsPreReleaseVersion(string? rawVersion) =>
+        TryParseUpdaterVersion(rawVersion, out SemanticVersion parsed) && parsed.IsPreRelease;
+
+    internal static ProductInfoChannel? SelectChannel(
+        ProductInfoChannel? current,
+        ProductInfoChannel? beta,
+        bool useBeta
+    )
+    {
+        if (!useBeta)
+        {
+            return current;
+        }
+
+        if (beta is null)
+        {
+            return current;
+        }
+
+        if (current is null)
+        {
+            return beta;
+        }
+
+        // Prefer Beta only when its version is strictly newer than Current; once stable
+        // catches up (e.g. 2026.3.2.0 > 2026.3.2-beta3 or 2026.3.2.0 == 2026.3.2.0),
+        // prefer Current so beta users upgrade seamlessly to the final release.
+        return IsUpdateAvailable(current.Version, beta.Version) ? beta : current;
+    }
+
+    internal static ProductInfoChannel? SelectChannel(ProductInfoEntry product, bool useBeta) =>
+        SelectChannel(product.Current, product.Beta, useBeta);
+
+    private static bool TryExtractNormalizedCoreVersion(
+        string? rawVersion,
+        out Version? normalizedCore,
+        out string? preRelease
+    )
+    {
+        normalizedCore = null;
+        preRelease = null;
+
+        if (string.IsNullOrWhiteSpace(rawVersion))
+        {
+            return false;
         }
 
         string sanitized = rawVersion.Trim().TrimStart('v', 'V');
-        if (Version.TryParse(sanitized, out parsed))
+        int plusIndex = sanitized.IndexOf('+');
+        if (plusIndex >= 0)
         {
-            return CoreTools.NormalizeVersionForComparison(parsed);
+            sanitized = sanitized[..plusIndex];
         }
 
-        Logger.Warn($"Could not parse version '{rawVersion}', using fallback '{fallbackVersion}'");
-        return fallbackVersion;
+        int dashIndex = sanitized.IndexOf('-');
+        string corePart;
+        if (dashIndex >= 0)
+        {
+            corePart = sanitized[..dashIndex];
+            preRelease = sanitized[(dashIndex + 1)..];
+            if (string.IsNullOrWhiteSpace(preRelease))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            corePart = sanitized;
+        }
+
+        if (!Version.TryParse(corePart, out Version? parsed))
+        {
+            return false;
+        }
+
+        normalizedCore = CoreTools.NormalizeVersionForComparison(parsed);
+        return true;
     }
 
     internal static bool IsDefaultDevVersion(string? rawVersion)
@@ -164,6 +337,18 @@ internal static class AutoUpdaterHelpers
             || normalized.Equals("on", StringComparison.OrdinalIgnoreCase);
     }
 #endif
+
+    internal sealed class ProductInfoEntry
+    {
+        public ProductInfoChannel? Current { get; set; }
+        public ProductInfoChannel? Beta { get; set; }
+    }
+
+    internal sealed class ProductInfoChannel
+    {
+        public string Version { get; set; } = string.Empty;
+        public List<ProductInfoFile> Files { get; set; } = [];
+    }
 
     internal sealed class ProductInfoFile
     {

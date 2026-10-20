@@ -99,8 +99,15 @@ public partial class MainWindowViewModel : ViewModelBase
             int total = _operationBatch.Count;
             if (total == 0)
                 return CoreTools.Translate("Operations");
+            // Name the failures, so a collapsed panel does not read as "all good" when some failed.
+            int failed = _operationBatch.Count(o => o.Status is OperationStatus.Failed);
+            if (failed > 0)
+            {
+                int succeeded = _operationBatch.Count(o => o.Status is OperationStatus.Succeeded);
+                return CoreTools.Translate("{0} of {1} succeeded, {2} failed", succeeded, total, failed);
+            }
             int completed = _operationBatch.Count(o =>
-                o.Status is OperationStatus.Succeeded or OperationStatus.Failed or OperationStatus.Canceled);
+                o.Status is OperationStatus.Succeeded or OperationStatus.Canceled);
             return CoreTools.Translate("{0} of {1} operations completed", completed, total);
         }
     }

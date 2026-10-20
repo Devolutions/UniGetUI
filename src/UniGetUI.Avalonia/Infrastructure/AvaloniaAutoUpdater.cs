@@ -1666,9 +1666,6 @@ internal static partial class AvaloniaAutoUpdater
             : product.Current;
     }
 
-    private static Version ParseVersionOrFallback(string raw, Version fallback) =>
-        AutoUpdaterHelpers.ParseVersionOrFallback(raw, fallback, message => LogUpdateWarn(message));
-
     internal static bool IsDefaultDevVersion(string? rawVersion) =>
         AutoUpdaterHelpers.IsDefaultDevVersion(rawVersion);
 

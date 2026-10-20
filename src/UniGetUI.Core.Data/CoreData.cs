@@ -38,7 +38,7 @@ namespace UniGetUI.Core.Data
                 return __console_encoding;
             }
         }
-        public const string VersionName = "2026.1.0"; // Do not modify this line, use file scripts/set-version.ps1
+        public const string VersionName = "1.0.0.0"; // Do not modify this line, use file scripts/set-version.ps1
         public const int BuildNumber = 106; // Do not modify this line, use file scripts/set-version.ps1
 
         public const string UserAgentString =

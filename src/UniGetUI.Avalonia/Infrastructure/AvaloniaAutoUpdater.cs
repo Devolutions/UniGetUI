@@ -194,6 +194,7 @@ internal static partial class AvaloniaAutoUpdater
     {
         try
         {
+            if (IsDefaultDevVersion(CoreData.VersionName)) return;
             if (!File.Exists(_updateLogPath)) return;
 
             var info = new FileInfo(_updateLogPath);
@@ -361,6 +362,14 @@ internal static partial class AvaloniaAutoUpdater
             return;
         }
 
+        if (IsDefaultDevVersion(CoreData.VersionName))
+        {
+            LogUpdateInfo(
+                $"Auto-updater: default dev version ({CoreData.VersionName}) detected, skipping update check."
+            );
+            return;
+        }
+
         await CoreTools.WaitForInternetConnection();
 
         bool isFirstLaunch = true;
@@ -413,6 +422,14 @@ internal static partial class AvaloniaAutoUpdater
 
     private static async Task<bool> CheckAndInstallUpdatesCoreAsync(bool autoLaunch, bool manualCheck)
     {
+        if (IsDefaultDevVersion(CoreData.VersionName))
+        {
+            LogUpdateInfo(
+                $"Auto-updater: default dev version ({CoreData.VersionName}) detected, skipping update check."
+            );
+            return true;
+        }
+
         ResetUpdateLog(manualCheck, autoLaunch);
         UpdaterOverrides overrides = LoadUpdaterOverrides();
         bool wasCheckingForUpdates = true;
@@ -1631,6 +1648,25 @@ internal static partial class AvaloniaAutoUpdater
 
         LogUpdateWarn($"Could not parse version '{raw}', using fallback '{fallback}'");
         return fallback;
+    }
+
+    internal static bool IsDefaultDevVersion(string? rawVersion)
+    {
+        if (string.IsNullOrWhiteSpace(rawVersion))
+        {
+            return false;
+        }
+
+        string sanitized = rawVersion.Trim().TrimStart('v', 'V');
+        if (!Version.TryParse(sanitized, out Version? parsed))
+        {
+            return false;
+        }
+
+        return parsed.Major == 1
+            && parsed.Minor == 0
+            && parsed.Build <= 0
+            && parsed.Revision <= 0;
     }
 
     // Normalize trailing zero components so "2026.1.11" and "2026.1.11.0" compare equal.

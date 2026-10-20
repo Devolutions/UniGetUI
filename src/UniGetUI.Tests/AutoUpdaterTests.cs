@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Core.Data;
 using UniGetUI.Shared;
 
 namespace UniGetUI.Tests;
@@ -308,6 +310,44 @@ public sealed class AutoUpdaterTests
 
         Assert.Equal(new Version(1, 2, 3), AutoUpdaterHelpers.ParseVersionOrFallback("v1.2.3", fallback));
         Assert.Equal(fallback, AutoUpdaterHelpers.ParseVersionOrFallback("not-a-version", fallback));
+    }
+
+    [Theory]
+    [InlineData("1.0", true)]
+    [InlineData("1.0.0", true)]
+    [InlineData("1.0.0.0", true)]
+    [InlineData("v1.0", true)]
+    [InlineData("v1.0.0", true)]
+    [InlineData("v1.0.0.0", true)]
+    [InlineData("1.0.1", false)]
+    [InlineData("1.0.0.1", false)]
+    [InlineData("1.1.0", false)]
+    [InlineData("2026.1.0", false)]
+    [InlineData("2026.1.1", false)]
+    [InlineData("2026.2.0", false)]
+    [InlineData("2026.3.2", false)]
+    [InlineData("3.3.7", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    [InlineData("not-a-version", false)]
+    public void IsDefaultDevVersion_IdentifiesDefaultDevVersionsOnly(
+        string? rawVersion,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, AutoUpdaterHelpers.IsDefaultDevVersion(rawVersion));
+        Assert.Equal(expected, AvaloniaAutoUpdater.IsDefaultDevVersion(rawVersion));
+    }
+
+    [Fact]
+    public async Task CheckAndInstallUpdatesAsync_SkipsWhenRunningDefaultDevVersion()
+    {
+        if (!AvaloniaAutoUpdater.IsDefaultDevVersion(CoreData.VersionName))
+        {
+            return;
+        }
+
+        Assert.True(await AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync());
     }
 
     [Fact]

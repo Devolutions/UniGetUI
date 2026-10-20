@@ -91,6 +91,25 @@ internal static class AutoUpdaterHelpers
         return fallbackVersion;
     }
 
+    internal static bool IsDefaultDevVersion(string? rawVersion)
+    {
+        if (string.IsNullOrWhiteSpace(rawVersion))
+        {
+            return false;
+        }
+
+        string sanitized = rawVersion.Trim().TrimStart('v', 'V');
+        if (!Version.TryParse(sanitized, out Version? parsed))
+        {
+            return false;
+        }
+
+        return parsed.Major == 1
+            && parsed.Minor == 0
+            && parsed.Build <= 0
+            && parsed.Revision <= 0;
+    }
+
     internal static string NormalizeThumbprint(string thumbprint)
     {
         char[] normalized = thumbprint.ToLowerInvariant().Where(char.IsAsciiHexDigit).ToArray();

@@ -1,0 +1,287 @@
+name: Issue Automation
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+      - labeled
+      - unlabeled
+  issue_comment:
+    types:
+      - created
+  schedule:
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Optional single issue number to analyze"
+        required: false
+        type: string
+      batch_limit:
+        description: "Max issues for scheduled/manual backlog digest (1-20)"
+        required: false
+        default: "20"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-automation-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  analyze-issue:
+    name: Deterministic Issue Analysis
+    if: >-
+      (github.event_name == 'issues' && !github.event.issue.pull_request &&
+       (github.event.action != 'labeled' && github.event.action != 'unlabeled' ||
+        github.actor != 'github-actions[bot]')) ||
+      (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+       github.actor != 'github-actions[bot]') ||
+      (github.event_name == 'workflow_dispatch' && inputs.issue_number != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      skipped: ${{ steps.admit.outputs.skipped }}
+      run-ai: ${{ steps.admit.outputs.run-ai }}
+      can-apply-labels: ${{ steps.admit.outputs.can-apply-labels }}
+      labels-to-add-count: ${{ steps.admit.outputs.labels-to-add-count }}
+      issue-number: ${{ steps.admit.outputs.issue-number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: .github/issue-automation/package-lock.json
+
+      - name: Install issue automation dependencies
+        working-directory: .github/issue-automation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run deterministic issue admission and analysis
+        id: admit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          ISSUE_AUTOMATION_MODE: ${{ vars.ISSUE_AUTOMATION_MODE || 'report-only' }}
+          ISSUE_AUTOMATION_AI_ENABLED: ${{ vars.ISSUE_AUTOMATION_AI_ENABLED || 'false' }}
+          ISSUE_AUTOMATION_DAILY_BUDGET: ${{ vars.ISSUE_AUTOMATION_DAILY_BUDGET || '0' }}
+          ISSUE_AUTOMATION_API_BASE_URL: ${{ vars.ISSUE_AUTOMATION_API_BASE_URL || '' }}
+          ISSUE_AUTOMATION_MODEL: ${{ vars.ISSUE_AUTOMATION_MODEL || '' }}
+        run: |
+          echo "issue-number=${ISSUE_NUMBER}" >> "$GITHUB_OUTPUT"
+          node .github/issue-automation/admission.js single
+
+      - name: Upload issue evidence
+        if: steps.admit.outputs.skipped != 'true'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: issue-evidence-${{ steps.admit.outputs.issue-number }}
+          path: issue-evidence/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload deterministic issue report
+        if: steps.admit.outputs.skipped != 'true' && steps.admit.outputs.run-ai != 'true'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: issue-automation-results-${{ steps.admit.outputs.issue-number }}
+          path: issue-automation-results/
+          retention-days: 14
+          if-no-files-found: error
+
+  ai-triage:
+    name: Optional Bounded AI Issue Triage
+    needs: [analyze-issue]
+    if: needs.analyze-issue.outputs.skipped != 'true' && needs.analyze-issue.outputs.run-ai == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            .github/issue-automation/package-lock.json
+            .github/actions/openai-agent/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm --prefix .github/issue-automation ci --ignore-scripts --no-audit --no-fund
+          npm --prefix .github/actions/openai-agent ci --ignore-scripts --no-audit --no-fund
+
+      - name: Download issue evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: issue-evidence-${{ needs.analyze-issue.outputs.issue-number }}
+          path: issue-evidence
+
+      - name: Prepare triage stage
+        env:
+          ISSUE_AUTOMATION_MODE: ${{ vars.ISSUE_AUTOMATION_MODE || 'report-only' }}
+          ISSUE_AUTOMATION_AI_ENABLED: ${{ vars.ISSUE_AUTOMATION_AI_ENABLED || 'false' }}
+          ISSUE_AUTOMATION_DAILY_BUDGET: ${{ vars.ISSUE_AUTOMATION_DAILY_BUDGET || '0' }}
+          ISSUE_AUTOMATION_API_BASE_URL: ${{ vars.ISSUE_AUTOMATION_API_BASE_URL || '' }}
+          ISSUE_AUTOMATION_MODEL: ${{ vars.ISSUE_AUTOMATION_MODEL || '' }}
+        run: node .github/issue-automation/stages.js prepare triage
+
+      - name: Run triage agent
+        uses: ./.github/actions/openai-agent
+        with:
+          api-key: ${{ secrets.ISSUE_AUTOMATION_API_KEY }}
+          base-url: ${{ vars.ISSUE_AUTOMATION_API_BASE_URL }}
+          config-file: issue-evidence/agent-config.json
+          metadata: '{"stage":"triage","context_file":"issue-evidence/context.json"}'
+
+      - name: Record triage output
+        id: record
+        run: node .github/issue-automation/stages.js record-triage
+
+      - name: Prepare verifier stage
+        if: steps.record.outputs.needs-verifier == 'true'
+        env:
+          ISSUE_AUTOMATION_MODE: ${{ vars.ISSUE_AUTOMATION_MODE || 'report-only' }}
+          ISSUE_AUTOMATION_AI_ENABLED: ${{ vars.ISSUE_AUTOMATION_AI_ENABLED || 'false' }}
+          ISSUE_AUTOMATION_DAILY_BUDGET: ${{ vars.ISSUE_AUTOMATION_DAILY_BUDGET || '0' }}
+          ISSUE_AUTOMATION_API_BASE_URL: ${{ vars.ISSUE_AUTOMATION_API_BASE_URL || '' }}
+          ISSUE_AUTOMATION_MODEL: ${{ vars.ISSUE_AUTOMATION_MODEL || '' }}
+        run: node .github/issue-automation/stages.js prepare verifier
+
+      - name: Run verifier agent
+        if: steps.record.outputs.needs-verifier == 'true'
+        uses: ./.github/actions/openai-agent
+        with:
+          api-key: ${{ secrets.ISSUE_AUTOMATION_API_KEY }}
+          base-url: ${{ vars.ISSUE_AUTOMATION_API_BASE_URL }}
+          config-file: issue-evidence/agent-config.json
+          metadata: '{"stage":"verifier","context_file":"issue-evidence/context.json","triage_file":"issue-evidence/triage.json"}'
+
+      - name: Finalize AI issue report
+        run: node .github/issue-automation/stages.js finish
+
+      - name: Upload AI issue report
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: issue-automation-results-${{ needs.analyze-issue.outputs.issue-number }}
+          path: issue-automation-results/
+          retention-days: 14
+          if-no-files-found: error
+
+  publish-labels:
+    name: Narrow Additive Issue Label Writer
+    needs: [analyze-issue, ai-triage]
+    if: >-
+      always() &&
+      needs.analyze-issue.result == 'success' &&
+      needs.analyze-issue.outputs.skipped != 'true' &&
+      needs.analyze-issue.outputs.can-apply-labels == 'true' &&
+      (needs.ai-triage.result == 'skipped' || needs.ai-triage.result == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    concurrency:
+      group: issue-automation-publish-${{ needs.analyze-issue.outputs.issue-number }}
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: .github/issue-automation/package-lock.json
+
+      - name: Install issue automation dependencies
+        working-directory: .github/issue-automation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Download issue report
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: issue-automation-results-${{ needs.analyze-issue.outputs.issue-number }}
+          path: issue-automation-results
+
+      - name: Apply verified additive routing labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_AUTOMATION_MODE: ${{ vars.ISSUE_AUTOMATION_MODE || 'report-only' }}
+          ISSUE_AUTOMATION_AI_ENABLED: ${{ vars.ISSUE_AUTOMATION_AI_ENABLED || 'false' }}
+          ISSUE_AUTOMATION_DAILY_BUDGET: ${{ vars.ISSUE_AUTOMATION_DAILY_BUDGET || '0' }}
+          ISSUE_AUTOMATION_API_BASE_URL: ${{ vars.ISSUE_AUTOMATION_API_BASE_URL || '' }}
+          ISSUE_AUTOMATION_MODEL: ${{ vars.ISSUE_AUTOMATION_MODEL || '' }}
+        run: >-
+          node .github/issue-automation/publication.js
+          "issue-automation-results/result-${{ needs.analyze-issue.outputs.issue-number }}.json"
+
+  backlog-digest:
+    name: Scheduled Issue Backlog Digest
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.issue_number == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: .github/issue-automation/package-lock.json
+
+      - name: Install issue automation dependencies
+        working-directory: .github/issue-automation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Build maintainer backlog digest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_BATCH_LIMIT: ${{ inputs.batch_limit || '20' }}
+          ISSUE_AUTOMATION_MODE: ${{ vars.ISSUE_AUTOMATION_MODE || 'report-only' }}
+          ISSUE_AUTOMATION_AI_ENABLED: ${{ vars.ISSUE_AUTOMATION_AI_ENABLED || 'false' }}
+          ISSUE_AUTOMATION_DAILY_BUDGET: ${{ vars.ISSUE_AUTOMATION_DAILY_BUDGET || '0' }}
+          ISSUE_AUTOMATION_API_BASE_URL: ${{ vars.ISSUE_AUTOMATION_API_BASE_URL || '' }}
+          ISSUE_AUTOMATION_MODEL: ${{ vars.ISSUE_AUTOMATION_MODEL || '' }}
+        run: node .github/issue-automation/admission.js digest
+
+      - name: Upload backlog digest artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: issue-backlog-digest-${{ github.run_id }}
+          path: issue-automation-results/
+          retention-days: 14
+          if-no-files-found: error

@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["head", "risk", "legitimacy", "overlap", "reviewers", "summary"],
+  "properties": {
+    "head": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "risk": { "enum": ["low", "medium", "high", "unknown"] },
+    "legitimacy": { "type": "boolean" },
+    "overlap": {
+      "type": "array", "maxItems": 10, "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+    },
+    "reviewers": {
+      "type": "array", "uniqueItems": true, "maxItems": 5,
+      "items": { "enum": ["dotnet-aot", "package-engine", "ui-localization", "skeptical", "code-compressor"] }
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 }
+  }
+}

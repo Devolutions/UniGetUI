@@ -1,0 +1,27 @@
+{
+  "name": "openai-filesystem-agent-action",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Bounded read-only OpenAI-compatible filesystem agent for GitHub Actions",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && ncc build src/index.js -o dist --minify --license licenses.txt",
+    "test": "node --test test/*.test.js",
+    "check": "npm test && npm run build"
+  },
+  "dependencies": {
+    "@actions/core": "3.0.0",
+    "ajv": "8.20.0",
+    "openai": "7.8.0"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "0.45.0"
+  },
+  "overrides": {
+    "fast-uri": "3.1.8",
+    "undici": "6.28.1"
+  }
+}

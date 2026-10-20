@@ -2,7 +2,7 @@ blank_issues_enabled: false
 
 contact_links:
   - name: 📦 ISSUES INSTALLING/UPDATING A PACKAGE
-    url: https://github.com/Devolutions/UniGetUI
+    url: https://github.com/Devolutions/UniGetUI/blob/main/docs/ISSUE_DIAGNOSTICS.md
     about: PLEASE READ THIS BEFORE CREATING AN ISSUE RELATED TO A SPECIFIC PACKAGE
   - name: 🔒 Security issue or vulnerability
     url: https://devolutions.net/security/

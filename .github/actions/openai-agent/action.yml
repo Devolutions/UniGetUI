@@ -1,0 +1,53 @@
+name: OpenAI filesystem agent
+description: Run a bounded read-only filesystem agent against an OpenAI-compatible API
+
+inputs:
+  api-key:
+    description: API key sent to the configured OpenAI-compatible endpoint
+    required: true
+  base-url:
+    description: Configured OpenAI-compatible API base URL
+    required: true
+  config-file:
+    description: Workflow-controlled action configuration relative to the workspace
+    required: true
+  prompt-context:
+    description: Trusted workflow-generated text appended to the configured prompt
+    required: false
+    default: ""
+  validator:
+    description: Trusted workflow validator module selector in path#export form
+    required: false
+    default: ""
+  normalizer:
+    description: Trusted synchronous output normalizer module selector in path#export form
+    required: false
+    default: ""
+  validator-metadata:
+    description: Trusted JSON object passed opaquely to the selected validator
+    required: false
+    default: ""
+  structured-output-file:
+    description: Workflow-controlled filename in the action output directory for accepted JSON
+    required: false
+    default: ""
+
+outputs:
+  structured-output:
+    description: Schema-validated JSON when no structured-output-file is requested
+  failure-reason:
+    description: Bounded failure category when no valid output was produced
+  turn-count:
+    description: Number of model turns attempted, excluding SDK retries
+  tool-call-count:
+    description: Number of model tool calls processed
+  diagnostics:
+    description: Canonical bounded JSON runtime diagnostics
+  failure-category:
+    description: Machine-readable failure category
+  retryable:
+    description: Whether a caller may stage-recover the terminal failure
+
+runs:
+  using: node24
+  main: dist/index.js

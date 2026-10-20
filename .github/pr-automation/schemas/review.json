@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["head", "reviewer", "summary", "findings", "dispositions"],
+  "properties": {
+    "head": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "reviewer": { "enum": ["dotnet-aot", "package-engine", "ui-localization", "skeptical", "code-compressor", "general"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "findings": {
+      "type": "array", "maxItems": 20,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "path", "line", "severity", "title", "body", "sources"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+          "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+          "line": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+          "severity": { "enum": ["critical", "high", "medium", "low"] },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "body": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "sources": {
+            "type": "array", "uniqueItems": true, "maxItems": 100,
+            "items": { "type": "string", "pattern": "^[a-z0-9-]+:[a-z0-9-]{1,64}$", "maxLength": 100 }
+          }
+        }
+      }
+    },
+    "dispositions": {
+      "type": "array", "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["candidate", "decision", "reason"],
+        "properties": {
+          "candidate": { "type": "string", "pattern": "^[a-z0-9-]+:[a-z0-9-]{1,64}$", "maxLength": 100 },
+          "decision": { "enum": ["accepted", "refined", "rejected"] },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+        }
+      }
+    }
+  }
+}

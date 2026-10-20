@@ -1,0 +1,10 @@
+{
+  "triage": {
+    "prompt": "triage",
+    "methodologies": ["AGENTS.md", "CONTRIBUTING.md", "docs/CLI.md"]
+  },
+  "verifier": {
+    "prompt": "verifier",
+    "methodologies": ["AGENTS.md", ".agents/skills/skeptical-reviewer/SKILL.md"]
+  }
+}

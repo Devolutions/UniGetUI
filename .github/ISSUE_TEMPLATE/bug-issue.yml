@@ -19,15 +19,30 @@ body:
   - type: input
     attributes:
       label: UniGetUI Version
-      placeholder: 'x.y.z (e.g., 3.1.0)'
+      placeholder: 'e.g., 2026.3.2 or 3.3.7'
     validations:
       required: true
   - type: input
     attributes:
-      label: Windows version, edition, and architecture
-      placeholder: Windows 11 Pro 10.0.22000.0 x64
+      label: Operating system, version, and architecture
+      description: Include Windows, Linux distribution, or macOS version and CPU architecture (x64 or ARM64).
+      placeholder: Windows 11 Pro 24H2 x64 / Ubuntu 24.04 x64 / macOS 15.3 ARM64
     validations:
       required: true
+  - type: input
+    attributes:
+      label: Installation source / channel
+      description: Optional. How was UniGetUI installed (e.g., GitHub installer, WinGet, Scoop, Chocolatey, Microsoft Store, Flatpak, AppImage, DEB/RPM, macOS DMG/Homebrew)?
+      placeholder: GitHub installer / WinGet / Flatpak / Homebrew
+    validations:
+      required: false
+  - type: input
+    attributes:
+      label: Affected package manager or backend
+      description: Optional. Which package manager or backend is involved (e.g., WinGet COM API, Bundled WinGet / Pinget, Scoop, Chocolatey, Pip, npm, Cargo, Apt, Flatpak, Homebrew)?
+      placeholder: WinGet (COM API) / Scoop / Pip / UI only
+    validations:
+      required: false
   - type: textarea
     attributes:
       label: Describe your issue
@@ -50,10 +65,11 @@ body:
   - type: textarea
     attributes:
       label: Package Managers Logs
+      description: Required when reporting a package discovery, install, update, uninstall, or source error. Include the exact command line executed by UniGetUI.
       render: "text"
       placeholder: Paste your Package Manager logs here. Click the button on the bottom-left corner of UniGetUI -> Package Manager logs.
     validations:
-      required: true
+      required: false
   - type: textarea
     attributes:
       label: Relevant information

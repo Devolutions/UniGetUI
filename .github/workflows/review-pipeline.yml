@@ -1,0 +1,251 @@
+name: Automated review pipeline
+
+on:
+  workflow_call:
+    inputs:
+      pr-number:
+        required: true
+        type: number
+      head:
+        required: true
+        type: string
+      base:
+        required: true
+        type: string
+      automation-sha:
+        required: true
+        type: string
+    secrets:
+      api-key:
+        required: false
+
+permissions: {}
+
+env:
+  AUTOMATION_API_BASE_URL: ${{ vars.PR_AUTOMATION_API_BASE_URL }}
+  AUTOMATION_MODEL: ${{ vars.PR_AUTOMATION_MODEL }}
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/pr-automation
+      - uses: actions/download-artifact@v8
+        with:
+          name: automation-snapshots
+          path: automation-snapshots
+      - uses: actions/github-script@v8
+        env:
+          PR_NUMBER: ${{ inputs.pr-number }}
+          HEAD: ${{ inputs.head }}
+          BASE: ${{ inputs.base }}
+          AUTOMATION_SHA: ${{ inputs.automation-sha }}
+        with:
+          script: |
+            const fs = require("node:fs");
+            const {readJson} = require("./.github/pr-automation/validation");
+            const {prepare} = require("./.github/pr-automation/evidence");
+            const snapshot = readJson(`automation-snapshots/snapshot-${process.env.PR_NUMBER}.json`);
+            if (process.env.AUTOMATION_SHA !== process.env.GITHUB_WORKFLOW_SHA ||
+                snapshot.head !== process.env.HEAD || snapshot.base !== process.env.BASE ||
+                snapshot.automationSha !== process.env.AUTOMATION_SHA ||
+                snapshot.runId !== String(context.runId) || snapshot.status !== "ready") {
+              throw new Error("Evidence snapshot provenance mismatch");
+            }
+            await prepare(github, context.repo, snapshot, process.env.AUTOMATION_SHA);
+            fs.copyFileSync(`automation-snapshots/snapshot-${snapshot.number}.json`, "pr-evidence/snapshot.json");
+      - uses: actions/upload-artifact@v7
+        with:
+          name: review-evidence-${{ inputs.pr-number }}
+          path: |
+            pr-head/
+            pr-evidence/
+          include-hidden-files: true
+          retention-days: 1
+
+  classifier:
+    needs: evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    outputs:
+      reviewers: ${{ steps.select.outputs.reviewers }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/pr-automation
+      - uses: actions/download-artifact@v8
+        with:
+          name: review-evidence-${{ inputs.pr-number }}
+      - run: node .github/pr-automation/stages.js prepare classifier
+      - id: agent
+        uses: ./.github/actions/openai-agent
+        with:
+          api-key: ${{ secrets.api-key }}
+          base-url: ${{ vars.PR_AUTOMATION_API_BASE_URL }}
+          config-file: pr-evidence/agent-config.json
+          validator: .github/pr-automation/validation.js#agentValidator
+          validator-metadata: '{"stage":"classifier","context_file":"pr-evidence/context.json"}'
+          structured-output-file: .openai-agent-output/classifier.json
+      - id: select
+        run: node .github/pr-automation/stages.js select
+      - uses: actions/upload-artifact@v7
+        with:
+          name: review-plan-${{ inputs.pr-number }}
+          path: |
+            pr-evidence/classifier.json
+            pr-evidence/selected.json
+          retention-days: 1
+      - name: Record stage diagnostics
+        if: always()
+        env:
+          DIAGNOSTICS: ${{ steps.agent.outputs.diagnostics }}
+          STAGE_OUTCOME: ${{ steps.agent.outcome }}
+        run: node .github/pr-automation/diagnostics.js classifier
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: diagnostics-${{ inputs.pr-number }}-classifier
+          path: diagnostics/
+          retention-days: 1
+
+  specialists:
+    needs: classifier
+    if: needs.classifier.outputs.reviewers != '[]'
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        reviewer: ${{ fromJSON(needs.classifier.outputs.reviewers) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/pr-automation
+      - uses: actions/download-artifact@v8
+        with:
+          name: review-evidence-${{ inputs.pr-number }}
+      - name: Prepare trusted reviewer configuration
+        env:
+          STAGE: ${{ matrix.reviewer }}
+        run: node .github/pr-automation/stages.js prepare "$STAGE"
+      - id: agent
+        uses: ./.github/actions/openai-agent
+        with:
+          api-key: ${{ secrets.api-key }}
+          base-url: ${{ vars.PR_AUTOMATION_API_BASE_URL }}
+          config-file: pr-evidence/agent-config.json
+          validator: .github/pr-automation/validation.js#agentValidator
+          validator-metadata: '{"stage":"${{ matrix.reviewer }}","context_file":"pr-evidence/context.json"}'
+          structured-output-file: .openai-agent-output/${{ matrix.reviewer }}.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: specialist-${{ inputs.pr-number }}-${{ matrix.reviewer }}
+          path: .openai-agent-output/${{ matrix.reviewer }}.json
+          include-hidden-files: true
+          retention-days: 1
+      - name: Record stage diagnostics
+        if: always()
+        env:
+          STAGE: ${{ matrix.reviewer }}
+          DIAGNOSTICS: ${{ steps.agent.outputs.diagnostics }}
+          STAGE_OUTCOME: ${{ steps.agent.outcome }}
+        run: node .github/pr-automation/diagnostics.js "$STAGE"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: diagnostics-${{ inputs.pr-number }}-${{ matrix.reviewer }}
+          path: diagnostics/
+          retention-days: 1
+
+  general:
+    needs: [classifier, specialists]
+    if: >-
+      always() && needs.classifier.result == 'success' &&
+      (needs.specialists.result == 'success' || needs.specialists.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/pr-automation
+      - uses: actions/download-artifact@v8
+        with:
+          name: review-evidence-${{ inputs.pr-number }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: review-plan-${{ inputs.pr-number }}
+          path: pr-evidence
+      - uses: actions/download-artifact@v8
+        if: needs.specialists.result != 'skipped'
+        with:
+          pattern: specialist-${{ inputs.pr-number }}-*
+          path: specialist-results
+          merge-multiple: true
+      - run: |
+          node .github/pr-automation/stages.js aggregate specialist-results
+          node .github/pr-automation/stages.js prepare general
+      - id: agent
+        uses: ./.github/actions/openai-agent
+        with:
+          api-key: ${{ secrets.api-key }}
+          base-url: ${{ vars.PR_AUTOMATION_API_BASE_URL }}
+          config-file: pr-evidence/agent-config.json
+          validator: .github/pr-automation/validation.js#agentValidator
+          validator-metadata: '{"stage":"general","context_file":"pr-evidence/context.json"}'
+          structured-output-file: .openai-agent-output/general.json
+      - run: node .github/pr-automation/stages.js finish
+      - uses: actions/upload-artifact@v7
+        with:
+          name: automation-result-${{ inputs.pr-number }}
+          path: automation-results/
+          retention-days: 1
+      - name: Record stage diagnostics
+        if: always()
+        env:
+          DIAGNOSTICS: ${{ steps.agent.outputs.diagnostics }}
+          STAGE_OUTCOME: ${{ steps.agent.outcome }}
+        run: node .github/pr-automation/diagnostics.js general
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: diagnostics-${{ inputs.pr-number }}-general
+          path: diagnostics/
+          retention-days: 1

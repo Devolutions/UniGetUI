@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "defaultMode": "report-only",
+  "defaultAiEnabled": false,
+  "optInLabel": "automation/ai-review",
+  "maxReviews": 3,
+  "maxParallel": 3,
+  "maxFiles": 3000,
+  "maxDiffBytes": 4194304,
+  "maxTreeBytes": 67108864,
+  "reviewers": ["dotnet-aot", "package-engine", "ui-localization", "skeptical", "code-compressor"],
+  "workflows": [
+    { "file": "dotnet-test.yml", "name": ".NET Tests" },
+    { "file": "cli-headless-e2e.yml", "name": "CLI Headless E2E" },
+    { "file": "translation-validation.yml", "name": "Translation Validation" },
+    { "file": "pr-automation-tests.yml", "name": "PR Automation Tests" }
+  ],
+  "size": [
+    { "label": "size/XS", "lines": 49, "files": 2 },
+    { "label": "size/S", "lines": 199, "files": 5 },
+    { "label": "size/M", "lines": 449, "files": 10 },
+    { "label": "size/L", "lines": 899, "files": 20 },
+    { "label": "size/XL", "lines": 1299, "files": 49 },
+    { "label": "size/XXL", "lines": null, "files": null }
+  ]
+}

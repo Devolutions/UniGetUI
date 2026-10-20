@@ -1,0 +1,68 @@
+name: PR Automation Tests
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/pr-automation/**"
+      - ".github/issue-automation/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/actions/openai-agent/**"
+      - ".github/actions/sync-skills/**"
+      - ".github/workflows/**"
+      - ".github/skills-sync.yml"
+      - ".agents/skills/skeptical-reviewer/**"
+      - ".agents/skills/code-compressor/**"
+      - ".agents/skills/translation-review/SKILL.md"
+      - "docs/ISSUE_DIAGNOSTICS.md"
+      - "AGENTS.md"
+      - "CONTRIBUTING.md"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/pr-automation/**"
+      - ".github/issue-automation/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - ".github/skills-sync.yml"
+      - ".agents/skills/**"
+      - "docs/ISSUE_DIAGNOSTICS.md"
+      - "AGENTS.md"
+      - "CONTRIBUTING.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/pr-automation
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/issue-automation
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/actions/openai-agent
+      - run: npm run check
+        working-directory: .github/pr-automation
+      - run: npm run check
+        working-directory: .github/issue-automation
+      - run: node --test test/*.test.js
+        working-directory: .github/actions/sync-skills
+      - run: npm run check
+        working-directory: .github/actions/openai-agent
+      - name: Verify checked-in action bundle
+        run: git diff --exit-code -- .github/actions/openai-agent/dist

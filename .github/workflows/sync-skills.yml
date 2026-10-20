@@ -1,0 +1,42 @@
+name: Shared skills preview
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Validate trusted manifest
+        id: manifest
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { validateManifest } = require('./.github/actions/sync-skills/sync.js');
+          const manifest = validateManifest(JSON.parse(fs.readFileSync('.github/skills-sync.yml', 'utf8')));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `revision=${manifest.revision}\nrepository=${manifest.repository}\n`);
+          NODE
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ steps.manifest.outputs.repository }}
+          ref: ${{ steps.manifest.outputs.revision }}
+          path: .github/actions/sync-skills/.upstream
+          persist-credentials: false
+      - name: Offline synchronizer safety tests
+        working-directory: .github/actions/sync-skills
+        run: node --test test/*.test.js
+      - name: Preview only
+        uses: ./.github/actions/sync-skills
+        with:
+          source-directory: ${{ github.workspace }}/.github/actions/sync-skills/.upstream
+          mode: preview

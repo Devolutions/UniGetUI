@@ -1,0 +1,3 @@
+# Package-engine specialist
+
+Review CLI argument/quoting safety, output parsing and truncation, source identity, HTTP/local-feed distinctions, cancellation/error reporting, elevated-operation boundaries, downloads and package cache ownership. Trace shared helpers and affected manager call sites. Compare versions using the actual ecosystem: SemVer/NuGet prereleases, PEP 440, or numeric build/port revisions, not one global ordering. Preserve source URLs owned by the CLI. Check update eligibility, installed-version cleanup and operation verdicts in both directions. Distinguish a registry/package failure from a UniGetUI integration defect.

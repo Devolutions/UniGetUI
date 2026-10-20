@@ -6,14 +6,32 @@ body:
   - type: checkboxes
     attributes:
       label: Please confirm these before moving forward.
-      description: Please confirm the following before posting your issue.
+      description: Please confirm the following before posting your issue. Do not delete your user data folder unless you have backed up your settings first.
       options:
-        - label: I have tried deleting a folder named `UniGetUI` under `%UserProfile%\AppData\Local\UniGetUI`.
-          required: true
-        - label: I have tried reinstalling UniGetUI.
+        - label: I have tried reinstalling or restarting UniGetUI.
           required: true
         - label: I have tested that this issue has not been fixed in the latest [(beta or stable) release](https://github.com/Devolutions/UniGetUI/releases/).
           required: true
+  - type: input
+    attributes:
+      label: UniGetUI Version
+      placeholder: 'e.g., 2026.3.2 or 3.3.7'
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Operating system, version, and architecture
+      description: Include Windows, Linux distribution, or macOS version and CPU architecture (x64 or ARM64).
+      placeholder: Windows 11 Pro 24H2 x64 / Ubuntu 24.04 x64 / macOS 15.3 ARM64
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Installation source / channel
+      description: Optional. How was UniGetUI installed (e.g., GitHub installer, WinGet, Scoop, Microsoft Store, Flatpak, AppImage, DEB/RPM, macOS DMG/Homebrew)?
+      placeholder: GitHub installer / WinGet / Flatpak / Homebrew
+    validations:
+      required: false
   - type: textarea
     attributes:
       label: Describe your crash

@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "defaultMode": "report-only",
+  "defaultAiEnabled": false,
+  "defaultDailyBudget": 0,
+  "maxDailyBudget": 100,
+  "optInLabel": "automation/ai-triage",
+  "maxBatchIssues": 20,
+  "maxRelatedCandidates": 5,
+  "maxParallel": 2,
+  "maxBodyBytes": 65536,
+  "maxBundleBytes": 131072,
+  "maxComments": 100,
+  "currentReleaseSeries": "2026.3",
+  "supportedReleaseSeries": ["2026.3", "2026.2", "2026.1"],
+  "legacyReleaseSeries": ["3.3", "3.2", "3.1", "3.0", "2."],
+  "stages": ["triage", "verifier"],
+  "protectedLabels": [
+    "ready-to-go",
+    "needs-further-study",
+    "needs-author-answer",
+    "waiting-for-user-feedback",
+    "ready-for-release",
+    "released",
+    "waiting-for-something",
+    "important",
+    "hard-one",
+    "duplicate",
+    "not-UniGetUI",
+    "automation/ai-triage"
+  ],
+  "typeLabels": [
+    "bug",
+    "new-feature",
+    "enhancement",
+    "widgets-for-unigetui"
+  ],
+  "managerLabels": [
+    "winget",
+    "scoop",
+    "chocolatey",
+    "powershell",
+    "vcpkg",
+    "cargo",
+    "pip",
+    "npm",
+    "bun",
+    "dotnet-tool",
+    "homebrew",
+    "apt",
+    "dnf",
+    "pacman",
+    "flatpak",
+    "snap"
+  ],
+  "platformLabels": [
+    "platform/windows",
+    "platform/linux",
+    "platform/macos"
+  ],
+  "areaLabels": [
+    "area/accessibility",
+    "area/cli",
+    "area/ui",
+    "area/package-bundles",
+    "area/scheduling",
+    "area/elevation-agent",
+    "area/localization"
+  ]
+}

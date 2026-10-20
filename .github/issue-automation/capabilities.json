@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "pinnedRelease": {
+    "tag": "v2026.3.2",
+    "publishedAt": "2026-10-15T18:58:36Z",
+    "assets": [
+      "UniGetUI.Installer.exe",
+      "UniGetUI.Installer.x64.exe",
+      "UniGetUI.Installer.arm64.exe",
+      "UniGetUI.x64.zip",
+      "UniGetUI.arm64.zip",
+      "UniGetUI.linux-x64.deb",
+      "UniGetUI.linux-x64.rpm",
+      "UniGetUI.linux-x64.tar.gz",
+      "UniGetUI.linux-arm64.deb",
+      "UniGetUI.linux-arm64.rpm",
+      "UniGetUI.linux-arm64.tar.gz",
+      "UniGetUI.macos-x64.dmg",
+      "UniGetUI.macos-x64.tar.gz",
+      "UniGetUI.macos-arm64.dmg",
+      "UniGetUI.macos-arm64.tar.gz"
+    ]
+  },
+  "capabilities": [
+    {
+      "id": "cross-platform-desktop",
+      "title": "Linux and macOS Avalonia desktop builds",
+      "status": "released",
+      "sinceRelease": "v2026.3.2",
+      "evidence": ["README.md", "v2026.3.2"],
+      "shippedScope": [
+        "Native Linux x64/arm64 (.deb, .rpm, .tar.gz) and macOS x64/arm64 (.dmg, .tar.gz) builds with Avalonia UI"
+      ],
+      "unmetOrDistinctScope": [
+        "Flatpak/Flathub distribution packaging (#4694, #5428)",
+        "Distribution-specific repositories (AUR, PPA, Homebrew cask)",
+        "Windows-only package managers on non-Windows hosts"
+      ]
+    },
+    {
+      "id": "native-arm64",
+      "title": "Native ARM64 builds for Windows, Linux and macOS",
+      "status": "released",
+      "sinceRelease": "v2026.3.2",
+      "evidence": ["README.md", "v2026.3.2"],
+      "shippedScope": [
+        "Native Windows ARM64 installer and portable zip (UniGetUI.Installer.arm64.exe, UniGetUI.arm64.zip)",
+        "Native Apple Silicon (macos-arm64) and Linux ARM64 packages"
+      ],
+      "unmetOrDistinctScope": [
+        "Per-package preferred architecture fallback when an upstream WinGet manifest lags on ARM64 (#2407 discussion)"
+      ]
+    },
+    {
+      "id": "cli-and-tui",
+      "title": "Public CLI (uniget) and interactive Terminal UI (uniget tui)",
+      "status": "released",
+      "sinceRelease": "v2026.3.2",
+      "evidence": ["docs/CLI.md", "docs/TUI.md", "docs/IPC.md"],
+      "shippedScope": [
+        "uniget console launcher for status, package search/install/update/uninstall, manager, source, bundle, backup and operation commands",
+        "Interactive Consolonia terminal UI via uniget tui",
+        "Headless bundle import and installation via uniget bundle import and uniget bundle install"
+      ],
+      "unmetOrDistinctScope": [
+        "Single-flag legacy syntax such as UniGetUI file --install --no-ui without a running IPC/headless session (#3580)",
+        "Headless package update-all and package update-manager commands that still require GUI-side upgrade handlers"
+      ]
+    },
+    {
+      "id": "headless-daemon",
+      "title": "Headless background daemon and IPC automation server",
+      "status": "partial",
+      "sinceRelease": "v2026.3.2",
+      "evidence": ["docs/CLI.md", "docs/IPC.md"],
+      "shippedScope": [
+        "UniGetUI --headless background daemon with named-pipe and TCP IPC transport"
+      ],
+      "unmetOrDistinctScope": [
+        "Headless elevator initialization for elevated package operations (#5541, candidate PR #5545)",
+        "Command-line flags to preconfigure per-manager elevation settings and completely suppress UAC prompts on headless servers (#1292)",
+        "Headless package update-all without GUI session"
+      ]
+    },
+    {
+      "id": "scheduled-maintenance",
+      "title": "Scheduled update checks, update installation and backups",
+      "status": "partial",
+      "sinceRelease": "v2026.3.2",
+      "evidence": ["README.md", "docs/TUI.md"],
+      "shippedScope": [
+        "Update checks on an interval or daily/weekly at a chosen time",
+        "Scheduled update installation after every update check or daily/weekly at a chosen time",
+        "Scheduled local or cloud backups at app start or daily/weekly"
+      ],
+      "unmetOrDistinctScope": [
+        "Monthly update check cadence (#3605)",
+        "Windows Update-style active hours suppression window"
+      ]
+    }
+  ]
+}

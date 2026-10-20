@@ -1,0 +1,121 @@
+name: Pull request automation
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, edited, closed, labeled, unlabeled]
+  workflow_run:
+    workflows: [".NET Tests", "CLI Headless E2E", "Translation Validation", "PR Automation Tests"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Pull request number (uses the same opt-in and CI gates)
+        required: true
+        type: number
+
+permissions: {}
+
+env:
+  AUTOMATION_MODE: ${{ vars.PR_AUTOMATION_MODE }}
+  AUTOMATION_AI_ENABLED: ${{ vars.PR_AUTOMATION_AI_ENABLED }}
+  AUTOMATION_API_BASE_URL: ${{ vars.PR_AUTOMATION_API_BASE_URL }}
+  AUTOMATION_MODEL: ${{ vars.PR_AUTOMATION_MODEL }}
+  AUTOMATION_SHA: ${{ github.workflow_sha }}
+
+jobs:
+  admission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      actions: read
+    outputs:
+      matrix: ${{ steps.admit.outputs.matrix }}
+      has-reviews: ${{ steps.admit.outputs.has-reviews }}
+      has-prs: ${{ steps.admit.outputs.has-prs }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/pr-automation
+      - id: admit
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await require("./.github/pr-automation/admission").admission({github, context, core});
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: automation-snapshots
+          path: automation-snapshots/
+          retention-days: 1
+          if-no-files-found: warn
+
+  review:
+    needs: admission
+    if: needs.admission.outputs.has-reviews == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.admission.outputs.matrix) }}
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      actions: read
+    uses: ./.github/workflows/review-pipeline.yml
+    with:
+      pr-number: ${{ matrix.number }}
+      head: ${{ matrix.head }}
+      base: ${{ matrix.base }}
+      automation-sha: ${{ github.workflow_sha }}
+    secrets:
+      api-key: ${{ secrets.PR_AUTOMATION_API_KEY }}
+
+  publication:
+    needs: [admission, review]
+    if: >-
+      always() && needs.admission.result == 'success' &&
+      needs.admission.outputs.has-prs == 'true' && vars.PR_AUTOMATION_MODE == 'publish'
+    concurrency:
+      group: pr-automation-writer
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: .github/pr-automation
+      - uses: actions/download-artifact@v8
+        with:
+          name: automation-snapshots
+          path: automation-snapshots
+      - uses: actions/download-artifact@v8
+        if: needs.admission.outputs.has-reviews == 'true'
+        with:
+          pattern: automation-result-*
+          path: automation-results
+          merge-multiple: true
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            await require("./.github/pr-automation/publication").publication({github, context, core});

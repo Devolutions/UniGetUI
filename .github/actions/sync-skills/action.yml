@@ -1,0 +1,25 @@
+name: Preview or locally sync approved skills
+description: Offline explicit-directory mirroring; never publishes or calls a provider
+inputs:
+  source-directory:
+    description: Local checkout of the manifest-pinned public upstream (caller verifies revision)
+    required: true
+  target-directory:
+    description: Local repository checkout; no files change in preview mode
+    default: ${{ github.workspace }}
+  manifest:
+    description: Trusted JSON manifest (JSON is a YAML subset)
+    default: ${{ github.workspace }}/.github/skills-sync.yml
+  mode:
+    description: preview (default) or apply (local files only, never git publication)
+    default: preview
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SYNC_SOURCE: ${{ inputs.source-directory }}
+        SYNC_TARGET: ${{ inputs.target-directory }}
+        SYNC_MANIFEST: ${{ inputs.manifest }}
+        SYNC_MODE: ${{ inputs.mode }}
+      run: node "$GITHUB_ACTION_PATH/sync.js" "$SYNC_SOURCE" "$SYNC_TARGET" "$SYNC_MANIFEST" "$SYNC_MODE"

@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "issueNumber",
+    "fingerprint",
+    "verified",
+    "approvedLabels",
+    "rejectedLabels",
+    "summary"
+  ],
+  "properties": {
+    "issueNumber": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+    "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "verified": { "type": "boolean" },
+    "approvedLabels": {
+      "type": "array",
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+    },
+    "rejectedLabels": {
+      "type": "array",
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 1500 }
+  }
+}

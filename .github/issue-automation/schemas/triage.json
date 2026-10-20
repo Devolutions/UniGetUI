@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "issueNumber",
+    "fingerprint",
+    "abstain",
+    "issueKind",
+    "proposedLabels",
+    "ownershipHypothesis",
+    "evidenceCitations",
+    "relatedCandidates",
+    "capabilityMatches",
+    "missingDiagnostics",
+    "recommendedQueue",
+    "summary"
+  ],
+  "properties": {
+    "issueNumber": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+    "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "abstain": { "type": "boolean" },
+    "issueKind": { "enum": ["bug", "feature-or-enhancement", "unclassified"] },
+    "proposedLabels": {
+      "type": "array",
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+    },
+    "ownershipHypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "confidence", "basis"],
+      "properties": {
+        "category": {
+          "enum": [
+            "unigetui-integration",
+            "manager-upstream",
+            "package-manifest-or-installer",
+            "environment",
+            "unknown"
+          ]
+        },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "basis": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "evidenceCitations": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "commentId", "quote"],
+        "properties": {
+          "source": { "enum": ["title", "body", "comment"] },
+          "commentId": { "type": ["integer", "null"], "minimum": 1 },
+          "quote": { "type": "string", "minLength": 1, "maxLength": 300 }
+        }
+      }
+    },
+    "relatedCandidates": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["number", "similarityBasis", "importantDifference"],
+        "properties": {
+          "number": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "similarityBasis": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "importantDifference": { "type": "string", "minLength": 1, "maxLength": 300 }
+        }
+      }
+    },
+    "capabilityMatches": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capabilityId", "sinceRelease", "unmetScope"],
+        "properties": {
+          "capabilityId": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "sinceRelease": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "unmetScope": { "type": "string", "minLength": 1, "maxLength": 400 }
+        }
+      }
+    },
+    "missingDiagnostics": {
+      "type": "array",
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+    },
+    "recommendedQueue": {
+      "enum": [
+        "current-regressions",
+        "author-replied",
+        "release-verification",
+        "implemented-or-partial",
+        "related-clusters",
+        "information-gaps",
+        "upstream-or-environment",
+        "roadmap-requests"
+      ]
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 1500 }
+  }
+}

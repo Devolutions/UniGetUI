@@ -11,7 +11,9 @@ Use the GitHub issue forms and choose the template that best matches your reques
 - **New feature:** use the feature request template.
 - **Improvement to an existing feature:** use the enhancement/improvement template.
 
-Before opening an issue, search for duplicates and check whether the problem is specific to UniGetUI. If the same behavior can be reproduced directly with the underlying package manager or package, report it to that project first.
+Before opening an issue, search for duplicates and check whether the problem is specific to UniGetUI. See [Issue diagnostics](docs/ISSUE_DIAGNOSTICS.md) for how to compare the exact command line executed by UniGetUI (including `--source`, `--scope`, `--location`, and bundled vs system backends) before reporting a package failure. If the same exact command fails directly with the underlying package manager or package installer, report it to that project first.
+
+Issue triage automation is advisory and starts in report-only mode with AI disabled by default. Protected maintainer workflow and judgment labels are never modified by automation. See [Issue automation](.github/ISSUE_AUTOMATION.md) for label ownership, queue digests, and rollout controls.
 
 Do not include secrets, tokens, personal data, or private logs in public issues. Security vulnerabilities should be reported through the [Devolutions security page](https://devolutions.net/security/). Private non-security inquiries can be sent through the [Devolutions contact page](https://devolutions.net/contact/).
 
@@ -25,6 +27,11 @@ Feature requests and improvements are reviewed by the maintainers and prioritize
 - Mark unfinished work as a draft pull request.
 - Make sure the project builds and the affected behavior is tested before requesting review.
 - Spam, unrelated, non-building, or low-effort pull requests may be closed without review.
+
+PR automation is advisory and starts in report-only mode. AI processing and PR
+publication require separate maintainer activation; automated reviews never
+approve, merge, or close a pull request. See [PR automation](.github/PR_AUTOMATION.md)
+for opt-in policy, evidence limits, and deployment requirements.
 
 ## Development setup and validation
 

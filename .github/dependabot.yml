@@ -8,3 +8,15 @@ updates:
       actions-deps:
         patterns:
           - "*"
+  - package-ecosystem: "npm"
+    directory: "/.github/actions/openai-agent"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/.github/pr-automation"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/.github/issue-automation"
+    schedule:
+      interval: "weekly"

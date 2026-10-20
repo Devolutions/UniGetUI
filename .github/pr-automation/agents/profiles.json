@@ -1,0 +1,30 @@
+{
+  "classifier": {
+    "prompt": "classifier",
+    "methodologies": ["AGENTS.md", "CONTRIBUTING.md"]
+  },
+  "dotnet-aot": {
+    "prompt": "dotnet-aot",
+    "methodologies": ["AGENTS.md"]
+  },
+  "package-engine": {
+    "prompt": "package-engine",
+    "methodologies": ["AGENTS.md"]
+  },
+  "ui-localization": {
+    "prompt": "ui-localization",
+    "methodologies": ["AGENTS.md", ".agents/skills/translation-review/SKILL.md"]
+  },
+  "skeptical": {
+    "prompt": "skeptical",
+    "methodologies": ["AGENTS.md", ".agents/skills/skeptical-reviewer/SKILL.md"]
+  },
+  "code-compressor": {
+    "prompt": "code-compressor",
+    "methodologies": ["AGENTS.md", ".agents/skills/code-compressor/SKILL.md"]
+  },
+  "general": {
+    "prompt": "general",
+    "methodologies": ["AGENTS.md", "CONTRIBUTING.md"]
+  }
+}

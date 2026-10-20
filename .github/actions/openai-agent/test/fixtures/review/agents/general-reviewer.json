@@ -1,0 +1,6 @@
+{
+  "max_output_repair_attempts": 2,
+  "max_turns": 32,
+  "max_tool_calls": 120,
+  "max_request_retries": 4
+}

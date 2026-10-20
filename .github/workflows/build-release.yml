@@ -4,8 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (required, e.g. 2026.3.2 or 2026.3.2-beta1)'
+        description: 'Base release version (required, e.g. 2026.3.2)'
         required: true
+        type: string
+      channel:
+        description: 'Release channel'
+        required: true
+        type: choice
+        options:
+          - stable
+          - beta
+        default: stable
+      beta-number:
+        description: 'Beta number (>= 1, used when channel is beta)'
+        required: false
+        type: number
+        default: 1
       draft-release:
         description: 'Create the GitHub Release as a draft'
         required: true
@@ -33,6 +47,7 @@ jobs:
       package-env: ${{ steps.info.outputs.package-env }}
       package-version: ${{ steps.info.outputs.package-version }}
       onedrive-version: ${{ steps.info.outputs.onedrive-version }}
+      release-channel: ${{ steps.info.outputs.release-channel }}
       is-prerelease: ${{ steps.info.outputs.is-prerelease }}
       draft-release: ${{ steps.info.outputs.draft-release }}
       skip-publish: ${{ steps.info.outputs.skip-publish }}
@@ -66,29 +81,58 @@ jobs:
             $DryRun = $true # force dry run when publishing outside production environment
           }
 
-          $PackageVersion = '${{ inputs.version }}'.Trim().TrimStart('v', 'V')
-          if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
+          $BaseVersion = '${{ inputs.version }}'.Trim().TrimStart('v', 'V')
+          if ([string]::IsNullOrWhiteSpace($BaseVersion)) {
             throw "The workflow_dispatch version input is required."
           }
+          if ($BaseVersion -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') {
+            throw "Invalid base version '$BaseVersion'. Expected a numeric version such as '2026.3.2' (use the 'channel' and 'beta-number' inputs for beta builds)."
+          }
 
-          $VersionParts = $PackageVersion -split '-', 2
-          $BaseVersion = $VersionParts[0]
-          $PrereleaseSuffix = if ($VersionParts.Count -gt 1) { "-$($VersionParts[1])" } else { "" }
-          $IsPrerelease = $VersionParts.Count -gt 1
           $BaseSegments = $BaseVersion -split '\.'
+          $ThreePartBase = if ($BaseSegments.Count -eq 4 -and $BaseSegments[3] -eq '0') {
+            "$($BaseSegments[0]).$($BaseSegments[1]).$($BaseSegments[2])"
+          } else {
+            $BaseVersion
+          }
           $FourPartBase = if ($BaseSegments.Count -eq 3) { "$BaseVersion.0" } else { $BaseVersion }
+
+          $Channel = '${{ inputs.channel }}'.Trim().ToLowerInvariant()
+          switch ($Channel) {
+            'beta' {
+              $BetaNumber = 0
+              if (-not [int]::TryParse('${{ inputs.beta-number }}', [ref]$BetaNumber) -or $BetaNumber -lt 1) {
+                throw "Invalid beta-number '${{ inputs.beta-number }}'. Must be an integer >= 1 when channel is 'beta'."
+              }
+              $PrereleaseSuffix = "-beta$BetaNumber"
+              $IsPrerelease = $true
+              $ReleaseChannel = "Beta"
+            }
+            'stable' {
+              $PrereleaseSuffix = ""
+              $IsPrerelease = $false
+              $ReleaseChannel = "Current"
+            }
+            default {
+              throw "Unsupported channel '$Channel'. Expected 'stable' or 'beta'."
+            }
+          }
+
+          $PackageVersion = "$ThreePartBase$PrereleaseSuffix"
           $OneDriveVersion = "$FourPartBase$PrereleaseSuffix"
 
           echo "package-env=$PackageEnv" >> $Env:GITHUB_OUTPUT
           echo "package-version=$PackageVersion" >> $Env:GITHUB_OUTPUT
           echo "onedrive-version=$OneDriveVersion" >> $Env:GITHUB_OUTPUT
+          echo "release-channel=$ReleaseChannel" >> $Env:GITHUB_OUTPUT
           echo "is-prerelease=$($IsPrerelease.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
           echo "draft-release=$($DraftRelease.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
           echo "skip-publish=$($SkipPublish.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
           echo "dry-run=$($DryRun.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
 
           echo "::notice::Environment: $PackageEnv"
-          echo "::notice::Version: $PackageVersion (OneDrive: $OneDriveVersion, Prerelease: $IsPrerelease)"
+          echo "::notice::Channel: $ReleaseChannel (Prerelease: $IsPrerelease)"
+          echo "::notice::Version: $PackageVersion (OneDrive: $OneDriveVersion)"
           echo "::notice::DraftRelease: $DraftRelease"
           echo "::notice::DryRun: $DryRun"
 
@@ -877,7 +921,7 @@ jobs:
           } else {
             $ReleaseArgs = @('release', 'create', $ReleaseTag, '--repo', $Repository, '--title', $ReleaseTitle)
             if ($DraftRelease) { $ReleaseArgs += '--draft' }
-            if ($IsPrerelease) { $ReleaseArgs += '--prerelease' }
+            if ($IsPrerelease) { $ReleaseArgs += @('--prerelease', '--latest=false') }
             $ReleaseArgs += $Files.FullName
             & gh @ReleaseArgs
           }

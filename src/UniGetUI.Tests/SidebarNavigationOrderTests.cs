@@ -20,7 +20,8 @@ namespace UniGetUI.Tests;
 
 public sealed class SidebarNavigationOrderTests : IDisposable
 {
-    private readonly HeadlessUnitTestSession _session = HeadlessUnitTestSession.StartNew(typeof(Application));
+    private readonly HeadlessUnitTestSession _session =
+        HeadlessUnitTestSession.GetOrStartForAssembly(typeof(SidebarNavigationOrderTests).Assembly);
     private readonly string _testRoot = Path.Combine(Path.GetTempPath(), nameof(SidebarNavigationOrderTests), Guid.NewGuid().ToString("N"));
 
     public SidebarNavigationOrderTests()
@@ -32,7 +33,6 @@ public sealed class SidebarNavigationOrderTests : IDisposable
 
     public void Dispose()
     {
-        _session.Dispose();
         CoreSettings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
         Directory.Delete(_testRoot, recursive: true);
@@ -284,9 +284,16 @@ public sealed class SidebarNavigationOrderTests : IDisposable
         var view = new SidebarView { DataContext = vm };
         var window = new Window { Width = 300, Height = height, Content = view };
         window.Show();
-        Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
+        RunJobsAndRender();
         return (window, vm, view.FindControl<ListBox>("NavListBox")!);
+    }
+
+    private static void RunJobsAndRender()
+    {
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Dispatcher.UIThread.RunJobs();
     }
 
     private static ListBoxItem[] Items(ListBox list) => list.Items.OfType<ListBoxItem>().ToArray();
@@ -339,9 +346,10 @@ public sealed class SidebarNavigationOrderTests : IDisposable
 
         public void Send(RawPointerEventType type, Point position)
         {
+            RunJobsAndRender();
             _input((RawInputEventArgs)Activator.CreateInstance(
                 RawTouchEventArgsType, _device, _timestamp++, _root, type, position, RawInputModifiers.None, 1L)!);
-            Dispatcher.UIThread.RunJobs();
+            RunJobsAndRender();
         }
     }
 }

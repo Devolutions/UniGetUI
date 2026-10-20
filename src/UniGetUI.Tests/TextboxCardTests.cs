@@ -11,7 +11,8 @@ namespace UniGetUI.Tests;
 
 public sealed class TextboxCardTests : IDisposable
 {
-    private readonly HeadlessUnitTestSession _session = HeadlessUnitTestSession.StartNew(typeof(Application));
+    private readonly HeadlessUnitTestSession _session =
+        HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TextboxCardTests).Assembly);
     private readonly string _testRoot = Path.Combine(Path.GetTempPath(), nameof(TextboxCardTests), Guid.NewGuid().ToString("N"));
 
     public TextboxCardTests()
@@ -23,7 +24,6 @@ public sealed class TextboxCardTests : IDisposable
 
     public void Dispose()
     {
-        _session.Dispose();
         CoreSettings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
         Directory.Delete(_testRoot, recursive: true);

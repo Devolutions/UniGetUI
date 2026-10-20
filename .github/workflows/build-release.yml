@@ -9,7 +9,7 @@ on:
         type: string
       channel:
         description: 'Release channel'
-        required: true
+        required: false
         type: choice
         options:
           - stable
@@ -98,6 +98,9 @@ jobs:
           $FourPartBase = if ($BaseSegments.Count -eq 3) { "$BaseVersion.0" } else { $BaseVersion }
 
           $Channel = '${{ inputs.channel }}'.Trim().ToLowerInvariant()
+          if ([string]::IsNullOrWhiteSpace($Channel)) {
+            $Channel = 'stable'
+          }
           switch ($Channel) {
             'beta' {
               $BetaNumber = 0

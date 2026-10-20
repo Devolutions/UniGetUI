@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using UniGetUI.Core.Logging;
@@ -107,10 +108,60 @@ internal static class AutoUpdaterHelpers
         }
 
         string canonical = preRelease is not null
-            ? $"{normalizedCore}-{preRelease}"
+            ? $"{normalizedCore}-{CanonicalizeUpdaterPreRelease(preRelease)}"
             : normalizedCore!.ToString();
 
         return SemanticVersion.TryParse(canonical, SemVerLabels.CaseInsensitive, out version);
+    }
+
+    // Canonicalizes updater pre-release labels such as "beta1" or "rc10" into dot-separated
+    // SemVer identifiers ("beta.1", "rc.10") before passing to SemanticVersion. This keeps
+    // SemanticVersion strictly SemVer 2.0 compliant for package managers (npm, Cargo, NuGet)
+    // while giving the self-updater a transitive total order where beta1 < beta2 < beta10.
+    internal static string CanonicalizeUpdaterPreRelease(string preRelease)
+    {
+        string[] segments = preRelease.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < segments.Length; i++)
+        {
+            string segment = segments[i];
+            int digitStart = 0;
+            while (digitStart < segment.Length && char.IsAsciiLetter(segment[digitStart]))
+            {
+                digitStart++;
+            }
+
+            if (digitStart == 0 || digitStart == segment.Length)
+            {
+                continue;
+            }
+
+            ReadOnlySpan<char> trailing = segment.AsSpan(digitStart);
+            bool allDigits = true;
+            for (int j = 0; j < trailing.Length; j++)
+            {
+                if (!char.IsAsciiDigit(trailing[j]))
+                {
+                    allDigits = false;
+                    break;
+                }
+            }
+
+            if (
+                allDigits
+                && int.TryParse(
+                    trailing,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out int numericSuffix
+                )
+            )
+            {
+                segments[i] =
+                    $"{segment[..digitStart]}.{numericSuffix.ToString(CultureInfo.InvariantCulture)}";
+            }
+        }
+
+        return string.Join('.', segments);
     }
 
     internal static SemanticVersion ParseUpdaterVersionOrFallback(
@@ -356,5 +407,131 @@ internal static class AutoUpdaterHelpers
         public string Type { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public string Hash { get; set; } = string.Empty;
+    }
+
+    internal sealed class UpdaterAttemptCoordinator
+    {
+        private readonly Lock _lock = new();
+        private Task<bool>? _activeAttempt;
+        private bool _isManualCheck;
+        private string? _awaitingConsentVersion;
+
+        public bool IsActive
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _activeAttempt is { IsCompleted: false };
+                }
+            }
+        }
+
+        public bool IsManualCheck
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _isManualCheck;
+                }
+            }
+        }
+
+        public void MarkAwaitingConsent(string versionName)
+        {
+            lock (_lock)
+            {
+                _awaitingConsentVersion = versionName;
+            }
+        }
+
+        public void ClearAwaitingConsent()
+        {
+            lock (_lock)
+            {
+                _awaitingConsentVersion = null;
+            }
+        }
+
+        public Task<bool> RunOrJoinAsync(
+            bool manualCheck,
+            Func<Task<bool>> attemptFactory,
+            Action? onJoinedActiveAttempt = null,
+            Action<string>? onManualJoinWhileAwaitingConsent = null,
+            Action? onManualJoinWhileBusy = null
+        )
+        {
+            Task<bool> taskToAwait;
+            bool joinedExisting = false;
+            bool upgradedToManual = false;
+            string? pendingConsentVersion = null;
+
+            lock (_lock)
+            {
+                if (_activeAttempt is { IsCompleted: false } existing)
+                {
+                    taskToAwait = existing;
+                    joinedExisting = true;
+                    if (manualCheck)
+                    {
+                        if (!_isManualCheck)
+                        {
+                            _isManualCheck = true;
+                            upgradedToManual = true;
+                        }
+
+                        pendingConsentVersion = _awaitingConsentVersion;
+                    }
+                }
+                else
+                {
+                    _isManualCheck = manualCheck;
+                    _awaitingConsentVersion = null;
+                    Task<bool> started = RunCoreAsync(attemptFactory);
+                    if (!started.IsCompleted)
+                    {
+                        _activeAttempt = started;
+                    }
+
+                    taskToAwait = started;
+                }
+            }
+
+            if (joinedExisting)
+            {
+                onJoinedActiveAttempt?.Invoke();
+                if (manualCheck)
+                {
+                    if (pendingConsentVersion is not null)
+                    {
+                        onManualJoinWhileAwaitingConsent?.Invoke(pendingConsentVersion);
+                    }
+                    else if (upgradedToManual)
+                    {
+                        onManualJoinWhileBusy?.Invoke();
+                    }
+                }
+            }
+
+            return taskToAwait;
+        }
+
+        private async Task<bool> RunCoreAsync(Func<Task<bool>> attemptFactory)
+        {
+            try
+            {
+                return await attemptFactory();
+            }
+            finally
+            {
+                lock (_lock)
+                {
+                    _activeAttempt = null;
+                    _isManualCheck = false;
+                    _awaitingConsentVersion = null;
+                }
+            }
+        }
     }
 }

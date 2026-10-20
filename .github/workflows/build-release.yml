@@ -46,6 +46,7 @@ jobs:
     outputs:
       package-env: ${{ steps.info.outputs.package-env }}
       package-version: ${{ steps.info.outputs.package-version }}
+      macos-version: ${{ steps.info.outputs.macos-version }}
       onedrive-version: ${{ steps.info.outputs.onedrive-version }}
       release-channel: ${{ steps.info.outputs.release-channel }}
       is-prerelease: ${{ steps.info.outputs.is-prerelease }}
@@ -122,10 +123,12 @@ jobs:
           }
 
           $PackageVersion = "$ThreePartBase$PrereleaseSuffix"
+          $MacOsVersion = "$($BaseSegments[0]).$($BaseSegments[1]).$($BaseSegments[2])"
           $OneDriveVersion = "$FourPartBase$PrereleaseSuffix"
 
           echo "package-env=$PackageEnv" >> $Env:GITHUB_OUTPUT
           echo "package-version=$PackageVersion" >> $Env:GITHUB_OUTPUT
+          echo "macos-version=$MacOsVersion" >> $Env:GITHUB_OUTPUT
           echo "onedrive-version=$OneDriveVersion" >> $Env:GITHUB_OUTPUT
           echo "release-channel=$ReleaseChannel" >> $Env:GITHUB_OUTPUT
           echo "is-prerelease=$($IsPrerelease.ToString().ToLower())" >> $Env:GITHUB_OUTPUT
@@ -651,7 +654,7 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         run: |
           set -euo pipefail
-          VERSION='${{ needs.preflight.outputs.package-version }}'
+          VERSION='${{ needs.preflight.outputs.macos-version }}'
           APP_BUNDLE="UniGetUI.app"
           APP_EXECUTABLE="UniGetUI"
           DRY_RUN='${{ needs.preflight.outputs.dry-run }}'

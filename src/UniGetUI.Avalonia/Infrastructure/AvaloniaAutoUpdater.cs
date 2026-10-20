@@ -390,6 +390,7 @@ internal static partial class AvaloniaAutoUpdater
 
     private static int _activeAttempts;
     private static int _attemptsAwaitingConsent;
+    private static readonly AutoUpdaterHelpers.UpdaterAttemptCoordinator AttemptCoordinator = new();
     private static readonly InstallerHandoffTracker InstallerHandoffs = new();
     private static readonly TimeSpan InstallerHandoffTimeout = TimeSpan.FromMinutes(2);
 
@@ -407,7 +408,25 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     // ------------------------------------------------------------------ core logic
-    internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool manualCheck = false)
+    internal static Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool manualCheck = false)
+    {
+        return AttemptCoordinator.RunOrJoinAsync(
+            manualCheck,
+            () => RunSingleAttemptAsync(autoLaunch, manualCheck),
+            onJoinedActiveAttempt: () =>
+                LogUpdateInfo("Auto-updater: an update attempt is already in progress; reusing active attempt."),
+            onManualJoinWhileAwaitingConsent: versionName =>
+                Dispatcher.UIThread.Post(() => UpdateAvailable?.Invoke(versionName)),
+            onManualJoinWhileBusy: () =>
+                RaiseStatus(
+                    CoreTools.Translate("We are checking for updates."),
+                    CoreTools.Translate("Please wait"),
+                    InfoBarSeverity.Informational,
+                    isClosable: false)
+        );
+    }
+
+    private static async Task<bool> RunSingleAttemptAsync(bool autoLaunch, bool manualCheck)
     {
         Interlocked.Increment(ref _activeAttempts);
         try
@@ -422,6 +441,8 @@ internal static partial class AvaloniaAutoUpdater
 
     private static async Task<bool> CheckAndInstallUpdatesCoreAsync(bool autoLaunch, bool manualCheck)
     {
+        bool IsManual() => manualCheck || AttemptCoordinator.IsManualCheck;
+
         if (IsDefaultDevVersion(CoreData.VersionName))
         {
             LogUpdateInfo(
@@ -430,13 +451,13 @@ internal static partial class AvaloniaAutoUpdater
             return true;
         }
 
-        ResetUpdateLog(manualCheck, autoLaunch);
+        ResetUpdateLog(IsManual(), autoLaunch);
         UpdaterOverrides overrides = LoadUpdaterOverrides();
         bool wasCheckingForUpdates = true;
 
         try
         {
-            if (manualCheck)
+            if (IsManual())
             {
                 RaiseStatus(
                     CoreTools.Translate("We are checking for updates."),
@@ -452,7 +473,7 @@ internal static partial class AvaloniaAutoUpdater
 
             if (!candidate.IsUpgradable)
             {
-                if (manualCheck)
+                if (IsManual())
                 {
                     RaiseStatus(
                         CoreTools.Translate("Great! You are on the latest version."),
@@ -494,7 +515,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Cached valid installer found, preparing to launch...");
-                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
+                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, IsManual());
             }
 
             string installerValidationFailureMarkerPath =
@@ -509,7 +530,7 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             if (
-                !manualCheck
+                !IsManual()
                 && UpdaterDownloadEngine.IsFailureBackoffActive(
                     installerDownloadFailureStatePath,
                     installerIdentity,
@@ -574,7 +595,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Downloaded installer is valid, preparing to launch...");
-                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
+                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, IsManual());
             }
 
             UpdaterDownloadEngine.RecordFailure(
@@ -598,7 +619,7 @@ internal static partial class AvaloniaAutoUpdater
                 actionButtonText: CoreTools.Translate("View log"),
                 actionButtonAction: OpenUpdateLog);
             MarkAttemptFinished("authenticity verification failed");
-            return !manualCheck;
+            return !IsManual();
         }
         catch (PlatformArtifactMissingException ex)
         {
@@ -606,7 +627,7 @@ internal static partial class AvaloniaAutoUpdater
             // published for the current OS/arch yet. Surface this as a friendly
             // "manual update required" notice rather than a generic error.
             LogUpdateWarn(ex.Message);
-            if (manualCheck)
+            if (IsManual())
             {
                 RaiseStatus(
                     CoreTools.Translate("Auto-update is not yet available on this platform."),
@@ -621,7 +642,7 @@ internal static partial class AvaloniaAutoUpdater
         {
             LogUpdateError("An error occurred while checking for updates:");
             LogUpdateError(ex);
-            if (manualCheck || !wasCheckingForUpdates)
+            if (IsManual() || !wasCheckingForUpdates)
             {
                 RaiseStatus(
                     CoreTools.Translate("An error occurred when checking for updates: "),
@@ -690,12 +711,13 @@ internal static partial class AvaloniaAutoUpdater
         try
         {
             // Wait until user requests install, clicks the toast, or the window is being closed
+            AttemptCoordinator.MarkAwaitingConsent(versionName);
             Interlocked.Increment(ref _attemptsAwaitingConsent);
             try
             {
                 while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
                 {
-                    if (!manualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
+                    if (!manualCheck && !AttemptCoordinator.IsManualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
                     {
                         LogUpdateWarn("Auto-updater: disabled while waiting for user \u2014 aborting.");
                         MarkAttemptFinished("aborted - auto-update disabled while waiting");
@@ -707,6 +729,7 @@ internal static partial class AvaloniaAutoUpdater
             finally
             {
                 Interlocked.Decrement(ref _attemptsAwaitingConsent);
+                AttemptCoordinator.ClearAwaitingConsent();
             }
 
             LogUpdateInfo("Installing update \u2014 launching installer.");

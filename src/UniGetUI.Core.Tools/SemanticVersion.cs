@@ -159,54 +159,9 @@ namespace UniGetUI.Core.Tools
             if (rightNumeric)
                 return 1;
 
-            StringComparison stringComparison = caseInsensitive
-                ? StringComparison.OrdinalIgnoreCase
-                : StringComparison.Ordinal;
-
-            if (
-                TrySplitTrailingNumber(left, out ReadOnlySpan<char> leftPrefix, out int leftTrailing)
-                && TrySplitTrailingNumber(right, out ReadOnlySpan<char> rightPrefix, out int rightTrailing)
-                && leftPrefix.Equals(rightPrefix, stringComparison)
-            )
-            {
-                return leftTrailing.CompareTo(rightTrailing);
-            }
-
             return caseInsensitive
                 ? string.Compare(left, right, StringComparison.OrdinalIgnoreCase)
                 : string.CompareOrdinal(left, right);
-        }
-
-        private static bool TrySplitTrailingNumber(
-            string label,
-            out ReadOnlySpan<char> prefix,
-            out int number
-        )
-        {
-            int digitStart = label.Length;
-            while (digitStart > 0 && char.IsAsciiDigit(label[digitStart - 1]))
-            {
-                digitStart--;
-            }
-
-            if (
-                digitStart > 0
-                && digitStart < label.Length
-                && int.TryParse(
-                    label.AsSpan(digitStart),
-                    NumberStyles.None,
-                    CultureInfo.InvariantCulture,
-                    out number
-                )
-            )
-            {
-                prefix = label.AsSpan(0, digitStart);
-                return true;
-            }
-
-            prefix = default;
-            number = 0;
-            return false;
         }
 
         public bool Equals(SemanticVersion other) => CompareTo(other) is 0;

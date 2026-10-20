@@ -401,6 +401,110 @@ public sealed class AutoUpdaterTests
         );
     }
 
+    [Fact]
+    public void CompareUpdaterVersions_MaintainsTransitiveOrderAcrossNumericAndAlphanumericLabels()
+    {
+        const string beta2 = "2026.3.2-beta2";
+        const string beta10 = "2026.3.2-beta10";
+        const string beta1a = "2026.3.2-beta1a";
+
+        Assert.True(AutoUpdaterHelpers.CompareUpdaterVersions(beta2, beta10) < 0);
+        Assert.True(AutoUpdaterHelpers.CompareUpdaterVersions(beta10, beta1a) < 0);
+        Assert.True(AutoUpdaterHelpers.CompareUpdaterVersions(beta2, beta1a) < 0);
+
+        Assert.True(AutoUpdaterHelpers.CompareUpdaterVersions(beta10, beta2) > 0);
+        Assert.True(AutoUpdaterHelpers.CompareUpdaterVersions(beta1a, beta10) > 0);
+        Assert.True(AutoUpdaterHelpers.CompareUpdaterVersions(beta1a, beta2) > 0);
+    }
+
+    [Fact]
+    public async Task UpdaterAttemptCoordinator_CoalescesConcurrentRequestsThroughConsentAndCompletion()
+    {
+        var coordinator = new AutoUpdaterHelpers.UpdaterAttemptCoordinator();
+        var attemptGate = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        int attemptInvocations = 0;
+        int joinedCount = 0;
+        int busyNotificationCount = 0;
+        string? consentNotifiedVersion = null;
+
+        Task<bool> firstAttempt = coordinator.RunOrJoinAsync(
+            manualCheck: false,
+            () =>
+            {
+                Interlocked.Increment(ref attemptInvocations);
+                return attemptGate.Task;
+            }
+        );
+
+        Assert.True(coordinator.IsActive);
+        Assert.False(coordinator.IsManualCheck);
+
+        // A manual check while busy reuses the in-flight attempt and promotes it to manual.
+        Task<bool> secondAttempt = coordinator.RunOrJoinAsync(
+            manualCheck: true,
+            () =>
+            {
+                Interlocked.Increment(ref attemptInvocations);
+                return Task.FromResult(false);
+            },
+            onJoinedActiveAttempt: () => Interlocked.Increment(ref joinedCount),
+            onManualJoinWhileAwaitingConsent: version => consentNotifiedVersion = version,
+            onManualJoinWhileBusy: () => Interlocked.Increment(ref busyNotificationCount)
+        );
+
+        Assert.Same(firstAttempt, secondAttempt);
+        Assert.Equal(1, attemptInvocations);
+        Assert.Equal(1, joinedCount);
+        Assert.Equal(1, busyNotificationCount);
+        Assert.Null(consentNotifiedVersion);
+        Assert.True(coordinator.IsManualCheck);
+
+        // Transition the active attempt into awaiting installation consent.
+        coordinator.MarkAwaitingConsent("2026.3.2-beta1");
+
+        Task<bool> thirdAttempt = coordinator.RunOrJoinAsync(
+            manualCheck: true,
+            () =>
+            {
+                Interlocked.Increment(ref attemptInvocations);
+                return Task.FromResult(false);
+            },
+            onJoinedActiveAttempt: () => Interlocked.Increment(ref joinedCount),
+            onManualJoinWhileAwaitingConsent: version => consentNotifiedVersion = version,
+            onManualJoinWhileBusy: () => Interlocked.Increment(ref busyNotificationCount)
+        );
+
+        Assert.Same(firstAttempt, thirdAttempt);
+        Assert.Equal(1, attemptInvocations);
+        Assert.Equal(2, joinedCount);
+        Assert.Equal(1, busyNotificationCount);
+        Assert.Equal("2026.3.2-beta1", consentNotifiedVersion);
+
+        coordinator.ClearAwaitingConsent();
+        attemptGate.SetResult(true);
+
+        Assert.True(await firstAttempt);
+        Assert.True(await secondAttempt);
+        Assert.True(await thirdAttempt);
+        Assert.False(coordinator.IsActive);
+        Assert.False(coordinator.IsManualCheck);
+
+        // After completion, a new request starts a new attempt.
+        Task<bool> nextAttempt = coordinator.RunOrJoinAsync(
+            manualCheck: false,
+            () =>
+            {
+                Interlocked.Increment(ref attemptInvocations);
+                return Task.FromResult(true);
+            }
+        );
+
+        Assert.True(await nextAttempt);
+        Assert.Equal(2, attemptInvocations);
+    }
+
     [Theory]
     [InlineData("1.0", true)]
     [InlineData("1.0.0", true)]

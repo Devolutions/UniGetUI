@@ -13,20 +13,61 @@ internal static class UninstallConfirmationDialog
         return ConfirmAsync(owner, [package]);
     }
 
-    public static async Task<bool> ConfirmAsync(Window owner, IReadOnlyList<IPackage> packages)
+    public static Task<bool> ConfirmAsync(Window owner, IReadOnlyList<IPackage> packages)
     {
         if (packages.Count == 0)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        var messageBlock = new TextBlock
-        {
-            Text = packages.Count == 1
+        return PackageListConfirmationDialog.ConfirmAsync(
+            owner,
+            packages,
+            packages.Count == 1
                 ? CoreTools.Translate("Do you really want to uninstall {0}?", packages[0].Name)
                 : CoreTools.Translate(
                     "Do you really want to uninstall the following {0} packages?",
-                    packages.Count),
+                    packages.Count));
+    }
+}
+
+internal static class IgnoreUpdatesConfirmationDialog
+{
+    /// <summary>
+    /// Asks before ignoring the updates of several packages at once. Every row of the Updates page is checked by
+    /// default, so one click on "Ignore selected packages" would otherwise ignore every update without a word.
+    /// </summary>
+    public static Task<bool> ConfirmAsync(Window owner, IReadOnlyList<IPackage> packages)
+    {
+        if (packages.Count == 0)
+        {
+            return Task.FromResult(false);
+        }
+
+        if (packages.Count == 1)
+        {
+            return Task.FromResult(true);
+        }
+
+        return PackageListConfirmationDialog.ConfirmAsync(
+            owner,
+            packages,
+            CoreTools.Translate(
+                "Do you really want to ignore updates for the following {0} packages?",
+                packages.Count));
+    }
+}
+
+internal static class PackageListConfirmationDialog
+{
+    public static async Task<bool> ConfirmAsync(
+        Window owner,
+        IReadOnlyList<IPackage> packages,
+        string message)
+    {
+        var messageBlock = new TextBlock
+        {
+            Text = message,
             Opacity = 0.82,
             TextWrapping = TextWrapping.Wrap,
         };

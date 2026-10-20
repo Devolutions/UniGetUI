@@ -100,7 +100,10 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
-            foreach (var pkg in vm.FilteredPackages.GetCheckedPackages())
+            var packages = vm.FilteredPackages.GetCheckedPackages().ToList();
+            if (MainWindow.Instance is not { } window
+                || !await IgnoreUpdatesConfirmationDialog.ConfirmAsync(window, packages)) return;
+            foreach (var pkg in packages)
             {
                 await pkg.AddToIgnoredUpdatesAsync();
                 UpgradablePackagesLoader.Instance.Remove(pkg);

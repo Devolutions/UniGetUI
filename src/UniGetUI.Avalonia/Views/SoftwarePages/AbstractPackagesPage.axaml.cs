@@ -460,7 +460,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     public void DetailsTriggered() { if (SelectedItem is { } pkg) _ = ShowDetailsForPackage(pkg); }
 
     // ─── IEnterLeaveListener ──────────────────────────────────────────────────
-    public virtual void OnEnter() { }
+    public virtual void OnEnter() => ViewModel.ReloadIfManagerBecameReady();
     public virtual void OnLeave() { }
 
     // ─── ISearchBoxPage ───────────────────────────────────────────────────────

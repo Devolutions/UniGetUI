@@ -59,7 +59,8 @@ public sealed partial class General : UserControl, ISettingsPage
         };
         EnableUniGetUIBetaCard.StateChanged += (_, _) =>
         {
-            if (EnableUniGetUIBetaCard.Checked && !CoreSettings.Get(CoreSettings.K.DisableAutoUpdateWingetUI))
+            AvaloniaAutoUpdater.CancelObsoletePendingUpdateForChannelChange();
+            if (!CoreSettings.Get(CoreSettings.K.DisableAutoUpdateWingetUI))
             {
                 _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: false);
             }

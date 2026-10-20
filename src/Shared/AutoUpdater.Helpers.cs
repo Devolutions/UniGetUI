@@ -311,7 +311,9 @@ internal static class AutoUpdaterHelpers
             return false;
         }
 
-        normalizedCore = CoreTools.NormalizeVersionForComparison(parsed);
+        normalizedCore = parsed.Revision == 0
+            ? new Version(parsed.Major, parsed.Minor, parsed.Build)
+            : parsed;
         return true;
     }
 
@@ -411,10 +413,115 @@ internal static class AutoUpdaterHelpers
 
     internal sealed class UpdaterAttemptCoordinator
     {
+        internal sealed class AttemptScope : IDisposable
+        {
+            private readonly UpdaterAttemptCoordinator _owner;
+            private readonly CancellationTokenSource _consentCts = new();
+            private bool _isManualCheck;
+            private string? _awaitingConsentVersion;
+            private bool _isSuperseded;
+
+            internal AttemptScope(UpdaterAttemptCoordinator owner, bool useBeta, bool isManualCheck)
+            {
+                _owner = owner;
+                UseBeta = useBeta;
+                _isManualCheck = isManualCheck;
+            }
+
+            public bool UseBeta { get; }
+
+            public bool IsManualCheck
+            {
+                get
+                {
+                    lock (_owner._lock)
+                    {
+                        return _isManualCheck;
+                    }
+                }
+            }
+
+            public bool IsSuperseded
+            {
+                get
+                {
+                    lock (_owner._lock)
+                    {
+                        return _isSuperseded;
+                    }
+                }
+            }
+
+            public CancellationToken ConsentCancellationToken => _consentCts.Token;
+
+            public void MarkAwaitingConsent(string versionName)
+            {
+                bool shouldCancel = false;
+                lock (_owner._lock)
+                {
+                    if (_isSuperseded)
+                    {
+                        shouldCancel = true;
+                    }
+                    else
+                    {
+                        _awaitingConsentVersion = versionName;
+                    }
+                }
+
+                if (shouldCancel)
+                {
+                    try
+                    {
+                        _consentCts.Cancel();
+                    }
+                    catch (ObjectDisposedException) { }
+                }
+            }
+
+            public void ClearAwaitingConsent()
+            {
+                lock (_owner._lock)
+                {
+                    _awaitingConsentVersion = null;
+                }
+            }
+
+            internal string? AwaitingConsentVersionNoLock => _awaitingConsentVersion;
+
+            internal bool IsSupersededNoLock => _isSuperseded;
+
+            internal bool PromoteToManualNoLock()
+            {
+                if (_isManualCheck)
+                {
+                    return false;
+                }
+
+                _isManualCheck = true;
+                return true;
+            }
+
+            internal void MarkSupersededNoLock()
+            {
+                _isSuperseded = true;
+                _awaitingConsentVersion = null;
+                try
+                {
+                    _consentCts.Cancel();
+                }
+                catch (ObjectDisposedException) { }
+            }
+
+            public void Dispose()
+            {
+                _consentCts.Dispose();
+            }
+        }
+
         private readonly Lock _lock = new();
         private Task<bool>? _activeAttempt;
-        private bool _isManualCheck;
-        private string? _awaitingConsentVersion;
+        private AttemptScope? _activeScope;
 
         public bool IsActive
         {
@@ -433,30 +540,43 @@ internal static class AutoUpdaterHelpers
             {
                 lock (_lock)
                 {
-                    return _isManualCheck;
+                    return _activeScope is not null && _activeScope.IsManualCheck;
                 }
             }
         }
 
-        public void MarkAwaitingConsent(string versionName)
+        public bool? ActiveUseBeta
         {
-            lock (_lock)
+            get
             {
-                _awaitingConsentVersion = versionName;
+                lock (_lock)
+                {
+                    return _activeAttempt is { IsCompleted: false } && _activeScope is not null
+                        ? _activeScope.UseBeta
+                        : null;
+                }
             }
         }
 
-        public void ClearAwaitingConsent()
+        public void CancelIfChannelMismatch(bool currentUseBeta)
         {
             lock (_lock)
             {
-                _awaitingConsentVersion = null;
+                if (
+                    _activeAttempt is { IsCompleted: false }
+                    && _activeScope is not null
+                    && _activeScope.UseBeta != currentUseBeta
+                )
+                {
+                    _activeScope.MarkSupersededNoLock();
+                }
             }
         }
 
         public Task<bool> RunOrJoinAsync(
             bool manualCheck,
-            Func<Task<bool>> attemptFactory,
+            bool useBeta,
+            Func<AttemptScope, Task<bool>> attemptFactory,
             Action? onJoinedActiveAttempt = null,
             Action<string>? onManualJoinWhileAwaitingConsent = null,
             Action? onManualJoinWhileBusy = null
@@ -469,27 +589,38 @@ internal static class AutoUpdaterHelpers
 
             lock (_lock)
             {
-                if (_activeAttempt is { IsCompleted: false } existing)
+                if (_activeAttempt is { IsCompleted: false } existing && _activeScope is not null)
                 {
-                    taskToAwait = existing;
-                    joinedExisting = true;
-                    if (manualCheck)
+                    if (_activeScope.UseBeta == useBeta && !_activeScope.IsSupersededNoLock)
                     {
-                        if (!_isManualCheck)
+                        taskToAwait = existing;
+                        joinedExisting = true;
+                        if (manualCheck)
                         {
-                            _isManualCheck = true;
-                            upgradedToManual = true;
+                            upgradedToManual = _activeScope.PromoteToManualNoLock();
+                            pendingConsentVersion = _activeScope.AwaitingConsentVersionNoLock;
+                        }
+                    }
+                    else
+                    {
+                        _activeScope.MarkSupersededNoLock();
+                        var nextScope = new AttemptScope(this, useBeta, manualCheck);
+                        _activeScope = nextScope;
+                        Task<bool> started = RunCoreAsync(existing, nextScope, attemptFactory);
+                        if (ReferenceEquals(_activeScope, nextScope))
+                        {
+                            _activeAttempt = started;
                         }
 
-                        pendingConsentVersion = _awaitingConsentVersion;
+                        taskToAwait = started;
                     }
                 }
                 else
                 {
-                    _isManualCheck = manualCheck;
-                    _awaitingConsentVersion = null;
-                    Task<bool> started = RunCoreAsync(attemptFactory);
-                    if (!started.IsCompleted)
+                    var scope = new AttemptScope(this, useBeta, manualCheck);
+                    _activeScope = scope;
+                    Task<bool> started = RunCoreAsync(previousAttempt: null, scope, attemptFactory);
+                    if (ReferenceEquals(_activeScope, scope))
                     {
                         _activeAttempt = started;
                     }
@@ -517,20 +648,45 @@ internal static class AutoUpdaterHelpers
             return taskToAwait;
         }
 
-        private async Task<bool> RunCoreAsync(Func<Task<bool>> attemptFactory)
+        private async Task<bool> RunCoreAsync(
+            Task<bool>? previousAttempt,
+            AttemptScope scope,
+            Func<AttemptScope, Task<bool>> attemptFactory
+        )
         {
             try
             {
-                return await attemptFactory();
+                if (previousAttempt is not null)
+                {
+                    try
+                    {
+                        await previousAttempt.ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Ignore failures from the superseded attempt so the new channel check still runs.
+                    }
+                }
+
+                if (scope.IsSuperseded)
+                {
+                    return true;
+                }
+
+                return await attemptFactory(scope);
             }
             finally
             {
                 lock (_lock)
                 {
-                    _activeAttempt = null;
-                    _isManualCheck = false;
-                    _awaitingConsentVersion = null;
+                    if (ReferenceEquals(_activeScope, scope))
+                    {
+                        _activeAttempt = null;
+                        _activeScope = null;
+                    }
                 }
+
+                scope.Dispose();
             }
         }
     }

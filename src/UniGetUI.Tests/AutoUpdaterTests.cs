@@ -310,6 +310,8 @@ public sealed class AutoUpdaterTests
 
         Assert.Equal(new Version(1, 2, 3), AutoUpdaterHelpers.ParseVersionOrFallback("v1.2.3", fallback));
         Assert.Equal(new Version(2026, 3, 2), AutoUpdaterHelpers.ParseVersionOrFallback("2026.3.2-beta1", fallback));
+        Assert.Equal(new Version(2026, 3, 2), AutoUpdaterHelpers.ParseVersionOrFallback("2026.3.2.0-beta1", fallback));
+        Assert.Equal(new Version(2026, 3, 2, 1), AutoUpdaterHelpers.ParseVersionOrFallback("2026.3.2.1-beta1", fallback));
         Assert.Equal(fallback, AutoUpdaterHelpers.ParseVersionOrFallback("not-a-version", fallback));
     }
 
@@ -320,9 +322,15 @@ public sealed class AutoUpdaterTests
     [InlineData("2026.3.2-beta2", "2026.3.2-beta10", true)]
     [InlineData("2026.3.2-beta3", "2026.3.2", true)]
     [InlineData("2026.3.2-beta3", "2026.3.2.0", true)]
+    [InlineData("2026.3.2.0", "2026.3.2.1-beta1", true)]
+    [InlineData("2026.3.2.1-beta1", "2026.3.2.1-beta2", true)]
+    [InlineData("2026.3.2.1-beta2", "2026.3.2.1", true)]
+    [InlineData("2026.3.2.0", "2026.3.2.1", true)]
     [InlineData("2026.3.2", "2026.3.3-beta1", true)]
     [InlineData("2026.3.2-beta1", "2026.3.2-beta1", false)]
     [InlineData("2026.3.2-beta1", "2026.3.2.0-beta1", false)]
+    [InlineData("2026.3.2.1-beta1", "2026.3.2.1-beta1", false)]
+    [InlineData("2026.3.2.1", "2026.3.2.1-beta1", false)]
     [InlineData("2026.3.2-beta2", "2026.3.2-beta1", false)]
     [InlineData("2026.3.2", "2026.3.2.0", false)]
     [InlineData("2026.3.2", "2026.3.2-beta3", false)]
@@ -344,6 +352,9 @@ public sealed class AutoUpdaterTests
     [InlineData("v2026.3.2", "2026.3.2.0", true)]
     [InlineData("2026.3.2-beta1", "2026.3.2-beta1", true)]
     [InlineData("2026.3.2-beta1", "2026.3.2.0-beta1", true)]
+    [InlineData("2026.3.2.1-beta1", "2026.3.2.1-beta1", true)]
+    [InlineData("2026.3.2.0", "2026.3.2.1", false)]
+    [InlineData("2026.3.2.1-beta1", "2026.3.2-beta1", false)]
     [InlineData("2026.3.2-beta1", "2026.3.2-beta2", false)]
     [InlineData("2026.3.2-beta1", "2026.3.2", false)]
     [InlineData("2026.3.2-beta1", "2026.3.2.0", false)]
@@ -375,6 +386,8 @@ public sealed class AutoUpdaterTests
         var stableOld = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.1.0" };
         var betaNew = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.2-beta2" };
         var stableFinal = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.2.0" };
+        var betaRevision = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.2.1-beta1" };
+        var stableRevision = new AutoUpdaterHelpers.ProductInfoChannel { Version = "2026.3.2.1" };
 
         // Stable user always gets Current
         Assert.Same(
@@ -392,6 +405,18 @@ public sealed class AutoUpdaterTests
         Assert.Same(
             stableFinal,
             AutoUpdaterHelpers.SelectChannel(stableFinal, betaNew, useBeta: true)
+        );
+
+        // Beta user gets Beta when a 4-part revision beta is ahead of Current (2026.3.2.1-beta1 > 2026.3.2.0)
+        Assert.Same(
+            betaRevision,
+            AutoUpdaterHelpers.SelectChannel(stableFinal, betaRevision, useBeta: true)
+        );
+
+        // Beta user gets Current when the 4-part revision stable ships (2026.3.2.1 > 2026.3.2.1-beta1)
+        Assert.Same(
+            stableRevision,
+            AutoUpdaterHelpers.SelectChannel(stableRevision, betaRevision, useBeta: true)
         );
 
         // Beta user falls back to Current if Beta channel is absent
@@ -424,6 +449,7 @@ public sealed class AutoUpdaterTests
         var attemptGate = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously
         );
+        AutoUpdaterHelpers.UpdaterAttemptCoordinator.AttemptScope? capturedScope = null;
         int attemptInvocations = 0;
         int joinedCount = 0;
         int busyNotificationCount = 0;
@@ -431,8 +457,10 @@ public sealed class AutoUpdaterTests
 
         Task<bool> firstAttempt = coordinator.RunOrJoinAsync(
             manualCheck: false,
-            () =>
+            useBeta: false,
+            scope =>
             {
+                capturedScope = scope;
                 Interlocked.Increment(ref attemptInvocations);
                 return attemptGate.Task;
             }
@@ -440,11 +468,14 @@ public sealed class AutoUpdaterTests
 
         Assert.True(coordinator.IsActive);
         Assert.False(coordinator.IsManualCheck);
+        Assert.Equal(false, coordinator.ActiveUseBeta);
+        Assert.NotNull(capturedScope);
 
-        // A manual check while busy reuses the in-flight attempt and promotes it to manual.
+        // A manual check on the same channel while busy reuses the in-flight attempt and promotes it to manual.
         Task<bool> secondAttempt = coordinator.RunOrJoinAsync(
             manualCheck: true,
-            () =>
+            useBeta: false,
+            _ =>
             {
                 Interlocked.Increment(ref attemptInvocations);
                 return Task.FromResult(false);
@@ -462,11 +493,12 @@ public sealed class AutoUpdaterTests
         Assert.True(coordinator.IsManualCheck);
 
         // Transition the active attempt into awaiting installation consent.
-        coordinator.MarkAwaitingConsent("2026.3.2-beta1");
+        capturedScope!.MarkAwaitingConsent("2026.3.2-beta1");
 
         Task<bool> thirdAttempt = coordinator.RunOrJoinAsync(
             manualCheck: true,
-            () =>
+            useBeta: false,
+            _ =>
             {
                 Interlocked.Increment(ref attemptInvocations);
                 return Task.FromResult(false);
@@ -482,7 +514,7 @@ public sealed class AutoUpdaterTests
         Assert.Equal(1, busyNotificationCount);
         Assert.Equal("2026.3.2-beta1", consentNotifiedVersion);
 
-        coordinator.ClearAwaitingConsent();
+        capturedScope.ClearAwaitingConsent();
         attemptGate.SetResult(true);
 
         Assert.True(await firstAttempt);
@@ -490,11 +522,13 @@ public sealed class AutoUpdaterTests
         Assert.True(await thirdAttempt);
         Assert.False(coordinator.IsActive);
         Assert.False(coordinator.IsManualCheck);
+        Assert.Null(coordinator.ActiveUseBeta);
 
         // After completion, a new request starts a new attempt.
         Task<bool> nextAttempt = coordinator.RunOrJoinAsync(
             manualCheck: false,
-            () =>
+            useBeta: false,
+            _ =>
             {
                 Interlocked.Increment(ref attemptInvocations);
                 return Task.FromResult(true);
@@ -503,6 +537,161 @@ public sealed class AutoUpdaterTests
 
         Assert.True(await nextAttempt);
         Assert.Equal(2, attemptInvocations);
+    }
+
+    [Fact]
+    public async Task UpdaterAttemptCoordinator_EndsPendingConsentAndRechecksWhenChannelChangesWithoutOverlappingDownloads()
+    {
+        var coordinator = new AutoUpdaterHelpers.UpdaterAttemptCoordinator();
+        var currentAwaitingConsent = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        var betaDownloadGate = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        var betaAwaitingConsent = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        var betaInstallConsent = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        int concurrentAttempts = 0;
+        int maxConcurrentAttempts = 0;
+        bool currentInstallerLaunched = false;
+        bool betaInstallerLaunched = false;
+
+        void EnterAttempt()
+        {
+            int current = Interlocked.Increment(ref concurrentAttempts);
+            int observedMax;
+            do
+            {
+                observedMax = Volatile.Read(ref maxConcurrentAttempts);
+                if (current <= observedMax)
+                {
+                    break;
+                }
+            } while (
+                Interlocked.CompareExchange(ref maxConcurrentAttempts, current, observedMax)
+                != observedMax
+            );
+        }
+
+        // 1. Start a Current-channel attempt that reaches the pending-consent stage.
+        Task<bool> currentAttempt = coordinator.RunOrJoinAsync(
+            manualCheck: false,
+            useBeta: false,
+            async scope =>
+            {
+                EnterAttempt();
+                try
+                {
+                    scope.MarkAwaitingConsent("2026.3.1.0");
+                    currentAwaitingConsent.SetResult();
+                    try
+                    {
+                        await Task.Delay(Timeout.Infinite, scope.ConsentCancellationToken);
+                    }
+                    catch (OperationCanceledException) when (scope.IsSuperseded)
+                    {
+                        return true;
+                    }
+                    finally
+                    {
+                        scope.ClearAwaitingConsent();
+                    }
+
+                    currentInstallerLaunched = true;
+                    return true;
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref concurrentAttempts);
+                }
+            }
+        );
+
+        await currentAwaitingConsent.Task;
+        Assert.Equal(false, coordinator.ActiveUseBeta);
+
+        // 2. Enabling beta while Current is awaiting consent ends the obsolete consent wait
+        // and starts a Beta-channel attempt only after Current has exited.
+        Task<bool> betaAttempt = coordinator.RunOrJoinAsync(
+            manualCheck: false,
+            useBeta: true,
+            async scope =>
+            {
+                EnterAttempt();
+                try
+                {
+                    await betaDownloadGate.Task;
+                    if (scope.IsSuperseded)
+                    {
+                        return true;
+                    }
+
+                    scope.MarkAwaitingConsent("2026.3.2-beta1");
+                    betaAwaitingConsent.SetResult();
+                    try
+                    {
+                        await betaInstallConsent.Task.WaitAsync(scope.ConsentCancellationToken);
+                    }
+                    finally
+                    {
+                        scope.ClearAwaitingConsent();
+                    }
+
+                    betaInstallerLaunched = true;
+                    return true;
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref concurrentAttempts);
+                }
+            }
+        );
+
+        Assert.NotSame(currentAttempt, betaAttempt);
+        Assert.True(await currentAttempt);
+        Assert.False(currentInstallerLaunched);
+        Assert.Equal(true, coordinator.ActiveUseBeta);
+
+        // While Beta is still downloading, a manual check on Beta joins it and marks it manual.
+        int manualBusyNotifications = 0;
+        string? manualConsentVersion = null;
+        Task<bool> manualJoinWhileDownloading = coordinator.RunOrJoinAsync(
+            manualCheck: true,
+            useBeta: true,
+            _ => Task.FromResult(false),
+            onManualJoinWhileAwaitingConsent: version => manualConsentVersion = version,
+            onManualJoinWhileBusy: () => Interlocked.Increment(ref manualBusyNotifications)
+        );
+
+        Assert.Same(betaAttempt, manualJoinWhileDownloading);
+        Assert.Equal(1, manualBusyNotifications);
+        Assert.Null(manualConsentVersion);
+
+        // Allow Beta download to finish and enter consent.
+        betaDownloadGate.SetResult();
+        await betaAwaitingConsent.Task;
+
+        // A subsequent manual check on Beta re-surfaces the Beta candidate ("2026.3.2-beta1"), not Current.
+        Task<bool> manualJoinWhileAwaitingBetaConsent = coordinator.RunOrJoinAsync(
+            manualCheck: true,
+            useBeta: true,
+            _ => Task.FromResult(false),
+            onManualJoinWhileAwaitingConsent: version => manualConsentVersion = version,
+            onManualJoinWhileBusy: () => Interlocked.Increment(ref manualBusyNotifications)
+        );
+
+        Assert.Same(betaAttempt, manualJoinWhileAwaitingBetaConsent);
+        Assert.Equal("2026.3.2-beta1", manualConsentVersion);
+
+        betaInstallConsent.SetResult();
+        Assert.True(await betaAttempt);
+        Assert.True(betaInstallerLaunched);
+        Assert.Equal(1, maxConcurrentAttempts);
     }
 
     [Theory]

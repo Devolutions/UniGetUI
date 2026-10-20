@@ -493,6 +493,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         AvaloniaAutoUpdater.StatusChanged += status => Dispatcher.UIThread.Post(() =>
         {
+            if (!status.IsOpen)
+            {
+                UpdatesBanner.ActionButtonCommand = null;
+                UpdatesBanner.IsOpen = false;
+                return;
+            }
+
             UpdatesBanner.Severity = status.Severity;
             UpdatesBanner.Title = status.Title;
             UpdatesBanner.Message = status.Message;

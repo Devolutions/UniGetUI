@@ -1,0 +1,114 @@
+name: Desktop Smoke Test
+
+# Installs the latest UniGetUI release and checks that it starts and shows its main window
+# in a real interactive Windows desktop session, driven over localhost RDP by ironrdp-agent.
+
+on:
+  workflow_dispatch:
+    inputs:
+      desktop_size:
+        description: RDP desktop size requested through ironrdp-agent
+        required: true
+        default: 1920x1080
+  # TODO: remove before merge. workflow_dispatch only works once the workflow is on the
+  # default branch, so this trigger runs it from the development branch.
+  push:
+    branches: [ "claude/desktop-smoke-tests-ab5c53" ]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
+  RUST_BACKTRACE: short
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+jobs:
+  desktop-smoke:
+    name: UniGetUI in an RDP desktop session
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # TODO: switch back to master once https://github.com/Devolutions/IronRDP/pull/2189
+      # merges; that branch carries the daemon readiness and screenshot fixes.
+      - name: Checkout IronRDP
+        uses: actions/checkout@v7
+        with:
+          repository: Devolutions/IronRDP
+          ref: claude/agentic-rdp-ci-workflow-b25bea
+          path: ironrdp
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2.9.1
+        with:
+          workspaces: ironrdp
+
+      - name: Build ironrdp-agent
+        working-directory: ironrdp
+        run: cargo build -p ironrdp-agent --release
+
+      - name: Install latest UniGetUI release
+        id: install
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $install = .\testing\desktop-smoke\Install-LatestUniGetUI.ps1 `
+            -DownloadDir (Join-Path $env:RUNNER_TEMP 'unigetui-release') `
+            -ArtifactsDir (Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke') |
+            ConvertFrom-Json
+          Write-Host "Installed UniGetUI $($install.Tag) ($($install.FileVersion)) at $($install.ExePath)"
+          "exe=$($install.ExePath)" >> $env:GITHUB_OUTPUT
+          "tag=$($install.Tag)" >> $env:GITHUB_OUTPUT
+
+      - name: Run UniGetUI desktop smoke test
+        shell: pwsh
+        env:
+          DESKTOP_SIZE: ${{ github.event.inputs.desktop_size }}
+          UNIGETUI_EXE: ${{ steps.install.outputs.exe }}
+        run: |
+          $desktopSize = $env:DESKTOP_SIZE
+          if ([string]::IsNullOrWhiteSpace($desktopSize)) {
+            $desktopSize = '1920x1080'
+          }
+
+          .\testing\desktop-smoke\Invoke-DesktopSmokeTest.ps1 `
+            -IronRdpRoot (Join-Path $env:GITHUB_WORKSPACE 'ironrdp') `
+            -UniGetUIPath $env:UNIGETUI_EXE `
+            -DesktopSize $desktopSize `
+            -ArtifactsDir (Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke')
+
+      # The smoke test cleans up after itself; this covers a step that was cancelled mid-way.
+      - name: Clean up RDP session
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          .\ironrdp\testing\agentic-rdp\Invoke-AgenticRdpTest.ps1 `
+            -CleanupOnly `
+            -WorkspaceRoot (Join-Path $env:GITHUB_WORKSPACE 'ironrdp') `
+            -ArtifactsDir (Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke')
+
+      - name: Upload screenshots
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-smoke-screenshots
+          path: artifacts\desktop-smoke\*.png
+          if-no-files-found: warn
+
+      - name: Upload logs and metadata
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-smoke-logs
+          path: |
+            artifacts\desktop-smoke
+            !artifacts\desktop-smoke\*.png
+          if-no-files-found: warn

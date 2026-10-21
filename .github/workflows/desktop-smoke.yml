@@ -25,6 +25,12 @@ env:
   RUST_BACKTRACE: short
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
   CARGO_PROFILE_DEV_DEBUG: 0
+  # IronRDP commit that provides ironrdp-agent and the testing/agentic-rdp harness. Pinned so
+  # the built agent can be cached by commit. It is currently the head of
+  # claude/agentic-rdp-ci-workflow-b25bea (https://github.com/Devolutions/IronRDP/pull/2189),
+  # which carries the daemon readiness and screenshot fixes.
+  # TODO: move to a master commit once that PR merges.
+  IRONRDP_REF: 6ac6e4447cf4e15423772af987aff6c7fc1ca15a
 
 jobs:
   desktop-smoke:
@@ -36,23 +42,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      # TODO: switch back to master once https://github.com/Devolutions/IronRDP/pull/2189
-      # merges; that branch carries the daemon readiness and screenshot fixes.
       - name: Checkout IronRDP
         uses: actions/checkout@v7
         with:
           repository: Devolutions/IronRDP
-          ref: claude/agentic-rdp-ci-workflow-b25bea
+          ref: ${{ env.IRONRDP_REF }}
           path: ironrdp
 
+      # The agent only changes with IRONRDP_REF, so a cache hit skips the Rust build entirely.
+      - name: Restore ironrdp-agent
+        id: agent-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ironrdp/target/release/ironrdp-agent.exe
+          key: ironrdp-agent-${{ runner.os }}-${{ env.IRONRDP_REF }}
+
       - name: Rust cache
+        if: steps.agent-cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@v2.9.1
         with:
           workspaces: ironrdp
 
       - name: Build ironrdp-agent
+        if: steps.agent-cache.outputs.cache-hit != 'true'
         working-directory: ironrdp
         run: cargo build -p ironrdp-agent --release
+
+      # Saved right after the build rather than at job end, so a failing smoke test still
+      # leaves the agent cached for the next run.
+      - name: Save ironrdp-agent
+        if: steps.agent-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ironrdp/target/release/ironrdp-agent.exe
+          key: ${{ steps.agent-cache.outputs.cache-primary-key }}
 
       - name: Install latest UniGetUI release
         id: install

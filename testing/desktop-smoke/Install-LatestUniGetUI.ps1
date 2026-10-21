@@ -84,8 +84,15 @@ if ($process.ExitCode -ne 0) {
     throw "$AssetName exited with code $($process.ExitCode); see $installLogPath"
 }
 
+# UniGetUI.iss does not set ArchitecturesInstallIn64BitMode, so an all-users install
+# registers itself in the 32-bit registry view.
 $installLocation = $null
-foreach ($root in @('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall', 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall')) {
+$uninstallRoots = @(
+    'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall',
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+    'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+)
+foreach ($root in $uninstallRoots) {
     $keyPath = Join-Path $root $uninstallKeyName
     if (Test-Path $keyPath) {
         $installLocation = (Get-Item -Path $keyPath).GetValue('InstallLocation', $null)

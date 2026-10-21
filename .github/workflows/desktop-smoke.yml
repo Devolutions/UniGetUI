@@ -1,17 +1,30 @@
 name: Desktop Smoke Test
 
-# Installs the latest UniGetUI release and checks that it starts and shows its main window
-# in a real interactive Windows desktop session, driven over localhost RDP by ironrdp-agent.
+# Installs UniGetUI, from a release or built from source, and checks that it starts and
+# shows its main window in a real interactive Windows desktop session, driven over
+# localhost RDP by ironrdp-agent.
 
 on:
   workflow_dispatch:
     inputs:
+      unigetui_source:
+        description: Install a published release, an installer built from this commit, or both
+        type: choice
+        options:
+          - release
+          - source
+          - both
+        default: release
+      unigetui_release:
+        description: Release tag to install, for example v2026.3.2 (empty for the latest release)
+        required: false
+        default: ''
       desktop_size:
         description: RDP desktop size requested through ironrdp-agent
         required: true
         default: 1920x1080
   # TODO: remove before merge. workflow_dispatch only works once the workflow is on the
-  # default branch, so this trigger runs it from the development branch.
+  # default branch, so this trigger runs it from the development branch (with both sources).
   push:
     branches: [ "claude/desktop-smoke-tests-ab5c53" ]
 
@@ -34,9 +47,16 @@ env:
 
 jobs:
   desktop-smoke:
-    name: UniGetUI in an RDP desktop session
+    name: UniGetUI (${{ matrix.unigetui_source }}) in an RDP desktop session
     runs-on: windows-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # 'both', and a push (which has no inputs), runs one job per source.
+        unigetui_source: ${{ fromJSON((inputs.unigetui_source || 'both') == 'both' && '["release","source"]' || format('["{0}"]', inputs.unigetui_source)) }}
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
     steps:
       - name: Checkout repository
@@ -77,19 +97,61 @@ jobs:
           path: ironrdp/target/release/ironrdp-agent.exe
           key: ${{ steps.agent-cache.outputs.cache-primary-key }}
 
-      - name: Install latest UniGetUI release
+      - name: Install .NET
+        if: matrix.unigetui_source == 'source'
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # Same key as build-release.yml, so a source build can reuse that workflow's packages.
+      - name: Cache NuGet packages
+        if: matrix.unigetui_source == 'source'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Install Inno Setup
+        if: matrix.unigetui_source == 'source'
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          echo "C:\Program Files (x86)\Inno Setup 6" >> $Env:GITHUB_PATH
+
+      # Builds the same unsigned installer as a local scripts/build.ps1 run, so the source
+      # build goes through the same silent install as a release.
+      - name: Build UniGetUI installer from source
+        if: matrix.unigetui_source == 'source'
+        shell: pwsh
+        run: |
+          .\scripts\build.ps1 -SkipTests -OutputPath (Join-Path $env:RUNNER_TEMP 'unigetui-build')
+
+      - name: Install UniGetUI
         id: install
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          UNIGETUI_SOURCE: ${{ matrix.unigetui_source }}
+          UNIGETUI_RELEASE: ${{ inputs.unigetui_release }}
         run: |
-          $install = .\testing\desktop-smoke\Install-LatestUniGetUI.ps1 `
-            -DownloadDir (Join-Path $env:RUNNER_TEMP 'unigetui-release') `
-            -ArtifactsDir (Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke') |
-            ConvertFrom-Json
-          Write-Host "Installed UniGetUI $($install.Tag) ($($install.FileVersion)) at $($install.ExePath)"
+          $artifactsDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke'
+          if ($env:UNIGETUI_SOURCE -eq 'source') {
+            $install = .\testing\desktop-smoke\Install-UniGetUI.ps1 `
+              -InstallerPath (Join-Path $env:RUNNER_TEMP 'unigetui-build\UniGetUI.Installer.x64.exe') `
+              -ArtifactsDir $artifactsDir
+          }
+          else {
+            $install = .\testing\desktop-smoke\Install-UniGetUI.ps1 `
+              -Tag $env:UNIGETUI_RELEASE `
+              -DownloadDir (Join-Path $env:RUNNER_TEMP 'unigetui-release') `
+              -ArtifactsDir $artifactsDir
+          }
+
+          $install = $install | ConvertFrom-Json
+          Write-Host "Installed UniGetUI from $($install.Source) ($($install.FileVersion)) at $($install.ExePath)"
           "exe=$($install.ExePath)" >> $env:GITHUB_OUTPUT
-          "tag=$($install.Tag)" >> $env:GITHUB_OUTPUT
 
       - name: Run UniGetUI desktop smoke test
         shell: pwsh
@@ -122,7 +184,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-smoke-screenshots
+          name: desktop-smoke-screenshots-${{ matrix.unigetui_source }}
           path: artifacts\desktop-smoke\*.png
           if-no-files-found: warn
 
@@ -130,7 +192,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-smoke-logs
+          name: desktop-smoke-logs-${{ matrix.unigetui_source }}
           path: |
             artifacts\desktop-smoke
             !artifacts\desktop-smoke\*.png

@@ -46,6 +46,13 @@ function Invoke-Agent {
     return $output
 }
 
+function Send-Key {
+    param([Parameter(Mandatory)] [string] $Scancode)
+
+    Invoke-Agent key-scancode --scancode $Scancode --pressed true | Out-Null
+    Invoke-Agent key-scancode --scancode $Scancode --pressed false | Out-Null
+}
+
 function Save-Screenshot {
     param([Parameter(Mandatory)] [string] $Name)
 
@@ -180,11 +187,9 @@ namespace UniGetUISmoke
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
         [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
         [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
-        [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
         private const uint GW_OWNER = 4;
         private const int SW_MAXIMIZE = 3;
-        private const uint WM_CLOSE = 0x0010;
 
         public static List<WindowInfo> Find(int[] processIds)
         {
@@ -219,11 +224,6 @@ namespace UniGetUISmoke
             return result;
         }
 
-        public static bool Close(long handle)
-        {
-            return PostMessage(new IntPtr(handle), WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
-        }
-
         public static bool MaximizeAndActivate(long handle)
         {
             var hWnd = new IntPtr(handle);
@@ -233,6 +233,26 @@ namespace UniGetUISmoke
     }
 }
 '@
+    }
+}
+
+# UniGetUI shows its dialogs (ImmersiveDialog) as an overlay inside the main window, not as
+# separate windows. The overlay's title TextBlock is only in the UI Automation tree while a
+# dialog is open, so its presence and text tell which dialog is showing.
+$remoteModalProbe = {
+    param($Handle)
+
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $automation = [System.Windows.Automation.AutomationElement]
+    $root = $automation::FromHandle([IntPtr] [long] $Handle)
+    $condition = [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'ModalTitle')
+    $title = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+    $elementCount = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition).Count
+
+    [pscustomobject]@{
+        IsOpen = $null -ne $title
+        Title = if ($null -ne $title) { $title.Current.Name } else { $null }
+        AutomationElementCount = $elementCount
     }
 }
 
@@ -252,7 +272,7 @@ $remoteProbe = {
     }
 }
 
-# The main window is the largest visible, unowned, titled window; owned windows are dialogs.
+# The main window is the largest visible, unowned, titled window.
 function Get-MainWindow {
     param([Parameter(Mandatory)] [object] $Probe)
 
@@ -260,12 +280,6 @@ function Get-MainWindow {
         Where-Object { $null -ne $_ -and -not $_.Owned -and -not [string]::IsNullOrWhiteSpace($_.Title) -and ($_.Right - $_.Left) -ge 400 -and ($_.Bottom - $_.Top) -ge 300 } |
         Sort-Object -Property { ($_.Right - $_.Left) * ($_.Bottom - $_.Top) } -Descending |
         Select-Object -First 1
-}
-
-function Get-Dialogs {
-    param([Parameter(Mandatory)] [object] $Probe)
-
-    return @(@($Probe.Windows) | Where-Object { $null -ne $_ -and $_.Owned -and -not [string]::IsNullOrWhiteSpace($_.Title) })
 }
 
 if ($DesktopSize -notmatch '^(?<width>[1-9][0-9]*)[xX](?<height>[1-9][0-9]*)$') {
@@ -319,42 +333,42 @@ try {
     }
     Write-Host "UniGetUI main window appeared: '$($mainWindow.Title)' (pid $($mainWindow.ProcessId))"
 
-    # First-run UI: startup checks may open modal dialogs (missing package manager
-    # dependencies, for example) a little after the main window. Record and close them.
-    $settleDeadline = (Get-Date).AddSeconds($DialogSettleSeconds)
-    $firstRunCaptured = $false
-    do {
-        $dialogs = @(Get-Dialogs -Probe $probe)
-        if ($dialogs.Count -gt 0) {
-            if (-not $firstRunCaptured) {
-                Save-Screenshot -Name 'unigetui-first-run-dialog.png' | Out-Null
-                $firstRunCaptured = $true
-            }
-
-            foreach ($dialog in $dialogs) {
-                Write-Host "Closing UniGetUI dialog: '$($dialog.Title)'"
-                $dismissedDialogs.Add($dialog)
-                Invoke-Command -Session $session -ArgumentList $dialog.Handle -ScriptBlock {
-                    param($Handle)
-                    [UniGetUISmoke.WindowProbe]::Close([long] $Handle) | Out-Null
-                }
-            }
-        }
-
-        Start-Sleep -Seconds 2
-        $probe = Invoke-Command -Session $session -ScriptBlock $remoteProbe
-    } while ((Get-Date) -lt $settleDeadline)
-
-    $mainWindow = Get-MainWindow -Probe $probe
-    if ($null -eq $mainWindow) {
-        throw 'UniGetUI main window disappeared while dismissing first-run dialogs'
-    }
-
     $activated = Invoke-Command -Session $session -ArgumentList $mainWindow.Handle -ScriptBlock {
         param($Handle)
         [UniGetUISmoke.WindowProbe]::MaximizeAndActivate([long] $Handle)
     }
     Write-Host "Maximized UniGetUI main window (SetForegroundWindow: $activated)"
+
+    # First-run UI: startup checks open dialogs a little after the main window appears.
+    # Missing package manager dependencies are expected on a fresh runner and are skipped
+    # with Escape, as a user would. Any other dialog (a crash report, an integrity
+    # violation) fails the test.
+    $settleDeadline = (Get-Date).AddSeconds($DialogSettleSeconds)
+    $firstRunCaptured = $false
+    $modal = $null
+    do {
+        Start-Sleep -Seconds 2
+        $modal = Invoke-Command -Session $session -ArgumentList $mainWindow.Handle -ScriptBlock $remoteModalProbe
+        if ($modal.IsOpen) {
+            if (-not $firstRunCaptured) {
+                Save-Screenshot -Name 'unigetui-first-run-dialog.png' | Out-Null
+                $firstRunCaptured = $true
+            }
+
+            if ($modal.Title -notlike 'Missing dependency*') {
+                throw "UniGetUI shows an unexpected dialog: '$($modal.Title)'"
+            }
+
+            Write-Host "Skipping UniGetUI dialog: '$($modal.Title)'"
+            $dismissedDialogs.Add($modal.Title)
+            Send-Key -Scancode '0x01'
+        }
+    } while ((Get-Date) -lt $settleDeadline)
+
+    Write-Host "UI Automation elements in the UniGetUI main window: $($modal.AutomationElementCount)"
+    if ($modal.IsOpen) {
+        throw "UniGetUI dialog '$($modal.Title)' is still open after $DialogSettleSeconds seconds"
+    }
 
     $screenshotPath = Join-Path $ArtifactsDir 'unigetui-main-window.png'
     $deadline = (Get-Date).AddSeconds($ScreenshotTimeoutSeconds)

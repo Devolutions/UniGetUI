@@ -27,7 +27,9 @@ Get-Process -Name 'UniGetUI' -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Seconds 1
 
 Write-Host "Building $Configuration (log: $buildLog)"
-& dotnet build $project -c $Configuration -p:Platform=x64 -r win-x64 --nologo -v q -clp:ErrorsOnly *> $buildLog
+# Serial build, as in build-release.yml: parallel project builds can race on the same output
+# file on CI runners (CS2012).
+& dotnet build $project -c $Configuration -p:Platform=x64 -r win-x64 -p:UseSharedCompilation=false -p:BuildInParallel=false -m:1 --nologo -v q -clp:ErrorsOnly *> $buildLog
 if ($LASTEXITCODE -ne 0) {
     Get-Content -Path $buildLog -Tail 60 | Write-Host
     throw "dotnet build failed with exit code $LASTEXITCODE; full log in $buildLog"

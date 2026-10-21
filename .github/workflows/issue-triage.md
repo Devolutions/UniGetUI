@@ -16,6 +16,9 @@ on:
         required: true
 
 concurrency:
+  group: gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.issue_number || github.run_id }}
+  cancel-in-progress: false
+  queue: max
   job-discriminator: ${{ github.event.issue.number || github.event.inputs.issue_number || github.run_id }}
 
 permissions:
@@ -146,7 +149,9 @@ Add all chosen labels in a single `add_labels` call with the issue number.
 
 Post one comment only when it helps the author or maintainers: the issue is
 unclear, a duplicate, or has closely related issues. Do not comment just to
-announce the labels. Address the author directly, keep it short and friendly,
+announce the labels, and do not repeat questions or duplicate links that an
+earlier comment on the issue already covers. Address the author directly, keep
+it short and friendly,
 and use this shape, omitting sections that do not apply:
 
 ```markdown

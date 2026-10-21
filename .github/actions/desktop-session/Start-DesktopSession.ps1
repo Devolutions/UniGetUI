@@ -37,12 +37,14 @@ $taskName = 'IronRdpAgenticPSHost'
 $psHostPort = 45985
 
 # Server Manager opens at every administrator logon on Windows Server and would sit on top
-# of whatever later steps put on the desktop.
+# of whatever later steps put on the desktop. Its scheduled task belongs to SYSTEM and
+# can't be disabled from here, so this sets the machine setting and its policy equivalent.
 function Disable-ServerManagerAtLogon {
     try {
         New-Item -Path 'HKLM:\SOFTWARE\Microsoft\ServerManager' -Force | Out-Null
         New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\ServerManager' -Name 'DoNotOpenServerManagerAtLogon' -PropertyType DWord -Value 1 -Force | Out-Null
-        Get-ScheduledTask -TaskName 'ServerManager' -ErrorAction SilentlyContinue | Disable-ScheduledTask | Out-Null
+        New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Server\ServerManager' -Force | Out-Null
+        New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Server\ServerManager' -Name 'DoNotOpenAtLogon' -PropertyType DWord -Value 1 -Force | Out-Null
     }
     catch {
         Write-Warning "Could not disable Server Manager at logon: $($_.Exception.Message)"

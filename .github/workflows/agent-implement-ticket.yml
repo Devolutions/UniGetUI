@@ -33,6 +33,12 @@ on:
   # and without opening a pull request.
   push:
     branches: [ "claude/desktop-smoke-tests-ab5c53" ]
+    paths:
+      - '.github/agent/**'
+      - '.github/workflows/agent-implement-ticket.yml'
+      - '.github/actions/desktop-session/**'
+      - '.github/actions/desktop-session-cleanup/**'
+      - '.github/actions/unigetui-desktop/**'
 
 permissions:
   contents: read

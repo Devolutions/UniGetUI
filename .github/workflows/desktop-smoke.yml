@@ -28,6 +28,10 @@ on:
   # default branch, so this trigger runs it from the development branch (with both sources).
   push:
     branches: [ "claude/desktop-smoke-tests-ab5c53" ]
+    paths:
+      - '.github/actions/**'
+      - '.github/workflows/desktop-smoke.yml'
+      - 'testing/desktop-smoke/**'
 
 permissions:
   contents: read

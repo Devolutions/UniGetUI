@@ -15824,14 +15824,14 @@
       "images": []
     },
     "FSPProductions.FileHasher": {
-      "icon": "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-icon/hash-icon-256.png",
+      "icon": "https://raw.githubusercontent.com/fsantiago07044/filehasher/v0.5.0/docs/filehasher-winget-PR-assets/app-icon/hash-icon-256.png",
       "images": [
-        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui-completion-state-simple.png",
-        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui.png",
-        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui-completion-inner-msi-scan.png",
-        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/sidecar-file-explorer-view.png",
-        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/sidecar-file-overwrite-dialog.png",
-        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/completion-dialog-sidecars-overwritten.png"
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/v0.5.0/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui-completion-state-simple.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/v0.5.0/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/v0.5.0/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui-completion-inner-msi-scan.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/v0.5.0/docs/filehasher-winget-PR-assets/app-ui-screenshots/sidecar-file-explorer-view.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/v0.5.0/docs/filehasher-winget-PR-assets/app-ui-screenshots/sidecar-file-overwrite-dialog.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/v0.5.0/docs/filehasher-winget-PR-assets/app-ui-screenshots/completion-dialog-sidecars-overwritten.png"
       ]
     },
     "fspy": {

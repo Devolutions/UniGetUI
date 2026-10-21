@@ -21,8 +21,7 @@ internal sealed record NotionPage(string Id, string Title, string Description, s
 }
 
 /// Where an installed Notion skill came from, for its lock entry: its page,
-/// the version downloaded, and the database (or, for a page outside one, the
-/// page) it is listed in.
+/// the version downloaded, and the database or page explicitly used as its source.
 internal sealed record NotionOrigin(NotionPage Page, string VersionId, string Source)
 {
     public string PageUrl => NotionFeed.CanonicalUrl(Page.Id);
@@ -201,13 +200,12 @@ internal static partial class NotionFeed
     public static ResolvedSource Resolve(string id, IReadOnlyList<string> requested, Action<string> log)
     {
         List<NotionPage> pages;
-        string source;
+        string source = CanonicalUrl(id);
         try
         {
             log("Reading the Notion source…");
             if (TryGetDataSources(id) is { } dataSources)
             {
-                source = CanonicalUrl(id);
                 var all = ListPages(dataSources);
                 var everything = requested.Count == 0 || requested.Contains("*");
                 pages = everything ? all : all.Where(p => requested.Any(p.Matches)).ToList();
@@ -220,9 +218,7 @@ internal static partial class NotionFeed
             }
             else
             {
-                var page = GetPage(id);
-                source = CanonicalUrl(page.DatabaseId ?? page.Id);
-                pages = [page];
+                pages = [GetPage(id)];
             }
         }
         catch (NotionCliException e)

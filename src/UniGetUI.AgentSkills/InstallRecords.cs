@@ -4,6 +4,7 @@
 // public API so both write identical lock files.
 
 using System.Text.Json.Nodes;
+using Devolutions.AgentSkills;
 
 namespace Skills;
 
@@ -209,7 +210,9 @@ internal static class InstallRecords
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // best effort
+            throw new SkillsException(
+                $"Could not save tracking information for skill '{name}' to the global lock file '{SkillLock.GetPath()}': {e.Message}",
+                e);
         }
     }
 
@@ -221,7 +224,9 @@ internal static class InstallRecords
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // best effort
+            throw new SkillsException(
+                $"Could not save tracking information for skill '{name}' to the project lock file '{LocalLock.GetPath(cwd)}': {e.Message}",
+                e);
         }
     }
 }

@@ -124,7 +124,7 @@ public sealed class SkillsManager
     /// <param name="progress">Receives progress and warning lines.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>One outcome per skill; per-agent failures are reported there rather than thrown.</returns>
-    /// <exception cref="SkillsException">The source could not be fetched, has no skills, or has none of the requested skills.</exception>
+    /// <exception cref="SkillsException">The source could not be fetched, has no skills, has none of the requested skills, or the install's tracking metadata could not be saved.</exception>
     /// <exception cref="ArgumentException">An unknown agent id.</exception>
     public SkillInstallResult Install(SkillInstallRequest request, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {

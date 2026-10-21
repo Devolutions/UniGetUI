@@ -249,7 +249,7 @@ internal static class UpdateEngine
                         Source = source,
                         CurrentHash = current,
                         LatestHash = latest,
-                        InstallSource = NotionFeed.CanonicalUrl(pageId),
+                        InstallSource = source,
                     });
                 }
                 catch (NotionCliException e) when (e.Failure == NotionCliFailure.NotFound)

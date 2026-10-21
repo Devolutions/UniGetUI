@@ -65,6 +65,7 @@ public sealed class AgentSkills : PackageManager
             RunsInProcess = true,
             CanListAllPackages = true,
             SupportsCustomSources = true,
+            SupportsCustomPackageIcons = true,
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
             Sources = new SourceCapabilities { KnowsPackageCount = false, KnowsUpdateDate = false },
@@ -416,6 +417,8 @@ public sealed class AgentSkills : PackageManager
     /// </summary>
     protected override void _performPreInitializationSteps()
     {
+        NotionCliTool.ApplyPinnedUpdateExclusions();
+
         if (Settings.Get(Settings.K.SkillsDefaultEnablementApplied))
             return;
 

@@ -43,13 +43,25 @@ runs:
       env:
         NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         OUTPUT_DIR: ${{ inputs.output-dir }}
+        # MSBuild reads environment variables as properties. As in build-release.yml, build
+        # project references one at a time without the shared compiler server: parallel
+        # builds can race on the same output file on CI runners (CS2012).
+        UseSharedCompilation: 'false'
+        BuildInParallel: 'false'
       run: |
         $outputDir = $env:OUTPUT_DIR
         if ([string]::IsNullOrWhiteSpace($outputDir)) {
           $outputDir = Join-Path $env:RUNNER_TEMP 'unigetui-build'
         }
 
-        & "$env:GITHUB_WORKSPACE\scripts\build.ps1" -SkipTests -OutputPath $outputDir
+        # One retry, which is incremental, for the file-lock race above.
+        try {
+          & "$env:GITHUB_WORKSPACE\scripts\build.ps1" -SkipTests -OutputPath $outputDir
+        }
+        catch {
+          Write-Host "::warning::scripts/build.ps1 failed ($($_.Exception.Message)); retrying once"
+          & "$env:GITHUB_WORKSPACE\scripts\build.ps1" -SkipTests -OutputPath $outputDir
+        }
 
         # build.ps1 only warns when it can't find ISCC, so check the installer was produced.
         $installerPath = Join-Path $outputDir 'UniGetUI.Installer.x64.exe'

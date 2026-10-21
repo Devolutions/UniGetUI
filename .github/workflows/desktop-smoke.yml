@@ -97,6 +97,47 @@ jobs:
           path: ironrdp/target/release/ironrdp-agent.exe
           key: ${{ steps.agent-cache.outputs.cache-primary-key }}
 
+      # UniGetUI's Cargo manager needs cargo-binstall and cargo-update, and asks for them in a
+      # dialog at startup when their executables are missing from the cargo bin directory.
+      # Bump the key to pick up newer versions.
+      - name: Restore cargo tools
+        id: cargo-tools-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.cargo/bin/cargo-binstall.exe
+            ~/.cargo/bin/cargo-install-update.exe
+            ~/.cargo/bin/cargo-install-update-config.exe
+          key: cargo-tools-${{ runner.os }}-v1
+
+      - name: Install cargo tools
+        if: steps.cargo-tools-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          cargo install cargo-binstall --locked
+          if ($LASTEXITCODE -ne 0) { throw "cargo install cargo-binstall failed with exit code $LASTEXITCODE" }
+          cargo binstall --no-confirm cargo-update
+          if ($LASTEXITCODE -ne 0) { throw "cargo binstall cargo-update failed with exit code $LASTEXITCODE" }
+
+      - name: Save cargo tools
+        if: steps.cargo-tools-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cargo/bin/cargo-binstall.exe
+            ~/.cargo/bin/cargo-install-update.exe
+            ~/.cargo/bin/cargo-install-update-config.exe
+          key: ${{ steps.cargo-tools-cache.outputs.cache-primary-key }}
+
+      - name: Check cargo tools
+        shell: pwsh
+        run: |
+          foreach ($tool in @('cargo-binstall', 'cargo-install-update')) {
+            $command = Get-Command $tool -ErrorAction SilentlyContinue
+            if ($null -eq $command) { throw "$tool is not on PATH" }
+            Write-Host "$tool`: $($command.Source)"
+          }
+
       - name: Install .NET
         if: matrix.unigetui_source == 'source'
         uses: actions/setup-dotnet@v6

@@ -3,7 +3,8 @@
 # connected to it, and a PowerShell remoting endpoint running inside that desktop session.
 #
 # IronRDP's own orchestrator tears the session down when it returns, so this script calls
-# its stage scripts directly and leaves the session up for later steps of the job. It then
+# its stage scripts directly (except the daemon start, see Start-DetachedAgentDaemon) and
+# leaves the session up for later steps of the job. It then
 # exports what those steps need (see DesktopSession.psm1) to GITHUB_ENV and GITHUB_OUTPUT.
 [CmdletBinding()]
 param(
@@ -48,6 +49,62 @@ function Disable-ServerManagerAtLogon {
     }
 }
 
+# The runner ends every process a step started when the step ends, so IronRDP's
+# Start-AgentDaemon.ps1 (Start-Process) would leave a daemon that dies with this step.
+# A process created through WMI is a child of the WMI provider host instead, so it outlives
+# the step. Same readiness probe and state file as Start-AgentDaemon.ps1, so IronRDP's
+# cleanup still stops it.
+function Start-DetachedAgentDaemon {
+    $stdoutPath = Join-Path $ArtifactsDir 'ironrdp-agent.stdout.log'
+    $stderrPath = Join-Path $ArtifactsDir 'ironrdp-agent.stderr.log'
+    $commandLine = "cmd.exe /d /s /c `"set IRONRDP_LOG=debug&& `"$AgentPath`" --endpoint $endpoint daemon-start --skip-certificate-check 1> `"$stdoutPath`" 2> `"$stderrPath`"`""
+    $created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+        CommandLine = $commandLine
+        CurrentDirectory = $ArtifactsDir
+    }
+    if ($created.ReturnValue -ne 0) {
+        throw "Win32_Process.Create failed with code $($created.ReturnValue) for: $commandLine"
+    }
+
+    # A failing native command does not throw, so readiness is detected via the exit code.
+    # stderr is discarded because "pipe not found" is expected until the daemon is listening.
+    $agentProcess = $null
+    $deadline = (Get-Date).AddSeconds(30)
+    do {
+        Start-Sleep -Milliseconds 250
+        if ($null -eq $agentProcess) {
+            $agentProcess = Get-CimInstance -ClassName Win32_Process -Filter "ParentProcessId = $($created.ProcessId) AND Name = 'ironrdp-agent.exe'" |
+                Select-Object -First 1
+        }
+
+        & $AgentPath --endpoint $endpoint status 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0 -and $null -ne $agentProcess) {
+            $state = [pscustomobject]@{
+                ProcessId = [int] $agentProcess.ProcessId
+                WrapperProcessId = [int] $created.ProcessId
+                Endpoint = $endpoint
+                AgentPath = $AgentPath
+                LogPath = $stderrPath
+                StandardOutputPath = $stdoutPath
+                StandardErrorPath = $stderrPath
+                CertificateCheckSkipped = $true
+            }
+            $state | ConvertTo-Json -Depth 4 | Set-Content -Path $daemonStatePath -Encoding utf8NoBOM
+            return $state
+        }
+
+        if ($null -eq (Get-Process -Id $created.ProcessId -ErrorAction SilentlyContinue)) {
+            throw "ironrdp-agent daemon exited during startup; see $stderrPath"
+        }
+    } while ((Get-Date) -lt $deadline)
+
+    Get-Process -Id $created.ProcessId -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    if ($null -ne $agentProcess) {
+        Stop-Process -Id $agentProcess.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+    throw "Timed out waiting for ironrdp-agent daemon on $endpoint"
+}
+
 New-Item -Path $ArtifactsDir -ItemType Directory -Force | Out-Null
 
 # Export first, so the cleanup action can find the session even if a stage below fails.
@@ -76,12 +133,7 @@ try {
     Write-Host '::endgroup::'
 
     Write-Host '::group::Start ironrdp-agent daemon'
-    & (Join-Path $harnessRoot 'Start-AgentDaemon.ps1') `
-        -AgentPath $AgentPath `
-        -Endpoint $endpoint `
-        -ArtifactsDir $ArtifactsDir `
-        -StatePath $daemonStatePath `
-        -SkipCertificateCheck | Write-Host
+    Start-DetachedAgentDaemon | ConvertTo-Json -Compress | Write-Host
     Write-Host '::endgroup::'
 
     Write-Host '::group::Register interactive PSHostServer'

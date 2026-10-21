@@ -44,3 +44,16 @@ try {
 catch {
     Write-Warning "IronRDP cleanup failed: $($_.Exception.Message)"
 }
+
+# The daemon was started through a cmd.exe wrapper (see Start-DesktopSession.ps1), which
+# IronRDP's cleanup doesn't know about.
+$daemonStatePath = Join-Path $ArtifactsDir 'agent-daemon.json'
+if (Test-Path $daemonStatePath) {
+    $daemonState = Get-Content -Path $daemonStatePath -Raw | ConvertFrom-Json
+    if ($daemonState.PSObject.Properties.Name -contains 'WrapperProcessId') {
+        Stop-Process -Id ([int] $daemonState.WrapperProcessId) -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Warnings above must not fail the step through a native command's leftover exit code.
+$global:LASTEXITCODE = 0

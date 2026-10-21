@@ -1,4 +1,5 @@
-using System.Text.Json;
+using System.Collections.Concurrent;
+using System.Text;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 
@@ -64,6 +65,35 @@ internal sealed class CratesIOClient
 {
     public const string ApiUrl = "https://crates.io/api/v1";
     internal static string? TEST_ApiUrlOverride { private get; set; }
+    private static readonly ConcurrentDictionary<string, (DateTime Time, string Json)> Cache = new();
+
+    internal static void InvalidateCache() => Cache.Clear();
+
+    internal static async Task<CargoManifest> GetManifestAsync(string packageId,
+        CancellationToken cancellationToken)
+    {
+        var manifest = await FetchAsync<CargoManifest>(
+            new Uri($"{GetApiUrl()}/crates/{Uri.EscapeDataString(packageId)}"), cancellationToken);
+        if (manifest.crate is null || manifest.versions is null)
+            throw new NullResponseException($"Null response for Cargo package {packageId}");
+        return manifest;
+    }
+
+    internal static CargoManifestVersion? SelectUpdate(CargoManifest manifest, string installed)
+    {
+        if (!SemanticVersion.TryParse(installed, out var current))
+            throw new InvalidDataException($"Invalid installed Cargo version: {installed}");
+        return manifest.versions
+            .Where(version => !version.yanked
+                && SemanticVersion.TryParse(version.num, out var parsed)
+                && !parsed.IsPreRelease && parsed.CompareTo(current) > 0)
+            .OrderByDescending(version =>
+            {
+                SemanticVersion.TryParse(version.num, out var parsed);
+                return parsed;
+            })
+            .FirstOrDefault();
+    }
 
     public static Tuple<Uri, CargoManifest> GetManifest(string packageId)
     {
@@ -90,18 +120,39 @@ internal sealed class CratesIOClient
     private static string GetApiUrl() => TEST_ApiUrlOverride ?? ApiUrl;
 
     internal static T Fetch<T>(Uri url)
+        => FetchAsync<T>(url, CancellationToken.None).GetAwaiter().GetResult();
+
+    private static async Task<T> FetchAsync<T>(Uri url, CancellationToken cancellationToken)
     {
+        string key = url.AbsoluteUri;
+        if (Cache.TryGetValue(key, out var cached) && DateTime.UtcNow - cached.Time < TimeSpan.FromMinutes(5))
+            return CargoJson.Deserialize<T>(cached.Json)
+                ?? throw new NullResponseException($"Null cached response for {url}");
+        await CargoHttp.PaceApiAsync(cancellationToken);
         using HttpClient client = new(CoreTools.GenericHttpClientParameters);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        using HttpResponseMessage response = client.Send(request);
+        using HttpResponseMessage response = await client.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
-
-        string manifestStr = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using MemoryStream output = new();
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = await stream.ReadAsync(buffer, cancellationToken)) != 0)
+        {
+            if (output.Length + read > CargoHttp.ManifestLimit)
+                throw new InvalidDataException($"Cargo API response exceeds the allowed size: {url}");
+            output.Write(buffer, 0, read);
+        }
+        string manifestStr = Encoding.UTF8.GetString(output.ToArray());
 
         var manifest =
             CargoJson.Deserialize<T>(manifestStr)
             ?? throw new NullResponseException($"Null response for request to {url}");
+        if (Cache.Count >= 512)
+            Cache.Clear();
+        Cache[key] = (DateTime.UtcNow, manifestStr);
         return manifest;
     }
 }

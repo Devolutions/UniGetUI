@@ -11,6 +11,7 @@ using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.Operations.Reboot;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -346,7 +347,7 @@ namespace UniGetUI.PackageEngine.Operations
             if (!ShouldUseAgentBroker())
             {
                 if (!Package.Manager.Capabilities.SerializesOperations)
-                    return await base.PerformOperation();
+                    return await PerformLocalOperation();
 
                 SemaphoreSlim gate = ManagerOperationGates.GetOrAdd(
                     Package.Manager.Name,
@@ -378,7 +379,7 @@ namespace UniGetUI.PackageEngine.Operations
 
                 try
                 {
-                    return await base.PerformOperation();
+                    return await PerformLocalOperation();
                 }
                 finally
                 {
@@ -387,6 +388,27 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             return await PerformBrokerOperation();
+        }
+
+        private async Task<OperationVeredict> PerformLocalOperation()
+        {
+            if (Package.Manager.OperationHelper is IManagedPackageOperationHelper managed)
+            {
+                try
+                {
+                    var result = await managed.TryPerformAsync(Package, Options, Role,
+                        message => Line(message, LineType.Information), ReportProgress, CancellationToken);
+                    if (result is not null)
+                        return result.Value;
+                    // Resolution may have pinned an initially unversioned request before fallback.
+                    PrepareProcessStartInfo();
+                }
+                catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+                {
+                    return OperationVeredict.Canceled;
+                }
+            }
+            return await base.PerformOperation();
         }
 
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> ManagerOperationGates =

@@ -104,6 +104,55 @@ Related environment variables:
 
 ## Command reference
 
+### Cargo prerequisites and installation behavior
+
+The Cargo manager requires Cargo, not `cargo-binstall` or `cargo-update`. UniGetUI never
+installs or invokes those extensions. Existing installations of those tools remain ordinary
+Cargo packages and are not removed.
+
+Installed packages are listed with `cargo install --list`, independently of network access.
+UniGetUI checks crates.io versions itself, excluding yanked and prerelease updates by default.
+Git, local-path, and other-registry packages remain listed with their source identity; they
+are not matched against crates.io for updates. Their details, version catalogs, and source
+downloads are not substituted with potentially unrelated same-name crates.io packages.
+
+Local, non-elevated installations first attempt a publisher-provided binary for the exact
+selected version and Cargo host target. The C# installer supports ZIP, TAR, TAR.GZ/TGZ, and
+explicitly configured raw executables. It reads supported publisher manifest metadata or
+unambiguous version-specific GitHub release assets. It requires a supported SHA-256/SHA-512
+checksum (including GitHub's published asset digest); unsupported signature-only metadata
+uses source compilation. No cargo-quickinstall or other third-party build host is used.
+Checksums of crates.io source archives are never reused as binary checksums.
+
+When a compatible verified binary is unavailable, the operation log explains the fallback
+to `cargo install --locked` for the same version. Custom Cargo/build options and elevated
+operations also use Cargo. Compilation still requires a working Rust compiler, linker,
+and any crate-specific native dependencies. A checksum mismatch, unsafe archive, or
+cancellation is a failure/cancellation, not permission to silently choose another installer.
+Integrity skipping and binstall-specific custom arguments are not supported.
+
+Custom installation locations use Cargo's **install-root** semantics: executables go into
+`<root>\bin`, with Cargo's tracking files beside that directory. This differs from binstall's
+former `--install-path`, which selected the binary directory directly; review saved custom
+locations when migrating. Without a custom root, `CARGO_INSTALL_ROOT`, `install.root` in the
+Cargo home configuration, `CARGO_HOME`, and the user-default Cargo home determine the root
+in that order. Like Cargo itself, the default installed listing does not scan arbitrary
+other custom roots.
+
+Uninstallation remains `cargo uninstall`. Command previews, manual-install commands, and
+exported install scripts use ordinary Cargo source commands; the managed binary optimization
+runs only inside UniGetUI's operation pipeline. Broker-owned operations stay with the Agent:
+they never fall back to a local installer after policy denial or broker failure. The Agent's
+own Cargo implementation determines its execution prerequisites and binary/source behavior;
+client-side helper removal does not change an externally installed Agent.
+
+The standalone NativeAOT interoperability check is
+`dotnet publish scripts\CargoSmoke\CargoSmoke.csproj -c Release -r win-x64 --self-contained true /p:Platform=x64`,
+followed by `.\scripts\CargoSmoke\bin\x64\Release\net10.0\win-x64\publish\UniGetUI.Cargo.Smoke.exe`.
+It uses fixture downloads and an isolated temporary install root, verifies real Cargo
+listing/uninstallation, and treats trim/AOT warnings as errors. Use the matching RID on
+other hosts; this does not substitute for their native lock-contention tests.
+
 ### Core
 
 | Command | Required options | Optional options | Notes |

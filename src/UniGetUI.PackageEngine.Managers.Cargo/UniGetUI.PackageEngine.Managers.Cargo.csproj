@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -23,5 +24,8 @@
 
     <ItemGroup>
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
+        <PackageReference Include="Tomlyn" Version="2.10.1" />
+        <Content Include="Tomlyn.LICENSE.txt" Link="Licenses\Tomlyn.txt"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

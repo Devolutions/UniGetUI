@@ -2,6 +2,7 @@ using UniGetUI.PackageEngine.Managers.CargoManager;
 
 namespace UniGetUI.PackageEngine.Tests;
 
+[Collection(nameof(OperationOrchestrationTestCollection))]
 public sealed class CargoBinDirectoryTests
 {
     private static Func<string, string?> Env(params (string Name, string Value)[] values) =>
@@ -49,11 +50,11 @@ public sealed class CargoBinDirectoryTests
     }
 
     [Fact]
-    public void IsCargoBinaryPresent_FindsBinariesUnderCargoHomeWhenNotOnPath()
+    public void DiscoveryFindsCargoUnderCargoHomeAndRequiresExecutablePermissions()
     {
         string binaryName = OperatingSystem.IsWindows()
-            ? "cargo-unigetui-detection-probe.exe"
-            : "cargo-unigetui-detection-probe";
+            ? "cargo.exe"
+            : "cargo";
         string cargoHome = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
         string binDirectory = Path.Join(cargoHome, "bin");
         string binaryPath = Path.Join(binDirectory, binaryName);
@@ -61,22 +62,23 @@ public sealed class CargoBinDirectoryTests
 
         try
         {
-            Assert.False(Cargo.IsCargoBinaryPresent(binaryName));
+            Environment.SetEnvironmentVariable("CARGO_HOME", cargoHome);
+            var manager = new Cargo();
+            Assert.DoesNotContain(binaryPath, manager.FindCandidateExecutableFiles());
 
             Directory.CreateDirectory(binDirectory);
             File.WriteAllText(binaryPath, "");
-            Environment.SetEnvironmentVariable("CARGO_HOME", cargoHome);
 
             if (!OperatingSystem.IsWindows())
             {
-                Assert.False(Cargo.IsCargoBinaryPresent(binaryName));
+                Assert.DoesNotContain(binaryPath, manager.FindCandidateExecutableFiles());
                 File.SetUnixFileMode(
                     binaryPath,
                     UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
                 );
             }
 
-            Assert.True(Cargo.IsCargoBinaryPresent(binaryName));
+            Assert.Contains(binaryPath, manager.FindCandidateExecutableFiles());
         }
         finally
         {

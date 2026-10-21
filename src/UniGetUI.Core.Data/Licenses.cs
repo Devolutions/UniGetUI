@@ -12,6 +12,7 @@ namespace UniGetUI.Core.Data
             { "Windows App Sdk", "MIT" },
             { "PhotoSauce.MagicScaler", "MIT" },
             { "YamlDotNet", "MIT" },
+            { "Tomlyn", "BSD-2-Clause" },
             { "InnoDependencyInstaller", "CPOL 1.02" },
             // Package managers and related
             { "WinGet", "MIT" },
@@ -24,8 +25,6 @@ namespace UniGetUI.Core.Data
             { "PowerShell Gallery", "Unknown" },
             { ".NET SDK", "MIT" },
             { "Cargo", "MIT" },
-            { "cargo-binstall", "GPL-3.0-only" },
-            { "cargo-update", "MIT" },
             { "vcpkg", "MIT" },
             // Other
             { "GSudo", "MIT" },
@@ -59,6 +58,7 @@ namespace UniGetUI.Core.Data
                 "YamlDotNet",
                 new Uri("https://github.com/aaubry/YamlDotNet/blob/master/LICENSE.txt")
             },
+            { "Tomlyn", new Uri("https://github.com/xoofx/tomlyn/blob/main/license.txt") },
             {
                 "InnoDependencyInstaller",
                 new Uri(
@@ -84,11 +84,6 @@ namespace UniGetUI.Core.Data
             { ".NET SDK", new Uri("https://github.com/dotnet/sdk/blob/main/LICENSE.TXT") },
             { "PowerShell Gallery", new Uri("https://www.powershellgallery.com/") },
             { "Cargo", new Uri("https://github.com/rust-lang/cargo/blob/master/LICENSE-MIT") },
-            { "cargo-binstall", new Uri("https://spdx.org/licenses/GPL-3.0-only.html") },
-            {
-                "cargo-update",
-                new Uri("https://github.com/nabijaczleweli/cargo-update/blob/master/LICENSE")
-            },
             { "vcpkg", new Uri("https://github.com/microsoft/vcpkg/blob/master/LICENSE.txt") },
             // Other
             { "GSudo", new Uri("https://github.com/gerardog/gsudo/blob/master/LICENSE.txt") },
@@ -110,6 +105,7 @@ namespace UniGetUI.Core.Data
             { "Windows App Sdk", new Uri("https://github.com/microsoft/WindowsAppSDK/") },
             { "PhotoSauce.MagicScaler", new Uri("https://github.com/saucecontrol/PhotoSauce/") },
             { "YamlDotNet", new Uri("https://github.com/aaubry/YamlDotNet/") },
+            { "Tomlyn", new Uri("https://github.com/xoofx/tomlyn/") },
             {
                 "InnoDependencyInstaller",
                 new Uri("https://github.com/DomGries/InnoDependencyInstaller")
@@ -128,8 +124,6 @@ namespace UniGetUI.Core.Data
             { ".NET SDK", new Uri("https://dotnet.microsoft.com/") },
             { "PowerShell Gallery", new Uri("https://www.powershellgallery.com/") },
             { "Cargo", new Uri("https://github.com/rust-lang/cargo") },
-            { "cargo-binstall", new Uri("https://github.com/cargo-bins/cargo-binstall") },
-            { "cargo-update", new Uri("https://github.com/nabijaczleweli/cargo-update/") },
             { "vcpkg", new Uri("https://github.com/microsoft/vcpkg") },
             // Other
             { "GSudo", new Uri("https://github.com/gerardog/gsudo/") },

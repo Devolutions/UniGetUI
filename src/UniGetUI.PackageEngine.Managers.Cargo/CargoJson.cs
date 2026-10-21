@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
@@ -10,6 +11,9 @@ internal static class CargoJson
     {
         return JsonSerializer.Deserialize(json, GetTypeInfo<T>());
     }
+
+    public static byte[] SerializeToUtf8Bytes<T>(T value) =>
+        JsonSerializer.SerializeToUtf8Bytes(value, GetTypeInfo<T>());
 
     private static JsonTypeInfo<T> GetTypeInfo<T>()
     {
@@ -23,4 +27,7 @@ internal static class CargoJson
 [JsonSourceGenerationOptions(AllowTrailingCommas = true, WriteIndented = true)]
 [JsonSerializable(typeof(CargoManifest))]
 [JsonSerializable(typeof(CargoManifestVersionWrapper))]
+[JsonSerializable(typeof(CargoRelease))]
+[JsonSerializable(typeof(CargoTransactionJournal))]
+[JsonSerializable(typeof(JsonObject))]
 internal sealed partial class CargoJsonContext : JsonSerializerContext;

@@ -1,136 +1,92 @@
-using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Managers.CargoManager;
 
-internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHelper(cargo)
+internal sealed class CargoPkgOperationHelper(Cargo cargo)
+    : BasePkgOperationHelper(cargo), IManagedPackageOperationHelper
 {
-    private const string BinstallPackageId = "cargo-binstall";
-
-    private static bool TargetsBinstallItself(IPackage package) =>
-        package.Id.Equals(BinstallPackageId, StringComparison.OrdinalIgnoreCase);
-
-    private bool UsesBinstall(IPackage package) =>
-        ((Cargo)Manager).HasBinstall && !package.OverridenOptions.Cargo_DoNotUseBinstall;
-
-    private static bool OperationIsBrokered(IPackage package) =>
-        Settings.Get(Settings.K.UseAgentBroker) && !package.Source.IsVirtualManager;
+    internal static string RequestedVersion(IPackage package, InstallOptions options, OperationType operation) =>
+        options.Version.Length > 0 ? options.Version
+        : operation == OperationType.Update && package.IsUpgradable ? package.NewVersionString
+        : package.HasConcreteVersion ? package.VersionString : "";
 
     protected override IReadOnlyList<string> _getOperationParameters(
-        IPackage package,
-        InstallOptions options,
-        OperationType operation
-    )
+        IPackage package, InstallOptions options, OperationType operation)
     {
-        // --version is omitted when there is nothing to pin, so cargo picks the latest itself. An
-        // unpinned imported package reports the localized "Latest" as its version, which is
-        // display text rather than a version and is more than one word in several languages.
-        string requestedVersion = options.Version.Length > 0
-            ? options.Version
-            : package.HasConcreteVersion
-                ? package.VersionString
-                : "";
-        string[] versionArguments = requestedVersion.Length > 0
-            ? ["--version", CoreTools.EscapeCommandLineArgument(requestedVersion)]
-            : [];
-
-        package.OverridenOptions.Cargo_CustomInstallPathRequested =
-            options.CustomInstallLocation.Length is not 0;
-
-        bool hasBinstall = UsesBinstall(package);
-        bool targetsBinstallItself =
-            TargetsBinstallItself(package)
-            && !package.OverridenOptions.Cargo_CustomInstallPathRequested;
-
-        List<string> parameters;
-        switch (operation)
+        if (options.SkipHashCheck && operation != OperationType.Uninstall)
+            throw new InvalidOperationException("Cargo installation requires integrity verification.");
+        string version = RequestedVersion(package, options, operation);
+        if (operation == OperationType.Update
+            && SemanticVersion.TryParse(version, out var requested)
+            && SemanticVersion.TryParse(package.VersionString, out var installed)
+            && requested.CompareTo(installed) < 0)
+            throw new InvalidOperationException("Refusing to downgrade an installed Cargo package during an update.");
+        List<string> arguments = [operation == OperationType.Uninstall ? "uninstall" : "install", package.Id];
+        if (operation is not OperationType.Uninstall)
         {
-            case OperationType.Install:
-                if (hasBinstall)
-                    parameters =
-                        [Manager.Properties.InstallVerb, .. versionArguments, package.Id];
-                else if (targetsBinstallItself)
-                    parameters =
-                        ["install", package.Id, .. versionArguments, "--locked", "--force"];
-                else
-                    parameters = ["install", package.Id, .. versionArguments];
-                break;
-
-            case OperationType.Update:
-                if (hasBinstall)
-                    parameters = [Manager.Properties.UpdateVerb, package.Id];
-                else if (targetsBinstallItself)
-                    parameters = ["install", package.Id, "--locked", "--force"];
-                else
-                    parameters = ["install", package.Id, "--force"];
-                break;
-
-            case OperationType.Uninstall:
-                parameters = [Manager.Properties.UninstallVerb, package.Id];
-                break;
-
-            default:
-                throw new InvalidDataException("Invalid package operation");
+            if (version.Length > 0)
+                arguments.AddRange(["--version", CoreTools.EscapeCommandLineArgument(version)]);
+            arguments.Add("--locked");
+            if (operation == OperationType.Update)
+                arguments.Add("--force");
         }
-
-        if (operation is OperationType.Install or OperationType.Update)
+        if (options.CustomInstallLocation.Length > 0)
+            arguments.AddRange(["--root", CoreTools.EscapeCommandLineArgument(
+                CargoConfiguration.GetRoot(options.CustomInstallLocation))]);
+        IReadOnlyList<string> custom = operation switch
         {
-            if (hasBinstall)
+            OperationType.Update => options.CustomParameters_Update,
+            OperationType.Uninstall => options.CustomParameters_Uninstall,
+            _ => options.CustomParameters_Install,
+        };
+        if (operation != OperationType.Uninstall && package.Source.Name != cargo.DefaultSource.Name
+            && !custom.Any(argument => argument is "--git" or "--path" or "--index" or "--registry"))
+        {
+            var source = package.Source.Url
+                ?? throw new InvalidOperationException("The installed Cargo package has no original source.");
+            if (source.IsFile)
+                arguments.AddRange(["--path", CoreTools.EscapeCommandLineArgument(source.LocalPath)]);
+            else if (package.Source.Name.StartsWith("registry+", StringComparison.Ordinal))
+                arguments.AddRange(["--index", CoreTools.EscapeCommandLineArgument(source.AbsoluteUri)]);
+            else if (source.Scheme == Uri.UriSchemeHttps)
             {
-                parameters.Add("--no-confirm");
-
-                if (targetsBinstallItself)
-                    parameters.AddRange(["--disable-strategies", "compile"]);
-
-                if (options.SkipHashCheck)
-                    parameters.Add("--skip-signatures");
-
-                if (options.CustomInstallLocation != "")
-                    parameters.AddRange(["--install-path", CoreTools.EscapeCommandLineArgument(options.CustomInstallLocation)]);
+                arguments.AddRange(["--git", CoreTools.EscapeCommandLineArgument(source.GetLeftPart(UriPartial.Path))]);
+                if (source.Fragment.Length > 1)
+                    arguments.AddRange(["--rev", CoreTools.EscapeCommandLineArgument(source.Fragment[1..])]);
             }
+            else
+                throw new InvalidOperationException("The installed Cargo package source requires explicit Cargo source arguments.");
         }
-
-        parameters.AddRange(
-            operation switch
-            {
-                OperationType.Update => options.CustomParameters_Update,
-                OperationType.Uninstall => options.CustomParameters_Uninstall,
-                _ => options.CustomParameters_Install,
-            }
-        );
-
-        return parameters;
+        if (custom.Any(argument => argument is "--no-confirm" or "--skip-signatures"
+            or "--install-path" or "--disable-strategies" or "--strategies"
+            or "--pkg-url" or "--pkg-fmt" or "--bin-dir" or "--only-signed"
+            || argument.StartsWith("--install-path=", StringComparison.Ordinal)
+            || argument.StartsWith("--disable-strategies=", StringComparison.Ordinal)
+            || argument.StartsWith("--bin-dir=", StringComparison.Ordinal)
+            || argument.StartsWith("--strategies=", StringComparison.Ordinal)
+            || argument.StartsWith("--pkg-", StringComparison.Ordinal)))
+            throw new InvalidOperationException(
+                "Cargo extension arguments are no longer supported. Replace them with cargo install options.");
+        arguments.AddRange(custom);
+        return arguments;
     }
 
+    public Task<OperationVeredict?> TryPerformAsync(IPackage package, InstallOptions options,
+        OperationType operation, Action<string> log, Action<OperationProgress> progress,
+        CancellationToken cancellationToken) =>
+        CargoManagedInstaller.TryPerformAsync(cargo, package, options, operation, log, progress, cancellationToken);
+
     protected override OperationVeredict _getOperationResult(
-        IPackage package,
-        OperationType operation,
-        IReadOnlyList<string> processOutput,
-        int returnCode
-    )
+        IPackage package, OperationType operation, IReadOnlyList<string> processOutput, int returnCode)
     {
-        if (returnCode == 0)
-        {
-            ((Cargo)Manager).InvalidateInstalledCache();
-            return OperationVeredict.Success;
-        }
-
-        if (
-            operation is OperationType.Install or OperationType.Update
-            && TargetsBinstallItself(package)
-            && !package.OverridenOptions.Cargo_CustomInstallPathRequested
-            && UsesBinstall(package)
-            && !OperationIsBrokered(package)
-        )
-        {
-            package.OverridenOptions.Cargo_DoNotUseBinstall = true;
-            return OperationVeredict.AutoRetry;
-        }
-
-        return OperationVeredict.Failure;
+        if (returnCode != 0)
+            return OperationVeredict.Failure;
+        cargo.InvalidateInstalledCache();
+        return OperationVeredict.Success;
     }
 }

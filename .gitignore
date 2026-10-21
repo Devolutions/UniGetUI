@@ -45,6 +45,9 @@ src/UniGetU*/outpublish
 src/UniGetUI.Pinget.Cli/bin
 src/UniGetUI.Pinget.Cli/obj
 
+scripts/CargoSmoke/bin/
+scripts/CargoSmoke/obj/
+
 src/ExternalLibraries.*/bin
 src/ExternalLibraries.*/obj
 src/ExternalLibraries.*/out

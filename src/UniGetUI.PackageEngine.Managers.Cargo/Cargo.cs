@@ -38,14 +38,6 @@ public partial class Cargo : PackageManager
         return directories;
     }
 
-    internal static bool IsCargoBinaryPresent(string binaryName) =>
-        CoreTools.Which(binaryName).Item1
-        || GetCargoBinDirectories(
-                Environment.GetEnvironmentVariable,
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-            )
-            .Any(directory => IsExecutableFile(Path.Join(directory, binaryName)));
-
     private static bool IsExecutableFile(string path)
     {
         if (!File.Exists(path))
@@ -77,51 +69,17 @@ public partial class Cargo : PackageManager
 
     public Cargo()
     {
-        string cargoCommand = OperatingSystem.IsWindows() ? "cargo.exe" : "cargo";
-        string cargoUpdateBinary = OperatingSystem.IsWindows()
-            ? "cargo-install-update.exe"
-            : "cargo-install-update";
-        string cargoBinstallBinary = OperatingSystem.IsWindows()
-            ? "cargo-binstall.exe"
-            : "cargo-binstall";
-
-        string CargoPath() =>
-            Status.ExecutablePath is { Length: > 0 } path ? path : cargoCommand;
-
-        Dependencies =
-        [
-            // Cargo-binstall is required to install and update cargo binaries
-            new ManagerDependency(
-                "cargo-binstall",
-                cargoCommand,
-                "install cargo-binstall --locked",
-                "cargo install cargo-binstall --locked",
-                async () => await Task.Run(() => IsCargoBinaryPresent(cargoBinstallBinary)),
-                () => (CargoPath(), "install cargo-binstall --locked")
-            ),
-            // cargo-update is required to check for installed and upgradable packages
-            new ManagerDependency(
-                "cargo-update",
-                cargoCommand,
-                "install cargo-update --locked",
-                "cargo install cargo-update --locked",
-                async () => await Task.Run(() => IsCargoBinaryPresent(cargoUpdateBinary)),
-                () => IsCargoBinaryPresent(cargoBinstallBinary)
-                    ? (CargoPath(), "binstall --no-confirm cargo-update")
-                    : (CargoPath(), "install cargo-update --locked")
-            ),
-        ];
-
         Capabilities = new ManagerCapabilities
         {
             CanRunAsAdmin = true,
-            CanSkipIntegrityChecks = true,
+            CanSkipIntegrityChecks = false,
             SupportsCustomVersions = true,
             SupportsCustomLocations = true,
             CanDownloadInstaller = true,
             SupportsProxy = ProxySupport.Partially,
             SupportsProxyAuth = true,
             KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
+            SerializesOperations = true,
         };
 
         var cratesIo = new ManagerSource(this, "crates.io", new Uri("https://index.crates.io/"));
@@ -136,9 +94,9 @@ public partial class Cargo : PackageManager
             IconId = IconType.Rust,
             ColorIconId = "cargo_color",
             ExecutableFriendlyName = "cargo.exe",
-            InstallVerb = "binstall",
+            InstallVerb = "install",
             UninstallVerb = "uninstall",
-            UpdateVerb = "binstall",
+            UpdateVerb = "install",
             DefaultSource = cratesIo,
             KnownSources = [cratesIo],
         };
@@ -176,8 +134,6 @@ public partial class Cargo : PackageManager
 
         for (int i = 0; i < Packages.Count; i++)
         {
-            DateTime startTime = DateTime.Now;
-
             var package = Packages[i];
             try
             {
@@ -195,12 +151,6 @@ public partial class Cargo : PackageManager
                 BinPackages.Add(package);
             }
 
-            if (i + 1 == Packages.Count)
-                break;
-            // Crates.io requires no more than one request per second
-            Task.Delay(Math.Max(0, 1000 - (int)(DateTime.Now - startTime).TotalMilliseconds))
-                .GetAwaiter()
-                .GetResult();
         }
 
         logger.Close(p.ExitCode);
@@ -218,11 +168,16 @@ public partial class Cargo : PackageManager
         return GetPackages(LoggableTaskType.ListInstalledPackages);
     }
 
-    public readonly bool HasBinstall =
-        IsCargoBinaryPresent(OperatingSystem.IsWindows() ? "cargo-binstall.exe" : "cargo-binstall");
-
-    public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
-        CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "cargo.exe" : "cargo");
+    public override IReadOnlyList<string> FindCandidateExecutableFiles()
+    {
+        string name = OperatingSystem.IsWindows() ? "cargo.exe" : "cargo";
+        return CoreTools.WhichMultiple(name)
+            .Concat(GetCargoBinDirectories(Environment.GetEnvironmentVariable,
+                CargoConfiguration.WorkingDirectory).Select(directory => Path.Join(directory, name))
+                .Where(IsExecutableFile))
+            .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+            .ToArray();
+    }
 
     protected override void _loadManagerExecutableFile(
         out bool found,
@@ -257,8 +212,11 @@ public partial class Cargo : PackageManager
             Logger.Error("cargo version error: " + error);
     }
 
-    public void InvalidateInstalledCache() =>
+    public void InvalidateInstalledCache()
+    {
         TaskRecycler<List<CargoListEntry>>.RemoveFromCache(GetInstalledCommandOutput);
+        CratesIOClient.InvalidateCache();
+    }
 
     private IReadOnlyList<Package> GetPackages(LoggableTaskType taskType)
     {
@@ -267,19 +225,32 @@ public partial class Cargo : PackageManager
         foreach (var entry in entries)
         {
             var name = CoreTools.FormatAsName(entry.Id);
+            var source = DefaultSource;
+            if (!entry.IsCratesIo && entry.SourceDescription is { } description)
+            {
+                string location = description.StartsWith("registry+", StringComparison.Ordinal)
+                    ? description["registry+".Length..]
+                    : description.StartsWith("git+", StringComparison.Ordinal)
+                        ? description["git+".Length..] : description;
+                if (!Uri.TryCreate(location, UriKind.Absolute, out Uri? sourceUrl))
+                    throw new InvalidDataException($"Unrecognized Cargo package source: {description}");
+                source = new ManagerSource(this, description, sourceUrl);
+            }
             if (taskType is LoggableTaskType.ListUpdates)
             {
-                if (
-                    entry.NeedsUpdate
-                    && entry.LatestVersion is { Length: > 0 } latestVersion
-                    && latestVersion != entry.InstalledVersion
-                )
+                if (!entry.IsCratesIo)
+                {
+                    Logger.Debug($"Skipping crates.io update detection for {entry.Id} from {entry.SourceDescription}.");
+                    continue;
+                }
+                var (_, manifest) = CratesIOClient.GetManifest(entry.Id);
+                if (CratesIOClient.SelectUpdate(manifest, entry.InstalledVersion) is { } update)
                     Packages.Add(
                         new Package(
                             name,
                             entry.Id,
                             entry.InstalledVersion,
-                            latestVersion,
+                            update.num,
                             DefaultSource,
                             this
                         )
@@ -287,7 +258,7 @@ public partial class Cargo : PackageManager
             }
             else if (taskType is LoggableTaskType.ListInstalledPackages)
                 Packages.Add(
-                    new Package(name, entry.Id, entry.InstalledVersion, DefaultSource, this)
+                    new Package(name, entry.Id, entry.InstalledVersion, source, this)
                 );
         }
         return Packages;
@@ -296,10 +267,12 @@ public partial class Cargo : PackageManager
     private List<CargoListEntry> GetInstalledCommandOutput()
     {
         List<string> stdout = [];
-        using Process p = GetProcess(Status.ExecutablePath, "install-update --list");
+        CargoInstallTracker.RecoverAsync(CargoConfiguration.GetRoot(), CancellationToken.None)
+            .GetAwaiter().GetResult();
+        using Process p = GetProcess(Status.ExecutablePath, "install --list");
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.OtherTask, p);
-        logger.AddToStdOut("Other task: Call the install-update command");
         p.Start();
+        Task<string> stderr = p.StandardError.ReadToEndAsync();
 
         string? line;
         while ((line = p.StandardOutput.ReadLine()) is not null)
@@ -307,37 +280,43 @@ public partial class Cargo : PackageManager
             logger.AddToStdOut(line);
             stdout.Add(line);
         }
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        logger.AddToStdErr(stderr.GetAwaiter().GetResult());
         p.WaitForExit();
-
-        List<string> skippedRows = [];
-        var output = ParseInstallUpdateList(stdout, skippedRows);
-        foreach (var skippedRow in skippedRows)
-            logger.AddToStdErr($"Ignored unrecognized `install-update --list` row: {skippedRow}");
         logger.Close(p.ExitCode);
+        if (p.ExitCode != 0)
+            throw new InvalidOperationException($"Cargo installed-package listing failed with exit code {p.ExitCode}.");
+        return ParseInstallList(stdout);
+    }
 
-        if (output.Count > 0)
-            return output;
+    private string? _hostTarget;
 
-        List<string> fallbackStdout = [];
-        using Process fallback = GetProcess(Status.ExecutablePath, "install --list");
-        IProcessTaskLogger fallbackLogger = TaskLogger.CreateNew(
-            LoggableTaskType.OtherTask,
-            fallback
-        );
-        fallbackLogger.AddToStdOut(
-            "Falling back to `cargo install --list` (cargo-update reported no packages)"
-        );
-        fallback.Start();
-        while ((line = fallback.StandardOutput.ReadLine()) is not null)
+    internal async Task<string?> GetHostTargetAsync(CancellationToken cancellationToken)
+    {
+        if (_hostTarget is not null)
+            return _hostTarget;
+        using Process process = GetProcess(Status.ExecutablePath, "--version --verbose");
+        process.Start();
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        Task<string> stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        using var registration = cancellationToken.Register(() =>
         {
-            fallbackLogger.AddToStdOut(line);
-            fallbackStdout.Add(line);
-        }
-        fallbackLogger.AddToStdErr(fallback.StandardError.ReadToEnd());
-        fallback.WaitForExit();
-        fallbackLogger.Close(fallback.ExitCode);
-        return ParseInstallList(fallbackStdout);
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Logger.Debug($"Cargo host detection already exited during cancellation: {ex.Message}");
+            }
+        });
+        await process.WaitForExitAsync(cancellationToken);
+        string error = await stderr;
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException($"Cargo host detection failed: {error}");
+        _hostTarget = (await stdout).Split('\n')
+            .FirstOrDefault(line => line.StartsWith("host: ", StringComparison.Ordinal))?["host: ".Length..].Trim();
+        return _hostTarget;
     }
 
     private Process GetProcess(string fileName, string extraArguments)
@@ -354,6 +333,7 @@ public partial class Cargo : PackageManager
                 CreateNoWindow = true,
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8,
+                WorkingDirectory = CargoConfiguration.WorkingDirectory,
             },
         };
     }

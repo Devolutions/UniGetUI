@@ -8,213 +8,122 @@ public sealed class CargoListParsingTests
         output.Replace("\r\n", "\n").Split('\n', StringSplitOptions.None);
 
     [Fact]
-    public void ParseInstallUpdateList_ParsesRealCargoUpdateOutput()
+    public void ParseInstallList_PreservesRegistryGitAndPathProvenance()
     {
-        var entries = Cargo.ParseInstallUpdateList(
+        var entries = Cargo.ParseInstallList(
             Lines(
                 """
-                    Polling registry 'https://index.crates.io/'..
-
-                Package         Installed  Latest   Needs update
-                cargo-update    v16.4.1    v22.1.1  Yes
-                cargo-binstall  v1.21.1    v1.21.1  No
-
-                cargo-binstall contains removed executables (cargo-binstall.exe), which will be re-installed on update — you can remove it with cargo uninstall cargo-binstall
-
+                cargo-binstall v1.21.1:
+                    cargo-binstall.exe
+                cargo-update v16.4.1:
+                    cargo-install-update.exe
+                rg v14.1.0 (git+https://github.com/publisher/rg?branch=main#abcdef):
+                    rg.exe
+                private-tool v2.1.0 (registry+https://registry.example.test/index):
+                    private-tool.exe
+                local-tool v0.1.0 (C:\Program Files (x86)\local-tool):
+                    local-tool.exe
                 """
             )
         );
 
-        Assert.Equal(2, entries.Count);
-
-        Assert.Equal("cargo-update", entries[0].Id);
-        Assert.Equal("16.4.1", entries[0].InstalledVersion);
-        Assert.Equal("22.1.1", entries[0].LatestVersion);
-        Assert.True(entries[0].NeedsUpdate);
-
-        Assert.Equal("cargo-binstall", entries[1].Id);
-        Assert.Equal("1.21.1", entries[1].InstalledVersion);
-        Assert.Equal("1.21.1", entries[1].LatestVersion);
-        Assert.False(entries[1].NeedsUpdate);
+        Assert.Equal(["cargo-binstall", "cargo-update", "rg", "private-tool", "local-tool"], entries.Select(e => e.Id));
+        Assert.Equal(["1.21.1", "16.4.1", "14.1.0", "2.1.0", "0.1.0"], entries.Select(e => e.InstalledVersion));
+        Assert.True(entries[0].IsCratesIo);
+        Assert.True(entries[1].IsCratesIo);
+        Assert.Equal("git+https://github.com/publisher/rg?branch=main#abcdef", entries[2].SourceDescription);
+        Assert.Equal("registry+https://registry.example.test/index", entries[3].SourceDescription);
+        Assert.Equal(@"C:\Program Files (x86)\local-tool", entries[4].SourceDescription);
+        Assert.All(entries.Skip(2), e => Assert.False(e.IsCratesIo));
+        Assert.All(entries, e =>
+        {
+            Assert.Null(e.LatestVersion);
+            Assert.False(e.NeedsUpdate);
+        });
     }
 
     [Fact]
-    public void ParseInstallUpdateList_SkipsRowWithoutPackageName()
+    public void ParseInstallList_EmptyAndIndentedBinaryOutputProducesNoInventedPackages()
     {
-        List<string> skipped = [];
-
-        var entries = Cargo.ParseInstallUpdateList(
+        Assert.Empty(Cargo.ParseInstallList([]));
+        var entries = Cargo.ParseInstallList(
             Lines(
                 """
-                Package         Installed  Latest   Needs update
-                  v1.21.1  v1.21.2  Yes
-                cargo-update    v16.4.1    v22.1.1  Yes
+                    binary.exe
+                    fake-header v1.0.0:
                 """
-            ),
-            skipped
+            )
         );
+        Assert.Empty(entries);
+    }
 
-        Assert.Equal("cargo-update", Assert.Single(entries).Id);
-        Assert.Equal("v1.21.1  v1.21.2  Yes", Assert.Single(skipped));
+    [Theory]
+    [InlineData("warning: unexpected stdout")]
+    [InlineData("invalid name v1.0.0:")]
+    [InlineData("-option v1.0.0:")]
+    [InlineData("missing-version:")]
+    [InlineData("tool v:")]
+    [InlineData("tool v1.0.0")]
+    [InlineData("Package Installed Latest Needs update")]
+    public void ParseInstallList_MalformedUnindentedOutputFailsInsteadOfReturningEmptyInventory(string line)
+    {
+        var error = Assert.Throws<InvalidDataException>(() =>
+            Cargo.ParseInstallList(["valid v1.2.3:", "    valid.exe", line]));
+        Assert.Contains("Unrecognized cargo install --list output", error.Message);
     }
 
     [Fact]
-    public void ParseInstallUpdateList_AcceptsPrereleaseAndBuildMetadataVersions()
+    public void ParseInstallList_AcceptsPrereleaseAndBuildMetadataVersions()
     {
-        var entries = Cargo.ParseInstallUpdateList(
+        var entries = Cargo.ParseInstallList(
             Lines(
                 """
-                Package  Installed       Latest        Needs update
-                bat      v0.24.0-beta.1  v0.26.1       Yes
-                eza      v1.0.0+build.5  v1.1.0-rc.2   Yes
+                bat v0.24.0-beta.1:
+                    bat
+                eza v1.0.0+build.5:
+                    eza
                 """
             )
         );
 
         Assert.Equal(2, entries.Count);
         Assert.Equal("0.24.0-beta.1", entries[0].InstalledVersion);
-        Assert.Equal("0.26.1", entries[0].LatestVersion);
         Assert.Equal("1.0.0+build.5", entries[1].InstalledVersion);
-        Assert.Equal("1.1.0-rc.2", entries[1].LatestVersion);
-    }
-
-    [Fact]
-    public void ParseInstallUpdateList_StripsAlternativeVersionNote()
-    {
-        var entry = Assert.Single(
-            Cargo.ParseInstallUpdateList(
-                Lines(
-                    """
-                    Package         Installed  Latest                            Needs update
-                    cargo-binstall  v1.21.1    v1.21.2 (v1.23.0-rc.1 available)  Yes
-                    """
-                )
-            )
-        );
-
-        Assert.Equal("cargo-binstall", entry.Id);
-        Assert.Equal("1.21.1", entry.InstalledVersion);
-        Assert.Equal("1.21.2", entry.LatestVersion);
-        Assert.True(entry.NeedsUpdate);
     }
 
     [Theory]
-    [InlineData("N/A")]
-    [InlineData("^1.21")]
-    [InlineData("=1.21.1")]
-    public void ParseInstallUpdateList_ReportsUnknownLatestVersionAsNull(string latestCell)
+    [InlineData("legacy", true)]
+    [InlineData("legacy-slash", true)]
+    [InlineData("index-slash", true)]
+    [InlineData("index", true)]
+    [InlineData("sparse", true)]
+    [InlineData("registry-sparse", true)]
+    [InlineData("private-registry", false)]
+    [InlineData("private-sparse", false)]
+    [InlineData("git", false)]
+    [InlineData("path", false)]
+    public void ParseInstallList_OnlyCratesIoSourcesQualifyForRegistryUpdates(string scenario, bool cratesIo)
     {
+        string source = scenario switch
+        {
+            "legacy" => "registry+https://github.com/rust-lang/crates.io-index",
+            "legacy-slash" => "registry+https://github.com/rust-lang/crates.io-index/",
+            "index-slash" => "registry+https://index.crates.io/",
+            "index" => "registry+https://index.crates.io",
+            "sparse" => "sparse+https://index.crates.io/",
+            "registry-sparse" => "registry+sparse+https://index.crates.io/",
+            "private-registry" => "registry+https://private.test/index",
+            "private-sparse" => "sparse+https://private.test/index/",
+            "git" => "https://github.com/publisher/tool#deadbeef",
+            _ => "/tmp/local-tool",
+        };
         var entry = Assert.Single(
-            Cargo.ParseInstallUpdateList(
-                Lines(
-                    $"""
-                    Package         Installed  Latest    Needs update
-                    cargo-binstall  v1.21.1    {latestCell}    No
-                    """
-                )
-            )
+            Cargo.ParseInstallList(Lines($"tool v1.2.3 ({source}):\n    tool"))
         );
-
-        Assert.Equal("1.21.1", entry.InstalledVersion);
-        Assert.Null(entry.LatestVersion);
-        Assert.False(entry.NeedsUpdate);
-    }
-
-    [Fact]
-    public void ParseInstallUpdateList_SkipsRowsWithoutParsableInstalledVersion()
-    {
-        var entries = Cargo.ParseInstallUpdateList(
-            Lines(
-                """
-                Package         Installed  Latest    Needs update
-                cargo-binstall  No         v1.21.1   Yes
-                """
-            )
-        );
-
-        Assert.Empty(entries);
-    }
-
-    [Fact]
-    public void ParseInstallUpdateList_IgnoresGitPackageTable()
-    {
-        var entries = Cargo.ParseInstallUpdateList(
-            Lines(
-                """
-                    Checking 1 git package.
-
-                Package  Installed                                 Latest                                    Needs update
-                mygitpkg  1a2b3c4d5e6f7890abcdef1234567890abcdef12  9876543210fedcba9876543210fedcba98765432  Yes
-                """
-            )
-        );
-
-        Assert.Empty(entries);
-    }
-
-    [Fact]
-    public void ParseInstallUpdateList_IgnoresLinesOutsideTheTable()
-    {
-        var entries = Cargo.ParseInstallUpdateList(
-            Lines(
-                """
-                    Polling registry 'https://index.crates.io/'.
-                cargo-update is no longer part of its registry — you can remove it with cargo uninstall cargo-update
-                """
-            )
-        );
-
-        Assert.Empty(entries);
-    }
-
-    [Fact]
-    public void ParseInstallUpdateList_SkipsRowsWithMissingColumns()
-    {
-        var entries = Cargo.ParseInstallUpdateList(
-            Lines(
-                """
-                Package  Installed  Latest   Needs update
-                bat                 v0.26.1  Yes
-                """
-            )
-        );
-
-        Assert.Empty(entries);
-    }
-
-    [Fact]
-    public void ParseInstallUpdateList_ReadsNeedsUpdateFromItsOwnColumn()
-    {
-        var entries = Cargo.ParseInstallUpdateList(
-            Lines(
-                """
-                Package  Installed  Latest   Needs update
-                bat      v0.26.1    v0.26.2  No
-                eza      v1.0.0     v1.1.0   Yes
-                """
-            )
-        );
-
-        Assert.False(entries[0].NeedsUpdate);
-        Assert.True(entries[1].NeedsUpdate);
-    }
-
-    [Fact]
-    public void ParseInstallUpdateList_IgnoresNotesWhenNotSeparatedByABlankLine()
-    {
-        var entry = Assert.Single(
-            Cargo.ParseInstallUpdateList(
-                Lines(
-                    """
-                    Package  Installed  Latest   Needs update
-                    bat      v0.26.1    v0.26.2  Yes
-                    bat contains removed executables (bat.exe), which will be re-installed on update — you can remove it with cargo uninstall bat
-                    """
-                )
-            )
-        );
-
-        Assert.Equal("bat", entry.Id);
+        Assert.Equal("tool", entry.Id);
+        Assert.Equal("1.2.3", entry.InstalledVersion);
+        Assert.Equal(source, entry.SourceDescription);
+        Assert.Equal(cratesIo, entry.IsCratesIo);
     }
 
     [Fact]

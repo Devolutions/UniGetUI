@@ -9,6 +9,7 @@ internal sealed class CargoPkgDetailsHelper(Cargo manager) : BasePkgDetailsHelpe
 {
     protected override void GetDetails_UnSafe(IPackageDetails details)
     {
+        RequireCratesIo(details.Package);
         details.InstallerType = "Source";
 
         INativeTaskLogger logger = Manager.TaskLogger.CreateNew(
@@ -82,18 +83,13 @@ internal sealed class CargoPkgDetailsHelper(Cargo manager) : BasePkgDetailsHelpe
 
     protected override string? GetInstallLocation_UnSafe(IPackage package)
     {
-        // Cargo installs binaries into $CARGO_HOME/bin (default ~/.cargo/bin).
-        var cargoHome = Environment.GetEnvironmentVariable("CARGO_HOME");
-        if (string.IsNullOrEmpty(cargoHome))
-            cargoHome = Path.Join(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".cargo"
-            );
-        return Path.Join(cargoHome, "bin");
+        var options = package.GetInstallOptions().GetAwaiter().GetResult();
+        return Path.Join(CargoConfiguration.GetRoot(options.CustomInstallLocation), "bin");
     }
 
     protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
     {
+        RequireCratesIo(package);
         INativeTaskLogger logger = Manager.TaskLogger.CreateNew(
             Enums.LoggableTaskType.LoadPackageVersions
         );
@@ -110,5 +106,12 @@ internal sealed class CargoPkgDetailsHelper(Cargo manager) : BasePkgDetailsHelpe
             logger.Close(1);
             throw;
         }
+    }
+
+    private void RequireCratesIo(IPackage package)
+    {
+        if (package.Source.Name != Manager.DefaultSource.Name)
+            throw new NotSupportedException(
+                $"Cargo metadata and source downloads are only available for crates.io packages, not {package.Source.Name}.");
     }
 }

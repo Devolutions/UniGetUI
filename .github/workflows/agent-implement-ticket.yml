@@ -1,0 +1,240 @@
+name: Agent - Implement Ticket
+
+# An AI agent (GitHub Copilot CLI) implements a ticket in UniGetUI, builds and runs its change
+# on a live Windows desktop (see .github/actions/README.md), and checks it with screenshots.
+# A second job opens a draft pull request with the change and those screenshots.
+#
+# This is a plain workflow rather than a gh-aw one because gh-aw's agent sandbox needs Linux,
+# and the desktop only exists on the Windows runner. It keeps gh-aw's split, though: the
+# agent job has a read-only token, and only the pull-request job, which runs no agent, can
+# write. The ticket is untrusted input; the draft pull request is for human review.
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Number of the issue to implement (or leave empty and describe the ticket below)
+        required: false
+        default: ''
+      ticket:
+        description: Ticket text, used when no issue is given, or as extra guidance for the issue
+        required: false
+        default: ''
+      create_pr:
+        description: Open a draft pull request (otherwise the change is only uploaded as an artifact)
+        type: boolean
+        default: true
+      model:
+        description: Copilot model (empty for the repository default)
+        required: false
+        default: ''
+  # TODO: remove before merge. workflow_dispatch only works once the workflow is on the
+  # default branch, so this trigger runs it from the development branch, on a sample ticket
+  # and without opening a pull request.
+  push:
+    branches: [ "claude/desktop-smoke-tests-ab5c53" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-implement-ticket-${{ inputs.issue || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    name: Implement on a live desktop
+    runs-on: windows-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      issues: read
+      copilot-requests: write
+    outputs:
+      has-changes: ${{ steps.export.outputs.has-changes }}
+
+    steps:
+      # The agent works in this checkout, so it must not hold a git credential.
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Prepare the ticket
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ inputs.issue }}
+          TICKET: ${{ inputs.ticket }}
+        run: |
+          $agentDir = Join-Path $env:RUNNER_TEMP 'agent'
+          $screenshots = Join-Path $agentDir 'screenshots'
+          New-Item -Path $screenshots -ItemType Directory -Force | Out-Null
+          $ticketPath = Join-Path $agentDir 'ticket.md'
+
+          $ticket = [System.Text.StringBuilder]::new()
+          if (-not [string]::IsNullOrWhiteSpace($env:ISSUE)) {
+            $issue = gh issue view $env:ISSUE --repo $env:GITHUB_REPOSITORY --json number,title,body,url,comments | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "Could not read issue $env:ISSUE" }
+            [void] $ticket.AppendLine("# $($issue.title)").AppendLine().AppendLine($issue.body)
+            foreach ($comment in @($issue.comments)) {
+              [void] $ticket.AppendLine().AppendLine("## Comment by $($comment.author.login)").AppendLine().AppendLine($comment.body)
+            }
+            if (-not [string]::IsNullOrWhiteSpace($env:TICKET)) {
+              [void] $ticket.AppendLine().AppendLine('## Additional guidance from the maintainer who started this run').AppendLine().AppendLine($env:TICKET)
+            }
+          }
+          elseif (-not [string]::IsNullOrWhiteSpace($env:TICKET)) {
+            [void] $ticket.AppendLine($env:TICKET)
+          }
+          elseif ($env:GITHUB_EVENT_NAME -eq 'push') {
+            # Sample ticket for test runs from the development branch.
+            [void] $ticket.AppendLine('# Show the version next to the app name in the title bar').AppendLine()
+            [void] $ticket.AppendLine('The title bar of the main window only says "UniGetUI". Please show the running version right after the name, for example "UniGetUI 2026.3.2", in a smaller and dimmer font than the name, so users can tell at a glance which version they run.')
+          }
+          else {
+            throw 'Give an issue number or a ticket text'
+          }
+          $ticket.ToString() | Set-Content -Path $ticketPath -Encoding utf8NoBOM
+          Get-Content -Path $ticketPath | Write-Host
+
+          @(
+            "AGENT_DIR=$agentDir"
+            "AGENT_TICKET=$ticketPath"
+            "AGENT_SCREENSHOTS=$screenshots"
+            "AGENT_PR_BODY=$(Join-Path $agentDir 'pr.md')"
+          ) | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
+
+          # Keep workflow scaffolding in the workspace out of the agent's patch.
+          @('/ironrdp/', '/artifacts/', '/.nuget/', '/unigetui_bin/', '/output/', 'copilot-session-*.md') |
+            Add-Content -Path '.git/info/exclude' -Encoding utf8
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # Same key as build-release.yml, so the build can reuse that workflow's packages.
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Start desktop session
+        uses: ./.github/actions/desktop-session
+
+      # Restores packages and does the first build, so the agent's builds are incremental and
+      # a broken base build shows up here rather than as an agent failure.
+      - name: Build UniGetUI
+        shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+        run: .\.github\agent\implement-ticket\Start-UniGetUIDev.ps1 -NoLaunch
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install GitHub Copilot CLI
+        shell: pwsh
+        run: |
+          npm install --global --no-fund --no-audit @github/copilot@1.0.96
+          if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
+
+      # The token only allows Copilot requests and reading this public repository, and it is
+      # hidden from the agent's shell. The agent has no GitHub tools and no git credential.
+      - name: Run the agent
+        id: agent
+        shell: pwsh
+        timeout-minutes: 80
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_MODEL: ${{ inputs.model || vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'auto' }}
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+        run: |
+          $outDir = Join-Path $env:AGENT_DIR 'out'
+          New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+          $prompt = "Read .github/agent/implement-ticket/PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET."
+
+          copilot `
+            --prompt $prompt `
+            --model $env:COPILOT_MODEL `
+            --allow-all-tools `
+            --allow-all-paths `
+            --disable-builtin-mcps `
+            --secret-env-vars COPILOT_GITHUB_TOKEN GITHUB_ENV GITHUB_OUTPUT GITHUB_PATH `
+            --share (Join-Path $outDir 'transcript.md') `
+            --log-dir (Join-Path $outDir 'logs')
+          if ($LASTEXITCODE -ne 0) { throw "Copilot CLI exited with code $LASTEXITCODE" }
+
+      - name: Collect the change
+        id: export
+        if: always() && steps.agent.outcome != 'skipped'
+        shell: pwsh
+        env:
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          .\.github\agent\implement-ticket\Export-AgentChange.ps1 `
+            -BaseSha $env:BASE_SHA `
+            -PullRequestBody $env:AGENT_PR_BODY `
+            -ScreenshotsDir $env:AGENT_SCREENSHOTS `
+            -OutputDir (Join-Path $env:AGENT_DIR 'out')
+          Copy-Item -Path $env:AGENT_TICKET -Destination (Join-Path $env:AGENT_DIR 'out')
+
+      - name: Upload the change
+        if: always() && steps.export.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: agent-change
+          path: ${{ runner.temp }}/agent/out
+          if-no-files-found: warn
+
+      - name: Clean up desktop session
+        if: always()
+        uses: ./.github/actions/desktop-session-cleanup
+        with:
+          artifact-name: agent-desktop-session
+
+  pull-request:
+    name: Open draft pull request
+    needs: implement
+    if: needs.implement.outputs.has-changes == 'true' && github.event_name == 'workflow_dispatch' && inputs.create_pr
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout base commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          token: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
+
+      - name: Download the change
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-change
+          path: ${{ runner.temp }}/agent-change
+
+      - name: Open draft pull request
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
+          ISSUE: ${{ inputs.issue }}
+          BASE_BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          $branch = if ($env:ISSUE) { "agent/issue-$($env:ISSUE)-$($env:GITHUB_RUN_ID)" } else { "agent/ticket-$($env:GITHUB_RUN_ID)" }
+          ./.github/agent/implement-ticket/Publish-AgentPullRequest.ps1 `
+            -ChangeDir (Join-Path $env:RUNNER_TEMP 'agent-change') `
+            -Repository $env:GITHUB_REPOSITORY `
+            -BaseBranch $env:BASE_BRANCH `
+            -BranchName $branch `
+            -RunUrl $env:RUN_URL `
+            -IssueNumber $env:ISSUE

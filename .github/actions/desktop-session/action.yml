@@ -55,6 +55,8 @@ runs:
         repository: Devolutions/IronRDP
         ref: ${{ inputs.ironrdp-ref }}
         path: ${{ inputs.ironrdp-path }}
+        # Public repository; leave no token in its .git/config for agents on the desktop to find.
+        persist-credentials: false
 
     # The agent only changes with ironrdp-ref, so a cache hit skips the Rust build entirely.
     - name: Restore ironrdp-agent

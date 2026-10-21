@@ -30,6 +30,7 @@ tools:
     toolsets: [issues, labels]
 
 safe-outputs:
+  report-failure-as-issue: false
   add-labels:
     target: "*"
     max: 1

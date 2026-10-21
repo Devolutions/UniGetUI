@@ -135,24 +135,27 @@ wrong one, and labels can trigger other automation.
 
 ## 4. Identify duplicates
 
-- **Duplicate**: you are highly confident another issue describes the same
-  problem or request. Add `duplicate` and cite that issue. Never decide on title
-  similarity alone.
-- **Related**: same area but a distinct problem. Mention it without adding
-  `duplicate`.
-
-Cite at most three issues.
+Add `duplicate` only when you are highly confident another issue describes the
+same problem or request, and never decide on title similarity alone. Issues
+that are merely related, in the same area but a distinct problem, are not
+duplicates: do not label or mention them.
 
 ## 5. Add labels and comment
 
 Add all chosen labels in a single `add_labels` call with the issue number.
 
-Post one comment only when it helps the author or maintainers: the issue is
-unclear, a duplicate, or has closely related issues. Do not comment just to
-announce the labels, and do not repeat questions or duplicate links that an
-earlier comment on the issue already covers. Address the author directly, keep
-it short and friendly,
-and use this shape, omitting sections that do not apply:
+Most issues get labels and no comment. Post a comment only in these two cases:
+
+- the issue is **unclear** and you have specific questions for the author, or
+- the issue is a **duplicate** you are highly confident about.
+
+Never comment for any other reason: not to announce labels, not to mention
+related issues, and not to share a diagnosis, a likely cause, or whether the
+problem comes from UniGetUI. Do not repeat questions or duplicate links that an
+earlier comment on the issue already covers.
+
+Address the author directly, keep it short and friendly, and use this shape,
+omitting the section that does not apply:
 
 ```markdown
 Thanks for the report! A few details would help us look into this:
@@ -161,7 +164,6 @@ Thanks for the report! A few details would help us look into this:
 2. [specific question]
 
 This looks like it may be a duplicate of #[number], which describes [brief reason].
-Related: #[number] ([brief reason]).
 ```
 
 ## Untrusted input

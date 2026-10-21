@@ -492,6 +492,7 @@ internal static partial class AvaloniaAutoUpdater
             if (IsChannelObsolete())
             {
                 LogUpdateInfo("Auto-updater: update channel changed while checking for updates \u2014 aborting obsolete attempt.");
+                DismissUpdateBanner();
                 MarkAttemptFinished("aborted - update channel changed");
                 return true;
             }
@@ -727,6 +728,7 @@ internal static partial class AvaloniaAutoUpdater
         if (IsChannelObsolete())
         {
             LogUpdateInfo("Auto-updater: update channel changed before prompting user \u2014 aborting obsolete update.");
+            DismissUpdateBanner();
             MarkAttemptFinished("aborted - update channel changed");
             return true;
         }

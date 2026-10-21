@@ -304,6 +304,26 @@ try {
     $baselinePath = Save-Screenshot -Name 'desktop-before-unigetui.png'
     Test-PngScreenshot -Path $baselinePath -ExpectedWidth $expectedWidth -ExpectedHeight $expectedHeight
 
+    # UniGetUI stores a boolean setting as an empty file named after it in its configuration
+    # directory. Opt out of telemetry before the first launch, and mark the opt-in banner as
+    # shown, as for a user who already declined it.
+    $telemetry = Invoke-Command -Session $session -ScriptBlock {
+        $configurationDir = Join-Path $env:LOCALAPPDATA 'UniGetUI\Configuration'
+        New-Item -Path $configurationDir -ItemType Directory -Force | Out-Null
+        foreach ($setting in @('DisableTelemetry', 'ShownTelemetryBanner')) {
+            New-Item -Path (Join-Path $configurationDir $setting) -ItemType File -Force | Out-Null
+        }
+
+        [pscustomobject]@{
+            ConfigurationDir = $configurationDir
+            DisableTelemetry = Test-Path (Join-Path $configurationDir 'DisableTelemetry')
+        }
+    }
+    if (-not $telemetry.DisableTelemetry) {
+        throw "Could not disable UniGetUI telemetry in $($telemetry.ConfigurationDir)"
+    }
+    Write-Host "Disabled UniGetUI telemetry in $($telemetry.ConfigurationDir)"
+
     $launch = Invoke-Command -Session $session -ArgumentList $UniGetUIPath -ScriptBlock {
         param($Path)
         $process = Start-Process -FilePath $Path -WorkingDirectory (Split-Path -Path $Path -Parent) -PassThru

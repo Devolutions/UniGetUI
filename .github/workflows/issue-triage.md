@@ -89,8 +89,9 @@ stop without doing anything.
 ## 1. Gather context
 
 1. Read the issue title, body, existing labels, and comments.
-2. Search open and recently closed issues for the same symptom, error message,
-   package, package manager, or feature request.
+2. Always search open and recently closed issues for the same symptom, error
+   message, package, package manager, or feature request, even when the report
+   is short or unclear.
 
 ## 2. Check whether the report is clear enough
 
@@ -103,13 +104,18 @@ If essential details are missing or the description is ambiguous, the issue is
 **unclear**: add `needs-author-answer` and ask only the specific questions
 needed to act on it (at most four). Do not guess a priority for an unclear bug.
 
+Being unclear only holds back the priority. An unclear issue still goes through
+every remaining step: it still gets a type label in step 3 and a duplicate
+check in step 4.
+
 ## 3. Label type and priority
 
 **Type**: issue templates already add `bug` or `enhancement`. Keep an existing
 type label unless the content clearly contradicts it, and never add a second
-one. If no type is set, add exactly one: `bug` for broken behavior or crashes,
-`new-feature` for a new capability, `enhancement` for an improvement to
-existing behavior.
+one. If no type is set, always add exactly one, including on unclear issues:
+`bug` for broken behavior or crashes, `new-feature` for a new capability,
+`enhancement` for an improvement to existing behavior. Every triaged issue
+ends up with a type label.
 
 **Priority**: if the issue already has a `priority:` label, keep it and do not
 add another; reprioritizing is left to maintainers. Otherwise add exactly one
@@ -137,7 +143,8 @@ wrong one, and labels can trigger other automation.
 
 ## 4. Identify duplicates
 
-Add `duplicate` only when you are highly confident another issue describes the
+Check the search results from step 1 on every issue, including unclear ones; a
+duplicate often answers what an unclear report leaves out. Add `duplicate` only when you are highly confident another issue describes the
 same problem or request, and never decide on title similarity alone. Issues
 that are merely related, in the same area but a distinct problem, are not
 duplicates: do not label or mention them.

@@ -234,20 +234,21 @@
                                 Spacing="6"/>
 
                     <!-- ── Action button (split: main + chevron dropdown) ── -->
+                    <!-- Grows with the translated label and the version number; 250 stays the minimum -->
                     <Grid x:Name="ActionsPanel"
-                          Width="250"
+                          MinWidth="250"
                           VerticalAlignment="Top"
                           HorizontalAlignment="Left"
                           ColumnSpacing="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="10000*" MaxWidth="260"/>
-                        </Grid.ColumnDefinitions>
                         <Grid ColumnDefinitions="*,0.5,Auto">
                             <Button x:Name="MainActionButton"
                                     Grid.Column="0"
                                     Classes="accent action-main"
-                                    Content="{Binding MainActionLabel}"
-                                    automation:AutomationProperties.Name="{Binding MainActionLabel}"/>
+                                    ToolTip.Tip="{Binding MainActionLabel}"
+                                    automation:AutomationProperties.Name="{Binding MainActionLabel}">
+                                <TextBlock Text="{Binding MainActionLabel}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Button>
                             <Border Grid.Column="1"
                                     Background="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                     IsHitTestVisible="False"/>

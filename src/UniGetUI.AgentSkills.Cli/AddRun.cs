@@ -1,6 +1,7 @@
 // `skills add` main flow.
 
 using System.Text.Json.Nodes;
+using Devolutions.AgentSkills;
 
 namespace Skills;
 
@@ -161,7 +162,7 @@ internal static partial class AddCommand
             RunInner(source, options, ctx, explicitlySelected, agentResult.IsAgent);
         }
         catch (Exception e) when (e is GitCloneException or AddFailure or SourceParseException or DiscoverException or DownloadException
-                                      or ArchiveValidationException or NotionException)
+                                      or ArchiveValidationException or NotionException or SkillsException)
         {
             string msg;
             if (e is GitCloneException ce)

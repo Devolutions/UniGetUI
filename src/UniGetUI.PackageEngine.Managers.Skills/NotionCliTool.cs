@@ -24,6 +24,8 @@ public static partial class NotionCliTool
     /// <summary>Its entry in the ignored updates, as the WinGet package.</summary>
     internal const string IgnoredUpdatesId = "winget\\" + WinGetId;
 
+    private static readonly string[] IgnoredUpdatesIds = [IgnoredUpdatesId, "npm\\" + NpmPackage];
+
     // Only digits, dots and a short pre-release tag, since the version goes into an install command
     [GeneratedRegex(@"^\d{1,4}(?:\.\d{1,6}){1,3}(?:-[0-9A-Za-z][0-9A-Za-z.-]{0,31})?$")]
     private static partial Regex VersionPattern();
@@ -38,7 +40,7 @@ public static partial class NotionCliTool
 
     /// <summary>
     /// Pins the version to install, or clears the pin for an empty value. While a version is pinned,
-    /// UniGetUI does not offer updates of the WinGet package. Returns false for an invalid version.
+    /// UniGetUI does not offer updates of the WinGet or npm package. Returns false for an invalid version.
     /// </summary>
     public static bool TrySetPinnedVersion(string version)
     {
@@ -46,12 +48,26 @@ public static partial class NotionCliTool
         if (version.Length > 0 && !IsValidVersion(version))
             return false;
 
+        bool wasPinned = PinnedVersion is not null;
         Settings.SetValue(Settings.K.SkillsNotionCliVersion, version);
         if (version.Length > 0)
-            IgnoredUpdatesDatabase.Add(IgnoredUpdatesId);
-        else
-            IgnoredUpdatesDatabase.Remove(IgnoredUpdatesId);
+            ApplyPinnedUpdateExclusions();
+        else if (wasPinned)
+        {
+            foreach (string ignoredId in IgnoredUpdatesIds)
+                if (IgnoredUpdatesDatabase.GetIgnoredVersion(ignoredId) is not null)
+                    IgnoredUpdatesDatabase.Remove(ignoredId);
+        }
         return true;
+    }
+
+    internal static void ApplyPinnedUpdateExclusions()
+    {
+        if (PinnedVersion is null)
+            return;
+
+        foreach (string ignoredId in IgnoredUpdatesIds)
+            IgnoredUpdatesDatabase.Add(ignoredId);
     }
 
     // Every library call asks, so an answer is kept: a found ntn while it is still there, and its

@@ -3,6 +3,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
@@ -845,5 +846,224 @@ public sealed class AgentSkillsManagerTests : IDisposable
         public void Verbose(string line) { }
 
         public void SetFailureMessage(string message) => FailureMessage = message;
+    }
+
+    [Theory]
+    [InlineData(" 0.23.9 ", "0.23.9")]
+    [InlineData(" 1.0.0-beta.2 ", "1.0.0-beta.2")]
+    public void NotionCliPinSuppressesBothPackageIdentities(string input, string expectedVersion)
+    {
+        IgnoredUpdatesDatabase.Add("winget\\Notion.ntn", "0.23.8");
+        IgnoredUpdatesDatabase.Add("npm\\ntn", "0.23.7");
+        IgnoredUpdatesDatabase.Add("npm\\unrelated-tool", "2.4.6");
+
+        Assert.True(NotionCliTool.TrySetPinnedVersion(input));
+
+        Assert.Equal(expectedVersion, Settings.GetValue(Settings.K.SkillsNotionCliVersion));
+        Assert.Equal(expectedVersion, NotionCliTool.PinnedVersion);
+        var ignored = IgnoredUpdatesDatabase.GetDatabase();
+        Assert.Equal(3, ignored.Count);
+        Assert.Equal("*", ignored["winget\\Notion.ntn"]);
+        Assert.Equal("*", ignored["npm\\ntn"]);
+        Assert.Equal("2.4.6", ignored["npm\\unrelated-tool"]);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \t\r\n ")]
+    public void ClearingNotionCliPinRemovesBothExclusionsButPreservesUnrelatedEntries(string input)
+    {
+        Settings.SetValue(Settings.K.SkillsNotionCliVersion, "0.23.9");
+        IgnoredUpdatesDatabase.Add("winget\\Notion.ntn");
+        IgnoredUpdatesDatabase.Add("npm\\ntn");
+        IgnoredUpdatesDatabase.Add("npm\\unrelated-tool", "2.4.6");
+
+        Assert.True(NotionCliTool.TrySetPinnedVersion(input));
+
+        Assert.Equal("", Settings.GetValue(Settings.K.SkillsNotionCliVersion));
+        Assert.Null(NotionCliTool.PinnedVersion);
+        var ignored = IgnoredUpdatesDatabase.GetDatabase();
+        Assert.False(ignored.ContainsKey("winget\\Notion.ntn"));
+        Assert.False(ignored.ContainsKey("npm\\ntn"));
+        var remaining = Assert.Single(ignored);
+        Assert.Equal("npm\\unrelated-tool", remaining.Key);
+        Assert.Equal("2.4.6", remaining.Value);
+    }
+
+    [Theory]
+    [InlineData("latest", false)]
+    [InlineData("latest", true)]
+    [InlineData("0.23.10; calc", false)]
+    [InlineData("0.23.10; calc", true)]
+    [InlineData("0.23.10}\" & calc & \"{", false)]
+    [InlineData("0.23.10}\" & calc & \"{", true)]
+    public void InvalidNotionCliPinLeavesStoredPinAndIgnoresUnchanged(string input, bool exclusionsPresent)
+    {
+        const string storedPin = " 0.23.9 ";
+        Settings.SetValue(Settings.K.SkillsNotionCliVersion, storedPin);
+        if (exclusionsPresent)
+        {
+            IgnoredUpdatesDatabase.Add("winget\\Notion.ntn", "0.23.8");
+            IgnoredUpdatesDatabase.Add("npm\\ntn");
+        }
+        IgnoredUpdatesDatabase.Add("npm\\unrelated-tool", "2.4.6");
+        var before = IgnoredUpdatesDatabase.GetDatabase().OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray();
+
+        Assert.False(NotionCliTool.TrySetPinnedVersion(input));
+
+        Assert.Equal(storedPin, Settings.GetValue(Settings.K.SkillsNotionCliVersion));
+        Assert.Equal("0.23.9", NotionCliTool.PinnedVersion);
+        Assert.Equal(before, IgnoredUpdatesDatabase.GetDatabase().OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray());
+    }
+
+    [Theory]
+    [InlineData("latest")]
+    [InlineData("0.23.10; calc")]
+    [InlineData("")]
+    [InlineData(" \t ")]
+    public void InvalidStoredNotionCliPinDoesNotRewritePinOrIgnores(string storedPin)
+    {
+        Settings.SetValue(Settings.K.SkillsNotionCliVersion, storedPin);
+        Settings.Set(Settings.K.SkillsDefaultEnablementApplied, true);
+        IgnoredUpdatesDatabase.Add("winget\\Notion.ntn", "0.23.8");
+        IgnoredUpdatesDatabase.Add("npm\\ntn");
+        IgnoredUpdatesDatabase.Add("npm\\unrelated-tool", "2.4.6");
+        var before = IgnoredUpdatesDatabase.GetDatabase().OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray();
+        Assert.Null(NotionCliTool.PinnedVersion);
+
+        var manager = CreateManager();
+
+        Assert.True(manager.IsReady());
+        Assert.Null(NotionCliTool.PinnedVersion);
+        Assert.Equal(storedPin, Settings.GetValue(Settings.K.SkillsNotionCliVersion));
+        Assert.Equal(before, IgnoredUpdatesDatabase.GetDatabase().OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StoredNotionCliPinRestoresBothExclusionsAtStartup(bool defaultEnablementApplied)
+    {
+        // Seed persisted state directly: calling TrySetPinnedVersion would hide missing startup recovery.
+        const string storedPin = " 0.23.9 ";
+        Settings.SetValue(Settings.K.SkillsNotionCliVersion, storedPin);
+        Settings.Set(Settings.K.SkillsDefaultEnablementApplied, defaultEnablementApplied);
+        IgnoredUpdatesDatabase.Add("npm\\unrelated-tool", "2.4.6");
+        Assert.False(IgnoredUpdatesDatabase.GetDatabase().ContainsKey("winget\\Notion.ntn"));
+        Assert.False(IgnoredUpdatesDatabase.GetDatabase().ContainsKey("npm\\ntn"));
+
+        var manager = CreateManager();
+
+        Assert.True(manager.IsReady());
+        Assert.True(Settings.Get(Settings.K.SkillsDefaultEnablementApplied));
+        Assert.Equal(storedPin, Settings.GetValue(Settings.K.SkillsNotionCliVersion));
+        Assert.Equal("0.23.9", NotionCliTool.PinnedVersion);
+        var ignored = IgnoredUpdatesDatabase.GetDatabase();
+        Assert.Equal(3, ignored.Count);
+        Assert.Equal("*", ignored["winget\\Notion.ntn"]);
+        Assert.Equal("*", ignored["npm\\ntn"]);
+        Assert.Equal("2.4.6", ignored["npm\\unrelated-tool"]);
+    }
+
+    [Fact]
+    public async Task NotionCliPinUsesRealNpmIgnoredUpdatesIdentity()
+    {
+        // Construction only: never initialize npm or execute its CLI.
+        var npm = new UniGetUI.PackageEngine.Managers.NpmManager.Npm();
+        var package = new Package("Notion CLI", "ntn", "0.23.9", "0.23.10", npm.DefaultSource, npm);
+        string ignoredId = IgnoredUpdatesDatabase.GetIgnoredIdForPackage(package);
+        Assert.Equal("npm\\ntn", ignoredId);
+        Assert.False(await package.HasUpdatesIgnoredAsync());
+
+        Assert.True(NotionCliTool.TrySetPinnedVersion("0.23.9"));
+
+        Assert.True(IgnoredUpdatesDatabase.HasUpdatesIgnored(ignoredId, package.NewVersionString));
+        Assert.True(await package.HasUpdatesIgnoredAsync());
+        Assert.True(await package.HasUpdatesIgnoredAsync("0.23.10"));
+
+        Assert.True(NotionCliTool.TrySetPinnedVersion(""));
+
+        Assert.False(IgnoredUpdatesDatabase.HasUpdatesIgnored(ignoredId, package.NewVersionString));
+        Assert.False(await package.HasUpdatesIgnoredAsync());
+        Assert.False(await package.HasUpdatesIgnoredAsync("0.23.10"));
+    }
+
+    [Fact]
+    public void ManagerAdvertisesCustomPackageIcons()
+    {
+        var manager = CreateManager();
+
+        Assert.True(manager.Capabilities.SupportsCustomPackageIcons);
+    }
+
+    [Fact]
+    public void PublicIconUsesConfiguredGitHubOwnerAvatarUrl()
+    {
+        const string source = "https://github.com/Contoso/private-skills";
+        string skillId = $"icon-owner-regression-{Guid.NewGuid():N}";
+        AddSourceSetting(source);
+        _backend.SourceSkills[source] = [new AvailableSkill(skillId, "Configured repository skill", null)];
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill(skillId, "foreign-owner/other-repository", "abcdef1234"));
+        var manager = CreateManager();
+        var package = Assert.Single(manager.FindPackages(skillId));
+        Assert.Equal("contoso/private-skills", package.Source.Name);
+
+        var icon = manager.DetailsHelper.GetIcon(package);
+
+        Assert.True(icon.HasValue);
+        Assert.Equal("https://github.com/contoso.png?size=128", icon.Value.Url.AbsoluteUri);
+        Assert.False(icon.Value.IsLocalPath);
+    }
+
+    [Theory]
+    [InlineData("https://skills.contoso.com")]
+    [InlineData(NotionDatabase)]
+    [InlineData("https://gitlab.com/contoso/private-skills")]
+    public void PublicIconDoesNotInventGitHubAvatarForNonGitHubSources(string source)
+    {
+        string skillId = $"icon-nongithub-regression-{Guid.NewGuid():N}";
+        AddSourceSetting(source);
+        _backend.SourceSkills[source] = [new AvailableSkill(skillId, "Non-GitHub source skill", null)];
+        var manager = CreateManager();
+        var package = Assert.Single(manager.FindPackages(skillId));
+
+        var icon = manager.DetailsHelper.GetIcon(package);
+
+        Assert.Null(icon);
+    }
+
+    [Theory]
+    [InlineData("", false, false)]
+    [InlineData("", true, false)]
+    [InlineData("", false, true)]
+    [InlineData("", true, true)]
+    [InlineData(" \t\r\n ", false, false)]
+    [InlineData(" \t\r\n ", true, false)]
+    [InlineData(" \t\r\n ", false, true)]
+    [InlineData(" \t\r\n ", true, true)]
+    public void ClearingAnAlreadyEmptyNotionCliPinPreservesManualIgnores(
+        string input,
+        bool winGetIgnored,
+        bool npmIgnored
+    )
+    {
+        Settings.SetValue(Settings.K.SkillsNotionCliVersion, "");
+        var expected = new Dictionary<string, string> { ["npm\\unrelated-tool"] = "2.4.6" };
+        if (winGetIgnored)
+            expected.Add("winget\\Notion.ntn", "0.23.8");
+        if (npmIgnored)
+            expected.Add("npm\\ntn", "*");
+        foreach (var entry in expected)
+            IgnoredUpdatesDatabase.Add(entry.Key, entry.Value);
+        Assert.Null(NotionCliTool.PinnedVersion);
+
+        Assert.True(NotionCliTool.TrySetPinnedVersion(input));
+
+        Assert.Equal("", Settings.GetValue(Settings.K.SkillsNotionCliVersion));
+        Assert.Null(NotionCliTool.PinnedVersion);
+        Assert.Equal(
+            expected.OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray(),
+            IgnoredUpdatesDatabase.GetDatabase().OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray()
+        );
     }
 }

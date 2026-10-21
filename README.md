@@ -179,6 +179,7 @@ UniGetUI loads package managers based on the current platform. Windows builds in
 Every platform also includes **Agent Skills**: skills for AI coding agents such as Claude Code, GitHub Copilot, Cursor and Codex (folders with a `SKILL.md` file). UniGetUI installs them for the user, into the skills folder of each agent it finds, from sources you add: git repositories, websites that publish a well-known skills index, and Notion skills databases. The bundled Agent Skills library runs in process; git is only needed for repository sources and the [Notion CLI](https://developers.notion.com/cli) for Notion sources (which UniGetUI can install and sign in from the Agent Skills settings). Run `unigetui skills` to use the bundled skills CLI without launching the GUI. Agent Skills is enabled by default only when a coding agent is found.
 
 Skills searches and update checks use only the sources configured in UniGetUI. Website indexes at different paths on the same host can be added separately.
+Configure sources, target coding agents, and Notion sign-in under **Package Managers > Agent Skills**. A pinned Notion CLI version suppresses updates of both its WinGet and npm packages until the pin is cleared.
 
 ![image](media/supported-managers.svg)
 

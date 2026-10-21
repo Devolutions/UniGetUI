@@ -65,6 +65,9 @@ warnings such as a skipped invalid SKILL.md, and a `CancellationToken`.
 Cancelling aborts HTTP requests and kills a running `git`. A source that
 can't be fetched, or has none of the requested skills, throws
 `SkillsException`. An unknown agent id throws `ArgumentException`.
+Failure to save required lock-file tracking metadata also throws `SkillsException`;
+skill files may already have been copied, so resolve the reported file access error
+and retry the installation rather than treating it as tracked successfully.
 
 ### Scopes and agents
 
@@ -116,7 +119,9 @@ A failure a host can act on throws `SkillsException` with `Failure` set to
 signed-in workspace).
 
 Global installs from Notion are tracked in the global lock, with the page and
-its Notion version id, so `CheckForUpdates` finds skills edited in Notion.
+its Notion version id, so `CheckForUpdates` finds skills edited in Notion. The
+explicitly selected database or page remains the source across installs and updates,
+including when a selected page belongs to a database.
 
 ## Not supported
 

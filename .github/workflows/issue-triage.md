@@ -26,13 +26,20 @@ permissions:
 engine: copilot
 
 tools:
+  bash: false
+  cli-proxy: false
   github:
     toolsets: [issues, labels]
+    min-integrity: none
+    allowed-repos: ["devolutions/unigetui"]
 
 safe-outputs:
   report-failure-as-issue: false
+  threat-detection:
+    continue-on-error: false
+    report-as-issue: false
   add-labels:
-    target: "*"
+    target: ${{ github.event.issue.number || github.event.inputs.issue_number }}
     max: 1
     max-labels: 5
     allowed:
@@ -58,7 +65,7 @@ safe-outputs:
       - dotnet-tool
       - vcpkg
   add-comment:
-    target: "*"
+    target: ${{ github.event.issue.number || github.event.inputs.issue_number }}
     max: 1
 
 timeout-minutes: 15
@@ -101,8 +108,9 @@ one. If no type is set, add exactly one: `bug` for broken behavior or crashes,
 `new-feature` for a new capability, `enhancement` for an improvement to
 existing behavior.
 
-**Priority**: add exactly one priority label when the issue is clear enough to
-judge:
+**Priority**: if the issue already has a `priority:` label, keep it and do not
+add another; reprioritizing is left to maintainers. Otherwise add exactly one
+priority label when the issue is clear enough to judge:
 
 - `priority: high`: crash on start or during common use, data loss, installs
   or updates broken for a whole package manager, or a regression in a core flow

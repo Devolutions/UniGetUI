@@ -218,10 +218,14 @@ public partial class Cargo : PackageManager
         CratesIOClient.InvalidateCache();
     }
 
-    private IReadOnlyList<Package> GetPackages(LoggableTaskType taskType)
+    private IReadOnlyList<Package> GetPackages(LoggableTaskType taskType) =>
+        GetPackages(TaskRecycler<List<CargoListEntry>>.RunOrAttach(GetInstalledCommandOutput, 15), taskType);
+
+    internal IReadOnlyList<Package> GetPackages(
+        IEnumerable<CargoListEntry> entries,
+        LoggableTaskType taskType)
     {
         List<Package> Packages = [];
-        var entries = TaskRecycler<List<CargoListEntry>>.RunOrAttach(GetInstalledCommandOutput, 15);
         foreach (var entry in entries)
         {
             var name = CoreTools.FormatAsName(entry.Id);
@@ -233,7 +237,11 @@ public partial class Cargo : PackageManager
                     : description.StartsWith("git+", StringComparison.Ordinal)
                         ? description["git+".Length..] : description;
                 if (!Uri.TryCreate(location, UriKind.Absolute, out Uri? sourceUrl))
-                    throw new InvalidDataException($"Unrecognized Cargo package source: {description}");
+                {
+                    sourceUrl = new Uri("about:blank");
+                    Logger.Debug(
+                        $"Cargo source {description} is a display label without a direct URL; preserving its source identity.");
+                }
                 source = new ManagerSource(this, description, sourceUrl);
             }
             if (taskType is LoggableTaskType.ListUpdates)

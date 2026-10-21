@@ -115,6 +115,8 @@ UniGetUI checks crates.io versions itself, excluding yanked and prerelease updat
 Git, local-path, and other-registry packages remain listed with their source identity; they
 are not matched against crates.io for updates. Their details, version catalogs, and source
 downloads are not substituted with potentially unrelated same-name crates.io packages.
+Named-registry and directory-source display labels remain listed even when Cargo does
+not provide a source URL; they do not prevent other packages in the same root from loading.
 
 Local, non-elevated installations first attempt a publisher-provided binary for the exact
 selected version and Cargo host target. The C# installer supports ZIP, TAR, TAR.GZ/TGZ, and

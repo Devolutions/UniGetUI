@@ -19,6 +19,10 @@ param(
 
     [string] $DesktopSize = '1920x1080',
 
+    # Package managers to disable, by their internal name. Cargo needs cargo-binstall and
+    # cargo-update, which the runner doesn't have, and would ask for them at startup.
+    [string[]] $DisabledManagers = @('Cargo'),
+
     [int] $WindowTimeoutSeconds = 180,
 
     # Startup dialogs are done once none has shown for this long.
@@ -307,25 +311,39 @@ try {
     $baselinePath = Save-Screenshot -Name 'desktop-before-unigetui.png'
     Test-PngScreenshot -Path $baselinePath -ExpectedWidth $expectedWidth -ExpectedHeight $expectedHeight
 
-    # UniGetUI stores a boolean setting as an empty file named after it in its configuration
-    # directory. Opt out of telemetry before the first launch, and mark the opt-in banner as
-    # shown, as for a user who already declined it.
-    $telemetry = Invoke-Command -Session $session -ScriptBlock {
+    # Settings are written before the first launch, as the user who runs UniGetUI. A boolean
+    # setting is an empty file named after it in the configuration directory; a dictionary
+    # setting is a JSON object in "<name>.json". Opt out of telemetry and mark the opt-in
+    # banner as shown, as for a user who already declined it, and disable package managers
+    # that would otherwise ask for missing dependencies at startup.
+    $settings = Invoke-Command -Session $session -ArgumentList (, $DisabledManagers) -ScriptBlock {
+        param([string[]] $Managers)
+
         $configurationDir = Join-Path $env:LOCALAPPDATA 'UniGetUI\Configuration'
         New-Item -Path $configurationDir -ItemType Directory -Force | Out-Null
         foreach ($setting in @('DisableTelemetry', 'ShownTelemetryBanner')) {
             New-Item -Path (Join-Path $configurationDir $setting) -ItemType File -Force | Out-Null
         }
 
+        $disabled = [ordered]@{}
+        foreach ($manager in $Managers) {
+            $disabled[$manager] = $true
+        }
+        if ($disabled.Count -gt 0) {
+            $disabled | ConvertTo-Json -Compress | Set-Content -Path (Join-Path $configurationDir 'DisabledManagers.json') -Encoding utf8NoBOM -NoNewline
+        }
+
         [pscustomobject]@{
             ConfigurationDir = $configurationDir
             DisableTelemetry = Test-Path (Join-Path $configurationDir 'DisableTelemetry')
+            DisabledManagers = @($disabled.Keys)
         }
     }
-    if (-not $telemetry.DisableTelemetry) {
-        throw "Could not disable UniGetUI telemetry in $($telemetry.ConfigurationDir)"
+    if (-not $settings.DisableTelemetry) {
+        throw "Could not disable UniGetUI telemetry in $($settings.ConfigurationDir)"
     }
-    Write-Host "Disabled UniGetUI telemetry in $($telemetry.ConfigurationDir)"
+    Write-Host "Disabled UniGetUI telemetry in $($settings.ConfigurationDir)"
+    Write-Host "Disabled UniGetUI package managers: $(@($settings.DisabledManagers) -join ', ')"
 
     $launch = Invoke-Command -Session $session -ArgumentList $UniGetUIPath -ScriptBlock {
         param($Path)

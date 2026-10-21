@@ -54,7 +54,7 @@ safe-outputs:
       - "priority: low"
       - duplicate
       - needs-author-answer
-      - not-UniGetUI
+      - possibly-upstream
       - appearance
       - translations
       - widgets-for-unigetui
@@ -127,8 +127,10 @@ package-manager label (`winget`, `scoop`, `chocolatey`, `pip`, `npm`,
 `powershell` for PowerShell 5/7 and PowerShell Gallery, `cargo`,
 `dotnet-tool`, `vcpkg`), `appearance` for UI, theming, or layout,
 `translations` for translated text, or `widgets-for-unigetui` for the Windows
-widgets integration. Add `not-UniGetUI` only when the evidence clearly shows
-the failure comes from the package manager or the package itself.
+widgets integration. Add `possibly-upstream` when the evidence suggests the
+failure comes from the package manager or the package itself, for example the
+same error from the manager's own CLI. Never add `not-UniGetUI`; that verdict
+is left to maintainers.
 
 When unsure about a label, leave it off. A missing label is cheaper than a
 wrong one, and labels can trigger other automation.

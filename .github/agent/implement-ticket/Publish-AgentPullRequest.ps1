@@ -170,14 +170,47 @@ $body = "$body`n$footer"
 $finalBodyPath = Join-Path $ChangeDir 'pr-final.md'
 $body | Set-Content -LiteralPath $finalBodyPath -Encoding utf8NoBOM
 
-$prUrl = Invoke-Native gh pr create `
+$prOutput = & gh pr create `
     --repo $Repository `
     --draft `
     --base $BaseBranch `
     --head $BranchName `
     --title $title `
-    --body-file $finalBodyPath
-$prUrl = ($prUrl | Select-Object -Last 1).Trim()
+    --body-file $finalBodyPath 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $message = ($prOutput | Out-String).Trim()
+    if ($message -notmatch 'not permitted to create or approve pull requests') {
+        throw "gh pr create failed: $message"
+    }
+
+    # The repository doesn't let GitHub Actions open pull requests, and no token that may was
+    # given. The branch and screenshots are pushed, so hand a maintainer a one-click link
+    # and the description instead of failing the run.
+    $compareUrl = "https://github.com/$Repository/compare/$([uri]::EscapeDataString($BaseBranch))...$([uri]::EscapeDataString($BranchName))?expand=1&title=$([uri]::EscapeDataString($title))"
+    Write-Host "::warning::GitHub Actions may not open pull requests in this repository. Open it from $compareUrl (the description is in the job summary)."
+    if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_STEP_SUMMARY)) {
+        @(
+            '## Pull request not opened'
+            ''
+            'This repository does not allow GitHub Actions to create pull requests, and no `GH_AW_GITHUB_TOKEN` secret was available.'
+            "The change is on branch ``$BranchName``. [Open the pull request]($compareUrl) (mark it as a draft) and paste the description below."
+            ''
+            '````markdown'
+            $body
+            '````'
+            ''
+            '### Preview'
+            ''
+            $body
+        ) -join "`n" | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_OUTPUT)) {
+        "compare-url=$compareUrl" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+    }
+    return
+}
+
+$prUrl = ($prOutput | Select-Object -Last 1).ToString().Trim()
 Write-Host "Opened $prUrl"
 
 if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_OUTPUT)) {

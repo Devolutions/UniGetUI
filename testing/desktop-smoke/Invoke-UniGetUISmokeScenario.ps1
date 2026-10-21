@@ -21,7 +21,10 @@ param(
 
     [int] $WindowTimeoutSeconds = 180,
 
+    # Startup dialogs are done once none has shown for this long.
     [int] $DialogSettleSeconds = 30,
+
+    [int] $DialogTimeoutSeconds = 150,
 
     [int] $ScreenshotTimeoutSeconds = 60,
 
@@ -363,13 +366,17 @@ try {
     # Missing package manager dependencies are expected on a fresh runner and are skipped
     # with Escape, as a user would. Any other dialog (a crash report, an integrity
     # violation) fails the test.
-    $settleDeadline = (Get-Date).AddSeconds($DialogSettleSeconds)
+    # Their timing varies between runs, so wait until no dialog has shown for
+    # $DialogSettleSeconds, and judge only a probe taken after the last Escape.
+    $lastDialogAt = Get-Date
+    $dialogDeadline = $lastDialogAt.AddSeconds($DialogTimeoutSeconds)
     $firstRunCaptured = $false
     $modal = $null
     do {
         Start-Sleep -Seconds 2
         $modal = Invoke-Command -Session $session -ArgumentList $mainWindow.Handle -ScriptBlock $remoteModalProbe
         if ($modal.IsOpen) {
+            $lastDialogAt = Get-Date
             if (-not $firstRunCaptured) {
                 Save-Screenshot -Name 'unigetui-first-run-dialog.png' | Out-Null
                 $firstRunCaptured = $true
@@ -383,11 +390,11 @@ try {
             $dismissedDialogs.Add($modal.Title)
             Send-Key -Scancode '0x01'
         }
-    } while ((Get-Date) -lt $settleDeadline)
+    } while (($modal.IsOpen -or ((Get-Date) - $lastDialogAt).TotalSeconds -lt $DialogSettleSeconds) -and (Get-Date) -lt $dialogDeadline)
 
     Write-Host "UI Automation elements in the UniGetUI main window: $($modal.AutomationElementCount)"
     if ($modal.IsOpen) {
-        throw "UniGetUI dialog '$($modal.Title)' is still open after $DialogSettleSeconds seconds"
+        throw "UniGetUI dialog '$($modal.Title)' is still open after $DialogTimeoutSeconds seconds"
     }
 
     $screenshotPath = Join-Path $ArtifactsDir 'unigetui-main-window.png'

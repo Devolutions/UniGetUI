@@ -873,6 +873,14 @@ public partial class MainWindowViewModel : ViewModelBase
     public void OpenManagerSettings(IPackageManager? manager = null)
         => _ = OpenManagerSettingsAsync(manager);
 
+    // Called after a manager is (re)initialized from the settings, so a page that loaded with no manager ready
+    // picks it up without waiting to be shown again.
+    public void ReloadPagesWithoutReadyManager()
+    {
+        UpdatesPage.ViewModel.ReloadIfManagerBecameReady();
+        InstalledPage.ViewModel.ReloadIfManagerBecameReady();
+    }
+
     private async Task OpenManagerSettingsAsync(IPackageManager? manager)
     {
         if (!await NavigateToAsync(PageType.Managers))

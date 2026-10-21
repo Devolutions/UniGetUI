@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.Controls.Settings;
@@ -69,6 +70,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                 CoreSettings.SetDictionaryItem(CoreSettings.K.DisabledManagers, manager.Name, toggle.IsChecked != true);
                 await Task.Run(manager.Initialize);
                 ApplyStatusBadge(manager, toggle, badge);
+                (MainWindow.Instance?.DataContext as MainWindowViewModel)?.ReloadPagesWithoutReadyManager();
                 AccessibilityAnnouncementService.AnnounceToggle(manager.DisplayName, toggle.IsChecked == true);
             };
 

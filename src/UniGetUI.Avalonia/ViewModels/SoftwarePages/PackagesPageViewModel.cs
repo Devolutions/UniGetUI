@@ -559,7 +559,8 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
         IsLoading = Loader.IsLoading;
         _lastLoadTime = DateTime.Now;
-        _lastLoadHadNoManagerReady = !Loader.AnyManagerReady;
+        // Also called from the constructor before any load has run: only a finished load counts
+        _lastLoadHadNoManagerReady = Loader.IsLoaded && !Loader.AnyManagerReady;
         ReloadButtonTooltip = CoreTools.Translate("Last checked: {0}", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
         FilterPackages();
         _iconPreloadCts?.Cancel();
@@ -760,6 +761,7 @@ public partial class PackagesPageViewModel : ViewModelBase
             BackgroundTextVisible = true;
             LoadingImageVisible = _showPackageIllustrations && LoadingImage is not null;
             NoPackagesImageVisible = false;
+            NoManagerReadyVisible = false;
         }
         else if (FilteredPackages.Count == 0)
         {
@@ -1166,10 +1168,12 @@ public partial class PackagesPageViewModel : ViewModelBase
     }
 
     // Enabling a manager in the settings does not reload this page, so it would keep saying that none is
-    // available. Called when the page is shown again.
+    // available. Called when a manager finishes initializing and when the page is shown again. Never before
+    // the startup load, which would then be dropped while this one runs and miss the managers still starting.
     public void ReloadIfManagerBecameReady()
     {
-        if (LoadsOnStart && _lastLoadHadNoManagerReady && Loader.AnyManagerReady)
+        if (LoadsOnStart && _lastLoadHadNoManagerReady && !Loader.IsLoading && !Loader.HasPendingInitialLoad
+            && Loader.AnyManagerReady)
             _ = LoadPackages(ReloadReason.Automated);
     }
 

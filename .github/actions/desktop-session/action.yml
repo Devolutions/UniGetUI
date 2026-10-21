@@ -13,15 +13,12 @@ inputs:
     # be cached by commit.
     # TODO: move to a master commit once that PR merges.
     default: 6ac6e4447cf4e15423772af987aff6c7fc1ca15a
-  ironrdp-path:
-    description: Where to check out IronRDP, relative to the workspace
-    default: ironrdp
   desktop-size:
     description: RDP desktop size, as WxH
     default: 1920x1080
   artifacts-dir:
-    description: Directory for screenshots, logs and session state
-    default: ${{ github.workspace }}/artifacts/desktop-session
+    description: Directory for screenshots, logs and session state; defaults to RUNNER_TEMP/desktop-session
+    default: ''
 
 outputs:
   agent-path:
@@ -49,33 +46,39 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Check out IronRDP
-      uses: actions/checkout@v7
-      with:
-        repository: Devolutions/IronRDP
-        ref: ${{ inputs.ironrdp-ref }}
-        path: ${{ inputs.ironrdp-path }}
-        # Public repository; leave no token in its .git/config for agents on the desktop to find.
-        persist-credentials: false
+    # Cloned outside the workspace (actions/checkout can only write inside it), so the
+    # caller's checkout stays clean for agents, git and tests that scan the repository.
+    - name: Fetch IronRDP
+      shell: pwsh
+      env:
+        IRONRDP_REF: ${{ inputs.ironrdp-ref }}
+        IRONRDP_ROOT: ${{ runner.temp }}/ironrdp
+      run: |
+        git init --quiet $env:IRONRDP_ROOT
+        if ($LASTEXITCODE -ne 0) { throw "git init failed with exit code $LASTEXITCODE" }
+        git -C $env:IRONRDP_ROOT fetch --quiet --depth 1 https://github.com/Devolutions/IronRDP $env:IRONRDP_REF
+        if ($LASTEXITCODE -ne 0) { throw "Could not fetch IronRDP $env:IRONRDP_REF" }
+        git -C $env:IRONRDP_ROOT checkout --quiet --detach FETCH_HEAD
+        if ($LASTEXITCODE -ne 0) { throw "git checkout failed with exit code $LASTEXITCODE" }
 
     # The agent only changes with ironrdp-ref, so a cache hit skips the Rust build entirely.
     - name: Restore ironrdp-agent
       id: agent-cache
       uses: actions/cache/restore@v6
       with:
-        path: ${{ inputs.ironrdp-path }}/target/release/ironrdp-agent.exe
+        path: ${{ runner.temp }}/ironrdp/target/release/ironrdp-agent.exe
         key: ironrdp-agent-${{ runner.os }}-${{ inputs.ironrdp-ref }}
 
     - name: Rust cache
       if: steps.agent-cache.outputs.cache-hit != 'true'
       uses: Swatinem/rust-cache@v2.9.1
       with:
-        workspaces: ${{ inputs.ironrdp-path }}
+        workspaces: ${{ runner.temp }}/ironrdp
 
     - name: Build ironrdp-agent
       if: steps.agent-cache.outputs.cache-hit != 'true'
       shell: pwsh
-      working-directory: ${{ inputs.ironrdp-path }}
+      working-directory: ${{ runner.temp }}/ironrdp
       env:
         CARGO_INCREMENTAL: 0
         CARGO_NET_RETRY: 10
@@ -92,18 +95,23 @@ runs:
       if: steps.agent-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
-        path: ${{ inputs.ironrdp-path }}/target/release/ironrdp-agent.exe
+        path: ${{ runner.temp }}/ironrdp/target/release/ironrdp-agent.exe
         key: ${{ steps.agent-cache.outputs.cache-primary-key }}
 
     - name: Start desktop session
       id: start
       shell: pwsh
       env:
-        IRONRDP_ROOT: ${{ github.workspace }}/${{ inputs.ironrdp-path }}
+        IRONRDP_ROOT: ${{ runner.temp }}/ironrdp
         DESKTOP_SIZE: ${{ inputs.desktop-size }}
         ARTIFACTS_DIR: ${{ inputs.artifacts-dir }}
       run: |
+        $artifactsDir = $env:ARTIFACTS_DIR
+        if ([string]::IsNullOrWhiteSpace($artifactsDir)) {
+          $artifactsDir = Join-Path $env:RUNNER_TEMP 'desktop-session'
+        }
+
         & "$env:GITHUB_ACTION_PATH\Start-DesktopSession.ps1" `
           -IronRdpRoot $env:IRONRDP_ROOT `
           -DesktopSize $env:DESKTOP_SIZE `
-          -ArtifactsDir $env:ARTIFACTS_DIR
+          -ArtifactsDir $artifactsDir

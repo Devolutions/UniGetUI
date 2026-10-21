@@ -106,7 +106,7 @@ jobs:
           ) | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
 
           # Keep workflow scaffolding in the workspace out of the agent's patch.
-          @('/ironrdp/', '/artifacts/', '/.nuget/', '/unigetui_bin/', '/output/', 'copilot-session-*.md') |
+          @('/artifacts/', '/.nuget/', '/unigetui_bin/', '/output/', 'copilot-session-*.md') |
             Add-Content -Path '.git/info/exclude' -Encoding utf8
 
       - name: Install .NET

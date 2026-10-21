@@ -23,8 +23,8 @@ or not about UniGetUI, make no code changes and explain why in the pull request 
 - No GitHub access, and you must not try to get any. Do not commit, push, or create
   branches: leave your changes in the working tree. The workflow turns them into a pull
   request.
-- Do not change anything under `.github/`, `ironrdp/`, `artifacts/`, or `.nuget/`. A patch
-  that touches `.github/` is rejected.
+- Do not change anything under `.github/`, `artifacts/`, or `.nuget/`. A patch that
+  touches `.github/` is rejected.
 
 ### Build and run your change
 
@@ -69,7 +69,10 @@ so prefer showing your feature without waiting on package manager operations.
 ## Steps
 
 1. **Understand the ticket and the code.** Find where the behavior lives, and how similar
-   features are built. Keep the change as small and focused as the ticket allows.
+   features are built. Keep the change as small and focused as the ticket allows. Build on
+   what exists: if a setting, option, or platform-specific behavior (macOS, Linux) already
+   covers part of the ticket, keep it working and extend it rather than removing or
+   bypassing it, unless the ticket asks for that.
 2. **Capture the current behavior.** Run `Start-UniGetUIDev.ps1` before changing anything,
    navigate to where the feature will appear, and save `before-*.png` screenshots there.
 3. **Implement the change**, following the existing code style. Use `CoreTools.Translate()`

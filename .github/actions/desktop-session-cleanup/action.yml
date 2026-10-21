@@ -25,5 +25,5 @@ runs:
       uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}
-        path: ${{ inputs.artifacts-dir || env.DESKTOP_SESSION_ARTIFACTS || format('{0}/artifacts/desktop-session', github.workspace) }}
+        path: ${{ inputs.artifacts-dir || env.DESKTOP_SESSION_ARTIFACTS || format('{0}/desktop-session', runner.temp) }}
         if-no-files-found: warn

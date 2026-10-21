@@ -11,12 +11,23 @@ workflow.
 
 | Action | What it does |
 |---|---|
-| [`desktop-session`](desktop-session/action.yml) | Generic. Checks out IronRDP, restores or builds `ironrdp-agent`, enables local RDP, connects at `desktop-size`, and starts a PowerShell remoting endpoint *inside* the desktop session. Exports `DESKTOP_SESSION_*` variables. Nothing in it is UniGetUI-specific. |
+| [`desktop-session`](desktop-session/action.yml) | Generic. Fetches IronRDP into `RUNNER_TEMP`, restores or builds `ironrdp-agent`, enables local RDP, connects at `desktop-size`, and starts a PowerShell remoting endpoint *inside* the desktop session. Exports `DESKTOP_SESSION_*` variables. Nothing in it is UniGetUI-specific, and it leaves the workspace untouched. |
 | [`desktop-session-cleanup`](desktop-session-cleanup/action.yml) | Disconnects and restores the runner's RDP settings, and optionally uploads the artifacts directory (`artifact-name`). Composite actions have no post step, so run it with `if: always()`. |
 | [`unigetui-build`](unigetui-build/action.yml) | Builds an unsigned installer from the checked-out source with `scripts/build.ps1`. Output: `installer-path`. |
 | [`unigetui-desktop`](unigetui-desktop/action.yml) | Installs UniGetUI (latest release, a `release` tag, or `installer-path`), disables telemetry and the Cargo manager, launches it on the desktop, skips the first-run dependency dialogs, and leaves the main window maximized in the foreground. Outputs: `exe-path`, `process-id`, `window-handle`, `baseline-screenshot`. |
 
-[`desktop-smoke.yml`](../workflows/desktop-smoke.yml) is the reference example.
+Two workflows use them:
+
+- [`desktop-smoke.yml`](../workflows/desktop-smoke.yml) is the reference example: install
+  UniGetUI, check that its window is on screen, clean up.
+- [`agent-implement-ticket.yml`](../workflows/agent-implement-ticket.yml) has a GitHub
+  Copilot CLI agent implement an issue (or ticket text) on the live desktop. The agent
+  follows [`PROMPT.md`](../agent/implement-ticket/PROMPT.md), builds and runs its change
+  with `Start-UniGetUIDev.ps1`, and checks it with screenshots. A second job, which runs
+  no agent, opens a draft pull request with the change and the screenshots (published on
+  the `agent-assets` branch). The agent job's token can only read and make Copilot
+  requests; the write token stays in the pull-request job, which rejects changes to
+  `.github/`.
 
 ## Minimal job
 
@@ -82,7 +93,7 @@ To call `ironrdp-agent` directly, use
 Check `$LASTEXITCODE` afterwards, because a failing native command does not throw in PowerShell.
 
 The other variables are `DESKTOP_SESSION_ARTIFACTS` (screenshots, logs and session state, all
-uploaded by the cleanup action), `DESKTOP_SESSION_PSHOST_ENDPOINT` (JSON with the
+uploaded by the cleanup action; `RUNNER_TEMP\desktop-session` by default), `DESKTOP_SESSION_PSHOST_ENDPOINT` (JSON with the
 remoting port and the desktop's Windows session id), `DESKTOP_SESSION_SIZE` and
 `DESKTOP_SESSION_IRONRDP_ROOT`. `unigetui-desktop` also sets `UNIGETUI_EXE`.
 

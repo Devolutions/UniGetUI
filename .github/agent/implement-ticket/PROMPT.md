@@ -80,7 +80,9 @@ so prefer showing your feature without waiting on package manager operations.
 4. **Build, run, and look.** Run `Start-UniGetUIDev.ps1`, drive the app to the feature,
    take `after-*.png` screenshots that clearly show it working, and open them to check.
    Fix and repeat until the screenshots show the feature working as the ticket asks.
-5. **Check your change.** Run the unit tests of the projects you changed
+5. **Check your change.** Close UniGetUI first
+   (`Get-Process UniGetUI -ErrorAction SilentlyContinue | Stop-Process -Force`), since the
+   running app locks the build output. Run the unit tests of the projects you changed
    (`dotnet test <project> /p:Platform=x64 --nologo -v q`), then both formatters from
    `AGENTS.md` (`dotnet format whitespace src --folder` and
    `dotnet format style src/UniGetUI.Windows.slnx --no-restore`). Review `git diff` and

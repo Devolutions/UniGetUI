@@ -2,11 +2,12 @@
 description: |
   Triages new UniGetUI issues: labels them by type and priority, flags likely
   duplicates, and asks the author clarifying questions when the report is
-  unclear. Never closes, edits, or removes labels from issues.
+  unclear. Runs once per new issue. Never closes, edits, or removes labels from
+  issues.
 
 on:
   issues:
-    types: [opened, reopened]
+    types: [opened]
   reaction: eyes
   roles: all
   workflow_dispatch:
@@ -151,7 +152,8 @@ duplicates: do not label or mention them.
 
 ## 5. Add labels and comment
 
-Add all chosen labels in a single `add_labels` call with the issue number.
+Add all chosen labels in a single `add_labels` call with the issue number. If
+there is nothing new to add, skip the call.
 
 Most issues get labels and no comment. Post a comment only in these two cases:
 

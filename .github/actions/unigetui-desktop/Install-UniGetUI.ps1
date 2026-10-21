@@ -1,5 +1,5 @@
 # Installs UniGetUI silently, either from a GitHub release (the latest one unless -Tag is
-# given) or from an installer built from source with scripts/build.ps1.
+# given) or from a local installer, such as the one the unigetui-build action produces.
 [CmdletBinding(DefaultParameterSetName = 'Release')]
 param(
     [Parameter(ParameterSetName = 'Release')]

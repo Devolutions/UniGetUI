@@ -1,0 +1,29 @@
+name: Desktop session cleanup
+description: >
+  Tears down the desktop that the desktop-session action set up, and optionally uploads its
+  artifacts directory. Composite actions have no post step, so run this with if: always().
+
+inputs:
+  artifact-name:
+    description: Name of the artifact to upload the artifacts directory as; empty uploads nothing
+    default: ''
+  artifacts-dir:
+    description: Artifacts directory to upload; defaults to the one the desktop-session action used
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Stop desktop session
+      if: always()
+      shell: pwsh
+      run: |
+        & "$env:GITHUB_ACTION_PATH\..\desktop-session\Stop-DesktopSession.ps1"
+
+    - name: Upload desktop session artifacts
+      if: always() && inputs.artifact-name != ''
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.artifacts-dir || env.DESKTOP_SESSION_ARTIFACTS || format('{0}/artifacts/desktop-session', github.workspace) }}
+        if-no-files-found: warn

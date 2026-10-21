@@ -1,0 +1,87 @@
+name: UniGetUI desktop
+description: >
+  Installs UniGetUI (a release, or an installer such as the unigetui-build action's) and
+  launches it in the desktop session set up by the desktop-session action. Gets it past its
+  first-run UI and leaves its main window maximized in the foreground, ready to drive.
+
+inputs:
+  release:
+    description: Release tag to install, for example v2026.3.2; empty installs the latest release. Ignored with installer-path.
+    default: ''
+  installer-path:
+    description: Local UniGetUI installer to install instead of a release (not checksum- or signature-checked)
+    default: ''
+  repository:
+    description: Repository to download releases from
+    default: Devolutions/UniGetUI
+  disable-telemetry:
+    description: Opt out of telemetry before the first launch
+    default: 'true'
+  disabled-managers:
+    description: Comma-separated package managers to disable before the first launch (Cargo would ask for cargo-binstall and cargo-update)
+    default: Cargo
+  github-token:
+    description: Token for downloading releases
+    default: ${{ github.token }}
+
+outputs:
+  exe-path:
+    description: Path to the installed UniGetUI.exe (also UNIGETUI_EXE)
+    value: ${{ steps.install.outputs.exe-path }}
+  process-id:
+    description: Process id of the running UniGetUI
+    value: ${{ steps.start.outputs.process-id }}
+  window-handle:
+    description: Handle of the UniGetUI main window
+    value: ${{ steps.start.outputs.window-handle }}
+  baseline-screenshot:
+    description: Screenshot of the desktop taken just before UniGetUI was launched
+    value: ${{ steps.start.outputs.baseline-screenshot }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install UniGetUI
+      id: install
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        UNIGETUI_RELEASE: ${{ inputs.release }}
+        UNIGETUI_INSTALLER: ${{ inputs.installer-path }}
+        UNIGETUI_REPOSITORY: ${{ inputs.repository }}
+      run: |
+        $artifactsDir = $env:DESKTOP_SESSION_ARTIFACTS
+        if ([string]::IsNullOrWhiteSpace($artifactsDir)) {
+          throw 'DESKTOP_SESSION_ARTIFACTS is not set; run the desktop-session action first'
+        }
+
+        $installScript = Join-Path $env:GITHUB_ACTION_PATH 'Install-UniGetUI.ps1'
+        if (-not [string]::IsNullOrWhiteSpace($env:UNIGETUI_INSTALLER)) {
+          $install = & $installScript -InstallerPath $env:UNIGETUI_INSTALLER -ArtifactsDir $artifactsDir
+        }
+        else {
+          $install = & $installScript `
+            -Repository $env:UNIGETUI_REPOSITORY `
+            -Tag $env:UNIGETUI_RELEASE `
+            -DownloadDir (Join-Path $env:RUNNER_TEMP 'unigetui-release') `
+            -ArtifactsDir $artifactsDir
+        }
+
+        $install = $install | ConvertFrom-Json
+        Write-Host "Installed UniGetUI from $($install.Source) ($($install.FileVersion)) at $($install.ExePath)"
+        "exe-path=$($install.ExePath)" >> $env:GITHUB_OUTPUT
+        "UNIGETUI_EXE=$($install.ExePath)" >> $env:GITHUB_ENV
+
+    - name: Start UniGetUI
+      id: start
+      shell: pwsh
+      env:
+        UNIGETUI_DISABLE_TELEMETRY: ${{ inputs.disable-telemetry }}
+        UNIGETUI_DISABLED_MANAGERS: ${{ inputs.disabled-managers }}
+        UNIGETUI_EXE_PATH: ${{ steps.install.outputs.exe-path }}
+      run: |
+        $managers = @($env:UNIGETUI_DISABLED_MANAGERS -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        & (Join-Path $env:GITHUB_ACTION_PATH 'Start-UniGetUI.ps1') `
+          -UniGetUIPath $env:UNIGETUI_EXE_PATH `
+          -DisableTelemetry ([System.Boolean]::Parse($env:UNIGETUI_DISABLE_TELEMETRY)) `
+          -DisabledManagers $managers

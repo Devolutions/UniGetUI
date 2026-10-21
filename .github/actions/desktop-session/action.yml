@@ -1,0 +1,107 @@
+name: Desktop session
+description: >
+  Sets up a live interactive Windows desktop on this runner over localhost RDP, driven by
+  ironrdp-agent from the IronRDP repo, and leaves it up for later steps of the same job.
+  Exports DESKTOP_SESSION_* environment variables for DesktopSession.psm1. Run the
+  desktop-session-cleanup action with if: always() at the end of the job.
+
+inputs:
+  ironrdp-ref:
+    description: IronRDP commit providing ironrdp-agent and the testing/agentic-rdp harness
+    # Head of claude/agentic-rdp-ci-workflow-b25bea (https://github.com/Devolutions/IronRDP/pull/2189),
+    # which carries the daemon readiness and screenshot fixes. Pinned so the built agent can
+    # be cached by commit.
+    # TODO: move to a master commit once that PR merges.
+    default: 6ac6e4447cf4e15423772af987aff6c7fc1ca15a
+  ironrdp-path:
+    description: Where to check out IronRDP, relative to the workspace
+    default: ironrdp
+  desktop-size:
+    description: RDP desktop size, as WxH
+    default: 1920x1080
+  artifacts-dir:
+    description: Directory for screenshots, logs and session state
+    default: ${{ github.workspace }}/artifacts/desktop-session
+
+outputs:
+  agent-path:
+    description: Path to ironrdp-agent.exe (also DESKTOP_SESSION_AGENT)
+    value: ${{ steps.start.outputs.agent-path }}
+  endpoint:
+    description: Named pipe of the ironrdp-agent daemon (also DESKTOP_SESSION_ENDPOINT)
+    value: ${{ steps.start.outputs.endpoint }}
+  pshost-endpoint-path:
+    description: JSON file describing the interactive PSHost endpoint (also DESKTOP_SESSION_PSHOST_ENDPOINT)
+    value: ${{ steps.start.outputs.pshost-endpoint-path }}
+  ironrdp-root:
+    description: IronRDP checkout (also DESKTOP_SESSION_IRONRDP_ROOT)
+    value: ${{ steps.start.outputs.ironrdp-root }}
+  artifacts-dir:
+    description: Artifacts directory (also DESKTOP_SESSION_ARTIFACTS)
+    value: ${{ steps.start.outputs.artifacts-dir }}
+  module-path:
+    description: Path to DesktopSession.psm1 (also DESKTOP_SESSION_MODULE)
+    value: ${{ steps.start.outputs.module-path }}
+  session-id:
+    description: Windows session id of the interactive desktop
+    value: ${{ steps.start.outputs.session-id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check out IronRDP
+      uses: actions/checkout@v7
+      with:
+        repository: Devolutions/IronRDP
+        ref: ${{ inputs.ironrdp-ref }}
+        path: ${{ inputs.ironrdp-path }}
+
+    # The agent only changes with ironrdp-ref, so a cache hit skips the Rust build entirely.
+    - name: Restore ironrdp-agent
+      id: agent-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ inputs.ironrdp-path }}/target/release/ironrdp-agent.exe
+        key: ironrdp-agent-${{ runner.os }}-${{ inputs.ironrdp-ref }}
+
+    - name: Rust cache
+      if: steps.agent-cache.outputs.cache-hit != 'true'
+      uses: Swatinem/rust-cache@v2.9.1
+      with:
+        workspaces: ${{ inputs.ironrdp-path }}
+
+    - name: Build ironrdp-agent
+      if: steps.agent-cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      working-directory: ${{ inputs.ironrdp-path }}
+      env:
+        CARGO_INCREMENTAL: 0
+        CARGO_NET_RETRY: 10
+        RUSTUP_MAX_RETRIES: 10
+        RUST_BACKTRACE: short
+        CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+      run: |
+        cargo build -p ironrdp-agent --release
+        if ($LASTEXITCODE -ne 0) { throw "cargo build failed with exit code $LASTEXITCODE" }
+
+    # Saved right after the build rather than at job end, so a later failure in the job still
+    # leaves the agent cached for the next run.
+    - name: Save ironrdp-agent
+      if: steps.agent-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ inputs.ironrdp-path }}/target/release/ironrdp-agent.exe
+        key: ${{ steps.agent-cache.outputs.cache-primary-key }}
+
+    - name: Start desktop session
+      id: start
+      shell: pwsh
+      env:
+        IRONRDP_ROOT: ${{ github.workspace }}/${{ inputs.ironrdp-path }}
+        DESKTOP_SIZE: ${{ inputs.desktop-size }}
+        ARTIFACTS_DIR: ${{ inputs.artifacts-dir }}
+      run: |
+        & "$env:GITHUB_ACTION_PATH\Start-DesktopSession.ps1" `
+          -IronRdpRoot $env:IRONRDP_ROOT `
+          -DesktopSize $env:DESKTOP_SIZE `
+          -ArtifactsDir $env:ARTIFACTS_DIR

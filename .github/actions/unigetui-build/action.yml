@@ -1,0 +1,59 @@
+name: UniGetUI build
+description: >
+  Builds an unsigned UniGetUI installer from the checked-out source with scripts/build.ps1,
+  the same way a local build does. Pass its installer-path output to the unigetui-desktop
+  action. Needs the repository checked out in the workspace.
+
+inputs:
+  output-dir:
+    description: Where build.ps1 puts the installer and zip; defaults to a folder in RUNNER_TEMP
+    default: ''
+
+outputs:
+  installer-path:
+    description: Path to UniGetUI.Installer.x64.exe
+    value: ${{ steps.build.outputs.installer-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        global-json-file: global.json
+
+    # Same key as build-release.yml, so a build can reuse that workflow's packages.
+    - name: Cache NuGet packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ github.workspace }}/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Install Inno Setup
+      shell: pwsh
+      run: |
+        choco install innosetup -y --no-progress
+        if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed with exit code $LASTEXITCODE" }
+
+    - name: Build UniGetUI installer
+      id: build
+      shell: pwsh
+      env:
+        NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        $outputDir = $env:OUTPUT_DIR
+        if ([string]::IsNullOrWhiteSpace($outputDir)) {
+          $outputDir = Join-Path $env:RUNNER_TEMP 'unigetui-build'
+        }
+
+        & "$env:GITHUB_WORKSPACE\scripts\build.ps1" -SkipTests -OutputPath $outputDir
+
+        # build.ps1 only warns when it can't find ISCC, so check the installer was produced.
+        $installerPath = Join-Path $outputDir 'UniGetUI.Installer.x64.exe'
+        if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
+          throw "scripts/build.ps1 did not produce $installerPath"
+        }
+        "installer-path=$installerPath" >> $env:GITHUB_OUTPUT

@@ -2,7 +2,8 @@ name: Desktop Smoke Test
 
 # Installs UniGetUI, from a release or built from source, and checks that it starts and
 # shows its main window in a real interactive Windows desktop session, driven over
-# localhost RDP by ironrdp-agent.
+# localhost RDP by ironrdp-agent. It is also the reference example for the composite
+# actions in .github/actions (see the README there).
 
 on:
   workflow_dispatch:
@@ -31,20 +32,6 @@ on:
 permissions:
   contents: read
 
-env:
-  CARGO_INCREMENTAL: 0
-  CARGO_NET_RETRY: 10
-  RUSTUP_MAX_RETRIES: 10
-  RUST_BACKTRACE: short
-  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
-  CARGO_PROFILE_DEV_DEBUG: 0
-  # IronRDP commit that provides ironrdp-agent and the testing/agentic-rdp harness. Pinned so
-  # the built agent can be cached by commit. It is currently the head of
-  # claude/agentic-rdp-ci-workflow-b25bea (https://github.com/Devolutions/IronRDP/pull/2189),
-  # which carries the daemon readiness and screenshot fixes.
-  # TODO: move to a master commit once that PR merges.
-  IRONRDP_REF: 6ac6e4447cf4e15423772af987aff6c7fc1ca15a
-
 jobs:
   desktop-smoke:
     name: UniGetUI (${{ matrix.unigetui_source }}) in an RDP desktop session
@@ -55,145 +42,37 @@ jobs:
       matrix:
         # 'both', and a push (which has no inputs), runs one job per source.
         unigetui_source: ${{ fromJSON((inputs.unigetui_source || 'both') == 'both' && '["release","source"]' || format('["{0}"]', inputs.unigetui_source)) }}
-    env:
-      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Checkout IronRDP
-        uses: actions/checkout@v7
-        with:
-          repository: Devolutions/IronRDP
-          ref: ${{ env.IRONRDP_REF }}
-          path: ironrdp
-
-      # The agent only changes with IRONRDP_REF, so a cache hit skips the Rust build entirely.
-      - name: Restore ironrdp-agent
-        id: agent-cache
-        uses: actions/cache/restore@v6
-        with:
-          path: ironrdp/target/release/ironrdp-agent.exe
-          key: ironrdp-agent-${{ runner.os }}-${{ env.IRONRDP_REF }}
-
-      - name: Rust cache
-        if: steps.agent-cache.outputs.cache-hit != 'true'
-        uses: Swatinem/rust-cache@v2.9.1
-        with:
-          workspaces: ironrdp
-
-      - name: Build ironrdp-agent
-        if: steps.agent-cache.outputs.cache-hit != 'true'
-        working-directory: ironrdp
-        run: cargo build -p ironrdp-agent --release
-
-      # Saved right after the build rather than at job end, so a failing smoke test still
-      # leaves the agent cached for the next run.
-      - name: Save ironrdp-agent
-        if: steps.agent-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: ironrdp/target/release/ironrdp-agent.exe
-          key: ${{ steps.agent-cache.outputs.cache-primary-key }}
-
-      - name: Install .NET
+      - name: Build UniGetUI from source
+        id: build
         if: matrix.unigetui_source == 'source'
-        uses: actions/setup-dotnet@v6
+        uses: ./.github/actions/unigetui-build
+
+      - name: Start desktop session
+        uses: ./.github/actions/desktop-session
         with:
-          global-json-file: global.json
+          desktop-size: ${{ inputs.desktop_size || '1920x1080' }}
 
-      # Same key as build-release.yml, so a source build can reuse that workflow's packages.
-      - name: Cache NuGet packages
-        if: matrix.unigetui_source == 'source'
-        uses: actions/cache@v6
+      - name: Install and start UniGetUI
+        id: unigetui
+        uses: ./.github/actions/unigetui-desktop
         with:
-          path: ${{ env.NUGET_PACKAGES }}
-          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          release: ${{ inputs.unigetui_release }}
+          installer-path: ${{ steps.build.outputs.installer-path }}
 
-      - name: Install Inno Setup
-        if: matrix.unigetui_source == 'source'
-        shell: pwsh
-        run: |
-          choco install innosetup -y --no-progress
-          echo "C:\Program Files (x86)\Inno Setup 6" >> $Env:GITHUB_PATH
-
-      # Builds the same unsigned installer as a local scripts/build.ps1 run, so the source
-      # build goes through the same silent install as a release.
-      - name: Build UniGetUI installer from source
-        if: matrix.unigetui_source == 'source'
-        shell: pwsh
-        run: |
-          .\scripts\build.ps1 -SkipTests -OutputPath (Join-Path $env:RUNNER_TEMP 'unigetui-build')
-
-      - name: Install UniGetUI
-        id: install
+      - name: Check that UniGetUI is visible
         shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
-          UNIGETUI_SOURCE: ${{ matrix.unigetui_source }}
-          UNIGETUI_RELEASE: ${{ inputs.unigetui_release }}
+          BASELINE_SCREENSHOT: ${{ steps.unigetui.outputs.baseline-screenshot }}
         run: |
-          $artifactsDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke'
-          if ($env:UNIGETUI_SOURCE -eq 'source') {
-            $install = .\testing\desktop-smoke\Install-UniGetUI.ps1 `
-              -InstallerPath (Join-Path $env:RUNNER_TEMP 'unigetui-build\UniGetUI.Installer.x64.exe') `
-              -ArtifactsDir $artifactsDir
-          }
-          else {
-            $install = .\testing\desktop-smoke\Install-UniGetUI.ps1 `
-              -Tag $env:UNIGETUI_RELEASE `
-              -DownloadDir (Join-Path $env:RUNNER_TEMP 'unigetui-release') `
-              -ArtifactsDir $artifactsDir
-          }
+          .\testing\desktop-smoke\Assert-UniGetUIVisible.ps1 -BaselineScreenshot $env:BASELINE_SCREENSHOT
 
-          $install = $install | ConvertFrom-Json
-          Write-Host "Installed UniGetUI from $($install.Source) ($($install.FileVersion)) at $($install.ExePath)"
-          "exe=$($install.ExePath)" >> $env:GITHUB_OUTPUT
-
-      - name: Run UniGetUI desktop smoke test
-        shell: pwsh
-        env:
-          DESKTOP_SIZE: ${{ github.event.inputs.desktop_size }}
-          UNIGETUI_EXE: ${{ steps.install.outputs.exe }}
-        run: |
-          $desktopSize = $env:DESKTOP_SIZE
-          if ([string]::IsNullOrWhiteSpace($desktopSize)) {
-            $desktopSize = '1920x1080'
-          }
-
-          .\testing\desktop-smoke\Invoke-DesktopSmokeTest.ps1 `
-            -IronRdpRoot (Join-Path $env:GITHUB_WORKSPACE 'ironrdp') `
-            -UniGetUIPath $env:UNIGETUI_EXE `
-            -DesktopSize $desktopSize `
-            -ArtifactsDir (Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke')
-
-      # The smoke test cleans up after itself; this covers a step that was cancelled mid-way.
-      - name: Clean up RDP session
-        if: ${{ always() }}
-        shell: pwsh
-        run: |
-          .\ironrdp\testing\agentic-rdp\Invoke-AgenticRdpTest.ps1 `
-            -CleanupOnly `
-            -WorkspaceRoot (Join-Path $env:GITHUB_WORKSPACE 'ironrdp') `
-            -ArtifactsDir (Join-Path $env:GITHUB_WORKSPACE 'artifacts\desktop-smoke')
-
-      - name: Upload screenshots
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+      - name: Clean up desktop session
+        if: always()
+        uses: ./.github/actions/desktop-session-cleanup
         with:
-          name: desktop-smoke-screenshots-${{ matrix.unigetui_source }}
-          path: artifacts\desktop-smoke\*.png
-          if-no-files-found: warn
-
-      - name: Upload logs and metadata
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: desktop-smoke-logs-${{ matrix.unigetui_source }}
-          path: |
-            artifacts\desktop-smoke
-            !artifacts\desktop-smoke\*.png
-          if-no-files-found: warn
+          artifact-name: desktop-smoke-${{ matrix.unigetui_source }}

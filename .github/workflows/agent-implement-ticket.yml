@@ -202,7 +202,8 @@ jobs:
   pull-request:
     name: Open draft pull request
     needs: implement
-    if: needs.implement.outputs.has-changes == 'true' && github.event_name == 'workflow_dispatch' && inputs.create_pr
+    # TEMPORARY: push runs open a PR too, to test this job once. Revert to dispatch-only.
+    if: needs.implement.outputs.has-changes == 'true' && (github.event_name == 'push' || inputs.create_pr)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

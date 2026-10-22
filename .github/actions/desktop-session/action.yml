@@ -23,6 +23,12 @@ inputs:
       Version of the Devolutions.Agent winget package to install with its RDP extension, which
       serves the NOW protocol over an RDP virtual channel in the desktop session; empty skips it
     default: 2026.3.1.0
+  now-channel:
+    description: >
+      Negotiate the NOW channel with Devolutions Agent right after connecting, and check that a
+      command runs over it. Off until ironrdp-agent sends on that channel correctly: its DVC pipe
+      proxy reports channel 0 for what it sends, and the client then drops the whole RDP session
+    default: 'false'
 
 outputs:
   agent-path:
@@ -180,7 +186,7 @@ runs:
         IRONRDP_ROOT: ${{ runner.temp }}/ironrdp
         DESKTOP_SIZE: ${{ inputs.desktop-size }}
         ARTIFACTS_DIR: ${{ inputs.artifacts-dir }}
-        NOW_CHANNEL: ${{ inputs.devolutions-agent-version != '' }}
+        NOW_CHANNEL: ${{ inputs.devolutions-agent-version != '' && inputs.now-channel == 'true' }}
       run: |
         $artifactsDir = $env:ARTIFACTS_DIR
         if ([string]::IsNullOrWhiteSpace($artifactsDir)) {
@@ -197,7 +203,7 @@ runs:
     # command sent over the NOW channel runs there. A broken channel fails here rather than in
     # whatever later step needs it.
     - name: Check NOW remote execution
-      if: inputs.devolutions-agent-version != ''
+      if: inputs.devolutions-agent-version != '' && inputs.now-channel == 'true'
       shell: pwsh
       env:
         SESSION_ID: ${{ steps.start.outputs.session-id }}

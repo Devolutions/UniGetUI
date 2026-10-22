@@ -9,15 +9,22 @@ namespace UniGetUI.PackageEngine.Managers.CargoManager;
 
 internal static class CargoManagedInstaller
 {
-    internal static async Task<OperationVeredict?> TryPerformAsync(
+    internal static Task<OperationVeredict?> TryPerformAsync(
         Cargo manager, IPackage package, InstallOptions options, OperationType operation,
         Action<string> log, Action<OperationProgress> progress, CancellationToken cancellationToken)
+        => TryPerformAsync(manager, package, options, operation, log, progress,
+            CoreTools.IsAdministrator(), cancellationToken);
+
+    internal static async Task<OperationVeredict?> TryPerformAsync(
+        Cargo manager, IPackage package, InstallOptions options, OperationType operation,
+        Action<string> log, Action<OperationProgress> progress, bool processIsElevated,
+        CancellationToken cancellationToken)
     {
         if (operation == OperationType.Uninstall)
             return null;
         if (options.SkipHashCheck)
             throw new InvalidOperationException("Cargo installation requires integrity verification.");
-        if (CoreTools.IsAdministrator() || options.RunAsAdministrator
+        if (processIsElevated || options.RunAsAdministrator
             || package.OverridenOptions.RunAsAdministrator is true)
         {
             log("Elevated Cargo operations use Cargo source compilation.");

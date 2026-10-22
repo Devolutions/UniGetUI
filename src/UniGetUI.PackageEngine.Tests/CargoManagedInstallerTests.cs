@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Net;
 using System.Text;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
@@ -115,9 +116,8 @@ public sealed class CargoManagedInstallerTests
             scenario == "build-target" ? "aarch64-unknown-linux-musl" : null));
         List<string> logs = [];
         List<OperationProgress> progress = [];
-        var helper = Assert.IsAssignableFrom<IManagedPackageOperationHelper>(manager.OperationHelper);
-        Assert.Null(await helper.TryPerformAsync(builder.Build(), options, OperationType.Install,
-            logs.Add, progress.Add, default));
+        Assert.Null(await CargoManagedInstaller.TryPerformAsync(manager, builder.Build(), options,
+            OperationType.Install, logs.Add, progress.Add, processIsElevated: false, default));
         Assert.Contains(scenario switch
         {
             "elevated" => "Elevated",
@@ -125,6 +125,66 @@ public sealed class CargoManagedInstallerTests
             _ => "source compilation",
         }, Assert.Single(logs));
         Assert.Empty(http.Requests);
+        Assert.Empty(progress);
+        Assert.False(Directory.Exists(sandbox.PathFor("root")));
+    }
+
+    [Theory]
+    [InlineData(true, false, null)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, null)]
+    [InlineData(false, false, true)]
+    public async Task ElevatedExecutionAlwaysUsesSourceCompilationWithoutHttpOrMutation(
+        bool processIsElevated, bool requestedElevation, bool? packageElevation)
+    {
+        using var sandbox = new CargoTestSandbox();
+        using var environment = sandbox.IsolateEnvironment();
+        using var fixture = new CargoTestHttpFixture();
+        var manager = new Cargo();
+        var package = new PackageBuilder().WithManager(manager).WithId(CargoTestData.Id)
+            .WithVersion(CargoTestData.Version).Build();
+        package.OverridenOptions.RunAsAdministrator = packageElevation;
+        var options = new InstallOptions
+        {
+            RunAsAdministrator = requestedElevation,
+            CustomInstallLocation = sandbox.PathFor("root"),
+        };
+        List<string> log = [];
+        List<OperationProgress> progress = [];
+
+        Assert.Null(await CargoManagedInstaller.TryPerformAsync(manager, package, options,
+            OperationType.Install, log.Add, progress.Add, processIsElevated, default));
+
+        Assert.Equal("Elevated Cargo operations use Cargo source compilation.", Assert.Single(log));
+        Assert.Empty(fixture.Requests);
+        Assert.Empty(progress);
+        Assert.False(Directory.Exists(sandbox.PathFor("root")));
+        Assert.Empty(options.Version);
+    }
+
+    [Fact]
+    public async Task ShippingEntryUsesActualProcessElevation()
+    {
+        using var sandbox = new CargoTestSandbox();
+        using var environment = sandbox.IsolateEnvironment();
+        using var fixture = new CargoTestHttpFixture();
+        var manager = new Cargo();
+        var source = new SourceBuilder().WithManager(manager).WithName("private")
+            .WithUrl("https://private.test/index").Build();
+        var package = new PackageBuilder().WithManager(manager).WithSource(source)
+            .WithId(CargoTestData.Id).WithVersion(CargoTestData.Version).Build();
+        var options = new InstallOptions { CustomInstallLocation = sandbox.PathFor("root") };
+        var helper = Assert.IsAssignableFrom<IManagedPackageOperationHelper>(manager.OperationHelper);
+        List<string> log = [];
+        List<OperationProgress> progress = [];
+
+        Assert.Null(await helper.TryPerformAsync(package, options, OperationType.Install,
+            log.Add, progress.Add, default));
+
+        Assert.Equal(CoreTools.IsAdministrator()
+            ? "Elevated Cargo operations use Cargo source compilation."
+            : "Non-crates.io packages use their original source through Cargo.", Assert.Single(log));
+        Assert.Empty(fixture.Requests);
         Assert.Empty(progress);
         Assert.False(Directory.Exists(sandbox.PathFor("root")));
     }
@@ -181,11 +241,11 @@ public sealed class CargoManagedInstallerTests
             var options = new InstallOptions { CustomInstallLocation = sandbox.PathFor("root") };
             var package = new PackageBuilder().WithManager(manager).WithId(CargoTestData.Id)
                 .WithVersion(CargoTestData.Version).Build();
-            var helper = Assert.IsAssignableFrom<IManagedPackageOperationHelper>(manager.OperationHelper);
             List<string> log = [];
             List<OperationProgress> progress = [];
             Task<OperationVeredict?> Run() =>
-                helper.TryPerformAsync(package, options, OperationType.Install, log.Add, progress.Add, default);
+                CargoManagedInstaller.TryPerformAsync(manager, package, options, OperationType.Install,
+                    log.Add, progress.Add, processIsElevated: false, default);
             if (scenario == "mismatched-binary")
                 Assert.Contains("published checksum", (await Assert.ThrowsAsync<InvalidDataException>(Run)).Message);
             else if (scenario == "verified")

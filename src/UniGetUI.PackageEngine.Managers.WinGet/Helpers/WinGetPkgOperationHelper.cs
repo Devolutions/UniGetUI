@@ -28,14 +28,18 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
     private static string GetSelectorPiece(IPackage package)
     {
-        if (
-            package.OverridenOptions.WinGet_UseLocalIdentifier
-            && GetFallbackIdentifier(package) is { } localIdentifier
-        )
+        if (GetSelectedLocalIdentifier(package) is { } localIdentifier)
             return $"--id {Selector(localIdentifier, "local identifier")} --exact";
 
         return GetIdNamePiece(package);
     }
+
+    private static string? GetSelectedLocalIdentifier(IPackage package) =>
+        package.OverridenOptions.WinGet_UseLocalIdentifier ? GetFallbackIdentifier(package) : null;
+
+    private static bool DropsArchAndScope(IPackage package) =>
+        package.OverridenOptions.WinGet_DropArchAndScope
+        || GetSelectedLocalIdentifier(package) is not null;
 
     private static bool OperationIsBrokered(IPackage package) =>
         Settings.Get(Settings.K.UseAgentBroker) && !package.Source.IsVirtualManager;
@@ -66,7 +70,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
     internal static string? GetEffectiveScope(IPackage package, InstallOptions options)
     {
-        if (package.OverridenOptions.WinGet_DropArchAndScope)
+        if (DropsArchAndScope(package))
             return null;
 
         return (package.OverridenOptions.Scope ?? options.InstallationScope) switch
@@ -94,7 +98,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         bool forUpdate = false
     )
     {
-        if (package.OverridenOptions.WinGet_DropArchAndScope)
+        if (DropsArchAndScope(package))
             return null;
 
         string architecture =

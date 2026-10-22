@@ -177,6 +177,9 @@ public sealed class AgentSkills : PackageManager
         set => Settings.SetList(TargetAgentsListKey, value.Distinct().ToList());
     }
 
+    /// <summary>The supported coding agents, including their detection status.</summary>
+    public IReadOnlyList<AgentInfo> GetSupportedAgents() => Backend.GetAgents();
+
     /// <summary>The coding agents found on this computer, as (id, display name).</summary>
     public IReadOnlyList<(string Id, string DisplayName)> GetDetectedAgents()
     {

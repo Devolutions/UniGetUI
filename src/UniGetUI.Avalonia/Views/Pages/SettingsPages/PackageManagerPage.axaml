@@ -93,11 +93,11 @@
             <ContentControl x:Name="PathHolder"/>
 
             <!-- Install options heading and panel -->
-            <TextBlock Text="{Binding InstallSectionTitle}" Margin="44,32,4,8" FontSize="14" FontWeight="SemiBold"/>
+            <TextBlock x:Name="InstallOptionsHeading" Text="{Binding InstallSectionTitle}" Margin="44,32,4,8" FontSize="14" FontWeight="SemiBold"/>
             <ContentControl x:Name="InstallOptionsHolder"/>
 
             <!-- Manager-specific settings heading -->
-            <TextBlock Text="{Binding SettingsSectionTitle}" Margin="44,32,4,8" FontSize="14" FontWeight="SemiBold"/>
+            <TextBlock x:Name="ManagerSettingsHeading" Text="{Binding SettingsSectionTitle}" Margin="44,32,4,8" FontSize="14" FontWeight="SemiBold"/>
 
             <!-- Manager-specific extra controls – built in code-behind -->
             <StackPanel x:Name="ExtraControls"

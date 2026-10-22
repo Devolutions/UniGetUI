@@ -212,6 +212,30 @@ internal static partial class AvaloniaAutoUpdater
             if (content.Contains(AttemptFinishedMarker))
                 return;
 
+            if (MacUpdateTargetResolver.TryGetSwapFailure(content, out string failedBundle))
+            {
+                Logger.Warn($"The previous update could not replace {failedBundle}.");
+                try
+                {
+                    File.AppendAllText(
+                        _updateLogPath,
+                        $"{Environment.NewLine}{AttemptFinishedMarker} bundle swap failed (detected on next launch) at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Could not mark the failed update attempt as finished: {ex.Message}");
+                }
+
+                RaiseStatus(
+                    CoreTools.Translate("The update could not be applied."),
+                    CoreTools.Translate("UniGetUI could not replace {0}, so it is still running the previous version. Open the log to see what happened.", failedBundle),
+                    InfoBarSeverity.Error,
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
+                return;
+            }
+
             string currentVer = CoreData.VersionName;
             string? targetVer = null;
             foreach (string line in content.Split('\n'))
@@ -518,6 +542,11 @@ internal static partial class AvaloniaAutoUpdater
             wasCheckingForUpdates = false;
             RecordTargetVersion(candidate.VersionName);
             LogUpdateInfo($"Update to UniGetUI {candidate.VersionName} is available.");
+
+            if (OperatingSystem.IsMacOS() && ReportMacUpdateTargetIfBlocked(ResolveMacUpdateTarget()))
+            {
+                return false;
+            }
 
             string installerName;
             if (OperatingSystem.IsWindows())
@@ -939,6 +968,12 @@ internal static partial class AvaloniaAutoUpdater
     {
         LogUpdateInfo($"Applying macOS update from archive: {installerLocation}");
 
+        MacUpdateTarget updateTarget = ResolveMacUpdateTarget();
+        if (ReportMacUpdateTargetIfBlocked(updateTarget))
+        {
+            return;
+        }
+
         RaiseStatus(
             CoreTools.Translate("UniGetUI is being updated..."),
             CoreTools.Translate("This may take a minute or two"),
@@ -1000,8 +1035,7 @@ internal static partial class AvaloniaAutoUpdater
             return;
         }
 
-        // Replace the *running* bundle wherever it lives, falling back to /Applications.
-        string target = ResolveRunningMacAppBundle() ?? "/Applications/UniGetUI.app";
+        string target = updateTarget.BundlePath;
 
         if (!Directory.Exists(target))
         {
@@ -1032,10 +1066,10 @@ internal static partial class AvaloniaAutoUpdater
         // relaunched copy confirms success via CheckForOrphanedUpdateAttempt() by
         // comparing its own version against the recorded target version.
         //
-        // Arguments are passed positionally ($1=pid, $2=target, $3=new app) so no path
-        // is ever interpolated into the script text.
+        // Arguments are passed positionally ($1=pid, $2=target, $3=new app, $4=update log,
+        // $5=failure marker) so no path is ever interpolated into the script text.
         const string swap = """
-            pid="$1"; target="$2"; newapp="$3"
+            pid="$1"; target="$2"; newapp="$3"; log="$4"; marker="$5"
             i=0
             while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
             rm -rf "$target.old"
@@ -1046,11 +1080,20 @@ internal static partial class AvaloniaAutoUpdater
               else
                 rm -rf "$target"
                 mv "$target.old" "$target"
+                printf '\n%s %s\n' "$marker" "$target" >> "$log"
               fi
+            else
+              printf '\n%s %s\n' "$marker" "$target" >> "$log"
             fi
             /usr/bin/open -na "$target"
             """;
-        if (!TrySpawnSwapHelper(swap, Environment.ProcessId.ToString(CultureInfo.InvariantCulture), target, newApp))
+        if (!TrySpawnSwapHelper(
+                swap,
+                Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
+                target,
+                newApp,
+                _updateLogPath,
+                MacUpdateTargetResolver.SwapFailedMarker))
         {
             // We could not even launch the helper, so nothing was changed. Report and bail
             // without exiting so the user keeps a working copy.
@@ -1340,21 +1383,58 @@ internal static partial class AvaloniaAutoUpdater
         return stagingDir;
     }
 
-    // Walks up from the running executable to the enclosing ".app" bundle directory.
     [SupportedOSPlatform("macos")]
-    private static string? ResolveRunningMacAppBundle()
+    private static MacUpdateTarget ResolveMacUpdateTarget()
     {
-        // Environment.ProcessPath is typically /Applications/UniGetUI.app/Contents/MacOS/UniGetUI.
-        string? dir = Path.GetDirectoryName(Environment.ProcessPath);
-        while (!string.IsNullOrEmpty(dir))
+        MacUpdateTarget target = MacUpdateTargetResolver.Resolve(
+            Environment.ProcessPath,
+            MacBundleLocation.TryGetTranslocatedOriginalPath,
+            Directory.Exists,
+            MacBundleLocation.IsWritable);
+
+        if (target.RunningBundlePath is not null && MacUpdateTargetResolver.IsTranslocatedPath(target.RunningBundlePath))
         {
-            if (dir.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
-            {
-                return dir;
-            }
-            dir = Path.GetDirectoryName(dir);
+            LogUpdateInfo(
+                $"UniGetUI is running from the translocated copy {target.RunningBundlePath}; "
+                + $"update target resolved to {target.BundlePath} ({target.Status}).");
         }
-        return null;
+
+        return target;
+    }
+
+    private static bool ReportMacUpdateTargetIfBlocked(MacUpdateTarget target)
+    {
+        switch (target.Status)
+        {
+            case MacUpdateTargetStatus.TranslocatedUnresolved:
+                LogUpdateWarn(
+                    $"UniGetUI is running from the temporary location {target.BundlePath} and its original location could not be resolved; the update will not be applied.");
+                RaiseStatus(
+                    CoreTools.Translate("UniGetUI cannot update itself from a temporary location."),
+                    CoreTools.Translate("macOS is running UniGetUI from a temporary copy that cannot be modified. Move UniGetUI to the Applications folder, open it from there, and try again."),
+                    InfoBarSeverity.Warning,
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
+                MarkAttemptFinished("running from a translocated location that could not be resolved");
+                return true;
+
+            case MacUpdateTargetStatus.NotWritable:
+                LogUpdateWarn(
+                    $"The current user cannot replace {target.BundlePath} (the bundle or its parent folder is not writable); the update will not be downloaded.");
+                RaiseStatus(
+                    CoreTools.Translate("An update for UniGetUI is available, but installing it requires administrator rights."),
+                    CoreTools.Translate("Your account cannot modify {0}. Contact your IT administrator to update UniGetUI.", target.BundlePath),
+                    InfoBarSeverity.Warning,
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
+                MarkAttemptFinished("update target is not writable");
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     // ------------------------------------------------------------------ update check sources

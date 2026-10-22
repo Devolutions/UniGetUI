@@ -1018,6 +1018,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         };
         Grid.SetColumn(label, 0);
         var link = CreateLinkBlock(url, () => OpenUrl(url));
+        link.Url = url;
         link.TextWrapping = TextWrapping.Wrap;
         Grid.SetColumn(link, 1);
         grid.Children.Add(label);

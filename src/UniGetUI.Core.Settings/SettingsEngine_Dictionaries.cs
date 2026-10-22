@@ -71,11 +71,14 @@ namespace UniGetUI.Core.SettingsEngine
                     }
                 }
 
-                _dictionarySettings[key] = value.ToDictionary(
+                Dictionary<object, object?> loaded = value.ToDictionary(
                     kvp => (object)kvp.Key,
                     kvp => (object?)kvp.Value
                 );
-                return value;
+                if (_publishLoadedDictionary(key, loaded))
+                    return value;
+
+                return _getDictionary<KeyT, ValueT>(key);
             }
             catch (InvalidOperationException)
             {
@@ -87,6 +90,11 @@ namespace UniGetUI.Core.SettingsEngine
                 Logger.Error(ex);
                 return [];
             }
+        }
+
+        internal static bool _publishLoadedDictionary(K key, Dictionary<object, object?> loaded)
+        {
+            return ReferenceEquals(_dictionarySettings.GetOrAdd(key, loaded), loaded);
         }
 
         // Returns an empty dictionary if the setting doesn't exist and null if the types are invalid

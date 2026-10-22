@@ -293,12 +293,19 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
                 if (value.Length is 0 || value is "node" or "stable")
                     return null;
-                if (value.StartsWith('v') || char.IsAsciiDigit(value[0]))
+                if (IsNvmVersionSpecification(value))
                     return value;
                 alias = value;
             }
 
             return null;
+        }
+
+        private static bool IsNvmVersionSpecification(string value)
+        {
+            string[] parts = (value.StartsWith('v') ? value[1..] : value).Split('.');
+            return parts.Length is >= 1 and <= 3
+                && parts.All(part => part.Length > 0 && part.All(char.IsAsciiDigit));
         }
 
         private static bool MatchesNvmVersion(Version version, string specification)

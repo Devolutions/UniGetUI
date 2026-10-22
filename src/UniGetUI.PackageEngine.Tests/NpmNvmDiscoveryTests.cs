@@ -98,6 +98,27 @@ public sealed class NpmNvmDiscoveryTests
     }
 
     [Fact]
+    public void DiscoveryFollowsACustomNvmAliasWhoseNameStartsWithV()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        RunWithNvmDirectory(nvmDirectory =>
+        {
+            string configured = CreateNvmNode(nvmDirectory, "v22.11.0");
+            string newest = CreateNvmNode(nvmDirectory, "v24.21.0");
+            Directory.CreateDirectory(Path.Join(nvmDirectory, "alias"));
+            File.WriteAllText(Path.Join(nvmDirectory, "alias", "default"), "verified\n");
+            File.WriteAllText(Path.Join(nvmDirectory, "alias", "verified"), "v22.11.0\n");
+
+            var candidates = new Npm().FindCandidateExecutableFiles().ToList();
+
+            Assert.True(candidates.IndexOf(configured) >= 0);
+            Assert.True(candidates.IndexOf(configured) < candidates.IndexOf(newest));
+        });
+    }
+
+    [Fact]
     public void DiscoveryIgnoresNvmNpmWithoutExecutablePermissions()
     {
         if (OperatingSystem.IsWindows())

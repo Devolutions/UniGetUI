@@ -37,6 +37,25 @@ the new build on the desktop with its main window maximized in the foreground. I
 the build errors if the build fails. The first build has already been done for you, so
 later builds are incremental. Run it again after every change you want to see.
 
+```powershell
+& .\.github\agent\implement-ticket\Stop-UniGetUIDev.ps1
+```
+
+This closes UniGetUI and waits for it to exit. The running app locks the build output, so
+run it before `dotnet test` and the formatters. Do not stop processes yourself with
+`Get-Process ... | Stop-Process`: the shell tool refuses that command.
+
+```powershell
+& .\.github\agent\implement-ticket\Wait-UniGetUIIdle.ps1 -Screenshot 'after-1-example.png'
+```
+
+This waits until the page on screen has finished loading packages and the window has
+stopped changing, then saves the screenshot (a relative name goes in
+`$env:AGENT_SCREENSHOTS`). It prints a JSON summary: `Idle` is false if it gave up after
+its timeout (`-TimeoutSeconds`, 120 by default), and `Dialog` names any open dialog. Run it
+after launching the app and after every action, before every screenshot, instead of
+`Start-Sleep`. Without `-Screenshot` it only waits.
+
 ### See and drive the desktop
 
 Load the desktop module in every PowerShell command that uses it:
@@ -46,9 +65,9 @@ Import-Module $env:DESKTOP_SESSION_MODULE
 ```
 
 - `Save-DesktopScreenshot -Name (Join-Path $env:AGENT_SCREENSHOTS 'name.png')` saves a
-  screenshot of the whole desktop and returns its path. **Open every screenshot you take
-  with your file viewing tool and look at it** before you rely on it: that is how you see
-  the app.
+  screenshot of the whole desktop right away and returns its path; prefer
+  `Wait-UniGetUIIdle.ps1 -Screenshot` above. **Open every screenshot you take with your
+  file viewing tool and look at it** before you rely on it: that is how you see the app.
 - `Invoke-DesktopClick -X 100 -Y 200` clicks (add `-Button right` for a right click), and
   `Move-DesktopMouse -X 100 -Y 200` moves the pointer. Coordinates are desktop pixels,
   the same as in the screenshots.
@@ -59,12 +78,17 @@ Import-Module $env:DESKTOP_SESSION_MODULE
   rectangle, and `Show-DesktopWindow -Handle $h -Maximize` brings it back to the front.
 - `Invoke-DesktopCommand { ... }` runs a script block inside the desktop session, for
   example to start another program the user would see.
-- Wait a second or two after an action before taking a screenshot, so the UI has settled.
+- After an action, run `Wait-UniGetUIIdle.ps1` before looking at the result, so the UI has
+  settled.
 
 UniGetUI's settings are stored as files in `$env:LOCALAPPDATA\UniGetUI\Configuration`.
 Telemetry and the Cargo package manager are disabled there; leave those settings alone.
-No packages are installed by package managers on this machine, and searches may be slow,
-so prefer showing your feature without waiting on package manager operations.
+The runner image comes with many tools installed through WinGet, Chocolatey, npm, pip and
+other package managers, so the package lists have real content: Software Updates usually
+lists dozens of available updates, and Installed Packages many more packages. Use them
+to show your feature. Package manager operations (searches, update checks, installs) can
+take a minute or more, so wait for them with `Wait-UniGetUIIdle.ps1`, and do not install,
+update, or remove packages unless the ticket can't be shown otherwise.
 
 ## Steps
 
@@ -73,20 +97,38 @@ so prefer showing your feature without waiting on package manager operations.
    what exists: if a setting, option, or platform-specific behavior (macOS, Linux) already
    covers part of the ticket, keep it working and extend it rather than removing or
    bypassing it, unless the ticket asks for that.
-2. **Capture the current behavior.** Run `Start-UniGetUIDev.ps1` before changing anything,
-   navigate to where the feature will appear, and save `before-*.png` screenshots there.
-3. **Implement the change**, following the existing code style. Use `CoreTools.Translate()`
+2. **Write the acceptance criteria.** Before changing code, turn the ticket into a short
+   numbered list of criteria. Each one is a behavior a user can see, stated as the user
+   action and the expected result, for example "Clicking the refresh button next to Scoop
+   checks Scoop for updates, and its updates appear in the list". Cover every request in
+   the ticket. Where the ticket can be read more than one way, pick the reading that best
+   fits the ticket and the existing UI, and write down the other readings: they go in the
+   pull request description.
+3. **Capture the current behavior.** Run `Start-UniGetUIDev.ps1` before changing anything,
+   navigate to where the feature will appear, and save `before-*.png` screenshots there
+   with `Wait-UniGetUIIdle.ps1 -Screenshot`.
+4. **Implement the change**, following the existing code style. Use `CoreTools.Translate()`
    for user-visible text. Add or update unit tests when the change has testable logic.
-4. **Build, run, and look.** Run `Start-UniGetUIDev.ps1`, drive the app to the feature,
-   take `after-*.png` screenshots that clearly show it working, and open them to check.
-   Fix and repeat until the screenshots show the feature working as the ticket asks.
-5. **Check your change.** Close UniGetUI first
-   (`Get-Process UniGetUI -ErrorAction SilentlyContinue | Stop-Process -Force`), since the
-   running app locks the build output. Run the unit tests of the projects you changed
-   (`dotnet test <project> /p:Platform=x64 --nologo -v q`), then both formatters from
-   `AGENTS.md` (`dotnet format whitespace src --folder` and
-   `dotnet format style src/UniGetUI.Windows.slnx --no-restore`). Review `git diff` and
-   remove anything not needed for the ticket.
+5. **Build, run, and show each criterion.** Run `Start-UniGetUIDev.ps1`, then for each
+   acceptance criterion, do what a user would do in the UI to trigger it (click, type,
+   press keys; not by editing settings files or calling code), and screenshot the result
+   as `after-<criterion number>-<short name>.png`. When the action starts something, such
+   as a check or an operation, also screenshot the state just before the action, so the
+   pair shows what changed (`after-1a-<short name>.png`, then `after-1b-<short name>.png`). A screenshot that only shows a new control exists does not
+   show that it works: show what happens when it is used. Open every screenshot and check
+   that it shows what you will claim, with nothing still loading and no unrelated dialog.
+   Fix and repeat until every criterion is shown working. If a criterion truly can't be
+   shown in the UI on this machine, say why in the pull request and how you checked it
+   instead (a unit test, the app's log).
+6. **Check your change.** Run `Stop-UniGetUIDev.ps1` first, since the running app locks
+   the build output. Run the unit tests of the projects you changed
+   (`dotnet test <project> /p:Platform=x64 --nologo -v q`). Review `git diff` and remove
+   anything not needed for the ticket. Then, once you are done changing code, run both
+   formatters from `AGENTS.md` once (`dotnet format whitespace src --folder` and
+   `dotnet format style src/UniGetUI.Windows.slnx --no-restore`); each takes about two
+   minutes, so don't run them after every edit, and don't run a `--verify-no-changes`
+   pass right after applying them. If the formatters changed files, rebuild before
+   finishing.
 
 ## Finish
 
@@ -95,10 +137,16 @@ Write the pull request description to the file at `$env:AGENT_PR_BODY`, in Markd
 - First line: `# ` followed by a short title in the imperative, for example
   `# Show the app version in the title bar`.
 - What the change does and why, in a few sentences, then the files changed and how.
+- **Assumptions**: where the ticket could be read more than one way, the reading you chose
+  and the ones you didn't, so a reviewer can redirect the change. Write "None" if the
+  ticket was unambiguous.
+- **Acceptance criteria**: your numbered list, each with how it was verified: the
+  screenshots that show it (by file name), a unit test, or "not verified" and why.
 - **Testing**: what you built, ran, and checked, including test and formatter results.
 - **Screenshots**: each screenshot you want reviewers to see, as
-  `![short caption](screenshots/<file name>)`, before and after where that helps. Only
-  reference files you saved in `$env:AGENT_SCREENSHOTS`.
+  `![short caption](screenshots/<file name>)`, grouped by criterion, with the before
+  screenshot first. The caption says what the screenshot shows, including the action
+  taken. Only reference files you saved in `$env:AGENT_SCREENSHOTS`.
 - Anything you could not do or verify, stated plainly.
 
 If you made no code changes, still write the description, explaining why. Do not mention

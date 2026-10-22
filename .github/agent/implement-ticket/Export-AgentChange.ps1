@@ -61,11 +61,20 @@ if (Test-Path -LiteralPath $ScreenshotsDir) {
         Copy-Item -Destination $screenshotsOut
 }
 
+$screenshotNames = @(Get-ChildItem -LiteralPath $screenshotsOut -Filter '*.png' -File | ForEach-Object { $_.Name })
+# The prompt asks for an after-*.png of every acceptance criterion; without one, nothing
+# shows the change working, so the run gets a warning a reviewer will see.
+$hasAfterScreenshots = @($screenshotNames | Where-Object { $_ -like 'after-*' }).Count -gt 0
+if ($hasChanges -and -not $hasAfterScreenshots) {
+    Write-Host '::warning::The agent changed code but saved no after-*.png screenshot showing the change working'
+}
+
 [pscustomobject]@{
     BaseSha = $BaseSha
     HasChanges = $hasChanges
+    HasAfterScreenshots = $hasAfterScreenshots
     Files = $files
-    Screenshots = @(Get-ChildItem -LiteralPath $screenshotsOut -Filter '*.png' -File | ForEach-Object { $_.Name })
+    Screenshots = $screenshotNames
 } | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $OutputDir 'change.json') -Encoding utf8NoBOM
 
 if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_OUTPUT)) {

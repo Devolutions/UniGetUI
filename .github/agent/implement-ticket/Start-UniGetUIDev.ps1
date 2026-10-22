@@ -23,17 +23,31 @@ New-Item -Path $logDir -ItemType Directory -Force | Out-Null
 $buildLog = Join-Path $logDir 'unigetui-dev-build.log'
 
 # A running instance locks its output files.
-Get-Process -Name 'UniGetUI' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
+& (Join-Path $PSScriptRoot 'Stop-UniGetUIDev.ps1') | Out-Null
+
+# Restoring evaluates every project, so it is skipped while the project files are the same
+# as at the last restore. The stamp is under obj, which git ignores.
+$restoreInputs = @(Get-ChildItem -Path (Join-Path $repoRoot 'src') -Recurse -File -Include '*.csproj', '*.props', '*.targets' |
+        Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }) +
+    @(Get-Item -Path (Join-Path $repoRoot 'global.json'))
+$restoreHash = ($restoreInputs | Sort-Object -Property FullName | Get-FileHash -Algorithm SHA256 |
+        ForEach-Object { "$($_.Path)=$($_.Hash)" }) -join "`n"
+$restoreStamp = Join-Path $repoRoot "src\UniGetUI.Avalonia\obj\agent-restore-$Configuration.txt"
+$restoreArgs = @()
+if ((Test-Path -LiteralPath $restoreStamp) -and (Get-Content -LiteralPath $restoreStamp -Raw) -eq $restoreHash) {
+    $restoreArgs = @('--no-restore')
+}
 
 Write-Host "Building $Configuration (log: $buildLog)"
 # Serial build, as in build-release.yml: parallel project builds can race on the same output
-# file on CI runners (CS2012).
-& dotnet build $project -c $Configuration -p:Platform=x64 -r win-x64 -p:UseSharedCompilation=false -p:BuildInParallel=false -m:1 --nologo -v q -clp:ErrorsOnly *> $buildLog
+# file on CI runners (CS2012). Unlike release builds, it keeps the shared compiler server,
+# which roughly halves the agent's repeated incremental builds.
+& dotnet build $project -c $Configuration -p:Platform=x64 -r win-x64 -p:BuildInParallel=false -m:1 @restoreArgs --nologo -v q -clp:ErrorsOnly *> $buildLog
 if ($LASTEXITCODE -ne 0) {
     Get-Content -Path $buildLog -Tail 60 | Write-Host
     throw "dotnet build failed with exit code $LASTEXITCODE; full log in $buildLog"
 }
+Set-Content -LiteralPath $restoreStamp -Value $restoreHash -NoNewline -Encoding utf8NoBOM
 
 $exe = Get-ChildItem -Path (Join-Path $repoRoot "src\UniGetUI.Avalonia\bin\x64\$Configuration") -Filter 'UniGetUI.exe' -Recurse -File |
     Where-Object { $_.DirectoryName -like '*\win-x64' } |

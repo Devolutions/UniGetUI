@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C *.claude/worktrees/* push -u origin fix/*)",
+      "Bash(git -C *.claude/worktrees/* push origin fix/*)",
+      "Bash(gh pr create --repo Devolutions/UniGetUI --base main --head fix/*)",
+      "Bash(gh pr edit * --repo Devolutions/UniGetUI --add-reviewer \"@copilot\"*)",
+      "Bash(gh pr edit * --body-file *)",
+      "Bash(gh api repos/Devolutions/UniGetUI/pulls/*/comments/*/replies *)",
+      "Bash(gh api graphql -f query='mutation($t:ID!){resolveReviewThread(input:{threadId:$t}){thread{isResolved}}}' -F t=*)"
+    ]
+  }
+}

@@ -8,11 +8,10 @@ description: >
 inputs:
   ironrdp-ref:
     description: IronRDP commit providing ironrdp-agent and the testing/agentic-rdp harness
-    # Head of claude/agentic-rdp-ci-workflow-b25bea (https://github.com/Devolutions/IronRDP/pull/2189),
-    # which carries the daemon readiness and screenshot fixes. Pinned so the built agent can
-    # be cached by commit.
-    # TODO: move to a master commit once that PR merges.
-    default: 6ac6e4447cf4e15423772af987aff6c7fc1ca15a
+    # IronRDP master at the merge of https://github.com/Devolutions/IronRDP/pull/2189, which
+    # hardened the harness. Pinned so the built agent can be cached by commit; changing it
+    # rebuilds ironrdp-agent once (about 5 minutes).
+    default: 75ee516f34562516bd400dbf6e2ef93de0521f22
   desktop-size:
     description: RDP desktop size, as WxH
     default: 1920x1080

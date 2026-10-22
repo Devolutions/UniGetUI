@@ -1,4 +1,6 @@
 using Avalonia;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input;
@@ -17,11 +19,12 @@ namespace UniGetUI.Avalonia.Views.Controls;
 /// </summary>
 public class LinkTextBlock : SelectableTextBlock
 {
+    private const double DragThreshold = 4;
     private static readonly TimeSpan DefaultDoubleClickTime = TimeSpan.FromMilliseconds(500);
     private static readonly Cursor HandCursor = new(StandardCursorType.Hand);
     private static readonly Cursor TextCursor = new(StandardCursorType.Ibeam);
 
-    private sealed record Link(int Start, int Length, string? Url, Action Activate);
+    internal sealed record Link(int Start, int Length, string Text, string? Url, Action Activate);
 
     private sealed record Tip(int Start, int Length, string Text);
 
@@ -34,6 +37,7 @@ public class LinkTextBlock : SelectableTextBlock
     private Link? _contextLink;
     private Link? _activationLink;
     private Point _pressOrigin;
+    private int _focusedLink = -1;
 
     // Positions are counted here rather than read from Inlines.Text: they must match the TextLayout.
     private int _length;
@@ -74,14 +78,18 @@ public class LinkTextBlock : SelectableTextBlock
     // Themes match by exact type; without this the SelectableTextBlock theme (and its selection brush) is skipped.
     protected override Type StyleKeyOverride => typeof(SelectableTextBlock);
 
+    internal IReadOnlyList<Link> Links => _links;
+
     public void Clear()
     {
+        ResetLinkInteraction();
         Inlines!.Clear();
         _links.Clear();
         _tips.Clear();
         _length = 0;
         _atLineStart = false;
         ClearSelection();
+        (ControlAutomationPeer.FromElement(this) as LinkTextBlockAutomationPeer)?.LinksChanged();
     }
 
     /// <summary>Starts a new line, unless the block is empty or already at the start of a line.</summary>
@@ -121,7 +129,87 @@ public class LinkTextBlock : SelectableTextBlock
 
         int start = _length;
         AddRun(run);
-        _links.Add(new Link(start, text.Length, url, activate));
+        _links.Add(new Link(start, text.Length, text, url, activate));
+        (ControlAutomationPeer.FromElement(this) as LinkTextBlockAutomationPeer)?.LinksChanged();
+    }
+
+    /// <summary>The link the keyboard is on: the one Tab last moved to, while it is still selected.</summary>
+    private Link? FocusedLink =>
+        _focusedLink >= 0 && _focusedLink < _links.Count
+        && _links[_focusedLink] is var link
+        && Math.Min(SelectionStart, SelectionEnd) == link.Start
+        && Math.Max(SelectionStart, SelectionEnd) == link.Start + link.Length
+            ? link
+            : null;
+
+    internal bool IsLinkFocused(Link link) => IsFocused && FocusedLink == link;
+
+    /// <summary>Moves keyboard focus to a link by selecting it, so the selection highlight shows where focus is.</summary>
+    internal void FocusLink(Link link)
+    {
+        _focusedLink = _links.IndexOf(link);
+        if (_focusedLink < 0)
+            return;
+        if (!IsFocused)
+            Focus(NavigationMethod.Tab);
+        SetCurrentValue(SelectionStartProperty, link.Start);
+        SetCurrentValue(SelectionEndProperty, link.Start + link.Length);
+        if (TextLayout.HitTestTextRange(link.Start, link.Length).FirstOrDefault() is var bounds && bounds != default)
+            this.BringIntoView(bounds.Translate(new Vector(Padding.Left, Padding.Top)));
+    }
+
+    /// <summary>The bounds of a link, in this control's coordinates, for automation.</summary>
+    internal Rect LinkBounds(Link link)
+    {
+        var rects = TextLayout.HitTestTextRange(link.Start, link.Length).ToList();
+        if (rects.Count == 0)
+            return default;
+        var union = rects.Aggregate((a, b) => a.Union(b));
+        return union.Translate(new Vector(Padding.Left, Padding.Top));
+    }
+
+    private void ResetLinkInteraction()
+    {
+        _pendingActivation.Stop();
+        _pressedLink = null;
+        _activationLink = null;
+        _contextLink = null;
+        _focusedLink = -1;
+    }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new LinkTextBlockAutomationPeer(this);
+
+    protected override void OnGotFocus(FocusChangedEventArgs e)
+    {
+        base.OnGotFocus(e);
+        if (e.NavigationMethod == NavigationMethod.Tab && _links.Count > 0 && FocusedLink is null)
+            FocusLink(_links[e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? _links.Count - 1 : 0]);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        bool shift = e.KeyModifiers is KeyModifiers.Shift;
+        if (e.Key is Key.Tab && (e.KeyModifiers is KeyModifiers.None || shift) && _links.Count > 0)
+        {
+            // Tab steps through the links, then lets focus leave the block past the first or last one.
+            int next = FocusedLink is null ? (shift ? _links.Count - 1 : 0) : _focusedLink + (shift ? -1 : 1);
+            if (next >= 0 && next < _links.Count)
+            {
+                FocusLink(_links[next]);
+                e.Handled = true;
+                return;
+            }
+
+            _focusedLink = -1;
+        }
+        else if (e.KeyModifiers is KeyModifiers.None && e.Key is Key.Enter or Key.Space && FocusedLink is { } link)
+        {
+            link.Activate();
+            e.Handled = true;
+            return;
+        }
+
+        base.OnKeyDown(e);
     }
 
     private Link? LinkAt(int position) =>
@@ -153,6 +241,9 @@ public class LinkTextBlock : SelectableTextBlock
         var point = e.GetPosition(this);
         bool selecting = e.GetCurrentPoint(this).Properties.IsLeftButtonPressed;
         Cursor = !selecting && LinkAt(point) is not null ? HandCursor : TextCursor;
+        // Once the pointer leaves the click threshold, the gesture is a selection even if it comes back.
+        if (_pressedLink is not null && IsBeyondDragThreshold(point))
+            _pressedLink = null;
         ToolTip.SetTip(this, selecting ? null : TipAt(point)?.Text);
         base.OnPointerMoved(e);
     }
@@ -165,10 +256,14 @@ public class LinkTextBlock : SelectableTextBlock
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        _pendingActivation.Stop();
-        _pressedLink = null;
-        _activationLink = null;
+        ResetLinkInteraction();
         base.OnDetachedFromVisualTree(e);
+    }
+
+    private bool IsBeyondDragThreshold(Point point)
+    {
+        var moved = point - _pressOrigin;
+        return Math.Abs(moved.X) > DragThreshold || Math.Abs(moved.Y) > DragThreshold;
     }
 
     /// <summary>Activate a link on a clean click, but let a drag or a multi-click run the text selection instead.</summary>
@@ -176,6 +271,7 @@ public class LinkTextBlock : SelectableTextBlock
     {
         _pendingActivation.Stop();
         _activationLink = null;
+        _focusedLink = -1;
         var point = e.GetCurrentPoint(this);
 
         if (point.Properties.IsRightButtonPressed)
@@ -205,8 +301,7 @@ public class LinkTextBlock : SelectableTextBlock
             return;
 
         _pressedLink = null;
-        var moved = e.GetPosition(this) - _pressOrigin;
-        if (Math.Abs(moved.X) > 4 || Math.Abs(moved.Y) > 4)
+        if (IsBeyondDragThreshold(e.GetPosition(this)))
             return;
 
         // A plain click on a link should not leave a caret behind in the text.
@@ -229,5 +324,81 @@ public class LinkTextBlock : SelectableTextBlock
             Logger.Warn("Could not copy the link to the clipboard");
             Logger.Warn(ex);
         }
+    }
+}
+
+public class LinkTextBlockAutomationPeer : TextBlockAutomationPeer
+{
+    private readonly Dictionary<LinkTextBlock.Link, LinkAutomationPeer> _peers = [];
+
+    public LinkTextBlockAutomationPeer(LinkTextBlock owner) : base(owner)
+    {
+    }
+
+    public new LinkTextBlock Owner => (LinkTextBlock)base.Owner;
+
+    internal void LinksChanged()
+    {
+        foreach (var stale in _peers.Keys.Except(Owner.Links).ToList())
+            _peers.Remove(stale);
+        InvalidateChildren();
+    }
+
+    protected override IReadOnlyList<AutomationPeer>? GetChildrenCore() =>
+        Owner.Links.Select(link => (AutomationPeer)(_peers.TryGetValue(link, out var peer)
+            ? peer
+            : _peers[link] = new LinkAutomationPeer(Owner, link))).ToList();
+}
+
+/// <summary>Exposes one link inside a <see cref="LinkTextBlock"/> to screen readers as an invokable hyperlink.</summary>
+public class LinkAutomationPeer : AutomationPeer, IInvokeProvider
+{
+    private readonly LinkTextBlock _owner;
+    private readonly LinkTextBlock.Link _link;
+    private AutomationPeer? _parent;
+
+    internal LinkAutomationPeer(LinkTextBlock owner, LinkTextBlock.Link link)
+    {
+        _owner = owner;
+        _link = link;
+    }
+
+    void IInvokeProvider.Invoke()
+    {
+        EnsureEnabled();
+        Dispatcher.UIThread.Post(_link.Activate);
+    }
+
+    protected override void BringIntoViewCore() => _owner.FocusLink(_link);
+    protected override string? GetAcceleratorKeyCore() => null;
+    protected override string? GetAccessKeyCore() => null;
+    protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.Hyperlink;
+    protected override string? GetAutomationIdCore() => null;
+
+    protected override Rect GetBoundingRectangleCore()
+    {
+        var bounds = _owner.LinkBounds(_link);
+        return TopLevel.GetTopLevel(_owner) is { } root && _owner.TransformToVisual(root) is { } transform
+            ? bounds.TransformToAABB(transform)
+            : default;
+    }
+
+    protected override IReadOnlyList<AutomationPeer> GetOrCreateChildrenCore() => [];
+    protected override string GetClassNameCore() => "Hyperlink";
+    protected override AutomationPeer? GetLabeledByCore() => null;
+    protected override string? GetNameCore() => _link.Text;
+    protected override AutomationPeer? GetParentCore() => _parent;
+    protected override bool HasKeyboardFocusCore() => _owner.IsLinkFocused(_link);
+    protected override bool IsContentElementCore() => true;
+    protected override bool IsControlElementCore() => true;
+    protected override bool IsEnabledCore() => _owner.IsEffectivelyEnabled;
+    protected override bool IsKeyboardFocusableCore() => true;
+    protected override void SetFocusCore() => _owner.FocusLink(_link);
+    protected override bool ShowContextMenuCore() => false;
+
+    protected override bool TrySetParent(AutomationPeer? parent)
+    {
+        _parent = parent;
+        return true;
     }
 }

@@ -81,14 +81,27 @@ public class HyperlinkText : SelectableTextBlock
                 : DefaultDoubleClickTime;
     }
 
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        // Once the pointer leaves the click threshold, the gesture is a selection even if it comes back.
+        if (_tracking && IsBeyondClickThreshold(e.GetPosition(this)))
+            _tracking = false;
+    }
+
+    private bool IsBeyondClickThreshold(Point point)
+    {
+        var moved = point - _pressOrigin;
+        return Math.Abs(moved.X) > 4 || Math.Abs(moved.Y) > 4;
+    }
+
     private void OnLinkPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (!_tracking || e.InitialPressMouseButton is not MouseButton.Left)
             return;
 
         _tracking = false;
-        var moved = e.GetPosition(this) - _pressOrigin;
-        if (Math.Abs(moved.X) <= 4 && Math.Abs(moved.Y) <= 4)
+        if (!IsBeyondClickThreshold(e.GetPosition(this)))
             _pendingActivation.Start();
     }
 }

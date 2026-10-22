@@ -65,6 +65,22 @@ public sealed class HyperlinkTextTests
         window.Close();
     }, CancellationToken.None);
 
+    [Fact]
+    public Task DragThatReturnsToItsStartDoesNotActivateTheLink() => _session.Dispatch(() =>
+    {
+        var (window, link, activations) = ShowLink();
+
+        Point start = link.TranslatePoint(new Point(40, link.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(start, MouseButton.Left);
+        window.MouseMove(start + new Point(150, 0), RawInputModifiers.LeftMouseButton);
+        window.MouseMove(start, RawInputModifiers.LeftMouseButton);
+        window.MouseUp(start, MouseButton.Left);
+        RunDispatcherPastDoubleClickTime();
+
+        Assert.Equal(0, activations());
+        window.Close();
+    }, CancellationToken.None);
+
     private static (Window Window, HyperlinkText Link, Func<int> Activations) ShowLink(double width = 800)
     {
         if (!Application.Current!.Styles.OfType<FluentTheme>().Any())

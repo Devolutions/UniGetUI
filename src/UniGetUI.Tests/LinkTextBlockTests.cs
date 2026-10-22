@@ -1,4 +1,6 @@
 using Avalonia;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Headless;
@@ -148,6 +150,79 @@ public sealed class LinkTextBlockTests
         var (window, text, _) = Show();
 
         Assert.False(CopyLinkItem(RightClick(window, text, DownloadStart + 3)).IsVisible);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task DragThatReturnsToItsStartDoesNotActivateTheLink() => _session.Dispatch(() =>
+    {
+        var (window, text, probe) = Show();
+
+        Point start = At(window, text, UrlStart + 5);
+        window.MouseDown(start, MouseButton.Left);
+        Pump(window);
+        window.MouseMove(start + new Point(150, 0), RawInputModifiers.LeftMouseButton);
+        Pump(window);
+        window.MouseMove(start, RawInputModifiers.LeftMouseButton);
+        Pump(window);
+        window.MouseUp(start, MouseButton.Left);
+        RunDispatcherPastDoubleClickTime();
+
+        Assert.Equal(0, probe.Opened);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task RebuildingTheTextCancelsAPendingClick() => _session.Dispatch(() =>
+    {
+        var (window, text, probe) = Show();
+
+        Click(window, text, UrlStart + 5);
+        text.Clear();
+        text.AddRun(new Run("Loaded"));
+        RunDispatcherPastDoubleClickTime();
+
+        Assert.Equal(0, probe.Opened);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task TabStepsThroughTheLinksAndEnterOpensThem() => _session.Dispatch(() =>
+    {
+        var (window, text, probe) = Show();
+
+        text.Focus(NavigationMethod.Tab);
+        Assert.Equal(Url, text.SelectedText);
+        window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
+        Assert.Equal(1, probe.Opened);
+
+        window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, null);
+        Assert.Equal(Download, text.SelectedText);
+        window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
+        Assert.Equal(1, probe.Downloaded);
+
+        window.KeyPress(Key.Tab, RawInputModifiers.Shift, PhysicalKey.Tab, null);
+        Assert.Equal(Url, text.SelectedText);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task ScreenReadersSeeEachLinkAsAnInvokableHyperlink() => _session.Dispatch(() =>
+    {
+        var (window, text, probe) = Show();
+
+        AutomationPeer peer = ControlAutomationPeer.CreatePeerForElement(text);
+        var links = peer.GetChildren();
+        Assert.Equal([Url, Download], links.Select(link => link.GetName()));
+        Assert.All(links, link => Assert.Equal(AutomationControlType.Hyperlink, link.GetAutomationControlType()));
+
+        Assert.IsAssignableFrom<IInvokeProvider>(links[0]).Invoke();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, probe.Opened);
+
+        text.Clear();
+        text.AddLink("Other", "https://example.com", () => { }, Brushes.Blue);
+        Assert.Equal(["Other"], peer.GetChildren().Select(link => link.GetName()));
         window.Close();
     }, CancellationToken.None);
 

@@ -18,6 +18,11 @@ inputs:
   artifacts-dir:
     description: Directory for screenshots, logs and session state; defaults to RUNNER_TEMP/desktop-session
     default: ''
+  devolutions-agent-version:
+    description: >
+      Version of the Devolutions.Agent winget package to install with its RDP extension, which
+      serves the NOW protocol over an RDP virtual channel in the desktop session; empty skips it
+    default: 2026.3.1.0
 
 outputs:
   agent-path:
@@ -116,6 +121,58 @@ runs:
           -NoPSModulePathUpdate `
           -NoProfileUpdate
 
+    # Devolutions Agent with its RDP extension (the F.Session feature, which sets Session.Enabled
+    # in agent.json): the agent starts DevolutionsSession in each RDP session, and it serves the
+    # NOW protocol over a virtual channel for remote execution. The agent only does that when an
+    # RDP session connects, so it is installed before the desktop session is. winget is not on
+    # the runner image, so the MSI comes from the package's winget manifest, checked against the
+    # manifest's hash.
+    - name: Install Devolutions Agent
+      if: inputs.devolutions-agent-version != ''
+      shell: pwsh
+      env:
+        AGENT_VERSION: ${{ inputs.devolutions-agent-version }}
+        ARTIFACTS_DIR: ${{ inputs.artifacts-dir }}
+      run: |
+        $artifactsDir = $env:ARTIFACTS_DIR
+        if ([string]::IsNullOrWhiteSpace($artifactsDir)) {
+          $artifactsDir = Join-Path $env:RUNNER_TEMP 'desktop-session'
+        }
+        New-Item -Path $artifactsDir -ItemType Directory -Force | Out-Null
+
+        $manifestUrl = "https://raw.githubusercontent.com/microsoft/winget-pkgs/master/manifests/d/Devolutions/Agent/$env:AGENT_VERSION/Devolutions.Agent.installer.yaml"
+        $manifest = Invoke-RestMethod -Uri $manifestUrl
+        $installer = [regex]::Match($manifest, '(?m)^- Architecture: x64\s*\r?\n\s+InstallerUrl: (?<url>\S+)\s*\r?\n\s+InstallerSha256: (?<sha>[0-9A-Fa-f]{64})')
+        if (-not $installer.Success) {
+          throw "No x64 installer in $manifestUrl"
+        }
+
+        $msiPath = Join-Path $env:RUNNER_TEMP 'DevolutionsAgent.msi'
+        Invoke-WebRequest -Uri $installer.Groups['url'].Value -OutFile $msiPath
+        $hash = (Get-FileHash -Path $msiPath -Algorithm SHA256).Hash
+        if ($hash -ne $installer.Groups['sha'].Value.ToUpperInvariant()) {
+          throw "$($installer.Groups['url'].Value) has SHA256 $hash, but the winget manifest expects $($installer.Groups['sha'].Value)"
+        }
+
+        $logPath = Join-Path $artifactsDir 'devolutions-agent-install.log'
+        $msiexec = Start-Process -FilePath 'msiexec.exe' -Wait -PassThru -ArgumentList @(
+          '/i', "`"$msiPath`"", '/qn', '/norestart', 'ADDLOCAL=F.Agent,F.Session', '/l*v', "`"$logPath`""
+        )
+        if ($msiexec.ExitCode -notin 0, 3010) {
+          throw "Devolutions Agent setup failed with exit code $($msiexec.ExitCode); log in $logPath"
+        }
+
+        $configPath = Join-Path $env:ProgramData 'Devolutions\Agent\agent.json'
+        $config = Get-Content -Path $configPath -Raw | ConvertFrom-Json
+        if (-not ($config.PSObject.Properties['Session'] -and $config.Session.Enabled)) {
+          throw "Session.Enabled is not set in $configPath after installing the RDP extension"
+        }
+        $service = Get-Service -Name 'DevolutionsAgent'
+        if ($service.Status -ne 'Running') {
+          Start-Service -Name 'DevolutionsAgent'
+        }
+        Write-Host "Devolutions Agent $env:AGENT_VERSION installed with its RDP extension; service $((Get-Service -Name 'DevolutionsAgent').Status)"
+
     - name: Start desktop session
       id: start
       shell: pwsh
@@ -133,3 +190,34 @@ runs:
           -IronRdpRoot $env:IRONRDP_ROOT `
           -DesktopSize $env:DESKTOP_SIZE `
           -ArtifactsDir $artifactsDir
+
+    # The RDP extension is only useful once DevolutionsSession runs in the desktop session, so
+    # a missing one fails here rather than in whatever later step needs the NOW channel.
+    - name: Check Devolutions Session
+      if: inputs.devolutions-agent-version != ''
+      shell: pwsh
+      env:
+        SESSION_ID: ${{ steps.start.outputs.session-id }}
+      run: |
+        $sessionId = [int] $env:SESSION_ID
+        $deadline = (Get-Date).AddSeconds(60)
+        do {
+          $process = Get-Process -Name 'DevolutionsSession' -ErrorAction SilentlyContinue |
+            Where-Object { $_.SessionId -eq $sessionId } |
+            Select-Object -First 1
+          if ($null -eq $process) {
+            Start-Sleep -Seconds 2
+          }
+        } while ($null -eq $process -and (Get-Date) -lt $deadline)
+
+        # The agent's logs and config go with the desktop session artifacts either way.
+        $agentLogs = Join-Path $env:DESKTOP_SESSION_ARTIFACTS 'devolutions-agent'
+        New-Item -Path $agentLogs -ItemType Directory -Force | Out-Null
+        Get-ChildItem -Path (Join-Path $env:ProgramData 'Devolutions\Agent') -File -Filter 'agent*' |
+          Copy-Item -Destination $agentLogs
+
+        if ($null -eq $process) {
+          $running = @(Get-Process -Name 'DevolutionsSession' -ErrorAction SilentlyContinue | ForEach-Object { "pid $($_.Id) in session $($_.SessionId)" })
+          throw "DevolutionsSession is not running in desktop session $sessionId after 60 seconds (running: $(if ($running) { $running -join ', ' } else { 'none' })); agent logs in $agentLogs"
+        }
+        Write-Host "DevolutionsSession is running in desktop session $sessionId (pid $($process.Id))"

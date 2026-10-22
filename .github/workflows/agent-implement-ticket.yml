@@ -28,17 +28,6 @@ on:
         description: Copilot model (empty for the repository default)
         required: false
         default: ''
-  # TODO: remove before merge. workflow_dispatch only works once the workflow is on the
-  # default branch, so this trigger runs it from the development branch, on a sample ticket
-  # and without opening a pull request.
-  push:
-    branches: [ "claude/desktop-smoke-tests-ab5c53" ]
-    paths:
-      - '.github/agent/**'
-      - '.github/workflows/agent-implement-ticket.yml'
-      - '.github/actions/desktop-session/**'
-      - '.github/actions/desktop-session-cleanup/**'
-      - '.github/actions/unigetui-desktop/**'
 
 permissions:
   contents: read
@@ -92,11 +81,6 @@ jobs:
           }
           elseif (-not [string]::IsNullOrWhiteSpace($env:TICKET)) {
             [void] $ticket.AppendLine($env:TICKET)
-          }
-          elseif ($env:GITHUB_EVENT_NAME -eq 'push') {
-            # Sample ticket for test runs from the development branch.
-            [void] $ticket.AppendLine('# Show the version next to the app name in the title bar').AppendLine()
-            [void] $ticket.AppendLine('The title bar of the main window only says "UniGetUI". Please show the running version right after the name, for example "UniGetUI 2026.3.2", in a smaller and dimmer font than the name, so users can tell at a glance which version they run.')
           }
           else {
             throw 'Give an issue number or a ticket text'
@@ -208,7 +192,7 @@ jobs:
   pull-request:
     name: Open draft pull request
     needs: implement
-    if: needs.implement.outputs.has-changes == 'true' && github.event_name == 'workflow_dispatch' && inputs.create_pr
+    if: needs.implement.outputs.has-changes == 'true' && inputs.create_pr
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

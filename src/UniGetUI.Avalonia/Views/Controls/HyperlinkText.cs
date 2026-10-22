@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Controls;
@@ -51,7 +52,16 @@ public class HyperlinkText : SelectableTextBlock
     {
         if (string.IsNullOrEmpty(Url) || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
             return;
-        await clipboard.SetTextAsync(Url);
+
+        try
+        {
+            await clipboard.SetTextAsync(Url);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Could not copy the link to the clipboard");
+            Logger.Warn(ex);
+        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

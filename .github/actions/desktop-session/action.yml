@@ -97,6 +97,25 @@ runs:
         path: ${{ runner.temp }}/ironrdp/target/release/ironrdp-agent.exe
         key: ${{ steps.agent-cache.outputs.cache-primary-key }}
 
+    # The harness drives the interactive desktop through AwakeCoding.PSRemoting, and installs
+    # it with Install-Module when it is missing. ModuleFast installs it in about half the time,
+    # into the same CurrentUser folder, so the harness finds it and skips its own install.
+    - name: Install PowerShell modules
+      shell: pwsh
+      env:
+        MODULEFAST_RELEASE: v0.6.1
+        MODULES: AwakeCoding.PSRemoting=2026.10.21
+      run: |
+        # Created up front: ModuleFast asks before creating a destination folder.
+        $destination = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules'
+        New-Item -Path $destination -ItemType Directory -Force | Out-Null
+        $bootstrap = Invoke-RestMethod "https://github.com/JustinGrote/ModuleFast/releases/download/$env:MODULEFAST_RELEASE/ModuleFast.ps1"
+        & ([scriptblock]::Create($bootstrap)) -Release $env:MODULEFAST_RELEASE `
+          -Specification ($env:MODULES -split ',') `
+          -Destination $destination `
+          -NoPSModulePathUpdate `
+          -NoProfileUpdate
+
     - name: Start desktop session
       id: start
       shell: pwsh

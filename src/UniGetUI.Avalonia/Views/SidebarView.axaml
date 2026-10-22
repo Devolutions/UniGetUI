@@ -97,7 +97,7 @@
                                    FontSize="9"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
-                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
                                    VerticalAlignment="Center"/>
                     </Border>
                     <ProgressBar IsIndeterminate="{Binding UpdatesIsLoading}"

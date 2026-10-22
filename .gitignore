@@ -100,3 +100,6 @@ src/UniGetUI.v3.ncrunchsolution
 # macOS Finder metadata
 .DS_Store
 /src/UniGetUI.Avalonia/Generated Files
+
+# Claude Code worktrees (issue factory)
+.claude/worktrees/

@@ -1067,9 +1067,9 @@ internal static partial class AvaloniaAutoUpdater
         // comparing its own version against the recorded target version.
         //
         // Arguments are passed positionally ($1=pid, $2=target, $3=new app, $4=update log,
-        // $5=failure marker) so no path is ever interpolated into the script text.
+        // $5=failure marker, $6=redacted target) so no path is ever interpolated into the script text.
         const string swap = """
-            pid="$1"; target="$2"; newapp="$3"; log="$4"; marker="$5"
+            pid="$1"; target="$2"; newapp="$3"; log="$4"; marker="$5"; shown="$6"
             i=0
             while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
             rm -rf "$target.old"
@@ -1080,10 +1080,10 @@ internal static partial class AvaloniaAutoUpdater
               else
                 rm -rf "$target"
                 mv "$target.old" "$target"
-                printf '\n%s %s\n' "$marker" "$target" >> "$log"
+                printf '\n%s %s\n' "$marker" "$shown" >> "$log"
               fi
             else
-              printf '\n%s %s\n' "$marker" "$target" >> "$log"
+              printf '\n%s %s\n' "$marker" "$shown" >> "$log"
             fi
             /usr/bin/open -na "$target"
             """;
@@ -1093,7 +1093,8 @@ internal static partial class AvaloniaAutoUpdater
                 target,
                 newApp,
                 _updateLogPath,
-                MacUpdateTargetResolver.SwapFailedMarker))
+                MacUpdateTargetResolver.SwapFailedMarker,
+                Logger.Redact(target)))
         {
             // We could not even launch the helper, so nothing was changed. Report and bail
             // without exiting so the user keeps a working copy.

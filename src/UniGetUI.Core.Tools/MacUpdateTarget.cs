@@ -15,16 +15,33 @@ public static class MacUpdateTargetResolver
     public const string DefaultInstallPath = "/Applications/UniGetUI.app";
     public const string SwapFailedMarker = "=== Swap failed:";
 
-    // Runs as root for a bundle the user cannot replace ($1=target, $2=new app, $3=pid).
-    // The old bundle is deleted in the background once that process has exited.
+    // Runs as root for a bundle the user cannot replace ($1=target, $2=archive, $3=SHA-256, $4=pid).
+    // Installs only from a root-owned copy of the archive, re-hashed, so the user's staging is never trusted.
     public const string ElevatedSwapScript = """
         set -e
-        target="$1"; newapp="$2"; pid="$3"
+        target="$1"; archive="$2"; expected="$3"; pid="$4"
+        work="$(/usr/bin/mktemp -d /private/tmp/unigetui-update.XXXXXX)"
+        trap 'rm -rf "$work"' EXIT
+        /bin/cp "$archive" "$work/update.tar.gz"
+        actual="$(/usr/bin/shasum -a 256 "$work/update.tar.gz" | /usr/bin/cut -d ' ' -f 1)"
+        if [ "$actual" != "$expected" ]; then
+          echo "The update archive does not match its expected hash." >&2
+          exit 1
+        fi
+        /bin/mkdir "$work/x"
+        /usr/bin/tar -xzf "$work/update.tar.gz" -C "$work/x"
+        newapp="$work/x/UniGetUI.app"
+        [ -d "$newapp" ] || newapp="$(/usr/bin/find "$work/x" -type d -name UniGetUI.app -prune -print | /usr/bin/head -n 1)"
+        if [ -z "$newapp" ] || [ ! -d "$newapp" ]; then
+          echo "The update archive does not contain UniGetUI.app." >&2
+          exit 1
+        fi
         rm -rf "$target.old"
-        chown -R "$(/usr/bin/stat -f '%u:%g' "$target")" "$newapp"
+        /usr/sbin/chown -R "$(/usr/bin/stat -f '%u:%g' "$target")" "$newapp"
         /usr/bin/xattr -dr com.apple.quarantine "$newapp" 2>/dev/null || true
         mv "$target" "$target.old"
         if ! mv "$newapp" "$target"; then
+          rm -rf "$target"
           mv "$target.old" "$target"
           exit 1
         fi

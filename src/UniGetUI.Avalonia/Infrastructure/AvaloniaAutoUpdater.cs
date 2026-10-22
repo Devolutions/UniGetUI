@@ -574,7 +574,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Cached valid installer found, preparing to launch...");
-                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.VersionName, autoLaunch, IsManual());
+                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, autoLaunch, IsManual());
             }
 
             string installerValidationFailureMarkerPath =
@@ -654,7 +654,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Downloaded installer is valid, preparing to launch...");
-                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.VersionName, autoLaunch, IsManual());
+                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, autoLaunch, IsManual());
             }
 
             UpdaterDownloadEngine.RecordFailure(
@@ -747,6 +747,7 @@ internal static partial class AvaloniaAutoUpdater
     private static async Task<bool> PrepareAndLaunchAsync(
         AutoUpdaterHelpers.UpdaterAttemptCoordinator.AttemptScope attempt,
         string installerPath,
+        string installerHash,
         string versionName,
         bool autoLaunch,
         bool manualCheck)
@@ -829,7 +830,7 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             LogUpdateInfo("Installing update \u2014 launching installer.");
-            await LaunchInstallerAsync(installerPath, handoff);
+            await LaunchInstallerAsync(installerPath, installerHash, handoff);
             return true;
         }
         finally
@@ -838,11 +839,11 @@ internal static partial class AvaloniaAutoUpdater
         }
     }
 
-    private static async Task LaunchInstallerAsync(string installerLocation, TaskCompletionSource handoff)
+    private static async Task LaunchInstallerAsync(string installerLocation, string installerHash, TaskCompletionSource handoff)
     {
         if (OperatingSystem.IsMacOS())
         {
-            await LaunchMacInstallerAsync(installerLocation);
+            await LaunchMacInstallerAsync(installerLocation, installerHash);
             return;
         }
 
@@ -964,7 +965,7 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     [SupportedOSPlatform("macos")]
-    private static async Task LaunchMacInstallerAsync(string installerLocation)
+    private static async Task LaunchMacInstallerAsync(string installerLocation, string installerHash)
     {
         LogUpdateInfo($"Applying macOS update from archive: {installerLocation}");
 
@@ -1060,7 +1061,7 @@ internal static partial class AvaloniaAutoUpdater
 
         if (updateTarget.Status == MacUpdateTargetStatus.NotWritable)
         {
-            await ApplyMacUpdateAsAdminAsync(target, newApp);
+            await ApplyMacUpdateAsAdminAsync(target, installerLocation, installerHash);
             return;
         }
 
@@ -1123,7 +1124,7 @@ internal static partial class AvaloniaAutoUpdater
     // Swaps a bundle the user cannot write to through the macOS administrator prompt, while
     // this process still runs, then relaunches the new bundle once it has exited.
     [SupportedOSPlatform("macos")]
-    private static async Task ApplyMacUpdateAsAdminAsync(string target, string newApp)
+    private static async Task ApplyMacUpdateAsAdminAsync(string target, string archive, string expectedHash)
     {
         string pid = Environment.ProcessId.ToString(CultureInfo.InvariantCulture);
         string command = string.Join(
@@ -1132,7 +1133,8 @@ internal static partial class AvaloniaAutoUpdater
             MacAdminFileInstaller.ShellQuote(MacUpdateTargetResolver.ElevatedSwapScript),
             "sh",
             MacAdminFileInstaller.ShellQuote(target),
-            MacAdminFileInstaller.ShellQuote(newApp),
+            MacAdminFileInstaller.ShellQuote(archive),
+            MacAdminFileInstaller.ShellQuote(expectedHash.ToLowerInvariant()),
             pid);
 
         bool swapped;

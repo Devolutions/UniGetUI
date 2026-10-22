@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
+using System.Security.Cryptography;
 
 namespace UniGetUI.Core.Tools.Tests;
 
@@ -156,84 +158,59 @@ public class MacUpdateTargetTests
     [MacOSFact]
     public void ElevatedSwapScript_ReplacesTheBundleAndDeletesTheOldOneOnceTheAppHasExited()
     {
-        string root = Directory.CreateTempSubdirectory("unigetui-swap-").FullName;
-        try
-        {
-            (string target, string newApp) = CreateBundles(root);
+        using SwapSandbox box = new();
 
-            Assert.Equal(0, RunElevatedSwapScript(target, newApp, ExitedProcessId()));
+        Assert.Equal(0, box.Run(ExitedProcessId()));
 
-            Assert.Equal("new", File.ReadAllText(Path.Join(target, "version")));
-            Assert.False(Directory.Exists(newApp));
-            Assert.True(SpinWait.SpinUntil(() => !Directory.Exists(target + ".old"), TimeSpan.FromSeconds(5)));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.Equal("new", box.InstalledVersion());
+        Assert.True(SpinWait.SpinUntil(() => !Directory.Exists(box.Target + ".old"), TimeSpan.FromSeconds(5)));
     }
 
     [MacOSFact]
     public void ElevatedSwapScript_KeepsTheOldBundleWhileTheAppIsStillRunning()
     {
-        string root = Directory.CreateTempSubdirectory("unigetui-swap-").FullName;
-        try
-        {
-            (string target, string newApp) = CreateBundles(root);
+        using SwapSandbox box = new();
 
-            Assert.Equal(0, RunElevatedSwapScript(target, newApp, Environment.ProcessId));
+        Assert.Equal(0, box.Run(Environment.ProcessId));
 
-            Assert.Equal("new", File.ReadAllText(Path.Join(target, "version")));
-            Assert.Equal("old", File.ReadAllText(Path.Join(target + ".old", "version")));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.Equal("new", box.InstalledVersion());
+        Assert.Equal("old", File.ReadAllText(Path.Join(box.Target + ".old", "version")));
     }
 
     [MacOSFact]
-    public void ElevatedSwapScript_LeavesTheBundleAloneWhenTheNewOneIsMissing()
+    public void ElevatedSwapScript_RefusesAnArchiveThatNoLongerMatchesItsHash()
     {
-        string root = Directory.CreateTempSubdirectory("unigetui-swap-").FullName;
-        try
-        {
-            (string target, string newApp) = CreateBundles(root);
-            Directory.Delete(newApp, recursive: true);
+        using SwapSandbox box = new();
+        string expected = box.Hash;
+        box.ReplaceArchive("tampered");
 
-            Assert.NotEqual(0, RunElevatedSwapScript(target, newApp, ExitedProcessId()));
+        Assert.NotEqual(0, box.Run(ExitedProcessId(), expected));
 
-            Assert.Equal("old", File.ReadAllText(Path.Join(target, "version")));
-            Assert.False(Directory.Exists(target + ".old"));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.Equal("old", box.InstalledVersion());
+        Assert.False(Directory.Exists(box.Target + ".old"));
     }
 
-    private static (string Target, string NewApp) CreateBundles(string root)
+    [MacOSFact]
+    [SupportedOSPlatform("macos")]
+    public void ElevatedSwapScript_RestoresTheOldBundleWhenTheNewOneIsOnlyPartlyMoved()
     {
-        string target = Path.Join(root, "Applications", "UniGetUI.app");
-        string newApp = Path.Join(root, "staging", "UniGetUI.app");
-        Directory.CreateDirectory(target);
-        Directory.CreateDirectory(newApp);
-        File.WriteAllText(Path.Join(target, "version"), "old");
-        File.WriteAllText(Path.Join(newApp, "version"), "new");
-        return (target, newApp);
-    }
+        using SwapSandbox box = new();
+        // A mv that leaves a partial destination behind, as a failed cross-volume copy can.
+        string fakeBin = Path.Join(box.Root, "bin");
+        Directory.CreateDirectory(fakeBin);
+        string fakeMv = Path.Join(fakeBin, "mv");
+        File.WriteAllText(
+            fakeMv,
+            "#!/bin/sh\n"
+            + "if [ \"$2\" = \"$TARGET\" ] && [ \"$1\" != \"$TARGET.old\" ]; then mkdir -p \"$2\"; touch \"$2/partial\"; exit 1; fi\n"
+            + "exec /bin/mv \"$@\"\n");
+        File.SetUnixFileMode(fakeMv, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
-    private static int RunElevatedSwapScript(string target, string newApp, int pid)
-    {
-        var startInfo = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
-        foreach (string arg in new[] { "-c", MacUpdateTargetResolver.ElevatedSwapScript, "sh", target, newApp, pid.ToString() })
-        {
-            startInfo.ArgumentList.Add(arg);
-        }
+        Assert.NotEqual(0, box.Run(ExitedProcessId(), pathPrefix: fakeBin));
 
-        using Process process = Process.Start(startInfo)!;
-        process.WaitForExit();
-        return process.ExitCode;
+        Assert.Equal("old", box.InstalledVersion());
+        Assert.False(File.Exists(Path.Join(box.Target, "partial")));
+        Assert.False(Directory.Exists(Path.Join(box.Target, "UniGetUI.app.old")));
     }
 
     private static int ExitedProcessId()
@@ -241,5 +218,54 @@ public class MacUpdateTargetTests
         using Process process = Process.Start("/usr/bin/true");
         process.WaitForExit();
         return process.Id;
+    }
+
+    private sealed class SwapSandbox : IDisposable
+    {
+        public string Root { get; } = Directory.CreateTempSubdirectory("unigetui-swap-").FullName;
+        public string Target => Path.Join(Root, "Applications", "UniGetUI.app");
+        public string Archive => Path.Join(Root, "UniGetUI Updater.tar.gz");
+        public string Hash => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Archive))).ToLowerInvariant();
+
+        public SwapSandbox()
+        {
+            Directory.CreateDirectory(Target);
+            File.WriteAllText(Path.Join(Target, "version"), "old");
+            ReplaceArchive("new");
+        }
+
+        public void ReplaceArchive(string version)
+        {
+            string source = Path.Join(Root, "source-" + version);
+            Directory.CreateDirectory(Path.Join(source, "UniGetUI.app"));
+            File.WriteAllText(Path.Join(source, "UniGetUI.app", "version"), version);
+            File.Delete(Archive);
+            using Process tar = Process.Start("/usr/bin/tar", ["-czf", Archive, "-C", source, "UniGetUI.app"]);
+            tar.WaitForExit();
+            Assert.Equal(0, tar.ExitCode);
+        }
+
+        public string InstalledVersion() => File.ReadAllText(Path.Join(Target, "version"));
+
+        public int Run(int pid, string? hash = null, string? pathPrefix = null)
+        {
+            var startInfo = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
+            foreach (string arg in new[] { "-c", MacUpdateTargetResolver.ElevatedSwapScript, "sh", Target, Archive, hash ?? Hash, pid.ToString() })
+            {
+                startInfo.ArgumentList.Add(arg);
+            }
+
+            startInfo.Environment["TARGET"] = Target;
+            if (pathPrefix is not null)
+            {
+                startInfo.Environment["PATH"] = pathPrefix + ":" + startInfo.Environment["PATH"];
+            }
+
+            using Process process = Process.Start(startInfo)!;
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+
+        public void Dispose() => Directory.Delete(Root, recursive: true);
     }
 }

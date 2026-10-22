@@ -46,4 +46,33 @@ public class InstallerHandoffTrackerTests
         Assert.False(tracker.HasPending);
         Assert.True(await tracker.WaitForAllAsync(TimeSpan.FromMilliseconds(50)));
     }
+
+    [Fact]
+    public async Task WaitForAll_KeepsWaitingPastItsTimeoutWhileAnInteractionIsOpen()
+    {
+        var tracker = new InstallerHandoffTracker();
+        TaskCompletionSource handoff = tracker.Begin();
+        IDisposable prompt = tracker.BeginInteraction();
+
+        Task<bool> shutdownWait = tracker.WaitForAllAsync(TimeSpan.FromMilliseconds(50));
+        await Task.Delay(300);
+        Assert.False(shutdownWait.IsCompleted);
+
+        prompt.Dispose();
+        tracker.Complete(handoff);
+
+        Assert.True(await shutdownWait);
+    }
+
+    [Fact]
+    public async Task WaitForAll_TimesOutOnceTheInteractionHasEnded()
+    {
+        var tracker = new InstallerHandoffTracker();
+        tracker.Begin();
+        IDisposable prompt = tracker.BeginInteraction();
+        prompt.Dispose();
+        prompt.Dispose();
+
+        Assert.False(await tracker.WaitForAllAsync(TimeSpan.FromMilliseconds(50)));
+    }
 }

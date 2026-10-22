@@ -1138,6 +1138,8 @@ internal static partial class AvaloniaAutoUpdater
             pid);
 
         bool swapped;
+        // Keeps a Quit from exiting on its handoff timeout while the user still has the prompt open.
+        using IDisposable prompt = InstallerHandoffs.BeginInteraction();
         try
         {
             swapped = await MacAdminFileInstaller.RunAsync(

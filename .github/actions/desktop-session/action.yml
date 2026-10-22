@@ -180,6 +180,7 @@ runs:
         IRONRDP_ROOT: ${{ runner.temp }}/ironrdp
         DESKTOP_SIZE: ${{ inputs.desktop-size }}
         ARTIFACTS_DIR: ${{ inputs.artifacts-dir }}
+        NOW_CHANNEL: ${{ inputs.devolutions-agent-version != '' }}
       run: |
         $artifactsDir = $env:ARTIFACTS_DIR
         if ([string]::IsNullOrWhiteSpace($artifactsDir)) {
@@ -189,35 +190,38 @@ runs:
         & "$env:GITHUB_ACTION_PATH\Start-DesktopSession.ps1" `
           -IronRdpRoot $env:IRONRDP_ROOT `
           -DesktopSize $env:DESKTOP_SIZE `
-          -ArtifactsDir $artifactsDir
+          -ArtifactsDir $artifactsDir `
+          -NowChannel:($env:NOW_CHANNEL -eq 'true')
 
-    # The RDP extension is only useful once DevolutionsSession runs in the desktop session, so
-    # a missing one fails here rather than in whatever later step needs the NOW channel.
-    - name: Check Devolutions Session
+    # Checks the RDP extension end to end: DevolutionsSession runs in the desktop session, and a
+    # command sent over the NOW channel runs there. A broken channel fails here rather than in
+    # whatever later step needs it.
+    - name: Check NOW remote execution
       if: inputs.devolutions-agent-version != ''
       shell: pwsh
       env:
         SESSION_ID: ${{ steps.start.outputs.session-id }}
       run: |
         $sessionId = [int] $env:SESSION_ID
-        $deadline = (Get-Date).AddSeconds(60)
-        do {
-          $process = Get-Process -Name 'DevolutionsSession' -ErrorAction SilentlyContinue |
-            Where-Object { $_.SessionId -eq $sessionId } |
-            Select-Object -First 1
-          if ($null -eq $process) {
-            Start-Sleep -Seconds 2
-          }
-        } while ($null -eq $process -and (Get-Date) -lt $deadline)
 
-        # The agent's logs and config go with the desktop session artifacts either way.
+        # The agent's and DevolutionsSession's logs go with the desktop session artifacts either way.
         $agentLogs = Join-Path $env:DESKTOP_SESSION_ARTIFACTS 'devolutions-agent'
         New-Item -Path $agentLogs -ItemType Directory -Force | Out-Null
         Get-ChildItem -Path (Join-Path $env:ProgramData 'Devolutions\Agent') -File -Filter 'agent*' |
           Copy-Item -Destination $agentLogs
+        Get-ChildItem -Path (Join-Path $env:APPDATA 'Devolutions\Session') -File -ErrorAction SilentlyContinue |
+          Copy-Item -Destination $agentLogs
 
+        $process = Get-Process -Name 'DevolutionsSession' -ErrorAction SilentlyContinue |
+          Where-Object { $_.SessionId -eq $sessionId } |
+          Select-Object -First 1
         if ($null -eq $process) {
-          $running = @(Get-Process -Name 'DevolutionsSession' -ErrorAction SilentlyContinue | ForEach-Object { "pid $($_.Id) in session $($_.SessionId)" })
-          throw "DevolutionsSession is not running in desktop session $sessionId after 60 seconds (running: $(if ($running) { $running -join ', ' } else { 'none' })); agent logs in $agentLogs"
+          throw "DevolutionsSession is not running in desktop session $sessionId; logs in $agentLogs"
         }
-        Write-Host "DevolutionsSession is running in desktop session $sessionId (pid $($process.Id))"
+
+        # The remote command prints the session it runs in, which must be the desktop session.
+        $output = & $env:DESKTOP_SESSION_AGENT --endpoint $env:DESKTOP_SESSION_ENDPOINT now powershell '(Get-Process -Id $PID).SessionId' 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0 -or $output -notmatch "(?m)^\s*$sessionId\s*$") {
+          throw "NOW remote execution in desktop session $sessionId failed (exit code $LASTEXITCODE): $($output.Trim())"
+        }
+        Write-Host "DevolutionsSession (pid $($process.Id)) ran a PowerShell command in desktop session $sessionId over NOW"

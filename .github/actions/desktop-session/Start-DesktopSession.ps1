@@ -16,7 +16,10 @@ param(
     [string] $DesktopSize = '1920x1080',
 
     [Parameter(Mandatory)]
-    [string] $ArtifactsDir
+    [string] $ArtifactsDir,
+
+    # Negotiate the NOW channel with Devolutions Agent's DevolutionsSession right after connecting.
+    [switch] $NowChannel
 )
 
 Set-StrictMode -Version Latest
@@ -159,6 +162,22 @@ try {
         -StatePath $sessionStatePath | Write-Host
     $connected = $true
     Write-Host '::endgroup::'
+
+    if ($NowChannel) {
+        # DevolutionsSession, which Devolutions Agent starts once the session logs on, opens the
+        # Devolutions::Now::Agent channel and exits unless NOW negotiation starts within 5
+        # seconds. The daemon only negotiates on its first NOW request, which waits up to 30
+        # seconds for the channel, so that request is made right away. The daemon then keeps
+        # the negotiated channel alive.
+        Write-Host '::group::Negotiate NOW channel'
+        $capabilities = & $AgentPath --endpoint $endpoint now capabilities 2>&1 | Out-String
+        $capabilities | Set-Content -Path (Join-Path $ArtifactsDir 'now-capabilities.txt') -Encoding utf8NoBOM
+        Write-Host $capabilities.Trim()
+        if ($LASTEXITCODE -ne 0) {
+            throw "NOW negotiation with DevolutionsSession failed (exit code $LASTEXITCODE)"
+        }
+        Write-Host '::endgroup::'
+    }
 
     Write-Host '::group::Start interactive PSHostServer'
     Start-ScheduledTask -TaskName $taskName

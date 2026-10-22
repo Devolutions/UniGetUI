@@ -86,6 +86,12 @@ internal sealed class FakeDataEnvironment
         // The Devolutions Agent broker is a real out-of-process service; never route fake operations there.
         Settings.Set(Settings.K.UseAgentBroker, false);
 
+        foreach (FakeManagerProfile profile in FakeCatalog.Managers.Where(p => !p.Found))
+        {
+            if (!Settings.DictionaryContainsKey<string, bool>(Settings.K.DisabledManagers, profile.Name))
+                Settings.SetDictionaryItem(Settings.K.DisabledManagers, profile.Name, false);
+        }
+
         env.Managers = FakeCatalog.Managers.Select(p => (IPackageManager)new FakePackageManager(p, env)).ToArray();
         Current = env;
         return env;

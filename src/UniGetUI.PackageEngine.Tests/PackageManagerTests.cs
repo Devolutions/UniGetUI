@@ -81,6 +81,7 @@ public sealed class PackageManagerTests : IDisposable
         var manager = CreateManager();
         manager.ExecutableFound = false;
         manager.ExecutablePath = CreateExecutable("missing-manager.exe");
+        Settings.SetDictionaryItem<string, bool>(Settings.K.DisabledManagers, manager.Name, false);
 
         manager.Initialize();
 
@@ -92,6 +93,66 @@ public sealed class PackageManagerTests : IDisposable
             CoreTools.Translate("{pm} was not found!").Replace("{pm}", manager.DisplayName).Trim('!'),
             manager.Status.Version
         );
+    }
+
+    [Fact]
+    public void FirstInitializeDisablesManagerWhoseExecutableIsMissing()
+    {
+        var manager = CreateManager();
+        manager.ExecutableFound = false;
+        manager.ExecutablePath = CreateExecutable("never-installed-manager.exe");
+
+        manager.Initialize();
+
+        Assert.False(manager.IsEnabled());
+        Assert.False(manager.IsReady());
+        Assert.False(manager.Status.Found);
+        Assert.True(Settings.GetDictionaryItem<string, bool>(Settings.K.DisabledManagers, manager.Name));
+        Assert.Equal(
+            CoreTools.Translate("{0} is disabled", manager.DisplayName),
+            manager.Status.Version
+        );
+    }
+
+    [Fact]
+    public void FirstInitializeKeepsFoundManagerEnabledAfterItsExecutableDisappears()
+    {
+        var manager = CreateManager();
+        manager.ExecutablePath = CreateExecutable("installed-manager.exe");
+
+        manager.Initialize();
+
+        Assert.True(manager.IsReady());
+        Assert.True(Settings.DictionaryContainsKey<string, bool>(Settings.K.DisabledManagers, manager.Name));
+        Assert.False(Settings.GetDictionaryItem<string, bool>(Settings.K.DisabledManagers, manager.Name));
+
+        manager.ExecutableFound = false;
+        manager.Initialize();
+
+        Assert.True(manager.IsEnabled());
+        Assert.False(manager.IsReady());
+        Assert.False(manager.Status.Found);
+    }
+
+    [Fact]
+    public void FirstInitializeDisablesOnlyMissingManagersWhenInitializedConcurrently()
+    {
+        var managers = Enumerable.Range(0, 16).Select(i =>
+        {
+            var manager = CreateManager();
+            manager.ExecutableFound = i % 2 == 0;
+            manager.ExecutablePath = CreateExecutable($"{manager.Name}.exe");
+            return manager;
+        }).ToList();
+
+        Parallel.ForEach(managers, manager => manager.Initialize());
+
+        foreach (var manager in managers)
+        {
+            Assert.True(Settings.DictionaryContainsKey<string, bool>(Settings.K.DisabledManagers, manager.Name));
+            Assert.Equal(manager.ExecutableFound, manager.IsEnabled());
+            Assert.Equal(manager.ExecutableFound, manager.IsReady());
+        }
     }
 
     [Fact]

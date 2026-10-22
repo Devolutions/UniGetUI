@@ -1989,6 +1989,8 @@
   "UniGetUI cannot update itself from a temporary location.": "UniGetUI cannot update itself from a temporary location.",
   "macOS is running UniGetUI from a temporary copy that cannot be modified. Move UniGetUI to the Applications folder, open it from there, and try again.": "macOS is running UniGetUI from a temporary copy that cannot be modified. Move UniGetUI to the Applications folder, open it from there, and try again.",
   "An update for UniGetUI is available, but installing it requires administrator rights.": "An update for UniGetUI is available, but installing it requires administrator rights.",
-  "Your account cannot modify {0}. Contact your IT administrator to update UniGetUI.": "Your account cannot modify {0}. Contact your IT administrator to update UniGetUI.",
+  "Your account cannot modify {0} without administrator rights.": "Your account cannot modify {0} without administrator rights.",
+  "UniGetUI needs administrator rights to install its update.": "UniGetUI needs administrator rights to install its update.",
+  "Restart UniGetUI to start using the new version.": "Restart UniGetUI to start using the new version.",
   "UniGetUI could not replace {0}, so it is still running the previous version. Open the log to see what happened.": "UniGetUI could not replace {0}, so it is still running the previous version. Open the log to see what happened."
 }

@@ -15,6 +15,24 @@ public static class MacUpdateTargetResolver
     public const string DefaultInstallPath = "/Applications/UniGetUI.app";
     public const string SwapFailedMarker = "=== Swap failed:";
 
+    // Runs as root for a bundle the user cannot replace ($1=target, $2=new app, $3=pid).
+    // The old bundle is deleted in the background once that process has exited.
+    public const string ElevatedSwapScript = """
+        set -e
+        target="$1"; newapp="$2"; pid="$3"
+        rm -rf "$target.old"
+        chown -R "$(/usr/bin/stat -f '%u:%g' "$target")" "$newapp"
+        /usr/bin/xattr -dr com.apple.quarantine "$newapp" 2>/dev/null || true
+        mv "$target" "$target.old"
+        if ! mv "$newapp" "$target"; then
+          mv "$target.old" "$target"
+          exit 1
+        fi
+        (i=0
+         while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+         rm -rf "$target.old") >/dev/null 2>&1 &
+        """;
+
     public static string? FindEnclosingAppBundle(string? executablePath)
     {
         if (string.IsNullOrEmpty(executablePath))

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace UniGetUI.Core.Tools.Tests;
 
 public class MacUpdateTargetTests
@@ -149,5 +151,95 @@ public class MacUpdateTargetTests
     public void TryGetSwapFailure_IgnoresALogWithoutTheMarker()
     {
         Assert.False(MacUpdateTargetResolver.TryGetSwapFailure("Target version: 2026.1.0\n", out _));
+    }
+
+    [MacOSFact]
+    public void ElevatedSwapScript_ReplacesTheBundleAndDeletesTheOldOneOnceTheAppHasExited()
+    {
+        string root = Directory.CreateTempSubdirectory("unigetui-swap-").FullName;
+        try
+        {
+            (string target, string newApp) = CreateBundles(root);
+
+            Assert.Equal(0, RunElevatedSwapScript(target, newApp, ExitedProcessId()));
+
+            Assert.Equal("new", File.ReadAllText(Path.Join(target, "version")));
+            Assert.False(Directory.Exists(newApp));
+            Assert.True(SpinWait.SpinUntil(() => !Directory.Exists(target + ".old"), TimeSpan.FromSeconds(5)));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [MacOSFact]
+    public void ElevatedSwapScript_KeepsTheOldBundleWhileTheAppIsStillRunning()
+    {
+        string root = Directory.CreateTempSubdirectory("unigetui-swap-").FullName;
+        try
+        {
+            (string target, string newApp) = CreateBundles(root);
+
+            Assert.Equal(0, RunElevatedSwapScript(target, newApp, Environment.ProcessId));
+
+            Assert.Equal("new", File.ReadAllText(Path.Join(target, "version")));
+            Assert.Equal("old", File.ReadAllText(Path.Join(target + ".old", "version")));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [MacOSFact]
+    public void ElevatedSwapScript_LeavesTheBundleAloneWhenTheNewOneIsMissing()
+    {
+        string root = Directory.CreateTempSubdirectory("unigetui-swap-").FullName;
+        try
+        {
+            (string target, string newApp) = CreateBundles(root);
+            Directory.Delete(newApp, recursive: true);
+
+            Assert.NotEqual(0, RunElevatedSwapScript(target, newApp, ExitedProcessId()));
+
+            Assert.Equal("old", File.ReadAllText(Path.Join(target, "version")));
+            Assert.False(Directory.Exists(target + ".old"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static (string Target, string NewApp) CreateBundles(string root)
+    {
+        string target = Path.Join(root, "Applications", "UniGetUI.app");
+        string newApp = Path.Join(root, "staging", "UniGetUI.app");
+        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(newApp);
+        File.WriteAllText(Path.Join(target, "version"), "old");
+        File.WriteAllText(Path.Join(newApp, "version"), "new");
+        return (target, newApp);
+    }
+
+    private static int RunElevatedSwapScript(string target, string newApp, int pid)
+    {
+        var startInfo = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
+        foreach (string arg in new[] { "-c", MacUpdateTargetResolver.ElevatedSwapScript, "sh", target, newApp, pid.ToString() })
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+
+        using Process process = Process.Start(startInfo)!;
+        process.WaitForExit();
+        return process.ExitCode;
+    }
+
+    private static int ExitedProcessId()
+    {
+        using Process process = Process.Start("/usr/bin/true");
+        process.WaitForExit();
+        return process.Id;
     }
 }

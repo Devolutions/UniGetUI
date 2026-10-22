@@ -1058,6 +1058,12 @@ internal static partial class AvaloniaAutoUpdater
 
         LogUpdateInfo($"Replacing {target} with the freshly-extracted bundle and relaunching.");
 
+        if (updateTarget.Status == MacUpdateTargetStatus.NotWritable)
+        {
+            await ApplyMacUpdateAsAdminAsync(target, newApp);
+            return;
+        }
+
         // The swap is handed to a detached helper that waits for THIS process to exit
         // before touching the bundle, so the running app never has its files yanked out
         // from under it. On success the helper relaunches the new bundle; on any failure
@@ -1111,6 +1117,78 @@ internal static partial class AvaloniaAutoUpdater
 
         // Match the Windows flow: terminate the running copy so the helper can replace
         // the bundle and relaunch the freshly-installed version.
+        Environment.Exit(0);
+    }
+
+    // Swaps a bundle the user cannot write to through the macOS administrator prompt, while
+    // this process still runs, then relaunches the new bundle once it has exited.
+    [SupportedOSPlatform("macos")]
+    private static async Task ApplyMacUpdateAsAdminAsync(string target, string newApp)
+    {
+        string pid = Environment.ProcessId.ToString(CultureInfo.InvariantCulture);
+        string command = string.Join(
+            ' ',
+            "/bin/sh -c",
+            MacAdminFileInstaller.ShellQuote(MacUpdateTargetResolver.ElevatedSwapScript),
+            "sh",
+            MacAdminFileInstaller.ShellQuote(target),
+            MacAdminFileInstaller.ShellQuote(newApp),
+            pid);
+
+        bool swapped;
+        try
+        {
+            swapped = await MacAdminFileInstaller.RunAsync(
+                command,
+                CoreTools.Translate("UniGetUI needs administrator rights to install its update."));
+        }
+        catch (Exception ex)
+        {
+            LogUpdateError($"Could not replace {target} with administrator rights:");
+            LogUpdateError(ex);
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                ex.Message,
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("administrator swap failed");
+            return;
+        }
+
+        if (!swapped)
+        {
+            LogUpdateWarn("The administrator prompt was cancelled; the update was not installed.");
+            RaiseStatus(
+                CoreTools.Translate("An update for UniGetUI is available, but installing it requires administrator rights."),
+                CoreTools.Translate("Your account cannot modify {0} without administrator rights.", target),
+                InfoBarSeverity.Warning,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("administrator prompt cancelled");
+            return;
+        }
+
+        const string relaunch = """
+            pid="$1"; target="$2"
+            i=0
+            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+            /usr/bin/open -na "$target"
+            """;
+        if (!TrySpawnSwapHelper(relaunch, pid, target))
+        {
+            // The new version is already in place; it only needs to be opened again.
+            RaiseStatus(
+                CoreTools.Translate("Update installed."),
+                CoreTools.Translate("Restart UniGetUI to start using the new version."),
+                InfoBarSeverity.Success,
+                isClosable: true);
+            MarkAttemptFinished("administrator swap succeeded; relaunch helper could not start");
+            return;
+        }
+
         Environment.Exit(0);
     }
 
@@ -1421,17 +1499,9 @@ internal static partial class AvaloniaAutoUpdater
                 return true;
 
             case MacUpdateTargetStatus.NotWritable:
-                LogUpdateWarn(
-                    $"The current user cannot replace {target.BundlePath} (the bundle or its parent folder is not writable); the update will not be downloaded.");
-                RaiseStatus(
-                    CoreTools.Translate("An update for UniGetUI is available, but installing it requires administrator rights."),
-                    CoreTools.Translate("Your account cannot modify {0}. Contact your IT administrator to update UniGetUI.", target.BundlePath),
-                    InfoBarSeverity.Warning,
-                    isClosable: true,
-                    actionButtonText: CoreTools.Translate("View log"),
-                    actionButtonAction: OpenUpdateLog);
-                MarkAttemptFinished("update target is not writable");
-                return true;
+                LogUpdateInfo(
+                    $"The current user cannot replace {target.BundlePath} (the bundle or its parent folder is not writable); administrator rights will be requested to install the update.");
+                return false;
 
             default:
                 return false;

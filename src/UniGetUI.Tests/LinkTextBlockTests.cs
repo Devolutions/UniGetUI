@@ -226,6 +226,28 @@ public sealed class LinkTextBlockTests
         window.Close();
     }, CancellationToken.None);
 
+    [Fact]
+    public Task FocusingALaterLinkFromAutomationKeepsThatLinkFocused() => _session.Dispatch(() =>
+    {
+        var (window, text, probe) = Show();
+        var other = new Button { Content = "Elsewhere" };
+        window.Content = null;
+        window.Content = new StackPanel { Children = { other, text } };
+        window.UpdateLayout();
+        other.Focus();
+        Assert.False(text.IsFocused);
+
+        AutomationPeer download = ControlAutomationPeer.CreatePeerForElement(text).GetChildren()[1];
+        download.SetFocus();
+
+        Assert.True(download.HasKeyboardFocus());
+        Assert.Equal(Download, text.SelectedText);
+        window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
+        Assert.Equal(1, probe.Downloaded);
+        Assert.Equal(0, probe.Opened);
+        window.Close();
+    }, CancellationToken.None);
+
     private static (Window Window, LinkTextBlock Text, Probe Probe) Show()
     {
         if (!Application.Current!.Styles.OfType<FluentTheme>().Any())

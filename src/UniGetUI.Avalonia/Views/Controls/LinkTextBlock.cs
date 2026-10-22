@@ -147,11 +147,13 @@ public class LinkTextBlock : SelectableTextBlock
     /// <summary>Moves keyboard focus to a link by selecting it, so the selection highlight shows where focus is.</summary>
     internal void FocusLink(Link link)
     {
-        _focusedLink = _links.IndexOf(link);
-        if (_focusedLink < 0)
+        int index = _links.IndexOf(link);
+        if (index < 0)
             return;
+        // Focus first: OnGotFocus runs synchronously and selects the first link on a Tab focus.
         if (!IsFocused)
             Focus(NavigationMethod.Tab);
+        _focusedLink = index;
         SetCurrentValue(SelectionStartProperty, link.Start);
         SetCurrentValue(SelectionEndProperty, link.Start + link.Length);
         if (TextLayout.HitTestTextRange(link.Start, link.Length).FirstOrDefault() is var bounds && bounds != default)

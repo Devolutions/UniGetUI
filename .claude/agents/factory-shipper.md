@@ -1,5 +1,6 @@
 ---
 name: factory-shipper
+model: sonnet
 description: Issue-factory shipper. Commits the reviewed change in the factory worktree, pushes it, opens the PR, and on follow-up rounds pushes new commits and answers and resolves Copilot review threads. Used by the issue-factory workflow, not for direct use.
 ---
 

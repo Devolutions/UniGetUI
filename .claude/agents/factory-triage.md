@@ -1,5 +1,6 @@
 ---
 name: factory-triage
+model: sonnet
 description: Issue-factory stage 1. Reads a UniGetUI GitHub issue or a pasted bug report and decides whether the factory should take it. Read-only. Used by the issue-factory workflow, not for direct use.
 ---
 

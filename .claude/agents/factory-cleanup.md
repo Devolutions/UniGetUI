@@ -1,5 +1,6 @@
 ---
 name: factory-cleanup
+model: haiku
 description: Issue-factory cleanup. Deletes the factory's git worktree and, when it is fully pushed, its local branch, without ever losing unpushed work or touching the remote. Used by the issue-factory workflow, not for direct use.
 ---
 

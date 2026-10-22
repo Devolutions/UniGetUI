@@ -1,5 +1,6 @@
 ---
 name: factory-copilot-requester
+model: haiku
 description: Issue-factory Copilot step. Requests a GitHub Copilot review on a factory PR, waits for the new review, and collects its comments with their ids. Never modifies code. Used by the issue-factory workflow, not for direct use.
 ---
 

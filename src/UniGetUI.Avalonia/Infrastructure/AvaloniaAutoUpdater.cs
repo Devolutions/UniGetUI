@@ -1473,7 +1473,8 @@ internal static partial class AvaloniaAutoUpdater
             Environment.ProcessPath,
             MacBundleLocation.TryGetTranslocatedOriginalPath,
             Directory.Exists,
-            MacBundleLocation.IsWritable);
+            MacBundleLocation.IsWritable,
+            MacBundleLocation.IsOnReadOnlyVolume);
 
         if (target.RunningBundlePath is not null && MacUpdateTargetResolver.IsTranslocatedPath(target.RunningBundlePath))
         {
@@ -1500,6 +1501,19 @@ internal static partial class AvaloniaAutoUpdater
                     actionButtonText: CoreTools.Translate("View log"),
                     actionButtonAction: OpenUpdateLog);
                 MarkAttemptFinished("running from a translocated location that could not be resolved");
+                return true;
+
+            case MacUpdateTargetStatus.ReadOnlyVolume:
+                LogUpdateWarn(
+                    $"UniGetUI is running from {target.BundlePath}, which is on a read-only volume; the update will not be downloaded.");
+                RaiseStatus(
+                    CoreTools.Translate("UniGetUI cannot update itself from a read-only location."),
+                    CoreTools.Translate("UniGetUI is running from {0}, which cannot be modified, for example a mounted disk image. Move UniGetUI to the Applications folder, open it from there, and try again.", target.BundlePath),
+                    InfoBarSeverity.Warning,
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
+                MarkAttemptFinished("update target is on a read-only volume");
                 return true;
 
             case MacUpdateTargetStatus.NotWritable:

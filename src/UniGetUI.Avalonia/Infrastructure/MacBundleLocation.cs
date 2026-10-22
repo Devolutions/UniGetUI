@@ -12,6 +12,7 @@ internal static partial class MacBundleLocation
     private const string SecurityLibrary = "/System/Library/Frameworks/Security.framework/Security";
     private const string SystemLibrary = "/usr/lib/libSystem.B.dylib";
     private const int W_OK = 2;
+    private const int EROFS = 30;
     private const int MaxPathBytes = 4096;
 
     public static bool IsWritable(string path)
@@ -23,6 +24,19 @@ internal static partial class MacBundleLocation
         catch (Exception ex)
         {
             Logger.Warn($"Could not check write access to '{path}': {ex.Message}");
+            return false;
+        }
+    }
+
+    public static bool IsOnReadOnlyVolume(string path)
+    {
+        try
+        {
+            return access(path, W_OK) != 0 && Marshal.GetLastPInvokeError() == EROFS;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not check whether '{path}' is on a read-only volume: {ex.Message}");
             return false;
         }
     }
@@ -74,7 +88,7 @@ internal static partial class MacBundleLocation
         }
     }
 
-    [LibraryImport(SystemLibrary, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(SystemLibrary, StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
     private static partial int access(string path, int mode);
 
     [LibraryImport(CoreFoundationLibrary)]

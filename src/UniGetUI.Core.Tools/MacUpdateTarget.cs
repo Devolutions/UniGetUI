@@ -5,6 +5,7 @@ public enum MacUpdateTargetStatus
     Ready,
     BundleNotFound,
     TranslocatedUnresolved,
+    ReadOnlyVolume,
     NotWritable,
 }
 
@@ -81,7 +82,8 @@ public static class MacUpdateTargetResolver
         string? executablePath,
         Func<string, string?> resolveTranslocatedOriginal,
         Func<string, bool> directoryExists,
-        Func<string, bool> isWritable)
+        Func<string, bool> isWritable,
+        Func<string, bool> isOnReadOnlyVolume)
     {
         string? running = FindEnclosingAppBundle(executablePath);
         string target = running ?? DefaultInstallPath;
@@ -105,6 +107,12 @@ public static class MacUpdateTargetResolver
         if (!directoryExists(target))
         {
             return new MacUpdateTarget(MacUpdateTargetStatus.BundleNotFound, target, running);
+        }
+
+        // Not even root can replace a bundle on a mounted disk image, so asking for a password is pointless.
+        if (isOnReadOnlyVolume(target))
+        {
+            return new MacUpdateTarget(MacUpdateTargetStatus.ReadOnlyVolume, target, running);
         }
 
         int slash = target.TrimEnd('/').LastIndexOf('/');

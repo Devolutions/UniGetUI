@@ -15,12 +15,14 @@ public class MacUpdateTargetTests
         string? executablePath,
         string? translocatedOriginal,
         string[] existingDirectories,
-        string[] writableDirectories) =>
+        string[] writableDirectories,
+        string[]? readOnlyVolumePaths = null) =>
         MacUpdateTargetResolver.Resolve(
             executablePath,
             _ => translocatedOriginal,
             existingDirectories.Contains,
-            writableDirectories.Contains);
+            writableDirectories.Contains,
+            path => readOnlyVolumePaths?.Contains(path) ?? false);
 
     [Fact]
     public void Resolve_UpdatesTheOriginalBundleWhenRunningFromATranslocatedCopy()
@@ -97,6 +99,34 @@ public class MacUpdateTargetTests
             ["/Applications/UniGetUI.app"]);
 
         Assert.Equal(MacUpdateTargetStatus.NotWritable, target.Status);
+    }
+
+    [Fact]
+    public void Resolve_ReportsABundleOnAMountedDiskImageAsReadOnly()
+    {
+        MacUpdateTarget target = Resolve(
+            "/Volumes/UniGetUI/UniGetUI.app/Contents/MacOS/UniGetUI",
+            null,
+            ["/Volumes/UniGetUI/UniGetUI.app"],
+            [],
+            ["/Volumes/UniGetUI/UniGetUI.app"]);
+
+        Assert.Equal(MacUpdateTargetStatus.ReadOnlyVolume, target.Status);
+        Assert.Equal("/Volumes/UniGetUI/UniGetUI.app", target.BundlePath);
+    }
+
+    [Fact]
+    public void Resolve_ReportsATranslocatedCopyFromAMountedDiskImageAsReadOnly()
+    {
+        MacUpdateTarget target = Resolve(
+            TranslocatedExecutable,
+            "/Volumes/UniGetUI/UniGetUI.app",
+            [TranslocatedBundle, "/Volumes/UniGetUI/UniGetUI.app", "/Applications/UniGetUI.app"],
+            ["/Applications", "/Applications/UniGetUI.app"],
+            ["/Volumes/UniGetUI/UniGetUI.app"]);
+
+        Assert.Equal(MacUpdateTargetStatus.ReadOnlyVolume, target.Status);
+        Assert.Equal("/Volumes/UniGetUI/UniGetUI.app", target.BundlePath);
     }
 
     [Fact]

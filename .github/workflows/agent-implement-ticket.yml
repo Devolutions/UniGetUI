@@ -137,6 +137,8 @@ jobs:
 
       # The token only allows Copilot requests and reading this public repository, and it is
       # hidden from the agent's shell. The agent has no GitHub tools and no git credential.
+      # Its only MCP server is Avalonia's Build MCP (mcp-config.json), a public, read-only
+      # documentation service that gets no credential.
       - name: Run the agent
         id: agent
         shell: pwsh
@@ -149,6 +151,7 @@ jobs:
           $outDir = Join-Path $env:AGENT_DIR 'out'
           New-Item -Path $outDir -ItemType Directory -Force | Out-Null
           $prompt = "Read .github/agent/implement-ticket/PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET."
+          $mcpConfig = Join-Path $env:GITHUB_WORKSPACE '.github\agent\implement-ticket\mcp-config.json'
 
           copilot `
             --prompt $prompt `
@@ -156,6 +159,7 @@ jobs:
             --allow-all-tools `
             --allow-all-paths `
             --disable-builtin-mcps `
+            --additional-mcp-config "@$mcpConfig" `
             --secret-env-vars COPILOT_GITHUB_TOKEN GITHUB_ENV GITHUB_OUTPUT GITHUB_PATH `
             --share (Join-Path $outDir 'transcript.md') `
             --log-dir (Join-Path $outDir 'logs')

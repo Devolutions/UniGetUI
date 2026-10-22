@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "avalonia-docs": {
+      "type": "http",
+      "url": "https://docs-mcp.avaloniaui.net/mcp",
+      "tools": ["*"]
+    }
+  }
+}

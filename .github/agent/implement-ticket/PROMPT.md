@@ -20,6 +20,12 @@ or not about UniGetUI, make no code changes and explain why in the pull request 
 
 - PowerShell 7 (`pwsh`), .NET SDK, git, and a live 1920x1080 Windows desktop that you can
   see and drive. You are an administrator on this machine.
+- The `avalonia-docs` MCP server (Avalonia's Build MCP) answers Avalonia questions from the
+  current documentation, which is more reliable than memory for this Avalonia 12 app. Call
+  its `get_avalonia_expert_rules` tool once before you write any AXAML or UI code, and use
+  `search_avalonia_docs` or `lookup_avalonia_api` whenever you are unsure of an Avalonia
+  control, property, binding, or styling API. If `lookup_avalonia_api` finds nothing, try
+  the full type name, or `search_avalonia_docs`. Its WPF migration tools don't apply here.
 - No GitHub access, and you must not try to get any. Do not commit, push, or create
   branches: leave your changes in the working tree. The workflow turns them into a pull
   request.

@@ -762,92 +762,70 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             target.Children.Insert(Math.Min(index, target.Children.Count), child);
     }
 
-    // ── Per-row layout builders (inline flow like WinUI's RichTextBlock) ─────
+    // ── Details text: one selectable block per panel, so a selection runs across rows and links ─────
 
     private void BuildBasicInfoInlines()
     {
-        BasicInfoPanel.Children.Clear();
+        var text = ResetTextBlock(BasicInfoPanel);
 
         if (!string.IsNullOrWhiteSpace(_vm.Description))
         {
-            BasicInfoPanel.Children.Add(new SelectableTextBlock
-            {
-                Text = _vm.Description,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 8),
-            });
+            text.AddRun(new Run(_vm.Description));
+            AddSpacer(text);
         }
 
-        AddInlineRow(BasicInfoPanel, _vm.LabelHomepage, _vm.HomepageUrl);
-        AddInlineRow(BasicInfoPanel, _vm.LabelPublisher, _vm.Publisher);
-        AddInlineRow(BasicInfoPanel, _vm.LabelAuthor, _vm.Author);
-        AddLicenseRow(BasicInfoPanel);
-        AddInlineRow(BasicInfoPanel, _vm.LabelUpdateDate, _vm.UpdateDate);
-        AddInlineRow(BasicInfoPanel, _vm.LabelSource, _vm.SourceDisplay);
+        AddRow(text, _vm.LabelHomepage, _vm.HomepageUrl);
+        AddRow(text, _vm.LabelPublisher, _vm.Publisher);
+        AddRow(text, _vm.LabelAuthor, _vm.Author);
+        AddLicenseRow(text);
+        AddRow(text, _vm.LabelUpdateDate, _vm.UpdateDate);
+        AddRow(text, _vm.LabelSource, _vm.SourceDisplay);
     }
 
     private void BuildDetailsInlines()
     {
-        DetailsPanel.Children.Clear();
+        var text = ResetTextBlock(DetailsPanel);
 
-        AddInlineRow(DetailsPanel, _vm.LabelPackageId, _vm.PackageId);
-        AddInlineRow(DetailsPanel, _vm.LabelManifest, _vm.ManifestUrl);
-        AddInlineRow(DetailsPanel, _vm.LabelVersion, _vm.VersionDisplay, _vm.InstalledVersionTooltip);
+        AddRow(text, _vm.LabelPackageId, _vm.PackageId);
+        AddRow(text, _vm.LabelManifest, _vm.ManifestUrl);
+        AddRow(text, _vm.LabelVersion, _vm.VersionDisplay, _vm.InstalledVersionTooltip);
 
-        AddSpacer(DetailsPanel);
+        AddSpacer(text);
 
-        AddInlineRow(DetailsPanel, _vm.LabelInstallerType, _vm.InstallerType);
-        AddInlineRow(DetailsPanel, _vm.LabelInstallerUrl, _vm.InstallerUrl);
-        AddInlineRow(DetailsPanel, _vm.InstallerHashLabel.TrimEnd(':'), _vm.InstallerHash);
+        AddRow(text, _vm.LabelInstallerType, _vm.InstallerType);
+        AddRow(text, _vm.LabelInstallerUrl, _vm.InstallerUrl);
+        AddRow(text, _vm.InstallerHashLabel.TrimEnd(':'), _vm.InstallerHash);
 
-        AddDownloadRow(DetailsPanel);
+        AddDownloadRow(text);
 
-        AddSpacer(DetailsPanel);
+        AddSpacer(text);
 
         // Dependencies header + list
-        DetailsPanel.Children.Add(new SelectableTextBlock
-        {
-            Text = _vm.LabelDependencies + ":",
-            FontWeight = FontWeight.Bold,
-            Margin = new Thickness(0, 0, 0, 4),
-        });
+        text.StartLine();
+        text.AddRun(new Run(_vm.LabelDependencies + ":") { FontWeight = FontWeight.Bold });
         if (_vm.HasDependencyNote)
         {
-            DetailsPanel.Children.Add(new SelectableTextBlock
-            {
-                Text = "  " + _vm.DependencyNote,
-                Foreground = NotAvailableBrush,
-                Margin = new Thickness(0, 0, 0, 4),
-            });
+            text.StartLine();
+            text.AddRun(new Run("  " + _vm.DependencyNote) { Foreground = NotAvailableBrush });
         }
         else
         {
             foreach (var dep in _vm.Dependencies)
             {
-                DetailsPanel.Children.Add(new SelectableTextBlock
-                {
-                    Text = dep.DisplayText,
-                    TextWrapping = TextWrapping.Wrap,
-                });
+                text.StartLine();
+                text.AddRun(new Run(dep.DisplayText));
             }
         }
 
-        AddSpacer(DetailsPanel);
+        AddSpacer(text);
 
         // Release notes
-        DetailsPanel.Children.Add(new SelectableTextBlock
-        {
-            Text = _vm.LabelReleaseNotes + ":",
-            FontWeight = FontWeight.Bold,
-            Margin = new Thickness(0, 0, 0, 4),
-        });
-        DetailsPanel.Children.Add(new SelectableTextBlock
-        {
-            Text = _vm.ReleaseNotes,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 8),
-        });
-        AddInlineRow(DetailsPanel, _vm.LabelReleaseNotesUrl, _vm.ReleaseNotesUrl);
+        text.StartLine();
+        text.AddRun(new Run(_vm.LabelReleaseNotes + ":") { FontWeight = FontWeight.Bold });
+        text.StartLine();
+        text.AddRun(new Run(_vm.ReleaseNotes));
+        AddSpacer(text);
+        AddRow(text, _vm.LabelReleaseNotesUrl, _vm.ReleaseNotesUrl);
     }
 
     private static readonly IBrush NotAvailableBrush =
@@ -856,187 +834,89 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private static readonly IBrush WarningBrush =
         new SolidColorBrush(Color.FromArgb(255, 245, 158, 11));
 
-    private static void AddSpacer(StackPanel host) =>
-        host.Children.Add(new Border { Height = 10 });
-
-    /// <summary>
-    /// Builds a single wrap-able row with "<bold>Label:</bold> value" all on one line,
-    /// matching the WinUI RichTextBlock paragraph layout.
-    /// </summary>
-    private void AddInlineRow(
-        StackPanel host,
-        string label,
-        string value,
-        string? warningTooltip = null
-    )
+    private static LinkTextBlock ResetTextBlock(StackPanel host)
     {
-        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
-        var inlines = tb.Inlines ??= new InlineCollection();
-        inlines.Add(new Run(label + ": ") { FontWeight = FontWeight.Bold });
+        if (host.Children is [LinkTextBlock existing])
+        {
+            existing.Clear();
+            return existing;
+        }
+
+        host.Children.Clear();
+        var text = new LinkTextBlock { LineSpacing = 6 };
+        host.Children.Add(text);
+        return text;
+    }
+
+    /// <summary>Ends the current line and adds a blank one, to separate groups of rows.</summary>
+    private static void AddSpacer(LinkTextBlock text)
+    {
+        text.StartLine();
+        text.AddLineBreak();
+    }
+
+    private Run NotAvailableRun(string? text = null) => new(text ?? _vm.LabelNotAvailable)
+    {
+        Foreground = NotAvailableBrush,
+        FontStyle = FontStyle.Italic,
+    };
+
+    /// <summary>Adds a "<bold>Label:</bold> value" line, matching the WinUI RichTextBlock paragraph layout.</summary>
+    private void AddRow(LinkTextBlock text, string label, string value, string? warningTooltip = null)
+    {
+        text.StartLine();
+        text.AddRun(new Run(label + ": ") { FontWeight = FontWeight.Bold });
         if (string.IsNullOrWhiteSpace(value) || value == _vm.LabelNotAvailable)
-            inlines.Add(new Run(_vm.LabelNotAvailable)
-            {
-                Foreground = NotAvailableBrush,
-                FontStyle = FontStyle.Italic,
-            });
+            text.AddRun(NotAvailableRun());
         else
-            inlines.Add(new Run(value));
+            text.AddRun(new Run(value), warningTooltip);
 
-        if (warningTooltip is null)
-        {
-            host.Children.Add(tb);
-            return;
-        }
-
-        host.Children.Add(BuildWarningRow(tb, warningTooltip));
+        if (warningTooltip is not null)
+            text.AddRun(new Run(" \u26A0\uFE0E") { Foreground = WarningBrush }, warningTooltip);
     }
 
-    private static Grid BuildWarningRow(Control content, string tooltip)
+    private void AddRow(LinkTextBlock text, string label, Uri? url)
     {
-        ToolTip.SetTip(content, tooltip);
-        var icon = new SvgIcon
-        {
-            Path = "avares://UniGetUI/Assets/Symbols/warning_filled.svg",
-            Width = 16,
-            Height = 16,
-            Foreground = WarningBrush,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(6, 2, 0, 0),
-        };
-        ToolTip.SetTip(icon, tooltip);
-
-        var grid = new Grid
-        {
-            ColumnDefinitions =
-            [
-                new ColumnDefinition(new GridLength(1, GridUnitType.Star)),
-                new ColumnDefinition(GridLength.Auto),
-            ],
-        };
-        Grid.SetColumn(content, 0);
-        Grid.SetColumn(icon, 1);
-        grid.Children.Add(content);
-        grid.Children.Add(icon);
-        return grid;
-    }
-
-    private void AddInlineRow(StackPanel host, string label, Uri? url)
-    {
+        text.StartLine();
+        text.AddRun(new Run(label + ": ") { FontWeight = FontWeight.Bold });
         if (url is null)
-        {
-            var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
-            var inlines = tb.Inlines ??= new InlineCollection();
-            inlines.Add(new Run(label + ": ") { FontWeight = FontWeight.Bold });
-            inlines.Add(new Run(_vm.LabelNotAvailable)
-            {
-                Foreground = NotAvailableBrush,
-                FontStyle = FontStyle.Italic,
-            });
-            host.Children.Add(tb);
-            return;
-        }
-
-        host.Children.Add(BuildLinkRow(BoldLabel(label + ": "), url.ToString()));
+            text.AddRun(NotAvailableRun());
+        else
+            AddUrlLink(text, url.ToString());
     }
 
-    private void AddLicenseRow(StackPanel host)
+    private void AddLicenseRow(LinkTextBlock text)
     {
         bool hasName = !string.IsNullOrEmpty(_vm.LicenseName);
         bool hasUrl = _vm.LicenseUrl is not null;
 
-        if (!hasUrl)
-        {
-            // No link: render as a plain selectable line with the usual cursor.
-            var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
-            var inlines = tb.Inlines ??= new InlineCollection();
-            inlines.Add(new Run(_vm.LabelLicense + ": ") { FontWeight = FontWeight.Bold });
-            if (hasName)
-                inlines.Add(new Run(_vm.LicenseName!));
-            else
-                inlines.Add(new Run(_vm.LabelNotAvailable)
-                {
-                    Foreground = NotAvailableBrush,
-                    FontStyle = FontStyle.Italic,
-                });
-            host.Children.Add(tb);
-            return;
-        }
-
-        var labelBlock = new SelectableTextBlock
-        {
-            TextWrapping = TextWrapping.Wrap,
-            VerticalAlignment = VerticalAlignment.Top,
-        };
-        var labelInlines = labelBlock.Inlines ??= new InlineCollection();
-        labelInlines.Add(new Run(_vm.LabelLicense + ": ") { FontWeight = FontWeight.Bold });
+        text.StartLine();
+        text.AddRun(new Run(_vm.LabelLicense + ": ") { FontWeight = FontWeight.Bold });
         if (hasName)
-            labelInlines.Add(new Run(_vm.LicenseName! + " "));
-
-        host.Children.Add(BuildLinkRow(labelBlock, _vm.LicenseUrl!.ToString()));
+            text.AddRun(new Run(hasUrl ? _vm.LicenseName! + " " : _vm.LicenseName!));
+        if (hasUrl)
+            AddUrlLink(text, _vm.LicenseUrl!.ToString());
+        else if (!hasName)
+            text.AddRun(NotAvailableRun());
     }
 
-    private void AddDownloadRow(StackPanel host)
+    private void AddDownloadRow(LinkTextBlock text)
     {
+        text.StartLine();
         if (_vm.CanDownloadInstaller && !_vm.IsLoading)
         {
-            var panel = new StackPanel { Orientation = Orientation.Horizontal };
-            var link = CreateLinkBlock(_vm.LabelDownloadInstaller, DownloadInstaller);
-            link.FontWeight = FontWeight.SemiBold;
-            panel.Children.Add(link);
+            text.AddLink(_vm.LabelDownloadInstaller, null, DownloadInstaller, LinkBrush, FontWeight.SemiBold);
             if (!string.IsNullOrEmpty(_vm.InstallerSize))
-                panel.Children.Add(new SelectableTextBlock { Text = $" ({_vm.InstallerSize})" });
-            host.Children.Add(panel);
+                text.AddRun(new Run($" ({_vm.InstallerSize})"));
         }
         else
         {
-            host.Children.Add(new SelectableTextBlock
-            {
-                Text = _vm.LabelInstallerNotAvailable,
-                Foreground = NotAvailableBrush,
-                FontStyle = FontStyle.Italic,
-            });
+            text.AddRun(NotAvailableRun(_vm.LabelInstallerNotAvailable));
         }
     }
 
-    private static SelectableTextBlock BoldLabel(string text) => new()
-    {
-        Text = text,
-        FontWeight = FontWeight.Bold,
-        VerticalAlignment = VerticalAlignment.Top,
-    };
-
-    /// <summary>"Label: url" laid out so a long URL wraps under itself; only the URL is the link.</summary>
-    private Grid BuildLinkRow(Control label, string url)
-    {
-        var grid = new Grid
-        {
-            ColumnDefinitions =
-            [
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(new GridLength(1, GridUnitType.Star)),
-            ],
-        };
-        Grid.SetColumn(label, 0);
-        var link = CreateLinkBlock(url, () => OpenUrl(url));
-        link.Url = url;
-        link.TextWrapping = TextWrapping.Wrap;
-        Grid.SetColumn(link, 1);
-        grid.Children.Add(label);
-        grid.Children.Add(link);
-        return grid;
-    }
-
-    /// <summary>A selectable, copyable hyperlink. The hand cursor and activation cover only this text.</summary>
-    private HyperlinkText CreateLinkBlock(string text, Action activate)
-    {
-        var link = new HyperlinkText
-        {
-            Text = text,
-            Foreground = LinkBrush,
-        };
-        link.Activated += (_, _) => activate();
-        return link;
-    }
+    private void AddUrlLink(LinkTextBlock text, string url) =>
+        text.AddLink(url, url, () => OpenUrl(url), LinkBrush);
 
     private IBrush LinkBrush =>
         this.TryFindResource("HyperlinkForeground", ActualThemeVariant, out var res) && res is IBrush b

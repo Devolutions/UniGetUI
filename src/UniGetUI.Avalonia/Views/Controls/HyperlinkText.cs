@@ -3,19 +3,13 @@ using Avalonia.Automation.Peers;
 using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using UniGetUI.Core.Logging;
-using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Controls;
 
 public class HyperlinkText : SelectableTextBlock
 {
-    public static readonly StyledProperty<string?> UrlProperty =
-        AvaloniaProperty.Register<HyperlinkText, string?>(nameof(Url));
-
     private static readonly TimeSpan DefaultDoubleClickTime = TimeSpan.FromMilliseconds(500);
 
     private readonly DispatcherTimer _pendingActivation = new();
@@ -24,18 +18,14 @@ public class HyperlinkText : SelectableTextBlock
 
     public event EventHandler? Activated;
 
-    public string? Url
-    {
-        get => GetValue(UrlProperty);
-        set => SetValue(UrlProperty, value);
-    }
-
     public HyperlinkText()
     {
         Focusable = true;
         Cursor = new Cursor(StandardCursorType.Hand);
         TextDecorations = global::Avalonia.Media.TextDecorations.Underline;
         TextTrimming = global::Avalonia.Media.TextTrimming.CharacterEllipsis;
+        // Without a background only the glyph pixels are hit-testable, so drags, multi-clicks and right-clicks miss.
+        Background = global::Avalonia.Media.Brushes.Transparent;
 
         AddHandler(PointerPressedEvent, OnLinkPointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, OnLinkPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -46,35 +36,10 @@ public class HyperlinkText : SelectableTextBlock
         };
     }
 
+    // Themes match by exact type; without this the SelectableTextBlock theme (and its selection brush) is skipped.
+    protected override Type StyleKeyOverride => typeof(SelectableTextBlock);
+
     public void Activate() => Activated?.Invoke(this, EventArgs.Empty);
-
-    private async Task CopyUrlToClipboardAsync()
-    {
-        if (string.IsNullOrEmpty(Url) || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
-            return;
-
-        try
-        {
-            await clipboard.SetTextAsync(Url);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Could not copy the link to the clipboard");
-            Logger.Warn(ex);
-        }
-    }
-
-    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
-    {
-        base.OnPropertyChanged(change);
-        if (change.Property != UrlProperty)
-            return;
-
-        if (string.IsNullOrEmpty(Url))
-            ClearValue(ContextFlyoutProperty);
-        else
-            ContextFlyout = BuildLinkContextFlyout();
-    }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -125,20 +90,6 @@ public class HyperlinkText : SelectableTextBlock
         var moved = e.GetPosition(this) - _pressOrigin;
         if (Math.Abs(moved.X) <= 4 && Math.Abs(moved.Y) <= 4)
             _pendingActivation.Start();
-    }
-
-    private MenuFlyout BuildLinkContextFlyout()
-    {
-        var copySelection = new MenuItem { Header = CoreTools.Translate("Copy") };
-        copySelection.Click += (_, _) => Copy();
-        var copyLink = new MenuItem { Header = CoreTools.Translate("Copy link") };
-        copyLink.Click += async (_, _) => await CopyUrlToClipboardAsync();
-
-        var flyout = new MenuFlyout();
-        flyout.Items.Add(copySelection);
-        flyout.Items.Add(copyLink);
-        flyout.Opening += (_, _) => copySelection.IsEnabled = CanCopy;
-        return flyout;
     }
 }
 

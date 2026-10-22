@@ -2,10 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
-using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Media;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Views.Controls;
@@ -45,37 +42,26 @@ public sealed class HyperlinkTextTests
 
         Assert.Equal(0, activations());
         Assert.False(string.IsNullOrEmpty(link.SelectedText));
+        Assert.NotNull(link.SelectionBrush);
         if (clicks == 3)
             Assert.Equal(LongUrl, link.SelectedText);
         window.Close();
     }, CancellationToken.None);
 
     [Fact]
-    public Task CopyLinkCopiesTheWholeUrlEvenWhenTheTextIsTrimmed() => _session.Dispatch(() =>
+    public Task DragSelectsTextWithoutActivatingTheLink() => _session.Dispatch(() =>
     {
-        var (window, link, activations) = ShowLink(width: 120);
-        Assert.True(link.TextLayout.TextLines.Single().HasCollapsed);
+        var (window, link, activations) = ShowLink();
 
-        MenuItem copyLink = Assert.IsType<MenuFlyout>(link.ContextFlyout).Items.OfType<MenuItem>()
-            .Single(item => (string?)item.Header == "Copy link");
-        copyLink.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
+        window.MouseDown(link.TranslatePoint(new Point(5, link.Bounds.Height / 2), window)!.Value, MouseButton.Left);
+        Point end = link.TranslatePoint(new Point(200, link.Bounds.Height / 2), window)!.Value;
+        window.MouseMove(end, RawInputModifiers.LeftMouseButton);
+        window.MouseUp(end, MouseButton.Left);
+        RunDispatcherPastDoubleClickTime();
 
-        Assert.Equal(LongUrl, RunDispatcherUntilDone(window.Clipboard!.TryGetTextAsync()));
+        Assert.False(string.IsNullOrEmpty(link.SelectedText));
+        Assert.NotNull(link.SelectionBrush);
         Assert.Equal(0, activations());
-        window.Close();
-    }, CancellationToken.None);
-
-    [Fact]
-    public Task LinkWithoutUrlOffersNoCopyLinkMenu() => _session.Dispatch(() =>
-    {
-        var (window, link, _) = ShowLink();
-
-        link.Url = null;
-        Assert.Null(link.ContextFlyout);
-
-        link.Url = LongUrl;
-        Assert.IsType<MenuFlyout>(link.ContextFlyout);
         window.Close();
     }, CancellationToken.None);
 
@@ -87,8 +73,6 @@ public sealed class HyperlinkTextTests
         var link = new HyperlinkText
         {
             Text = LongUrl,
-            Url = LongUrl,
-            Background = Brushes.Transparent,
             VerticalAlignment = VerticalAlignment.Top,
         };
         int activations = 0;
@@ -115,13 +99,5 @@ public sealed class HyperlinkTextTests
         var frame = new DispatcherFrame();
         DispatcherTimer.RunOnce(() => frame.Continue = false, doubleClickTime + TimeSpan.FromMilliseconds(300));
         Dispatcher.UIThread.PushFrame(frame);
-    }
-
-    private static T RunDispatcherUntilDone<T>(Task<T> task)
-    {
-        var frame = new DispatcherFrame();
-        task.ContinueWith(_ => Dispatcher.UIThread.Post(() => frame.Continue = false), TaskScheduler.Default);
-        Dispatcher.UIThread.PushFrame(frame);
-        return task.Result;
     }
 }

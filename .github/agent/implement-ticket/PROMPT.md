@@ -134,7 +134,9 @@ update, or remove packages unless the ticket can't be shown otherwise.
    `dotnet format style src/UniGetUI.Windows.slnx --no-restore`); each takes about two
    minutes, so don't run them after every edit, and don't run a `--verify-no-changes`
    pass right after applying them. If the formatters changed files, rebuild before
-   finishing.
+   finishing. Don't run `dotnet publish`: the pull request's CI checks the NativeAOT
+   build, a publish takes about three minutes, and its Release restore breaks the next
+   Debug build. Follow the NativeAOT rules in `AGENTS.md` when writing the code instead.
 
 ## Finish
 

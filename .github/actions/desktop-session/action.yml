@@ -10,7 +10,7 @@ inputs:
     description: IronRDP commit providing ironrdp-agent and the testing/agentic-rdp harness
     # IronRDP master at the merge of https://github.com/Devolutions/IronRDP/pull/2189, which
     # hardened the harness. Pinned so the built agent can be cached by commit; changing it
-    # rebuilds ironrdp-agent once (about 5 minutes).
+    # rebuilds ironrdp-agent once (about 9 minutes).
     default: 75ee516f34562516bd400dbf6e2ef93de0521f22
   desktop-size:
     description: RDP desktop size, as WxH
@@ -79,12 +79,9 @@ runs:
         path: ${{ runner.temp }}/ironrdp/target/release/ironrdp-agent.exe
         key: ironrdp-agent-${{ runner.os }}-${{ inputs.ironrdp-ref }}
 
-    - name: Rust cache
-      if: steps.agent-cache.outputs.cache-hit != 'true'
-      uses: Swatinem/rust-cache@v2.9.1
-      with:
-        workspaces: ${{ runner.temp }}/ironrdp
-
+    # No Rust build cache: it saved about 400 MB per branch, and the repository's 10 GB Actions
+    # cache then evicted this agent and the NuGet packages. A build from scratch is rare
+    # (a new ironrdp-ref, or an evicted agent) and takes about 9 minutes.
     - name: Build ironrdp-agent
       if: steps.agent-cache.outputs.cache-hit != 'true'
       shell: pwsh

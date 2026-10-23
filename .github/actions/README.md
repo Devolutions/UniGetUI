@@ -102,4 +102,4 @@ remoting port and the desktop's Windows session id), `DESKTOP_SESSION_SIZE` and
 - UniGetUI's dialogs are drawn inside its main window, not as separate windows. UI Automation
   exposes the open dialog's title as the element with AutomationId `ModalTitle`. Escape closes it.
 - IronRDP is pinned through the `ironrdp-ref` input of `desktop-session`. Changing it rebuilds
-  and recaches `ironrdp-agent`, which takes about 5 minutes. A cache hit restores it in seconds.
+  and recaches `ironrdp-agent`, which takes about 9 minutes. A cache hit restores it in seconds.

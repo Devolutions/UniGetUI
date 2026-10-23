@@ -334,7 +334,16 @@ jobs:
           }
 
           Get-Content -Path (Join-Path $request 'ticket.md') | Write-Host
+          # NuGet's package and HTTP caches default to C:, the runner's slow OS disk; restores
+          # are much faster on D:, where RUNNER_TEMP and the checkout are. Nothing is cached
+          # between runs: every run restores from scratch.
+          $nugetPackages = Join-Path $env:RUNNER_TEMP 'nuget\packages'
+          $nugetHttpCache = Join-Path $env:RUNNER_TEMP 'nuget\http-cache'
+          New-Item -Path $nugetPackages, $nugetHttpCache -ItemType Directory -Force | Out-Null
+
           @(
+            "NUGET_PACKAGES=$nugetPackages"
+            "NUGET_HTTP_CACHE_PATH=$nugetHttpCache"
             "AGENT_DIR=$agentDir"
             "AGENT_TICKET=$(Join-Path $request 'ticket.md')"
             "AGENT_SPEC=$(Join-Path $request 'spec.md')"
@@ -345,23 +354,13 @@ jobs:
           ) | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
 
           # Keep workflow scaffolding in the workspace out of the agent's patch.
-          @('/artifacts/', '/.nuget/', '/unigetui_bin/', '/output/', 'copilot-session-*.md') |
+          @('/artifacts/', '/unigetui_bin/', '/output/', 'copilot-session-*.md') |
             Add-Content -Path '.git/info/exclude' -Encoding utf8
 
       - name: Install .NET
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
-
-      # Same key as build-release.yml, so the build reuses main's packages. Restore only: a
-      # cache saved per agent branch would take another 1-2 GB of the repository's 10 GB.
-      - name: Restore NuGet packages
-        uses: actions/cache/restore@v6
-        with:
-          path: ${{ github.workspace }}/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
 
       - name: Start desktop session
         uses: ./.github/actions/desktop-session
@@ -372,8 +371,6 @@ jobs:
       # a broken base build shows up here rather than as an agent failure.
       - name: Build UniGetUI
         shell: pwsh
-        env:
-          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         run: .\.github\agent\implement-ticket\Start-UniGetUIDev.ps1 -NoLaunch
 
       - name: Install Node.js
@@ -398,7 +395,6 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ github.token }}
           COPILOT_MODEL: ${{ inputs.model || vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'auto' }}
-          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         run: |
           .\.github\agent\Invoke-CopilotAgent.ps1 `
             -Prompt "Read .github/agent/implement-ticket/PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET. Save screenshots in $env:AGENT_SCREENSHOTS, and write the pull request description to the file at $env:AGENT_PR_BODY." `
@@ -410,8 +406,6 @@ jobs:
         id: checks
         if: always() && steps.agent.outcome != 'skipped'
         shell: pwsh
-        env:
-          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         run: |
           .\.github\agent\implement-ticket\Test-AgentChange.ps1 -BaseSha $env:AGENT_BASE_SHA -OutputDir (Join-Path $env:AGENT_DIR 'out')
 
@@ -465,7 +459,6 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ github.token }}
           COPILOT_MODEL: ${{ inputs.model || vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'auto' }}
-          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         run: |
           $fixDir = Join-Path $env:AGENT_DIR 'out\fix'
           $env:AGENT_FIX_REQUEST = Join-Path $fixDir 'fix-request.md'
@@ -481,8 +474,6 @@ jobs:
         id: checks-after-fix
         if: always() && steps.fix.outcome != 'skipped'
         shell: pwsh
-        env:
-          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         run: |
           $out = Join-Path $env:AGENT_DIR 'out'
           $before = Join-Path $out 'before-fix'

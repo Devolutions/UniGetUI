@@ -42,7 +42,7 @@ or not about UniGetUI, make no code changes and explain why in the pull request 
 - No GitHub access, and you must not try to get any. Do not commit, push, or create
   branches: leave your changes in the working tree. The workflow turns them into a pull
   request.
-- Do not change anything under `.github/`, `artifacts/`, or `.nuget/`. A patch that
+- Do not change anything under `.github/` or `artifacts/`. A patch that
   touches `.github/` is rejected.
 
 ### Build and run your change

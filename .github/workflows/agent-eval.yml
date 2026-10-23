@@ -7,11 +7,6 @@ name: Agent - Eval
 # models or the Avalonia docs MCP by running it before and after.
 
 on:
-  # TEMPORARY: runs case 5561 when this file changes on the branch that adds it, since a new
-  # workflow can only be dispatched once it is on the default branch. Remove before merging.
-  push:
-    branches: [claude/ai-factory-workflow-analysis-f8a3d5]
-    paths: [.github/workflows/agent-eval.yml]
   workflow_dispatch:
     inputs:
       cases:
@@ -48,7 +43,7 @@ jobs:
         id: pick
         shell: pwsh
         env:
-          CASE_IDS: ${{ inputs.cases || (github.event_name == 'push' && '5561') || '' }}
+          CASE_IDS: ${{ inputs.cases }}
         run: |
           $wanted = @($env:CASE_IDS -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
           $cases = @(Get-Content -LiteralPath .github/agent/eval/cases.json -Raw | ConvertFrom-Json |
@@ -108,7 +103,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          CASE_IDS: ${{ inputs.cases || (github.event_name == 'push' && '5561') || '' }}
+          CASE_IDS: ${{ inputs.cases }}
         run: |
           ./.github/agent/eval/Measure-AgentEval.ps1 `
             -CasesPath .github/agent/eval/cases.json `

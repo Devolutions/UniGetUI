@@ -95,9 +95,14 @@ try {
             Sort-Object { $_.Dir.Length } -Descending | Select-Object -First 1
         if ($owner) { [void] $changedProjects.Add($owner.Path) }
     }
+    # The TUI tests take about five minutes and their test host sometimes crashes on the desktop
+    # runner, so they run here only when the TUI itself changed.
+    $onlyWhenChanged = @{ 'UniGetUI.Tui.Tests' = 'src/UniGetUI.Tui/' }
     $testProjects = @($projects.Values | Where-Object {
-            [System.IO.Path]::GetFileNameWithoutExtension($_.Path) -like '*.Tests' -and
-            ($changedProjects.Contains($_.Path) -or @($_.References | Where-Object { $changedProjects.Contains($_) }).Count -gt 0)
+            $name = [System.IO.Path]::GetFileNameWithoutExtension($_.Path)
+            $name -like '*.Tests' -and
+            ($changedProjects.Contains($_.Path) -or @($_.References | Where-Object { $changedProjects.Contains($_) }).Count -gt 0) -and
+            (-not $onlyWhenChanged.ContainsKey($name) -or @($changed | Where-Object { $_.StartsWith($onlyWhenChanged[$name]) }).Count -gt 0)
         } | ForEach-Object { $_.Path } | Sort-Object)
     if ($testProjects.Count -eq 0) {
         Add-Result 'tests' 'skipped' 'no test project covers the changed projects'

@@ -1156,9 +1156,10 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     // Pages that load on start (Updates, Installed) show their empty state as a result. When the last load ran
     // with no manager ready, nothing was checked, so that state would describe a result that does not exist.
-    // A manager enabled since then is only taken into account by the next load.
+    // Like the list itself, it describes the last load: a manager enabled or disabled since then counts from the
+    // next load, which ReloadIfManagerBecameReady starts when one becomes ready.
     private bool _lastLoadHadNoManagerReady;
-    private bool IsWithoutReadyManager => LoadsOnStart && (_lastLoadHadNoManagerReady || !Loader.AnyManagerReady);
+    private bool IsWithoutReadyManager => LoadsOnStart && _lastLoadHadNoManagerReady;
 
     [RelayCommand]
     private void OpenManagerSettings()

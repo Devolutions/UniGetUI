@@ -83,6 +83,12 @@ namespace UniGetUI.PackageEngine.PackageLoader
         private int LoadOperationIdentifier;
         protected IReadOnlyList<IPackageManager> Managers { get; private set; }
 
+        /// <summary>
+        /// True when at least one of this loader's managers is ready. When none is, a reload runs nothing
+        /// and an empty list says nothing about the packages on this device.
+        /// </summary>
+        public bool AnyManagerReady => Managers.Any(manager => manager.IsReady());
+
         public AbstractPackageLoader(
             IReadOnlyList<IPackageManager> managers,
             string identifier,

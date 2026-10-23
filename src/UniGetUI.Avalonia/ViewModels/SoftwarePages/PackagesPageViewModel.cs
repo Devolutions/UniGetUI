@@ -14,6 +14,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -217,6 +218,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     public Bitmap? LoadingImage => _loadingImage.Value;
     [ObservableProperty] private Bitmap? _noPackagesImage;
     [ObservableProperty] private bool _noPackagesImageVisible;
+    [ObservableProperty] private bool _noManagerReadyVisible;
     [ObservableProperty] private string _backgroundText = "";
     [ObservableProperty] private bool _sourcesPlaceholderVisible = true;
     [ObservableProperty] private bool _sourcesTreeVisible;
@@ -557,6 +559,8 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
         IsLoading = Loader.IsLoading;
         _lastLoadTime = DateTime.Now;
+        // Also called from the constructor before any load has run: only a finished load counts
+        _lastLoadHadNoManagerReady = Loader.IsLoaded && !Loader.AnyManagerReady;
         ReloadButtonTooltip = CoreTools.Translate("Last checked: {0}", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
         FilterPackages();
         _iconPreloadCts?.Cancel();
@@ -757,20 +761,26 @@ public partial class PackagesPageViewModel : ViewModelBase
             BackgroundTextVisible = true;
             LoadingImageVisible = _showPackageIllustrations && LoadingImage is not null;
             NoPackagesImageVisible = false;
+            NoManagerReadyVisible = false;
         }
         else if (FilteredPackages.Count == 0)
         {
             bool noQuery = string.IsNullOrWhiteSpace(query);
-            BackgroundText = noQuery ? NoPackagesText : NoMatchesText;
+            bool noManagerReady = noQuery && IsWithoutReadyManager;
+            BackgroundText = noManagerReady
+                ? CoreTools.Translate("No package managers are available")
+                : noQuery ? NoPackagesText : NoMatchesText;
             BackgroundTextVisible = !MegaQueryBoxEnabled || !noQuery || !MegaQueryVisible;
             LoadingImageVisible = false;
-            NoPackagesImageVisible = noQuery && BackgroundTextVisible && NoPackagesImage is not null;
+            NoPackagesImageVisible = noQuery && !noManagerReady && BackgroundTextVisible && NoPackagesImage is not null;
+            NoManagerReadyVisible = noManagerReady && BackgroundTextVisible;
         }
         else
         {
             BackgroundTextVisible = false;
             LoadingImageVisible = false;
             NoPackagesImageVisible = false;
+            NoManagerReadyVisible = false;
         }
     }
 
@@ -1124,6 +1134,10 @@ public partial class PackagesPageViewModel : ViewModelBase
                 matching
             ) + " (" + CoreTools.Translate("{0} selected", selected) + ")", found, matching, selected);
         }
+        else if (IsWithoutReadyManager)
+        {
+            SetSubtitle(CoreTools.Translate("No package managers are available"));
+        }
         else
         {
             SetSubtitle(_noPackagesSubtitleBase);
@@ -1139,6 +1153,30 @@ public partial class PackagesPageViewModel : ViewModelBase
     [RelayCommand] private void RequestHelp() => HelpRequested?.Invoke();
     [RelayCommand] private void RequestManageIgnored() => ManageIgnoredRequested?.Invoke();
     [RelayCommand] private void RequestManageAutoUpdates() => ManageAutoUpdatesRequested?.Invoke();
+
+    // Pages that load on start (Updates, Installed) show their empty state as a result. When the last load ran
+    // with no manager ready, nothing was checked, so that state would describe a result that does not exist.
+    // Like the list itself, it describes the last load: a manager enabled or disabled since then counts from the
+    // next load, which ReloadIfManagerBecameReady starts when one becomes ready.
+    private bool _lastLoadHadNoManagerReady;
+    private bool IsWithoutReadyManager => LoadsOnStart && _lastLoadHadNoManagerReady;
+
+    [RelayCommand]
+    private void OpenManagerSettings()
+    {
+        if (MainWindow.Instance?.DataContext is MainWindowViewModel mainVm)
+            mainVm.OpenManagerSettings();
+    }
+
+    // Enabling a manager in the settings does not reload this page, so it would keep saying that none is
+    // available. Called when a manager finishes initializing and when the page is shown again. Never before
+    // the startup load, which would then be dropped while this one runs and miss the managers still starting.
+    public void ReloadIfManagerBecameReady()
+    {
+        if (LoadsOnStart && _lastLoadHadNoManagerReady && !Loader.IsLoading && !Loader.HasPendingInitialLoad
+            && Loader.AnyManagerReady)
+            _ = LoadPackages(ReloadReason.Automated);
+    }
 
     // ─── Sort commands ────────────────────────────────────────────────────────
     [RelayCommand] private void SortByName() => SortFieldIndex = 0;

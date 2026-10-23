@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
@@ -65,6 +66,7 @@ public partial class PackageManagerViewModel : ViewModelBase
         await Task.Run(Manager.Initialize);
         IsLoading = false;
         RefreshState(showVersion: true);
+        (MainWindow.Instance?.DataContext as MainWindowViewModel)?.ReloadPagesWithoutReadyManager();
     }
 
     [RelayCommand]

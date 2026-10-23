@@ -1100,6 +1100,10 @@
                                        TextWrapping="Wrap"
                                        Text="{Binding BackgroundText}"
                                        IsVisible="{Binding BackgroundTextVisible}"/>
+                            <Button HorizontalAlignment="Center"
+                                    Content="{t:Translate Package manager preferences}"
+                                    Command="{Binding OpenManagerSettingsCommand}"
+                                    IsVisible="{Binding NoManagerReadyVisible}"/>
                         </StackPanel>
                     </Panel>
                 </Grid>

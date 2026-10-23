@@ -257,9 +257,14 @@ internal static class AvaloniaBootstrapper
             CanNavigate = window is not null,
             CanQuit = true,
             CurrentPage = window is null ? "" : IpcAppPages.ToPageName(window.CurrentPage.ToString()),
-            SupportedPages = window is { SoftwareCatalogEnabled: true }
-                ? IpcAppPages.SupportedPages
-                : IpcAppPages.SupportedPages.Where(page => page is not ("catalog" or "catalog-editor")).ToArray(),
+            SupportedPages = IpcAppPages.SupportedPages
+                .Where(page => page switch
+                {
+                    "catalog" => window is { SoftwareCatalogEnabled: true },
+                    "catalog-editor" => window is { CatalogEditorEnabled: true },
+                    _ => true,
+                })
+                .ToArray(),
             SystemRestartPending = PendingRebootStore.HasPending,
             SystemRestartPendingPackages = PendingRebootStore.PendingCount,
         };
@@ -298,6 +303,8 @@ internal static class AvaloniaBootstrapper
             case "catalog-editor":
                 if (!window.SoftwareCatalogEnabled)
                     throw new InvalidOperationException("Software Catalog is disabled. Enable it in Experimental settings and developer options, then restart UniGetUI.");
+                if (page == "catalog-editor" && !window.CatalogEditorEnabled)
+                    throw new InvalidOperationException("Catalog Editor is disabled. Enable it in Experimental settings and developer options, then restart UniGetUI.");
                 window.Navigate(page == "catalog-editor" ? PageType.CatalogEditor : PageType.Catalog);
                 break;
             case "settings":

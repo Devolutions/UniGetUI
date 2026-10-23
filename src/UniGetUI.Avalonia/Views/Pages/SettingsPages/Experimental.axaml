@@ -84,8 +84,15 @@
             <settings:CheckboxCard x:Name="SoftwareCatalogCard" SettingName="EnableSoftwareCatalog"
                                    Text="{t:Translate Enable Software Catalog}"
                                    WarningText="{t:Translate Requires a machine-wide SoftwareCatalog.json file and an application restart.}"
+                                   StateChangedCommand="{Binding SoftwareCatalogChangedCommand}"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:CheckboxCard x:Name="CatalogEditorCard" SettingName="EnableCatalogEditor"
+                                   Text="{t:Translate Enable the Catalog Editor}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
-                                   CornerRadius="8"/>
+                                   IsEnabled="{Binding IsSoftwareCatalogEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"/>
 
         </StackPanel>
     </ScrollViewer>

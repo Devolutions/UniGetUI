@@ -6,7 +6,7 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class NavigationPageOrder
 {
     public static PageType[] DefaultPages(bool catalogEnabled) => catalogEnabled
-        ? [PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles, PageType.CatalogEditor]
+        ? [PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles]
         : [PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles];
 
     public static PageType[] Get(bool catalogEnabled)

@@ -222,6 +222,18 @@ public class CatalogEditorTests : IDisposable
     }
 
     [Fact]
+    public async Task TheEditorStartsOnAnUntitledDocumentInsteadOfTheDeployedCatalog()
+    {
+        var vm = new CatalogEditorViewModel();
+        Assert.True(await vm.EnsureLoadedAsync());
+        Assert.True(vm.CanEdit);
+        Assert.Empty(vm.Catalogs);
+        Assert.Null(vm.SelectedCatalog);
+        Assert.False(vm.IsDirty);
+        Assert.Equal("", vm.FilePath);
+    }
+
+    [Fact]
     public async Task MissingCatalogFileStartsAnEmptyEditableDocumentThatSavesThere()
     {
         string missing = Path.Combine(_directory, "not-deployed-yet.json");

@@ -262,6 +262,22 @@
                               Path="{Binding PageIconPath}"/>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                <!-- Link back to the page this one belongs to, e.g. the Catalog Editor's Software Catalog -->
+                <Button Classes="filter-hyperlink"
+                        IsVisible="{Binding HasParentPage}"
+                        Command="{Binding GoToParentPageCommand}"
+                        HorizontalAlignment="Left"
+                        Padding="2,1"
+                        Margin="-3,0,0,0"
+                        ToolTip.Tip="{Binding ParentPageLinkName}"
+                        automation:AutomationProperties.Name="{Binding ParentPageLinkName}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/backward.svg"
+                                          Width="12" Height="12" VerticalAlignment="Center"
+                                          automation:AutomationProperties.AccessibilityView="Raw"/>
+                        <TextBlock Text="{Binding ParentPageTitle}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
                 <TextBlock x:Name="MainTitle"
                            MaxHeight="60"
                            HorizontalAlignment="Left"

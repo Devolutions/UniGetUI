@@ -194,6 +194,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     public PageType CurrentPage => ViewModel.CurrentPage_t;
     public bool SoftwareCatalogEnabled => ViewModel.Sidebar.SoftwareCatalogEnabled;
+    public bool CatalogEditorEnabled => ViewModel.Sidebar.CatalogEditorEnabled;
 
     public MainWindow()
     {

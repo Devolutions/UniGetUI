@@ -13,6 +13,10 @@ public partial class SidebarViewModel : ViewModelBase
 {
     public bool SoftwareCatalogEnabled { get; } = Settings.Get(Settings.K.EnableSoftwareCatalog);
 
+    // An administrator tool, opened from the catalog page rather than the sidebar; off unless asked for.
+    public bool CatalogEditorEnabled { get; } =
+        Settings.Get(Settings.K.EnableSoftwareCatalog) && Settings.Get(Settings.K.EnableCatalogEditor);
+
     // Only a catalog with packages to offer becomes the startup page; an unset or broken one would
     // open the app on an empty page. Checked once at startup, like the setting itself.
     public bool HasUsableCatalog { get; } =

@@ -168,6 +168,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         OnPropertyChanged(nameof(BackgroundText));
         OnPropertyChanged(nameof(HasBackgroundText));
         OnPropertyChanged(nameof(HasBackgroundDetail));
+        OnPropertyChanged(nameof(ShowCreateCatalog));
     }
 
     private bool IsSelectedByFilters(CatalogTileViewModel tile) =>
@@ -267,22 +268,21 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 value, global::Avalonia.Automation.AutomationLiveSetting.Assertive);
     }
 
+    // Administrators who enabled the Catalog Editor can start a catalog from here; everyone else only installs.
+    public bool IsEditorEnabled { get; } =
+        Settings.Get(Settings.K.EnableSoftwareCatalog) && Settings.Get(Settings.K.EnableCatalogEditor);
+
+    // On a device with no catalog yet, the empty page offers to create one.
+    public bool ShowCreateCatalog => IsEditorEnabled && _notConfigured && IsEmpty;
+
     [RelayCommand]
-    private async Task EditAsync()
+    private void OpenEditor() => MainWindow.Instance?.Navigate(PageType.CatalogEditor);
+
+    [RelayCommand]
+    private async Task NewCatalogAsync()
     {
-        try
-        {
-            var owner = MainWindow.Instance
-                ?? throw new InvalidOperationException("The catalog editor requires an application window.");
-            owner.Navigate(PageType.CatalogEditor);
-            await Task.CompletedTask;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Could not open the software catalog editor.");
-            Logger.Error(ex);
-            ErrorMessage = CoreTools.Translate("The catalog editor could not be opened: {0}", ex.Message);
-        }
+        if (MainWindow.Instance?.DataContext is MainWindowViewModel main)
+            await main.StartNewCatalogAsync();
     }
 
     private bool _waitingForManagers;

@@ -46,7 +46,7 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         StartupPageSelector.AddItem(CoreTools.Translate("Software Updates"), "updates");
         StartupPageSelector.AddItem(CoreTools.Translate("Installed Packages"), "installed");
         StartupPageSelector.AddItem(CoreTools.Translate("Package Bundles"), "bundles");
-        if (catalogEnabled)
+        if (catalogEnabled && CoreSettings.Get(CoreSettings.K.EnableCatalogEditor))
             StartupPageSelector.AddItem(CoreTools.Translate("Catalog Editor"), "catalog-editor");
         StartupPageSelector.AddItem(CoreTools.Translate("Settings"), "settings");
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;

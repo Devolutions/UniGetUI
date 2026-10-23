@@ -327,12 +327,6 @@ public sealed class SoftwareCatalogTests : IDisposable
     }
 
     [Fact]
-    public void EditUsesAnAsynchronousInAppEditorCommand()
-    {
-        Assert.IsAssignableFrom<CommunityToolkit.Mvvm.Input.IAsyncRelayCommand>(new SoftwareCatalogViewModel().EditCommand);
-    }
-
-    [Fact]
     public void CatalogFileLivesInTheGlobalDirectory()
     {
         Assert.Equal(Path.Combine(CoreData.UniGetUIGlobalDirectory, "SoftwareCatalog.json"), SoftwareCatalog.FilePath);
@@ -694,7 +688,7 @@ public sealed class SoftwareCatalogTests : IDisposable
     {
         Assert.Equal(
             [PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles,
-                PageType.CatalogEditor, PageType.Settings, PageType.Managers],
+                PageType.Settings, PageType.Managers],
             MainWindowViewModel.GetShortcutPages(NavigationPageOrder.DefaultPages(true)));
         Assert.Equal(
             [PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles, PageType.Settings, PageType.Managers],
@@ -722,9 +716,11 @@ public sealed class SoftwareCatalogTests : IDisposable
     }
 
     [Theory]
-    [InlineData("", true, new[] { PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles, PageType.CatalogEditor })]
+    [InlineData("", true, new[] { PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles })]
     [InlineData("", false, new[] { PageType.Discover, PageType.Updates, PageType.Installed, PageType.Bundles })]
-    [InlineData("Updates,Installed", true, new[] { PageType.Updates, PageType.Installed, PageType.Catalog, PageType.Discover, PageType.Bundles, PageType.CatalogEditor })]
+    [InlineData("Updates,Installed", true, new[] { PageType.Updates, PageType.Installed, PageType.Catalog, PageType.Discover, PageType.Bundles })]
+    // The Catalog Editor opens from the catalog page, so an order saved with it in the sidebar drops it.
+    [InlineData("CatalogEditor,Bundles,Catalog", true, new[] { PageType.Bundles, PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed })]
     [InlineData("CatalogEditor,Bundles,Catalog,Discover", false, new[] { PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed })]
     [InlineData(" Bundles , Bogus,Settings,Bundles,,OwnLog,Null", false, new[] { PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed })]
     public void StoredNavigationOrderResolvesToEveryVisiblePageOnce(string stored, bool catalogEnabled, PageType[] expected)
@@ -733,11 +729,11 @@ public sealed class SoftwareCatalogTests : IDisposable
     [Fact]
     public void ReorderingWithTheCatalogHiddenKeepsTheCatalogPagesInPlace()
     {
-        var full = NavigationPageOrder.Resolve("Discover,Catalog,Updates,CatalogEditor,Installed,Bundles", true);
+        var full = NavigationPageOrder.Resolve("Discover,Catalog,Updates,Installed,Bundles", true);
         var merged = NavigationPageOrder.Merge(full, [PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed]);
 
         Assert.Equal(
-            [PageType.Bundles, PageType.Catalog, PageType.Discover, PageType.CatalogEditor, PageType.Updates, PageType.Installed],
+            [PageType.Bundles, PageType.Catalog, PageType.Discover, PageType.Updates, PageType.Installed],
             merged);
         Assert.Equal(
             [PageType.Bundles, PageType.Discover, PageType.Updates, PageType.Installed],
@@ -749,7 +745,7 @@ public sealed class SoftwareCatalogTests : IDisposable
     {
         Assert.Equal("", NavigationPageOrder.Serialize(NavigationPageOrder.DefaultPages(true)));
         Assert.Equal(
-            "Discover,Catalog,Updates,Installed,Bundles,CatalogEditor",
+            "Discover,Catalog,Updates,Installed,Bundles",
             NavigationPageOrder.Serialize(NavigationPageOrder.Resolve("Discover", true)));
     }
 

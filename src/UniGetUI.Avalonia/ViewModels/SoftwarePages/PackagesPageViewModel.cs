@@ -154,7 +154,8 @@ public partial class PackagesPageViewModel : ViewModelBase
     public bool SimilarSearchEnabled { get; private set; }
     public bool InstallerHostColumnVisible { get; }
     public bool DownloadSizeColumnVisible { get; }
-    public readonly string NoPackagesText;
+    // Settable so a page can say why it is empty; takes effect on the next list update.
+    public string NoPackagesText { get; set; }
     public readonly string NoMatchesText;
     public readonly string SearchBoxPlaceholder;
     private readonly string _noPackagesSubtitleBase;
@@ -169,6 +170,19 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private string _pageTitle = "";
     [ObservableProperty] private string _pageIconPath = "";
     [ObservableProperty] private string _subtitle = "";
+
+    // A page opened from another one (the Catalog Editor from the Software Catalog) links back to it above its title.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasParentPage))]
+    [NotifyPropertyChangedFor(nameof(ParentPageLinkName))]
+    private string _parentPageTitle = "";
+
+    public bool HasParentPage => ParentPageTitle.Length > 0;
+    public string ParentPageLinkName => CoreTools.Translate("Back to {0}", ParentPageTitle);
+    public Action? ParentPageRequested { get; set; }
+
+    [RelayCommand]
+    private void GoToParentPage() => ParentPageRequested?.Invoke();
 
     // Shown after the subtitle in a secondary tone: when the list was last checked, then the page suffix.
     [ObservableProperty] private string _subtitleDetail = "";

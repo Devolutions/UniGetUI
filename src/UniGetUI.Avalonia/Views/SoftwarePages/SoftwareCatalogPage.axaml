@@ -217,6 +217,17 @@
                         <TextBlock Text="{t:Translate Reload}" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
+                <!-- Opens the Catalog Editor as it was left; the deployed catalog is never opened from here -->
+                <Button Command="{Binding OpenEditorCommand}" IsVisible="{Binding IsEditorEnabled}"
+                        Height="40" Padding="10,4" CornerRadius="4"
+                        ToolTip.Tip="{t:Translate Catalog Editor}"
+                        automation:AutomationProperties.Name="{t:Translate Catalog Editor}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/catalog_add.svg"
+                                          Width="20" Height="20" VerticalAlignment="Center"/>
+                        <TextBlock Text="{t:Translate Catalog Editor}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Grid>
         <ProgressBar Grid.Row="2" Margin="0,4,0,8" IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3"/>
@@ -572,6 +583,9 @@
                                          TextAlignment="Center" TextWrapping="Wrap"
                                          Text="{Binding BackgroundDetail}"
                                          IsVisible="{Binding HasBackgroundDetail}"/>
+                    <Button Classes="accent" HorizontalAlignment="Center" Margin="0,8,0,0" Padding="16,6"
+                            Command="{Binding NewCatalogCommand}" IsVisible="{Binding ShowCreateCatalog}"
+                            Content="{t:Translate Create a catalog}"/>
                 </StackPanel>
             </Panel>
         </Grid>

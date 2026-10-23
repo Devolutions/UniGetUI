@@ -433,7 +433,7 @@ public partial class MainWindowViewModel : ViewModelBase
         RegisterBannerToast(TelemetryWarner);
         RegisterBannerToast(PortableImportBanner);
 
-        CatalogEditor = Sidebar.SoftwareCatalogEnabled ? new CatalogEditorViewModel() : null;
+        CatalogEditor = Sidebar.CatalogEditorEnabled ? new CatalogEditorViewModel() : null;
         DiscoverPage = new DiscoverSoftwarePage(CatalogEditor);
         UpdatesPage = new SoftwareUpdatesPage();
         InstalledPage = new InstalledPackagesPage();
@@ -669,7 +669,7 @@ public partial class MainWindowViewModel : ViewModelBase
             "installed" => PageType.Installed,
             "bundles" => PageType.Bundles,
             "catalog" when Sidebar.SoftwareCatalogEnabled => PageType.Catalog,
-            "catalog-editor" when Sidebar.SoftwareCatalogEnabled => PageType.CatalogEditor,
+            "catalog-editor" when Sidebar.CatalogEditorEnabled => PageType.CatalogEditor,
             "settings" => PageType.Settings,
             // A usable admin-curated catalog is the simplest starting point, so it wins over the default pages.
             _ when Sidebar.HasUsableCatalog => PageType.Catalog,
@@ -740,6 +740,15 @@ public partial class MainWindowViewModel : ViewModelBase
             MainWindow.Instance?.ShowBanner(
                 CoreTools.Translate("Software Catalog is disabled"),
                 CoreTools.Translate("Enable Software Catalog in Experimental settings and developer options, then restart UniGetUI."),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return false;
+        }
+        if (newPage_t is PageType.CatalogEditor && !Sidebar.CatalogEditorEnabled)
+        {
+            Logger.Warn("Catalog Editor navigation was rejected because the editor is disabled.");
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Catalog Editor is disabled"),
+                CoreTools.Translate("Enable the Catalog Editor in Experimental settings and developer options, then restart UniGetUI."),
                 MainWindow.RuntimeNotificationLevel.Error);
             return false;
         }
@@ -839,6 +848,13 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.ReleaseNotes => CoreTools.Translate("Release notes"),
         _ => CoreTools.Translate("UniGetUI"),
     };
+
+    /// <summary>Opens the Catalog Editor on a new catalog file, for the Software Catalog's New catalog actions.</summary>
+    public async Task StartNewCatalogAsync()
+    {
+        if (!await NavigateToAsync(PageType.CatalogEditor)) return;
+        if (_catalogEditorPage is { } editor) await editor.StartNewCatalogAsync();
+    }
 
     public void NavigateBack() => _ = NavigateBackAsync();
 

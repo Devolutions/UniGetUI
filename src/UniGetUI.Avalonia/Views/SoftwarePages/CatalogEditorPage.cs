@@ -44,7 +44,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         {
             PageName = "SoftwarePages.CatalogEditorPage",
             PageTitle = CoreTools.Translate("Catalog Editor"),
-            IconName = "package_managers",
+            IconName = "catalog_add",
             PageRole = OperationType.Install,
             Loader = loader,
             DisableAutomaticPackageLoadOnStart = true,
@@ -64,6 +64,13 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     {
         _document = document;
         _loader = loader;
+
+        // The editor belongs to the Software Catalog, whichever way it was opened.
+        ViewModel.ParentPageTitle = CoreTools.Translate("Software Catalog");
+        ViewModel.ParentPageRequested = () =>
+        {
+            if (GetMainWindow()?.DataContext is MainWindowViewModel main) main.NavigateTo(PageType.Catalog);
+        };
 
         document.PropertyChanged += DocumentChanged;
         document.ErrorRaised += message => Dispatcher.UIThread.Post(() =>
@@ -148,6 +155,9 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         _observedCatalog?.Packages.CollectionChanged -= PackagesChanged;
         _observedCatalog = _document.SelectedCatalog;
         _observedCatalog?.Packages.CollectionChanged += PackagesChanged;
+        ViewModel.NoPackagesText = _observedCatalog is null
+            ? CoreTools.Translate("Create a new catalog or open a catalog file")
+            : CoreTools.Translate("This catalog contains no packages.");
         _loader.Replace(_observedCatalog?.Packages ?? []);
     }
 
@@ -349,6 +359,13 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         return dialog.Result is true;
     }
 
+    /// <summary>Starts a new catalog file, as New file does, once the document has loaded.</summary>
+    public async Task StartNewCatalogAsync()
+    {
+        await _document.EnsureLoadedAsync();
+        await NewAsync();
+    }
+
     private async Task NewAsync()
     {
         if (_document.IsBusy || _pickingFile) return;
@@ -374,11 +391,17 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         SyncStatus();
         try
         {
-            var files = await MainWindow.Instance!.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            var storage = MainWindow.Instance!.StorageProvider;
+            string deployedFolder = Path.GetDirectoryName(SoftwareCatalog.FilePath)!;
+            var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = CoreTools.Translate("Open catalog file"),
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("JSON") { Patterns = ["*.json"] }],
+                // Start where the deployed catalog lives, so opening it is one click away.
+                SuggestedStartLocation = Directory.Exists(deployedFolder)
+                    ? await storage.TryGetFolderFromPathAsync(deployedFolder)
+                    : null,
             });
             if (files.Count > 0)
                 await _document.LoadAsync(files[0].TryGetLocalPath()
@@ -398,9 +421,15 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             string path = _document.FilePath;
             if (saveAs || string.IsNullOrEmpty(path))
             {
-                var file = await MainWindow.Instance!.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                var storage = MainWindow.Instance!.StorageProvider;
+                string deployedFolder = Path.GetDirectoryName(SoftwareCatalog.FilePath)!;
+                var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
                     Title = CoreTools.Translate("Save catalog as"),
+                    // An untitled catalog starts where it would be deployed.
+                    SuggestedStartLocation = string.IsNullOrEmpty(path) && Directory.Exists(deployedFolder)
+                        ? await storage.TryGetFolderFromPathAsync(deployedFolder)
+                        : null,
                     SuggestedFileName = string.IsNullOrEmpty(path) ? "SoftwareCatalog.json" : Path.GetFileName(path),
                     DefaultExtension = "json",
                     ShowOverwritePrompt = true,

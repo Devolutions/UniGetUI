@@ -55,7 +55,7 @@ public partial class CatalogEditorViewModel : ViewModelBase
     private string _query = "";
 
     [ObservableProperty]
-    private string _filePath = SoftwareCatalog.FilePath;
+    private string _filePath = "";
 
     private string _message = "";
 
@@ -110,14 +110,15 @@ public partial class CatalogEditorViewModel : ViewModelBase
         return _initialLoad ??= LoadOrStartAsync(FilePath);
     }
 
-    // No catalog deployed yet: start an empty document that saves to that path, so a first
-    // catalog can be created there instead of the editor opening disabled.
+    // The editor starts on an untitled, empty document rather than the deployed catalog, so nobody
+    // edits what this device installs from by accident; New catalog or Open file is the first step.
+    // A path set beforehand that does not exist yet also starts empty, and saves there.
     private Task<bool> LoadOrStartAsync(string path)
     {
-        if (!IsMissing(path)) return LoadAsync(path);
+        if (path.Length > 0 && !IsMissing(path)) return LoadAsync(path);
         SelectedCatalog = null;
         Catalogs.Clear();
-        FilePath = Path.GetFullPath(path);
+        FilePath = path.Length > 0 ? Path.GetFullPath(path) : "";
         _savedCatalogs = [];
         IsLoaded = true;
         IsDirty = false;

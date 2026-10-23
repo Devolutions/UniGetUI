@@ -128,7 +128,22 @@ namespace AgentEvidence
 }
 
 New-Item -Path $OutputDir -ItemType Directory -Force | Out-Null
-$screenshots = @(Get-ChildItem -LiteralPath $ScreenshotsDir -Filter '*.png' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike '*-changes.png' })
+
+# Runs again after the fix round: start from the screenshots and description as they are now.
+Get-ChildItem -LiteralPath $ScreenshotsDir -Filter '*-changes.png' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+if ($PullRequestBody -and (Test-Path -LiteralPath $PullRequestBody)) {
+    $kept = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in Get-Content -LiteralPath $PullRequestBody) {
+        if ($line -match '\]\(\s*(\./)?screenshots/[^)\s]+-changes\.png\s*\)') {
+            if ($kept.Count -gt 0 -and [string]::IsNullOrWhiteSpace($kept[$kept.Count - 1])) { $kept.RemoveAt($kept.Count - 1) }
+            continue
+        }
+        $kept.Add($line)
+    }
+    $kept -join "`n" | Set-Content -LiteralPath $PullRequestBody -Encoding utf8NoBOM
+}
+
+$screenshots = @(Get-ChildItem -LiteralPath $ScreenshotsDir -Filter '*.png' -File -ErrorAction SilentlyContinue)
 
 # Crop the taskbar off screenshots of the whole desktop (UniGetUI is maximized above it).
 foreach ($file in $screenshots) {

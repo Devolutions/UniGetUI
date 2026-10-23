@@ -8,8 +8,9 @@ name: Agent - Implement Ticket
 #                  a maintainer to approve with "/agent implement"
 #   implement      the agent implements the ticket and the approved spec; the workflow then
 #                  checks the change itself (build, tests, formatting, translations) and
-#                  outlines what changed between the agent's before/after screenshots
-#   review         a second agent, on a different model, reviews the change
+#                  outlines what changed between the agent's before/after screenshots; a
+#                  second agent, on a different model, reviews it; and a single fix round, on
+#                  the same desktop, fixes the failed checks and the implementable findings
 #   report         reports checks, review and metrics; opens a draft pull request, or pushes
 #                  to the agent pull request it iterates on, and comments on the issue
 #
@@ -279,7 +280,7 @@ jobs:
     needs: resolve
     if: needs.resolve.outputs.proceed == 'true' && needs.resolve.outputs.mode == 'implement'
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     concurrency:
       group: agent-${{ needs.resolve.outputs.pr || needs.resolve.outputs.issue || github.run_id }}-${{ inputs.artifact_prefix }}
       cancel-in-progress: false
@@ -288,7 +289,7 @@ jobs:
       copilot-requests: write
     outputs:
       has-changes: ${{ steps.export.outputs.has-changes }}
-      checks-passed: ${{ steps.checks.outputs.checks-passed }}
+      checks-passed: ${{ steps.checks-after-fix.outputs.checks-passed || steps.checks.outputs.checks-passed }}
       runner-name: ${{ runner.name }}
 
     steps:
@@ -423,6 +424,79 @@ jobs:
             -OutputDir (Join-Path $env:AGENT_DIR 'out') `
             -PullRequestBody $env:AGENT_PR_BODY
 
+      # A second agent, on a different model, reviews the change where it lies, so the fix
+      # round can run on the same desktop. It must not edit the change; if it does, the
+      # implementer's change is put back.
+      - name: Review the change
+        id: review
+        if: always() && steps.agent.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 20
+        shell: pwsh
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+          REVIEW_MODEL_LIST: ${{ inputs.review_model || env.REVIEW_MODELS }}
+        run: |
+          .\.github\agent\implement-ticket\Invoke-AgentReview.ps1 `
+            -BaseSha $env:AGENT_BASE_SHA `
+            -ChangeDir (Join-Path $env:AGENT_DIR 'out') `
+            -OutputDir (Join-Path $env:AGENT_DIR 'out\review') `
+            -Models ($env:REVIEW_MODEL_LIST -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+
+      # One fix round and no more: the failed checks and the review findings marked
+      # implementable (blocker, major, minor). Everything else goes to the human reviewer.
+      - name: Choose what to fix
+        id: select
+        if: always() && steps.agent.outcome == 'success'
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:AGENT_DIR 'out'
+          .\.github\agent\implement-ticket\Select-AgentFixes.ps1 `
+            -ChecksPath (Join-Path $out 'checks.json') `
+            -ReviewPath (Join-Path $out 'review\review.json') `
+            -OutputDir (Join-Path $out 'fix')
+
+      - name: Fix the problems found
+        id: fix
+        if: always() && steps.select.outputs.needs-fix == 'true'
+        continue-on-error: true
+        timeout-minutes: 40
+        shell: pwsh
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_MODEL: ${{ inputs.model || vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'auto' }}
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+        run: |
+          $fixDir = Join-Path $env:AGENT_DIR 'out\fix'
+          $env:AGENT_FIX_REQUEST = Join-Path $fixDir 'fix-request.md'
+          $env:AGENT_FIX_REPORT = Join-Path $fixDir 'fix-report.json'
+          .\.github\agent\Invoke-CopilotAgent.ps1 `
+            -Prompt "Read .github/agent/implement-ticket/FIX_PROMPT.md and follow it. The problems to fix are in the file at $env:AGENT_FIX_REQUEST. Save screenshots in $env:AGENT_SCREENSHOTS, update the pull request description at $env:AGENT_PR_BODY, and write your report to the file at $env:AGENT_FIX_REPORT." `
+            -OutputDir $fixDir `
+            -Models $env:COPILOT_MODEL `
+            -McpConfig (Join-Path $env:GITHUB_WORKSPACE '.github\agent\implement-ticket\mcp-config.json')
+
+      # The report shows both rounds of checks: before-fix holds the first.
+      - name: Check the change after the fixes
+        id: checks-after-fix
+        if: always() && steps.fix.outcome != 'skipped'
+        shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+        run: |
+          $out = Join-Path $env:AGENT_DIR 'out'
+          $before = Join-Path $out 'before-fix'
+          New-Item -Path $before -ItemType Directory -Force | Out-Null
+          foreach ($name in @('checks.json', 'checks.md', 'check-logs', 'evidence.json', 'evidence.md')) {
+            $path = Join-Path $out $name
+            if (Test-Path -LiteralPath $path) { Move-Item -LiteralPath $path -Destination $before }
+          }
+          .\.github\agent\implement-ticket\Test-AgentChange.ps1 -BaseSha $env:AGENT_BASE_SHA -OutputDir $out
+          .\.github\agent\implement-ticket\New-ScreenshotEvidence.ps1 `
+            -ScreenshotsDir $env:AGENT_SCREENSHOTS `
+            -OutputDir $out `
+            -PullRequestBody $env:AGENT_PR_BODY
+
       - name: Collect the change
         id: export
         if: always() && steps.agent.outcome != 'skipped'
@@ -449,107 +523,9 @@ jobs:
         with:
           artifact-name: ${{ inputs.artifact_prefix }}agent-desktop-session
 
-  review:
-    name: Review the change
-    needs: [resolve, implement]
-    if: needs.implement.outputs.has-changes == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      copilot-requests: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.resolve.outputs.base-sha }}
-          persist-credentials: false
-
-      - name: Download the request
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ inputs.artifact_prefix }}agent-request
-          path: ${{ runner.temp }}/request
-
-      - name: Download the change
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ inputs.artifact_prefix }}agent-change
-          path: ${{ runner.temp }}/change
-
-      # The same base as the agent's (this workflow's tooling and any earlier change, committed
-      # locally), then the change staged on top, so "git diff --cached" shows exactly the change.
-      - name: Apply the change
-        shell: pwsh
-        env:
-          WORKFLOW_SHA: ${{ github.workflow_sha }}
-        run: |
-          git fetch --quiet --depth 1 origin $env:WORKFLOW_SHA
-          if ($LASTEXITCODE -ne 0) { throw "Could not fetch $env:WORKFLOW_SHA" }
-          git checkout $env:WORKFLOW_SHA -- .github/agent .github/actions
-          git diff --cached --quiet
-          if ($LASTEXITCODE -ne 0) {
-            git -c user.name=agent-workflow -c user.email=agent-workflow@localhost commit --quiet --message 'Agent workflow tooling'
-          }
-          foreach ($previous in Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'request') -Filter 'previous-*.patch' -File | Sort-Object Name) {
-            git apply --index $previous.FullName
-            if ($LASTEXITCODE -ne 0) { throw "Could not apply the earlier change $($previous.Name)" }
-            git -c user.name=agent-workflow -c user.email=agent-workflow@localhost commit --quiet --message "Earlier agent change ($($previous.Name))"
-          }
-          git apply --index (Join-Path $env:RUNNER_TEMP 'change/change.patch')
-          if ($LASTEXITCODE -ne 0) { throw 'Could not apply the change' }
-
-          $reviewInput = Join-Path $env:RUNNER_TEMP 'review-input'
-          New-Item -Path $reviewInput -ItemType Directory -Force | Out-Null
-          foreach ($file in @('request/ticket.md', 'request/spec.md', 'request/feedback.md', 'change/pr.md', 'change/checks.md', 'change/evidence.md')) {
-            $path = Join-Path $env:RUNNER_TEMP $file
-            if (Test-Path -LiteralPath $path) { Copy-Item -LiteralPath $path -Destination $reviewInput }
-          }
-          $shots = Join-Path $env:RUNNER_TEMP 'change/screenshots'
-          if (Test-Path -LiteralPath $shots) { Copy-Item -LiteralPath $shots -Destination $reviewInput -Recurse }
-
-      - name: Install Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-
-      - name: Install GitHub Copilot CLI
-        shell: pwsh
-        run: |
-          npm install --global --no-fund --no-audit @github/copilot@1.0.96
-          if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
-
-      # A different model from the implementer's: the first one in the list that Copilot offers.
-      - name: Run the review agent
-        shell: pwsh
-        env:
-          COPILOT_GITHUB_TOKEN: ${{ github.token }}
-          REVIEW_MODEL_LIST: ${{ inputs.review_model || env.REVIEW_MODELS }}
-        run: |
-          $out = Join-Path $env:RUNNER_TEMP 'review'
-          $env:AGENT_REVIEW_INPUT = Join-Path $env:RUNNER_TEMP 'review-input'
-          $env:AGENT_REVIEW_OUTPUT = $out
-          $implementer = Get-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'change/metrics.json') -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
-          $avoid = if ($implementer) { @($implementer.models) } else { @() }
-          ./.github/agent/Invoke-CopilotAgent.ps1 `
-            -Prompt 'Read .github/agent/implement-ticket/REVIEW_PROMPT.md and follow it.' `
-            -OutputDir $out `
-            -Models ($env:REVIEW_MODEL_LIST -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) `
-            -AvoidModels $avoid `
-            -McpConfig (Join-Path $env:GITHUB_WORKSPACE '.github/agent/implement-ticket/mcp-config.json')
-          if (-not (Test-Path -LiteralPath (Join-Path $out 'review.md'))) { throw 'The review agent did not write review.md' }
-
-      - name: Upload the review
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ inputs.artifact_prefix }}agent-review
-          path: ${{ runner.temp }}/review
-          if-no-files-found: warn
-
   report:
     name: Report and publish
-    needs: [resolve, implement, review]
+    needs: [resolve, implement]
     if: >-
       always() && needs.resolve.outputs.proceed == 'true' && needs.resolve.outputs.mode == 'implement' &&
       needs.implement.result != 'skipped'
@@ -584,13 +560,6 @@ jobs:
           name: ${{ inputs.artifact_prefix }}agent-change
           path: ${{ runner.temp }}/agent-change
 
-      - name: Download the review
-        if: needs.review.result == 'success'
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ inputs.artifact_prefix }}agent-review
-          path: ${{ runner.temp }}/agent-review
-
       - name: Write the report
         id: report
         shell: pwsh
@@ -601,7 +570,6 @@ jobs:
           Add-Content -Path '.git/info/exclude' -Value '/agent-tools/' -Encoding utf8
           ./agent-tools/.github/agent/implement-ticket/New-AgentReport.ps1 `
             -ChangeDir (Join-Path $env:RUNNER_TEMP 'agent-change') `
-            -ReviewDir (Join-Path $env:RUNNER_TEMP 'agent-review') `
             -OutputDir (Join-Path $env:RUNNER_TEMP 'report') `
             -ImplementRunner $env:IMPLEMENT_RUNNER
 

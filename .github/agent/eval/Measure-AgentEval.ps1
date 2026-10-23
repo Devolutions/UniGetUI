@@ -1,6 +1,6 @@
 # Scores an agent-eval.yml run. Each case replays a merged pull request: the agent gets the
 # problem it solved, starting from the commit before it. For each case this reads the
-# implement run's artifacts (eval-<id>-agent-change, eval-<id>-agent-review) and compares the
+# implement run's artifact (eval-<id>-agent-change, with its review and fix round) and compares the
 # files the agent changed with the files of the human pull request.
 #
 # Writes eval-report.md and eval-report.json to -OutputDir and the report to the job summary.
@@ -37,12 +37,15 @@ New-Item -Path $OutputDir -ItemType Directory -Force | Out-Null
 
 $rows = foreach ($case in $cases) {
     $changeDir = Join-Path $ArtifactsDir "eval-$($case.id)-agent-change"
-    $reviewDir = Join-Path $ArtifactsDir "eval-$($case.id)-agent-review"
+    $reviewDir = Join-Path $changeDir 'review'
     $change = Read-Json (Join-Path $changeDir 'change.json')
     $checks = Read-Json (Join-Path $changeDir 'checks.json')
     $metrics = Read-Json (Join-Path $changeDir 'metrics.json')
     $evidence = Read-Json (Join-Path $changeDir 'evidence.json')
     $review = Read-Json (Join-Path $reviewDir 'review.json')
+    $checksBefore = Read-Json (Join-Path $changeDir 'before-fix/checks.json')
+    $fixRequest = Read-Json (Join-Path $changeDir 'fix/fix-request.json')
+    $fixReport = Read-Json (Join-Path $changeDir 'fix/fix-report.json')
 
     $humanFiles = @(& gh api "repos/$Repository/pulls/$($case.pr)/files" --paginate --jq '.[].filename')
     $agentFiles = @(if ($change) { $change.Files })
@@ -61,6 +64,13 @@ $rows = foreach ($case in $cases) {
         translations = & $checkStatus 'translations'
         review = if ($review) { $review.verdict } else { 'n/a' }
         reviewFindings = if ($review) { @($review.findings).Count } else { $null }
+        failedChecksBeforeFix = if ($checksBefore) { @($checksBefore.checks | Where-Object status -eq 'failed').Count } elseif ($checks) { @($checks.checks | Where-Object status -eq 'failed').Count } else { $null }
+        fixRequested = if ($fixRequest) { @($fixRequest.items).Count } else { 0 }
+        fixed = if ($fixReport -and $fixReport.PSObject.Properties['items']) { @($fixReport.items | Where-Object status -eq 'fixed').Count } else { 0 }
+        unresolvedMajor = if ($review) {
+            $fixedIds = if ($fixReport -and $fixReport.PSObject.Properties['items']) { @($fixReport.items | Where-Object status -eq 'fixed' | ForEach-Object { [string] $_.id }) } else { @() }
+            @($review.findings | Where-Object { ([string] $_.severity) -in @('blocker', 'major') -and $fixedIds -notcontains [string] $_.id }).Count
+        } else { $null }
         agentFiles = $agentFiles.Count
         humanFiles = $humanFiles.Count
         fileOverlap = $overlap
@@ -75,17 +85,17 @@ $rows = foreach ($case in $cases) {
 $rows = @($rows)
 
 $passed = { param($Value) $Value -in @('passed', 'skipped', 'n/a') }
-$score = @($rows | Where-Object { $_.changed -and (& $passed $_.build) -and (& $passed $_.tests) -and (& $passed $_.formatting) -and (& $passed $_.translations) -and $_.review -eq 'approve' }).Count
+$score = @($rows | Where-Object { $_.changed -and (& $passed $_.build) -and (& $passed $_.tests) -and (& $passed $_.formatting) -and (& $passed $_.translations) -and $_.unresolvedMajor -eq 0 }).Count
 
 $markdown = @(
     '## Agent eval'
     ''
-    "$score of $($rows.Count) case(s) produced a change that passed every check and that the reviewer approved."
+    "$score of $($rows.Count) case(s) ended with a change that passed every check and had no blocker or major review finding left unfixed after the fix round."
     ''
-    '| Case | Changed | Build | Tests | Format | Translations | Review | Files (agent / human, overlap) | Screenshots (warnings) | Model | Minutes | AI credits | MCP calls |'
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |'
+    '| Case | Changed | Build | Tests | Format | Translations | Review (findings) | Fix round (fixed / asked; failed checks before) | Files (agent / human, overlap) | Screenshots (warnings) | Model | Minutes | AI credits | MCP calls |'
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |'
     foreach ($row in $rows) {
-        "| [#$($row.pr)](https://github.com/$Repository/pull/$($row.pr)) | $($row.changed) | $($row.build) | $($row.tests) | $($row.formatting) | $($row.translations) | $($row.review) ($($row.reviewFindings)) | $($row.agentFiles) / $($row.humanFiles), $($row.fileOverlap) | $($row.screenshots) ($($row.evidenceWarnings)) | $($row.model) | $($row.minutes) | $($row.aiCredits) | $($row.mcpCalls) |"
+        "| [#$($row.pr)](https://github.com/$Repository/pull/$($row.pr)) | $($row.changed) | $($row.build) | $($row.tests) | $($row.formatting) | $($row.translations) | $($row.review) ($($row.reviewFindings)) | $($row.fixed) / $($row.fixRequested); $($row.failedChecksBeforeFix) | $($row.agentFiles) / $($row.humanFiles), $($row.fileOverlap) | $($row.screenshots) ($($row.evidenceWarnings)) | $($row.model) | $($row.minutes) | $($row.aiCredits) | $($row.mcpCalls) |"
     }
     ''
     'File overlap is the share of files changed by either the agent or the human pull request that both changed (1 is the same set of files).'

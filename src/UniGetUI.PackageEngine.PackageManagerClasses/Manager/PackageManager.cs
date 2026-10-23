@@ -546,6 +546,13 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         /// </summary>
         public bool LastInstalledListingFailed { get; private set; }
 
+        private long _installedPackagesGeneration;
+
+        public long InstalledPackagesGeneration => Volatile.Read(ref _installedPackagesGeneration);
+
+        public void InvalidateInstalledPackages() =>
+            Interlocked.Increment(ref _installedPackagesGeneration);
+
         public IReadOnlyList<IPackage> GetInstalledPackages()
         {
             LastInstalledListingFailed = false;

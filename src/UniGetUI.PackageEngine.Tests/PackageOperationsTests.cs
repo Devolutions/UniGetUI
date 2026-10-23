@@ -545,6 +545,27 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task ASuccessfulOperationInvalidatesTheInstalledPackagesOfItsManager()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateSlowProcessManager(serializesOperations: false);
+        InitializeLoaders();
+        long generationBefore = manager.InstalledPackagesGeneration;
+        using var operation = new UpdatePackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("updated").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        Assert.NotEqual(generationBefore, manager.InstalledPackagesGeneration);
+    }
+
+    [Fact]
     public async Task OperationsOfASerializingManagerNeverRunTheirProcessesConcurrently()
     {
         if (!OperatingSystem.IsWindows())

@@ -475,21 +475,24 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
     private IReadOnlyList<CatalogPackage> GetCachedLocalWinGetPackages(int? cacheSeconds = null)
     {
-        long sourceIndexGeneration = WinGet.SourceIndexGeneration;
+        (long, long) generations = (
+            WinGet.SourceIndexGeneration,
+            Manager.InstalledPackagesGeneration
+        );
 
         return cacheSeconds is null
             ? TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
                 EnumerateLocalWinGetPackages,
-                sourceIndexGeneration
+                generations
             )
             : TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
                 EnumerateLocalWinGetPackages,
-                sourceIndexGeneration,
+                generations,
                 cacheSeconds.Value
             );
     }
 
-    private IReadOnlyList<CatalogPackage> EnumerateLocalWinGetPackages(long sourceIndexGeneration)
+    private IReadOnlyList<CatalogPackage> EnumerateLocalWinGetPackages((long, long) generations)
     {
         return _localPackagesProvider is not null
             ? _localPackagesProvider()

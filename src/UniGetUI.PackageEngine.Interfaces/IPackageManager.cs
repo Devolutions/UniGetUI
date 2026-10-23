@@ -85,6 +85,10 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public IReadOnlyList<IPackage> GetInstalledPackages();
 
+        public long InstalledPackagesGeneration { get; }
+
+        public void InvalidateInstalledPackages();
+
         /// <summary>
         /// Refreshes the Package Manager sources/indexes
         /// Each manager MUST implement this method.

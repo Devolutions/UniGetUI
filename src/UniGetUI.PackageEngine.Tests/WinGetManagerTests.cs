@@ -901,6 +901,31 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void NativeWinGetHelperTakesAFreshSnapshotOnceTheInstalledPackagesAreInvalidated()
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        var manager = new TestableWinGet();
+        int snapshots = 0;
+        var helper = new NativeWinGetHelper(
+            manager,
+            systemCliHelperFactory: null,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+            {
+                snapshots++;
+                return [];
+            }
+        );
+
+        helper.GetInstalledPackages_UnSafe();
+        manager.InvalidateInstalledPackages();
+        helper.GetInstalledPackages_UnSafe();
+        helper.GetAvailableUpdates_UnSafe();
+
+        Assert.Equal(2, snapshots);
+    }
+
+    [Fact]
     public void RefreshPackageIndexesAdvancesTheSourceIndexGenerationWhenTheCliCallFails()
     {
         var manager = new TestableWinGet();

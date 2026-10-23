@@ -852,7 +852,14 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         }
 
         protected sealed override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
-            TaskRecycler<IReadOnlyList<Package>>.RunOrAttach(_getInstalledPackages_UnSafe);
+            TaskRecycler<IReadOnlyList<Package>>.RunOrAttach(
+                ListInstalledPackagesForGeneration,
+                InstalledPackagesGeneration
+            );
+
+        private IReadOnlyList<Package> ListInstalledPackagesForGeneration(
+            long installedPackagesGeneration
+        ) => _getInstalledPackages_UnSafe();
 
         protected abstract IReadOnlyList<Package> _getInstalledPackages_UnSafe();
     }

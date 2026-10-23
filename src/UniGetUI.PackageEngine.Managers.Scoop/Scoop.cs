@@ -440,9 +440,13 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
-            TaskRecycler<IReadOnlyList<Package>>.RunOrAttach(_getInstalledPackages_UnSafe, 15);
+            TaskRecycler<IReadOnlyList<Package>>.RunOrAttach(
+                _getInstalledPackages_UnSafe,
+                InstalledPackagesGeneration,
+                15
+            );
 
-        private IReadOnlyList<Package> _getInstalledPackages_UnSafe()
+        private IReadOnlyList<Package> _getInstalledPackages_UnSafe(long installedPackagesGeneration)
         {
             using Process p = new()
             {

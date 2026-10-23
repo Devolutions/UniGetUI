@@ -137,6 +137,7 @@ namespace UniGetUI.PackageEngine.Operations
                 if (status is OperationStatus.Canceled)
                     Package.SetTag(PackageTag.Default);
             };
+            OperationSucceeded += (_, _) => Package.Manager.InvalidateInstalledPackages();
             OperationSucceeded += (_, _) => RecordPendingRebootState();
             OperationSucceeded += (_, _) => HandleSuccess();
             OperationFailed += (_, _) => HandleFailure();

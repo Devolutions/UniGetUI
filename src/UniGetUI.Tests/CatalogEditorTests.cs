@@ -665,6 +665,8 @@ public class CatalogEditorTests : IDisposable
         public bool IdentifiersAreQuotedOnCommandLine => true;
         public bool LastUpdatesListingFailed => false;
         public bool LastInstalledListingFailed => false;
+        public long InstalledPackagesGeneration => 0;
+        public void InvalidateInstalledPackages() { }
         public int? CompareVersions(string versionA, string versionB) => throw new NotSupportedException();
         public void Initialize() => throw new NotSupportedException();
         public bool IsEnabled() => true;

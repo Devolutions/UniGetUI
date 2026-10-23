@@ -8,10 +8,10 @@ description: >
 inputs:
   ironrdp-ref:
     description: IronRDP commit providing ironrdp-agent and the testing/agentic-rdp harness
-    # IronRDP master at the merge of https://github.com/Devolutions/IronRDP/pull/2189, which
-    # hardened the harness. Pinned so the built agent can be cached by commit; changing it
-    # rebuilds ironrdp-agent once (about 9 minutes).
-    default: 75ee516f34562516bd400dbf6e2ef93de0521f22
+    # IronRDP master at the merge of https://github.com/Devolutions/IronRDP/pull/2209, which
+    # fixed the DVC pipe proxy for the NOW channel. Pinned so the built agent can be cached by
+    # commit; changing it rebuilds ironrdp-agent once (about 9 minutes).
+    default: 10199db3b0aeca629adc02234ffdbb570bb77d43
   desktop-size:
     description: RDP desktop size, as WxH
     default: 1920x1080
@@ -26,8 +26,8 @@ inputs:
   now-channel:
     description: >
       Negotiate the NOW channel with Devolutions Agent right after connecting, and check that a
-      command runs over it (Invoke-DesktopNowCommand). Needs ironrdp-patches/0001 until IronRDP
-      merges that fix; without it, the first NOW message drops the RDP session
+      command runs over it (Invoke-DesktopNowCommand). Needs an ironrdp-ref that includes
+      IronRDP#2209; before it, the first NOW message dropped the RDP session
     default: 'false'
 
 outputs:
@@ -58,7 +58,8 @@ runs:
   steps:
     # Cloned outside the workspace (actions/checkout can only write inside it), so the
     # caller's checkout stays clean for agents, git and tests that scan the repository.
-    # ironrdp-patches holds fixes not yet merged in IronRDP, applied on top of ironrdp-ref.
+    # ironrdp-patches can hold fixes not yet merged in IronRDP, applied on top of ironrdp-ref
+    # (none at the moment).
     - name: Fetch IronRDP
       id: fetch
       shell: pwsh

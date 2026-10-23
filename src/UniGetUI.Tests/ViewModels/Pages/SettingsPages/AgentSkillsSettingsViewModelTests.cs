@@ -10,6 +10,82 @@ namespace UniGetUI.Tests;
 public sealed class AgentSkillsSettingsViewModelTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SkillsShPreference_SaveFailureRestoresPreviousValueWithoutAnotherWriteAndRetryClearsError(bool initiallyEnabled)
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        fixture.Seed();
+        CoreSettings.Set(CoreSettings.K.SkillsShDiscoveryEnabled, initiallyEnabled);
+        var service = fixture.Service(hybrid: true);
+        var vm = new AgentSkillsSettingsViewModel(service);
+        service.AssertNoHydrationWrites();
+        Assert.False(vm.HasSkillsShDiscoveryError);
+        service.SkillsShDiscoveryFailure = initiallyEnabled
+            ? new UnauthorizedAccessException("denied fake save") : new IOException("failed fake save");
+
+        vm.SkillsShDiscoveryEnabled = !initiallyEnabled;
+
+        Assert.Equal(initiallyEnabled, vm.SkillsShDiscoveryEnabled);
+        Assert.Equal(initiallyEnabled, CoreSettings.Get(CoreSettings.K.SkillsShDiscoveryEnabled));
+        Assert.Equal([!initiallyEnabled], service.SkillsShDiscoveryWrites);
+        Assert.True(vm.HasSkillsShDiscoveryError);
+        Assert.Equal("The skills.sh discovery preference could not be saved. Check your settings folder permissions and try again.",
+            vm.SkillsShDiscoveryError);
+        service.SkillsShDiscoveryFailure = null;
+
+        vm.SkillsShDiscoveryEnabled = !initiallyEnabled;
+
+        Assert.Equal(!initiallyEnabled, CoreSettings.Get(CoreSettings.K.SkillsShDiscoveryEnabled));
+        Assert.Equal(!initiallyEnabled, vm.SkillsShDiscoveryEnabled);
+        Assert.Equal([!initiallyEnabled, !initiallyEnabled], service.SkillsShDiscoveryWrites);
+        Assert.False(vm.HasSkillsShDiscoveryError);
+        Assert.Equal("", vm.SkillsShDiscoveryError);
+        AssertOtherPreferences();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SkillsShPreference_HydratesWithoutWritesAndImmediatelyPersistsThroughProductionAdapter(bool? saved)
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        fixture.Seed(["detected-a"], disabled: true);
+        if (saved.HasValue) CoreSettings.Set(CoreSettings.K.SkillsShDiscoveryEnabled, saved.Value);
+        string settingFile = Path.Combine(UniGetUI.Core.Data.CoreData.UniGetUIUserConfigurationDirectory,
+            CoreSettings.ResolveKey(CoreSettings.K.SkillsShDiscoveryEnabled));
+        bool initial = saved ?? false;
+        var before = Snapshot();
+        var service = fixture.Service(hybrid: true);
+
+        var vm = new AgentSkillsSettingsViewModel(service);
+
+        Assert.Equal(initial, vm.SkillsShDiscoveryEnabled);
+        Assert.Equal(initial, File.Exists(settingFile));
+        service.AssertNoHydrationWrites();
+        before.AssertUnchanged();
+        vm.SkillsShDiscoveryEnabled = initial;
+        Assert.Empty(service.SkillsShDiscoveryWrites);
+
+        vm.SkillsShDiscoveryEnabled = !initial;
+        vm.SkillsShDiscoveryEnabled = !initial;
+
+        Assert.Equal([!initial], service.SkillsShDiscoveryWrites);
+        Assert.Equal(!initial, CoreSettings.Get(CoreSettings.K.SkillsShDiscoveryEnabled));
+        Assert.Equal(!initial, File.Exists(settingFile)); // Not merely the adapter's cached bool.
+        var reopenedService = fixture.Service(hybrid: true);
+        var reopened = new AgentSkillsSettingsViewModel(reopenedService);
+        Assert.Equal(!initial, reopened.SkillsShDiscoveryEnabled);
+        reopenedService.AssertNoHydrationWrites();
+        Assert.Equal(["detected-a"], SkillsManager.TargetAgents);
+        Assert.True(Disabled);
+        AssertOtherPreferences();
+        before.AssertUnchanged();
+        Assert.Empty(service.Operations); // Editing discovery must not sign in/install/refresh sources.
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void TargetRow_ExposesMetadataAndNotifiesSelection(bool detected)

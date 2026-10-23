@@ -26,6 +26,8 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
 
     public SkillOperationStatus InstallStatus { get; set; } = SkillOperationStatus.Succeeded;
 
+    public string? InstallOutcomeName { get; set; }
+
     public SkillOperationStatus RemoveStatus { get; set; } = SkillOperationStatus.Succeeded;
 
     public List<string> ListedSources { get; } = [];
@@ -76,7 +78,7 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
             [
                 new SkillInstallOutcome
                 {
-                    Name = skill,
+                    Name = InstallOutcomeName ?? skill,
                     Status = InstallStatus,
                     Error = InstallStatus is SkillOperationStatus.Succeeded ? null : "The install failed",
                     Agents = ["claude-code"],

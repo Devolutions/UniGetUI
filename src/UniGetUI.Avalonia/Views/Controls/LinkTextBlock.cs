@@ -61,9 +61,9 @@ public class LinkTextBlock : SelectableTextBlock
         };
 
         _copySelectionItem = new MenuItem { Header = CoreTools.Translate("Copy") };
-        _copySelectionItem.Click += (_, _) => Copy();
+        _copySelectionItem.Click += async (_, _) => await CopyToClipboardAsync(SelectedText);
         _copyLinkItem = new MenuItem { Header = CoreTools.Translate("Copy link") };
-        _copyLinkItem.Click += async (_, _) => await CopyUrlToClipboardAsync(_contextLink?.Url);
+        _copyLinkItem.Click += async (_, _) => await CopyToClipboardAsync(_contextLink?.Url);
         var flyout = new MenuFlyout();
         flyout.Items.Add(_copySelectionItem);
         flyout.Items.Add(_copyLinkItem);
@@ -282,7 +282,8 @@ public class LinkTextBlock : SelectableTextBlock
             return;
         }
 
-        if (e.ClickCount > 1 || !point.Properties.IsLeftButtonPressed)
+        // Shift+click extends the selection, so it must not open a link at its endpoint.
+        if (e.ClickCount > 1 || !point.Properties.IsLeftButtonPressed || e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             _pressedLink = null;
             return;
@@ -312,18 +313,18 @@ public class LinkTextBlock : SelectableTextBlock
         _pendingActivation.Start();
     }
 
-    private async Task CopyUrlToClipboardAsync(string? url)
+    private async Task CopyToClipboardAsync(string? text)
     {
-        if (string.IsNullOrEmpty(url) || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+        if (string.IsNullOrEmpty(text) || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
             return;
 
         try
         {
-            await clipboard.SetTextAsync(url);
+            await clipboard.SetTextAsync(text);
         }
         catch (Exception ex)
         {
-            Logger.Warn("Could not copy the link to the clipboard");
+            Logger.Warn("Could not copy the text to the clipboard");
             Logger.Warn(ex);
         }
     }

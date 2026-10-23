@@ -248,6 +248,41 @@ public sealed class LinkTextBlockTests
         window.Close();
     }, CancellationToken.None);
 
+    [Fact]
+    public Task ShiftClickOnALinkExtendsTheSelectionWithoutActivatingIt() => _session.Dispatch(() =>
+    {
+        var (window, text, probe) = Show();
+
+        Click(window, text, 2);
+        Point point = At(window, text, UrlStart + 10);
+        window.MouseDown(point, MouseButton.Left, RawInputModifiers.Shift);
+        Pump(window);
+        window.MouseUp(point, MouseButton.Left, RawInputModifiers.Shift);
+        RunDispatcherPastDoubleClickTime();
+
+        Assert.Equal(0, probe.Opened);
+        Assert.StartsWith(Label[2..] + Url[..5], text.SelectedText);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task CopyFromTheMenuCopiesTheSelection() => _session.Dispatch(() =>
+    {
+        var (window, text, _) = Show();
+
+        Drag(window, text, UrlStart + 3, VersionStart + 5);
+        string selected = text.SelectedText;
+        MenuFlyout menu = RightClick(window, text, VersionStart + 2);
+        MenuItem copy = menu.Items.OfType<MenuItem>().Single(item => (string?)item.Header == "Copy");
+        Assert.True(copy.IsEnabled);
+
+        copy.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(selected, RunDispatcherUntilDone(window.Clipboard!.TryGetTextAsync()));
+        window.Close();
+    }, CancellationToken.None);
+
     private static (Window Window, LinkTextBlock Text, Probe Probe) Show()
     {
         if (!Application.Current!.Styles.OfType<FluentTheme>().Any())

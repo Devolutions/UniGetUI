@@ -15,6 +15,8 @@ name: Translation Sync
 # keys are never translated twice.
 
 on:
+  push:
+    branches: [feat/daily-translation-sync]
   schedule:
     - cron: '17 6 * * *'
   workflow_dispatch:
@@ -73,7 +75,7 @@ jobs:
         if: steps.open-pr.outputs.skip != 'true'
         shell: pwsh
         env:
-          LANGUAGES: ${{ inputs.languages }}
+          LANGUAGES: ${{ inputs.languages || (github.event_name == 'push' && 'fr' || '') }}
         run: |
           $batchDir = Join-Path $env:RUNNER_TEMP 'translations'
           ./scripts/translation/Export-PendingTranslations.ps1 -OutputDirectory $batchDir -LanguageCodes $env:LANGUAGES
@@ -195,7 +197,7 @@ jobs:
         id: merge
         shell: pwsh
         env:
-          LANGUAGES: ${{ inputs.languages }}
+          LANGUAGES: ${{ inputs.languages || (github.event_name == 'push' && 'fr' || '') }}
         run: |
           $batchDir = Join-Path $env:RUNNER_TEMP 'translations'
           $translatedDir = Join-Path $env:RUNNER_TEMP 'translated'
@@ -221,7 +223,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
-          BASE_BRANCH: ${{ github.ref_name }}
+          BASE_BRANCH: ${{ github.event_name == 'push' && github.event.repository.default_branch || github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           $languageCount = @(git diff --name-only).Count
@@ -229,7 +231,18 @@ jobs:
           $title = "Translate missing strings in $languageCount languages"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git switch --create $branch
+
+          # The translations were merged on the commit that started the run; replay them on the
+          # base branch's current tip so the pull request carries only the language files.
+          $patchPath = Join-Path $env:RUNNER_TEMP 'translations.patch'
+          git diff --binary "--output=$patchPath" -- src/Languages
+          git checkout -- src/Languages
+          git fetch --quiet --depth 1 origin $env:BASE_BRANCH
+          if ($LASTEXITCODE -ne 0) { throw "git fetch $env:BASE_BRANCH failed" }
+          git switch --create $branch FETCH_HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'git switch failed' }
+          git apply --3way --index $patchPath
+          if ($LASTEXITCODE -ne 0) { throw "The translations do not apply cleanly on $env:BASE_BRANCH" }
           git add -- src/Languages
           git commit --quiet --message "$title`n`nTranslated by the translation-sync workflow: $env:RUN_URL"
           if ($LASTEXITCODE -ne 0) { throw 'git commit failed' }

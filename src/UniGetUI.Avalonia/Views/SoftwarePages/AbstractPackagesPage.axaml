@@ -1246,8 +1246,8 @@
                             <StackPanel Orientation="Horizontal"/>
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
-                    <ListBoxItem x:Name="Selector_List" Classes="segment-item" Padding="8,4,8,8" ToolTip.Tip="List"
-                                 automation:AutomationProperties.Name="List">
+                    <ListBoxItem x:Name="Selector_List" Classes="segment-item" Padding="8,4,8,8" ToolTip.Tip="{t:Translate List}"
+                                 automation:AutomationProperties.Name="{t:Translate List}">
                         <Viewbox Width="18" Height="18" automation:AutomationProperties.AccessibilityView="Raw">
                             <Grid Width="16" Height="16">
                                 <!-- bullets -->
@@ -1264,8 +1264,8 @@
                             </Grid>
                         </Viewbox>
                     </ListBoxItem>
-                    <ListBoxItem x:Name="Selector_Grid" Classes="segment-item" Padding="8,4,8,8" ToolTip.Tip="Grid"
-                                 automation:AutomationProperties.Name="Grid">
+                    <ListBoxItem x:Name="Selector_Grid" Classes="segment-item" Padding="8,4,8,8" ToolTip.Tip="{t:Translate Grid}"
+                                 automation:AutomationProperties.Name="{t:Translate Grid}">
                         <!-- Two rows: open "[" bracket on the left + two stacked lines on the right -->
                         <Viewbox Width="18" Height="18" automation:AutomationProperties.AccessibilityView="Raw">
                             <Path Width="16" Height="16"
@@ -1278,8 +1278,8 @@
                                   Fill="Transparent"/>
                         </Viewbox>
                     </ListBoxItem>
-                    <ListBoxItem x:Name="Selector_Icons" Classes="segment-item" Padding="8,4,8,8" ToolTip.Tip="Icons"
-                                 automation:AutomationProperties.Name="Icons">
+                    <ListBoxItem x:Name="Selector_Icons" Classes="segment-item" Padding="8,4,8,8" ToolTip.Tip="{t:Translate Icons}"
+                                 automation:AutomationProperties.Name="{t:Translate Icons}">
                         <!-- 2x2 hollow squares (WinUI IconView) with extra gap between -->
                         <Viewbox Width="18" Height="18" automation:AutomationProperties.AccessibilityView="Raw">
                             <Path Width="16" Height="16"

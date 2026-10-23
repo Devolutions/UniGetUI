@@ -34,7 +34,7 @@ public partial class GeneralViewModel : ViewModelBase
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("Settings JSON") { Patterns = ["*.json"] }],
+            FileTypeFilter = [new FilePickerFileType(CoreTools.Translate("Settings JSON")) { Patterns = ["*.json"] }],
         });
         if (files is not [{ } file]) return;
         var path = file.TryGetLocalPath();
@@ -67,7 +67,7 @@ public partial class GeneralViewModel : ViewModelBase
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = CoreTools.Translate("UniGetUI Settings") + ".json",
-            FileTypeChoices = [new FilePickerFileType("Settings JSON") { Patterns = ["*.json"] }],
+            FileTypeChoices = [new FilePickerFileType(CoreTools.Translate("Settings JSON")) { Patterns = ["*.json"] }],
         });
         if (file is null) return;
         var path = file.TryGetLocalPath();

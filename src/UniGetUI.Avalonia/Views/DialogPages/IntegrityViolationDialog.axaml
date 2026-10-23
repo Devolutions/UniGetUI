@@ -32,6 +32,7 @@
                 Content="{t:Translate Close}"
                 MinWidth="90"
                 HorizontalAlignment="Right"
+                HorizontalContentAlignment="Center"
                 Classes="accent"
                 automation:AutomationProperties.Name="{t:Translate Close}"/>
 

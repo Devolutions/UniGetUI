@@ -230,7 +230,7 @@
                 </Button>
             </StackPanel>
         </Grid>
-        <ProgressBar Grid.Row="2" Margin="0,4,0,8" IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3"/>
+        <ProgressBar Grid.Row="2" Margin="0,4,0,8" IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="3"/>
         <Grid Grid.Row="3" Name="FilteringPanel" ColumnDefinitions="220,12,*">
             <Border x:Name="InlineSidePanel"
                     Grid.Column="0"

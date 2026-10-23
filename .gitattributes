@@ -3,3 +3,5 @@ UniGetUI.iss whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 .githooks/* text eol=lf
 
 .github/workflows/*.lock.yml linguist-generated=true
+# Patches applied to other repositories must keep their line endings.
+.github/actions/desktop-session/ironrdp-patches/*.patch -text

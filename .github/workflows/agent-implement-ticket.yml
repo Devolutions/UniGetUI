@@ -116,8 +116,9 @@ env:
 jobs:
   resolve:
     name: Resolve the request
+    # A called workflow sees its caller's event; agent-eval.yml always sets artifact_prefix.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_dispatch' || inputs.artifact_prefix != '' ||
       (github.event_name == 'issues' && startsWith(github.event.label.name, 'agent:')) ||
       (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/agent'))
     runs-on: ubuntu-latest
@@ -157,8 +158,9 @@ jobs:
           IN_SPEC_RUN_ID: ${{ inputs.spec_run_id }}
           IN_CONTINUE_RUN_ID: ${{ inputs.continue_run_id }}
           IN_BASE_SHA: ${{ inputs.base_sha }}
+          AGENT_EVENT: ${{ inputs.artifact_prefix != '' && 'workflow_call' || github.event_name }}
         run: |
-          ./.github/agent/implement-ticket/Resolve-AgentRequest.ps1 -OutputDir (Join-Path $env:RUNNER_TEMP 'request')
+          ./.github/agent/implement-ticket/Resolve-AgentRequest.ps1 -OutputDir (Join-Path $env:RUNNER_TEMP 'request') -EventName $env:AGENT_EVENT
 
       - name: Upload the request
         if: steps.resolve.outputs.proceed == 'true'

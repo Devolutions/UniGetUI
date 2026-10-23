@@ -57,7 +57,7 @@ jobs:
           "cases=$(ConvertTo-Json -InputObject $cases -Compress -Depth 4)" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
 
   run:
-    name: Case
+    name: Case ${{ matrix.case.id }}
     needs: plan
     strategy:
       fail-fast: false

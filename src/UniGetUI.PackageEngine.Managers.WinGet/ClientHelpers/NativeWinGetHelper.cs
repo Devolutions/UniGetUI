@@ -1,6 +1,7 @@
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Microsoft.Management.Deployment;
+using Microsoft.Win32;
 using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -24,6 +25,9 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     private readonly Func<WinGet, IWinGetManagerHelper> _systemCliHelperFactory;
     private readonly Func<IReadOnlyList<CatalogPackage>>? _localPackagesProvider;
     private readonly IPingetPackageDetailsProvider _pingetPackageDetailsProvider;
+    private const string UserUninstallKeyPath =
+        @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+    private const string InstalledIndexInvalidationValueName = "UniGetUI.InstalledIndexInvalidation";
     private int _activeLocalPackageQueries;
     private ExceptionDispatchInfo? _lastActivationException;
 
@@ -590,6 +594,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         try
         {
             logger.Log("OtherTask: GetWinGetLocalPackages");
+            InvalidateInstalledIndexCache(logger);
             var availableCatalogs = GetReachableLocalCatalogReferences(logger);
             PackageCatalogReference installedSearchCatalogRef = CreateLocalCompositeCatalog(
                 availableCatalogs,
@@ -635,6 +640,30 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         finally
         {
             Interlocked.Decrement(ref _activeLocalPackageQueries);
+        }
+    }
+
+    private static void InvalidateInstalledIndexCache(INativeTaskLogger logger)
+    {
+        try
+        {
+            using RegistryKey? uninstallKey = Registry.CurrentUser.OpenSubKey(
+                UserUninstallKeyPath,
+                writable: true
+            );
+            if (uninstallKey is null)
+            {
+                logger.Log("No per-user uninstall key found; skipping WinGet installed index invalidation");
+                return;
+            }
+
+            uninstallKey.SetValue(InstalledIndexInvalidationValueName, Environment.ProcessId);
+            uninstallKey.DeleteValue(InstalledIndexInvalidationValueName, throwOnMissingValue: false);
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Could not invalidate the WinGet installed index: {ex.Message}");
+            Logger.Warn($"Could not invalidate the WinGet installed index: {ex.Message}");
         }
     }
 

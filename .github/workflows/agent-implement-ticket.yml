@@ -364,6 +364,8 @@ jobs:
 
       - name: Start desktop session
         uses: ./.github/actions/desktop-session
+        with:
+          now-channel: 'true'
 
       # Restores packages and does the first build, so the agent's builds are incremental and
       # a broken base build shows up here rather than as an agent failure.

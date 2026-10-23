@@ -26,8 +26,8 @@ inputs:
   now-channel:
     description: >
       Negotiate the NOW channel with Devolutions Agent right after connecting, and check that a
-      command runs over it. Off until ironrdp-agent sends on that channel correctly: its DVC pipe
-      proxy reports channel 0 for what it sends, and the client then drops the whole RDP session
+      command runs over it (Invoke-DesktopNowCommand). Needs ironrdp-patches/0001 until IronRDP
+      merges that fix; without it, the first NOW message drops the RDP session
     default: 'false'
 
 outputs:
@@ -58,7 +58,9 @@ runs:
   steps:
     # Cloned outside the workspace (actions/checkout can only write inside it), so the
     # caller's checkout stays clean for agents, git and tests that scan the repository.
+    # ironrdp-patches holds fixes not yet merged in IronRDP, applied on top of ironrdp-ref.
     - name: Fetch IronRDP
+      id: fetch
       shell: pwsh
       env:
         IRONRDP_REF: ${{ inputs.ironrdp-ref }}
@@ -71,13 +73,25 @@ runs:
         git -C $env:IRONRDP_ROOT checkout --quiet --detach FETCH_HEAD
         if ($LASTEXITCODE -ne 0) { throw "git checkout failed with exit code $LASTEXITCODE" }
 
-    # The agent only changes with ironrdp-ref, so a cache hit skips the Rust build entirely.
+        $patches = @(Get-ChildItem -Path (Join-Path $env:GITHUB_ACTION_PATH 'ironrdp-patches') -Filter '*.patch' -File -ErrorAction SilentlyContinue | Sort-Object Name)
+        foreach ($patch in $patches) {
+          git -C $env:IRONRDP_ROOT apply $patch.FullName
+          if ($LASTEXITCODE -ne 0) { throw "Could not apply $($patch.Name) to IronRDP $env:IRONRDP_REF" }
+          Write-Host "Applied $($patch.Name)"
+        }
+        $patchHash = if ($patches.Count -gt 0) {
+          (($patches | Get-FileHash -Algorithm SHA256 | ForEach-Object Hash) -join '').Substring(0, 12)
+        } else { 'none' }
+        "patches=$patchHash" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+
+    # The agent only changes with ironrdp-ref and the patches, so a cache hit skips the Rust
+    # build entirely.
     - name: Restore ironrdp-agent
       id: agent-cache
       uses: actions/cache/restore@v6
       with:
         path: ${{ runner.temp }}/ironrdp/target/release/ironrdp-agent.exe
-        key: ironrdp-agent-${{ runner.os }}-${{ inputs.ironrdp-ref }}
+        key: ironrdp-agent-${{ runner.os }}-${{ inputs.ironrdp-ref }}-${{ steps.fetch.outputs.patches }}
 
     # No Rust build cache: it saved about 400 MB per branch, and the repository's 10 GB Actions
     # cache then evicted this agent and the NuGet packages. A build from scratch is rare

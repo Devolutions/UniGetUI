@@ -1181,20 +1181,31 @@ public sealed class IpcClient : IDisposable
         HttpContent? requestContent = null
     )
     {
-        using var timeout = new CancellationTokenSource(GetRequestTimeout(method, relativePath));
+        TimeSpan requestTimeout = GetRequestTimeout(method, relativePath);
+        using var timeout = new CancellationTokenSource(requestTimeout);
         using var request = new HttpRequestMessage(method, BuildRelativeUri(relativePath, queryParameters));
         request.Content = requestContent;
-        using var response = await _httpClient.SendAsync(request, timeout.Token);
-        string content = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            throw new InvalidOperationException(
-                string.IsNullOrWhiteSpace(content) ? response.ReasonPhrase : content
+            using var response = await _httpClient.SendAsync(request, timeout.Token);
+            string content = await response.Content.ReadAsStringAsync(timeout.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException(
+                    string.IsNullOrWhiteSpace(content) ? response.ReasonPhrase : content
+                );
+            }
+
+            return content;
+        }
+        catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                $"UniGetUI did not answer {method.Method} {relativePath} within {requestTimeout.TotalSeconds:0} seconds.",
+                ex
             );
         }
-
-        return content;
     }
 
     private async Task<T?> ReadAuthenticatedJsonAsync<T>(
@@ -1474,7 +1485,7 @@ public sealed class IpcClient : IDisposable
         {
             return method == HttpMethod.Post
                 ? TimeSpan.FromMinutes(5)
-                : TimeSpan.FromSeconds(30);
+                : TimeSpan.FromMinutes(2);
         }
 
         if (IpcHttpRoutes.StartsWith(relativePath, "/bundles/install"))
@@ -1536,7 +1547,8 @@ public sealed class IpcClient : IDisposable
         return exception is HttpRequestException
             or IOException
             or TaskCanceledException
-            or OperationCanceledException;
+            or OperationCanceledException
+            or TimeoutException;
     }
 
     private static IpcEndpointRegistration? SelectLiveRegistration(

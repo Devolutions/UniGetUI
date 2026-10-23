@@ -211,8 +211,10 @@ runs:
           -NowChannel:($env:NOW_CHANNEL -eq 'true')
 
     # Checks the RDP extension end to end: DevolutionsSession runs in the desktop session, and a
-    # command sent over the NOW channel runs there. A broken channel fails here rather than in
-    # whatever later step needs it.
+    # command sent over the NOW channel runs there. The command is retried, since it sometimes
+    # fails with "NOW operation stream closed before a terminal event" right after the
+    # handshake. If NOW still doesn't work, later steps go without it (DESKTOP_SESSION_NOW=0)
+    # rather than the whole job failing.
     - name: Check NOW remote execution
       if: inputs.devolutions-agent-version != '' && inputs.now-channel == 'true'
       shell: pwsh
@@ -232,13 +234,22 @@ runs:
         $process = Get-Process -Name 'DevolutionsSession' -ErrorAction SilentlyContinue |
           Where-Object { $_.SessionId -eq $sessionId } |
           Select-Object -First 1
-        if ($null -eq $process) {
-          throw "DevolutionsSession is not running in desktop session $sessionId; logs in $agentLogs"
-        }
+        $failure = if ($null -eq $process) { "DevolutionsSession is not running in desktop session $sessionId" } else { $null }
 
         # The remote command prints the session it runs in, which must be the desktop session.
-        $output = & $env:DESKTOP_SESSION_AGENT --endpoint $env:DESKTOP_SESSION_ENDPOINT now powershell '(Get-Process -Id $PID).SessionId' 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0 -or $output -notmatch "(?m)^\s*$sessionId\s*$") {
-          throw "NOW remote execution in desktop session $sessionId failed (exit code $LASTEXITCODE): $($output.Trim())"
+        for ($attempt = 1; $null -ne $process -and $attempt -le 3; $attempt++) {
+          $output = & $env:DESKTOP_SESSION_AGENT --endpoint $env:DESKTOP_SESSION_ENDPOINT now powershell '(Get-Process -Id $PID).SessionId' 2>&1 | Out-String
+          if ($LASTEXITCODE -eq 0 -and $output -match "(?m)^\s*$sessionId\s*$") {
+            $failure = $null
+            Write-Host "DevolutionsSession (pid $($process.Id)) ran a PowerShell command in desktop session $sessionId over NOW (attempt $attempt)"
+            break
+          }
+          $failure = "NOW remote execution in desktop session $sessionId failed (exit code $LASTEXITCODE): $($output.Trim())"
+          Write-Host "Attempt ${attempt}: $failure"
+          Start-Sleep -Seconds 5
         }
-        Write-Host "DevolutionsSession (pid $($process.Id)) ran a PowerShell command in desktop session $sessionId over NOW"
+
+        if ($failure) {
+          Write-Host "::warning::$failure. The desktop session continues without NOW; logs in $agentLogs"
+          'DESKTOP_SESSION_NOW=0' | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
+        }

@@ -19,6 +19,103 @@ namespace UniGetUI.Tests;
 
 public sealed class AgentSkillsSettingsControlTests
 {
+    [Fact]
+    public Task SkillsShToggle_FailedDiskSaveShowsLiveErrorRollsBackAndKeyboardRetrySucceeds() => _session.Dispatch(() =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var service = fixture.Service(hybrid: true);
+        var vm = new AgentSkillsSettingsViewModel(service);
+        var control = new AgentSkillsSettingsControl(vm);
+        using var host = new AgentSkillsSettingsTestWindow(control);
+        var toggle = Named<ToggleSwitch>(control, "SkillsShDiscoveryToggle");
+        var error = Named<TextBlock>(control, "SkillsShDiscoveryErrorText");
+        Assert.False(toggle.IsChecked);
+        Assert.False(error.IsVisible);
+        service.AssertNoHydrationWrites();
+        string settingFile = Path.Combine(UniGetUI.Core.Data.CoreData.UniGetUIUserConfigurationDirectory,
+            UniGetUI.Core.SettingsEngine.Settings.ResolveKey(UniGetUI.Core.SettingsEngine.Settings.K.SkillsShDiscoveryEnabled));
+        Directory.CreateDirectory(settingFile);
+
+        host.Space(toggle);
+
+        Assert.False(toggle.IsChecked);
+        Assert.False(vm.SkillsShDiscoveryEnabled);
+        Assert.False(UniGetUI.Core.SettingsEngine.Settings.Get(UniGetUI.Core.SettingsEngine.Settings.K.SkillsShDiscoveryEnabled));
+        Assert.False(File.Exists(settingFile));
+        Assert.Equal([true], service.SkillsShDiscoveryWrites);
+        Assert.Equal("The skills.sh discovery preference could not be saved. Check your settings folder permissions and try again.",
+            error.Text);
+        Assert.True(error.IsEffectivelyVisible);
+        Assert.Equal(AutomationLiveSetting.Assertive, AutomationProperties.GetLiveSetting(error));
+        Directory.Delete(settingFile);
+
+        host.Space(toggle);
+
+        Assert.True(toggle.IsChecked);
+        Assert.True(vm.SkillsShDiscoveryEnabled);
+        Assert.True(File.Exists(settingFile));
+        Assert.Equal([true, true], service.SkillsShDiscoveryWrites);
+        Assert.False(error.IsVisible);
+        Assert.Equal("", error.Text);
+        Assert.Empty(service.TargetWrites);
+        Assert.Empty(service.NotificationWrites);
+        Assert.Empty(service.VersionWrites);
+    }, CancellationToken.None);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task SkillsShToggle_KeyboardPersistsAcrossReopenWithAccessiblePrivacyAndRetentionHelp(bool enabled) => _session.Dispatch(() =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        fixture.Seed(["detected-a"], disabled: true);
+        UniGetUI.Core.SettingsEngine.Settings.Set(UniGetUI.Core.SettingsEngine.Settings.K.SkillsShDiscoveryEnabled, enabled);
+        var service = fixture.Service(hybrid: true);
+        var vm = new AgentSkillsSettingsViewModel(service);
+        var control = new AgentSkillsSettingsControl(vm);
+        using (var host = new AgentSkillsSettingsTestWindow(control))
+        {
+            var toggle = Named<ToggleSwitch>(control, "SkillsShDiscoveryToggle");
+            Assert.Equal(enabled, toggle.IsChecked);
+            Assert.Equal("Search skills.sh", AutomationProperties.GetName(toggle));
+            Assert.True(toggle.Focusable);
+            Assert.True(toggle.IsEffectivelyVisible);
+            service.AssertNoHydrationWrites();
+            foreach (string help in new[]
+            {
+                "Off by default. When enabled, searches of at least two characters also send the search text to skills.sh. No sign-in is required.",
+                "Installing a result saves its source so updates keep working when skills.sh discovery is off. Review skills before installing them.",
+            })
+            {
+                var text = Assert.Single(control.GetVisualDescendants().OfType<TextBlock>(), block => block.Text == help);
+                Assert.True(text.IsEffectivelyVisible);
+                Assert.True(text.Bounds.Height > 0);
+            }
+
+            host.Space(toggle);
+
+            Assert.Equal(!enabled, toggle.IsChecked);
+            Assert.Equal(!enabled, vm.SkillsShDiscoveryEnabled);
+            Assert.Equal([!enabled], service.SkillsShDiscoveryWrites);
+            Assert.Equal(!enabled, UniGetUI.Core.SettingsEngine.Settings.Get(
+                UniGetUI.Core.SettingsEngine.Settings.K.SkillsShDiscoveryEnabled));
+            Assert.Empty(service.TargetWrites);
+            Assert.Empty(service.NotificationWrites);
+            Assert.Empty(service.VersionWrites);
+            Assert.Equal(0, service.SignOutCalls);
+            Assert.Equal(0, service.SourceRefreshes);
+            Assert.Equal(["detected-a"], service.TargetAgents);
+            Assert.True(Disabled);
+            AssertOtherPreferences();
+        }
+        var reopenedService = fixture.Service(hybrid: true);
+        var reopened = new AgentSkillsSettingsControl(new AgentSkillsSettingsViewModel(reopenedService));
+        using var reopenedHost = new AgentSkillsSettingsTestWindow(reopened);
+        Assert.Equal(!enabled, Named<ToggleSwitch>(reopened, "SkillsShDiscoveryToggle").IsChecked);
+        reopenedService.AssertNoHydrationWrites();
+        AssertOtherPreferences();
+    }, CancellationToken.None);
+
     private readonly HeadlessUnitTestSession _session =
         HeadlessUnitTestSession.GetOrStartForAssembly(typeof(AgentSkillsSettingsControlTests).Assembly);
 

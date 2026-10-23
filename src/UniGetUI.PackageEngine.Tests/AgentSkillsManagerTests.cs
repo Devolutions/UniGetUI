@@ -14,7 +14,7 @@ using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 
 namespace UniGetUI.PackageEngine.Tests;
 
-public sealed class AgentSkillsManagerTests : IDisposable
+public sealed partial class AgentSkillsManagerTests : IDisposable
 {
     private readonly string _testRoot = Path.Combine(
         Path.GetTempPath(),
@@ -41,9 +41,9 @@ public sealed class AgentSkillsManagerTests : IDisposable
             Directory.Delete(_testRoot, recursive: true);
     }
 
-    private AgentSkills CreateManager()
+    private AgentSkills CreateManager(ISkillsShClient? registry = null)
     {
-        var manager = new AgentSkills(_backend);
+        var manager = new AgentSkills(_backend, registry);
         manager.Initialize();
         Assert.True(manager.IsReady());
         return manager;

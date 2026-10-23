@@ -68,8 +68,11 @@ included in the same application package; no separate TUI executable is installe
 starting the GUI or connecting to the UniGetUI IPC API. For example, `unigetui skills list`
 lists installed agent skills, and `unigetui skills add <source>` installs skills from a source.
 On Windows PowerShell, use `.\uniget.exe skills [args...]` to wait for completion and return its exit code.
-Skill discovery in the GUI searches only repositories, websites and Notion databases you add as sources;
-the bundled CLI does not provide a public-catalog `find` command.
+Skill discovery searches your configured repositories, websites and Notion databases by default.
+The optional **Package Managers > Agent Skills > Sources > Search skills.sh** switch also includes
+the public skills.sh catalog for searches of at least two characters. It is off by default;
+enabling it sends search text to skills.sh. This applies to GUI Discover and engine-backed
+`package search`; the bundled `skills` CLI does not provide a public-catalog `find` command.
 Arguments and exit codes after `skills` belong to that CLI, not to the UniGetUI automation
 commands documented below.
 

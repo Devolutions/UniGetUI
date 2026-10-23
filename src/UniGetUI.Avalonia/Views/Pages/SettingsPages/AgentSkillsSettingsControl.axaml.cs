@@ -112,11 +112,23 @@ public sealed partial class AgentSkillsSettingsControl : UserControl
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(AgentSkillsSettingsViewModel.SkillsShDiscoveryEnabled)
+            && _viewModel.HasSkillsShDiscoveryError)
+        {
+            // A failed two-way write can leave the attempted value in the binding's target cache.
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_attached)
+                    SkillsShDiscoveryToggle.SetCurrentValue(ToggleSwitch.IsCheckedProperty, _viewModel.SkillsShDiscoveryEnabled);
+            });
+        }
+
         string? error = e.PropertyName switch
         {
             nameof(AgentSkillsSettingsViewModel.TargetError) => _viewModel.TargetError,
             nameof(AgentSkillsSettingsViewModel.VersionError) => _viewModel.VersionError,
             nameof(AgentSkillsSettingsViewModel.NotionError) => _viewModel.NotionError,
+            nameof(AgentSkillsSettingsViewModel.SkillsShDiscoveryError) => _viewModel.SkillsShDiscoveryError,
             _ => null,
         };
         if (!string.IsNullOrEmpty(error))

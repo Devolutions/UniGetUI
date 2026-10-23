@@ -56,6 +56,10 @@ internal sealed class SkillsPkgDetailsHelper : BasePkgDetailsHelper
         {
             details.Description = available.Description;
         }
+        else if (_skills.WasDiscoveredOnSkillsSh(details.Package))
+        {
+            details.Description = CoreTools.Translate("Discovered on skills.sh. Installs from the repository or website shown as its source. Review the skill before installing it.");
+        }
     }
 
     protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package) => [];

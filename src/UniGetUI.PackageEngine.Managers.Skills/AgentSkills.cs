@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Devolutions.AgentSkills;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -48,6 +49,11 @@ public sealed class AgentSkills : PackageManager
     internal ISkillsBackend Backend { get; }
     internal SkillsSourceFactory SourceFactory { get; }
     internal SkillSourceListings Listings { get; }
+    internal SkillsSourceHelper SkillSources { get; }
+    private readonly ISkillsShClient _registry;
+    private readonly ConcurrentDictionary<(string Source, string Skill), SkillSourceLocator> _registrySkills = new();
+    private readonly object _registryGate = new();
+    private int _registryGeneration;
 
     /// <summary>The source of skills no lock file tracks, such as ones copied by hand.</summary>
     internal IManagerSource LocalSource { get; }
@@ -55,9 +61,10 @@ public sealed class AgentSkills : PackageManager
     public AgentSkills()
         : this(new AgentSkillsBackend()) { }
 
-    internal AgentSkills(ISkillsBackend backend)
+    internal AgentSkills(ISkillsBackend backend, ISkillsShClient? registry = null)
     {
         Backend = backend;
+        _registry = registry ?? new SkillsShClient();
         Listings = new SkillSourceListings(backend);
 
         Capabilities = new ManagerCapabilities
@@ -108,7 +115,7 @@ public sealed class AgentSkills : PackageManager
 
         DetailsHelper = new SkillsPkgDetailsHelper(this);
         OperationHelper = new SkillsPkgOperationHelper(this);
-        SourcesHelper = new SkillsSourceHelper(this);
+        SourcesHelper = SkillSources = new SkillsSourceHelper(this);
     }
 
     /// <summary>The configured repository, website and Notion sources.</summary>
@@ -152,6 +159,48 @@ public sealed class AgentSkills : PackageManager
         SourceFactory.GetLocator(source) is { } locator
             ? FindConfiguredSource(locator)
             : null;
+
+    internal SkillSourceLocator? GetInstallSource(IPackage package) =>
+        GetInstallSource(package.Source)
+        ?? (SkillsShDiscoveryEnabled
+            && SourceFactory.GetLocator(package.Source) is { } locator
+            && _registrySkills.TryGetValue((locator.Name, package.Id), out var discovered)
+                ? discovered
+                : null);
+
+    internal bool WasDiscoveredOnSkillsSh(IPackage package) =>
+        _registrySkills.ContainsKey((package.Source.Name, package.Id));
+
+    /// <summary>Opt-in public-registry search; configured sources are always searched independently.</summary>
+    public bool SkillsShDiscoveryEnabled
+    {
+        get => Settings.Get(Settings.K.SkillsShDiscoveryEnabled);
+        set
+        {
+            lock (_registryGate)
+            {
+                bool previous = SkillsShDiscoveryEnabled;
+                Settings.Set(Settings.K.SkillsShDiscoveryEnabled, value);
+                if (File.Exists(Path.Combine(CoreData.UniGetUIUserConfigurationDirectory,
+                        Settings.ResolveKey(Settings.K.SkillsShDiscoveryEnabled))) != value)
+                {
+                    Settings.Set(Settings.K.SkillsShDiscoveryEnabled, previous);
+                    throw new IOException(CoreTools.Translate("The skills.sh discovery preference could not be saved. Check your settings folder permissions and try again."));
+                }
+                ClearRegistryResults();
+            }
+            RefreshDependencies();
+        }
+    }
+
+    internal void ClearRegistryResults()
+    {
+        lock (_registryGate)
+        {
+            _registryGeneration++;
+            _registrySkills.Clear();
+        }
+    }
 
     /// <summary>
     /// The source the library updates a skill from: for a skill from an index, the index address the
@@ -276,6 +325,15 @@ public sealed class AgentSkills : PackageManager
     {
         INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
         Dictionary<string, Package> packages = new(StringComparer.Ordinal);
+        int registryGeneration;
+        Task<IReadOnlyList<SkillsShResult>>? registrySearch;
+        lock (_registryGate)
+        {
+            registryGeneration = _registryGeneration;
+            registrySearch = SkillsShDiscoveryEnabled && query.Trim().Length >= 2
+                ? Task.Run(() => _registry.Search(query))
+                : null;
+        }
 
         void Add(string skill, SkillSourceLocator source)
         {
@@ -318,7 +376,34 @@ public sealed class AgentSkills : PackageManager
             }
         }
 
-        logger.Close(0);
+        bool registryFailed = false;
+        if (registrySearch is not null)
+        {
+            try
+            {
+                var discovered = registrySearch.GetAwaiter().GetResult();
+                // A preference changed while the request was running must take effect immediately.
+                lock (_registryGate)
+                {
+                    if (SkillsShDiscoveryEnabled && registryGeneration == _registryGeneration)
+                    {
+                        foreach (var skill in discovered)
+                        {
+                            _registrySkills[(skill.Source.Name, skill.Name)] = skill.Source;
+                            Add(skill.Name, skill.Source);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException or OperationCanceledException)
+            {
+                logger.Error("Could not search skills.sh. Retry the search or disable skills.sh discovery in Agent Skills settings.");
+                logger.Error(ex);
+                registryFailed = true;
+            }
+        }
+
+        logger.Close(registryFailed ? 1 : 0);
         return [.. packages.Values];
     }
 
@@ -476,7 +561,7 @@ public sealed class AgentSkills : PackageManager
     {
         var sources = GetConfiguredSources();
         List<ManagerDependency> dependencies = [];
-        if (sources.Any(source => source.Kind is SkillSourceKind.Repository))
+        if (SkillsShDiscoveryEnabled || sources.Any(source => source.Kind is SkillSourceKind.Repository))
             dependencies.Add(GitDependency.Create());
         if (sources.Any(source => source.Kind is SkillSourceKind.Notion))
             dependencies.Add(NotionCliTool.CreateDependency());

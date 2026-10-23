@@ -190,6 +190,9 @@ internal sealed class RecordingSkillsService(AgentInfo[] agents, bool hybrid = f
     private readonly IAgentSkillsSettingsService? _settings = hybrid ? new AgentSkillsSettingsService(new SkillsManager()) : null;
     private string[] _targets = [];
     private bool _notifications = true;
+    private bool _skillsShDiscovery;
+    public List<bool> SkillsShDiscoveryWrites { get; } = [];
+    public Exception? SkillsShDiscoveryFailure { get; set; }
     public string StoredVersion { get; set; } = "";
     public AgentInfo[] Catalogue { get; set; } = agents;
     public Exception? DiscoveryFailure { get; set; }
@@ -227,6 +230,17 @@ internal sealed class RecordingSkillsService(AgentInfo[] agents, bool hybrid = f
         }
     }
     public string SavedVersion => _settings?.SavedVersion ?? StoredVersion;
+    public bool SkillsShDiscoveryEnabled
+    {
+        get => _settings?.SkillsShDiscoveryEnabled ?? _skillsShDiscovery;
+        set
+        {
+            SkillsShDiscoveryWrites.Add(value);
+            if (SkillsShDiscoveryFailure is { } failure) throw failure;
+            if (_settings is not null) _settings.SkillsShDiscoveryEnabled = value;
+            else _skillsShDiscovery = value;
+        }
+    }
     public bool SetVersion(string version)
     {
         VersionWrites.Add(version);
@@ -257,6 +271,7 @@ internal sealed class RecordingSkillsService(AgentInfo[] agents, bool hybrid = f
         Assert.Empty(TargetWrites);
         Assert.Empty(NotificationWrites);
         Assert.Empty(VersionWrites);
+        Assert.Empty(SkillsShDiscoveryWrites);
     }
 }
 

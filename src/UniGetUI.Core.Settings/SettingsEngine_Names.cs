@@ -146,6 +146,7 @@ public static partial class Settings
         SkillsSources,
         SkillsTargetAgents,
         SkillsNotionCliVersion,
+        SkillsShDiscoveryEnabled,
 
         Test1,
         Test2,
@@ -301,6 +302,7 @@ public static partial class Settings
             K.SkillsSources => "SkillsSources",
             K.SkillsTargetAgents => "SkillsTargetAgents",
             K.SkillsNotionCliVersion => "SkillsNotionCliVersion",
+            K.SkillsShDiscoveryEnabled => "SkillsShDiscoveryEnabled",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

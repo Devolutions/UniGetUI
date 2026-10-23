@@ -68,7 +68,7 @@ internal sealed class SkillsPkgOperationHelper : BasePkgOperationHelper, IInProc
         CancellationToken cancellationToken
     )
     {
-        if (_skills.GetInstallSource(package.Source) is not { } source)
+        if (_skills.GetInstallSource(package) is not { } source)
             return Fail(output, NotASourceMessage(package.Source.Name));
 
         var agents = AgentSkills.GetTargetAgents();
@@ -80,15 +80,14 @@ internal sealed class SkillsPkgOperationHelper : BasePkgOperationHelper, IInProc
         );
 
         var result = _skills.Backend.Install(source.InstallSource, package.Id, agents, progress, cancellationToken);
-        var outcome =
-            result.Skills.FirstOrDefault(s => s.Name.Equals(package.Id, StringComparison.OrdinalIgnoreCase))
-            ?? result.Skills.FirstOrDefault();
+        var outcome = result.Skills.FirstOrDefault(s => s.Name.Equals(package.Id, StringComparison.OrdinalIgnoreCase));
         if (outcome is null)
             return Fail(output, CoreTools.Translate("{0} could not be installed", package.Name));
 
         if (outcome.Status is not SkillOperationStatus.Succeeded)
             return Fail(output, outcome.Error ?? CoreTools.Translate("{0} could not be installed", package.Name));
 
+        _skills.SkillSources.RememberInstalledSource(source);
         output.Info($"Installed {outcome.Name} for {string.Join(", ", outcome.Agents)}");
         if (outcome.SkippedAgents.Count > 0)
             output.Info($"Skipped {string.Join(", ", outcome.SkippedAgents)}: no skills folder for them");

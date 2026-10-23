@@ -24,6 +24,19 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
     protected override IReadOnlyList<IManagerSource> GetSources_UnSafe() =>
         AgentSkills.GetConfiguredSources().Select(_skills.SourceFactory.GetOrCreate).ToArray();
 
+    /// <summary>Retains an installed registry result's repository for updates, even with discovery off.</summary>
+    internal void RememberInstalledSource(SkillSourceLocator source)
+    {
+        if (AgentSkills.FindConfiguredSource(source) is not null)
+            return;
+
+        Settings.AddToList(AgentSkills.SourcesListKey, source.InstallSource);
+        if (AgentSkills.FindConfiguredSource(source) is null)
+            throw new SkillsException(CoreTools.Translate("The skill was installed, but its source {0} could not be saved. Add it in Agent Skills settings to receive updates.", source.Name));
+        InvalidateSourcesCache();
+        _skills.RefreshDependencies();
+    }
+
     public Task<OperationVeredict> AddSourceAsync(
         IManagerSource source,
         IOperationOutput output,
@@ -115,6 +128,7 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
             )
             .ToList();
         Settings.SetList(AgentSkills.SourcesListKey, remaining);
+        _skills.ClearRegistryResults();
         _skills.RefreshDependencies();
         if (locator is not null)
             _skills.Listings.Forget(locator);

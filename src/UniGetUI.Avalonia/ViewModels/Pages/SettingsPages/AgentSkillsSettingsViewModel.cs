@@ -14,6 +14,7 @@ internal interface IAgentSkillsSettingsService
     IReadOnlyList<AgentInfo> GetAgents();
     IReadOnlyList<string> TargetAgents { get; set; }
     bool NotificationsEnabled { get; set; }
+    bool SkillsShDiscoveryEnabled { get; set; }
     string SavedVersion { get; }
     bool SetVersion(string version);
     bool HasNotionSources { get; }
@@ -32,6 +33,7 @@ internal sealed class AgentSkillsSettingsService(SkillsManager manager) : IAgent
         set => CoreSettings.SetDictionaryItem(CoreSettings.K.DisabledPackageManagerNotifications, "Skills", !value);
     }
     public string SavedVersion => CoreSettings.GetValue(CoreSettings.K.SkillsNotionCliVersion);
+    public bool SkillsShDiscoveryEnabled { get => manager.SkillsShDiscoveryEnabled; set => manager.SkillsShDiscoveryEnabled = value; }
     public bool SetVersion(string version) => NotionCliTool.TrySetPinnedVersion(version);
     public bool HasNotionSources => manager.HasNotionSources;
     public Task<NotionStatus> GetNotionStatusAsync() => manager.GetNotionStatusAsync();
@@ -62,6 +64,11 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
     [ObservableProperty] private int _targetMode;
     [ObservableProperty] private string _targetError = "";
     [ObservableProperty] private bool _notificationsEnabled;
+    [ObservableProperty] private bool _skillsShDiscoveryEnabled;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSkillsShDiscoveryError))]
+    private string _skillsShDiscoveryError = "";
+    public bool HasSkillsShDiscoveryError => SkillsShDiscoveryError.Length > 0;
     [ObservableProperty] private int _versionPolicy;
     [ObservableProperty] private string _versionText = "";
     [ObservableProperty] private string _versionError = "";
@@ -114,6 +121,7 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
             : [CoreTools.Translate("Automatic (recommended)")];
         _targetMode = selected.Count == 0 ? 0 : 1;
         _notificationsEnabled = service.NotificationsEnabled;
+        _skillsShDiscoveryEnabled = service.SkillsShDiscoveryEnabled;
         _versionText = service.SavedVersion;
         _versionPolicy = string.IsNullOrWhiteSpace(_versionText) ? 0 : 1;
         ValidateVersion(save: false);
@@ -159,6 +167,24 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
     partial void OnNotificationsEnabledChanged(bool value)
     {
         if (!_loading) _service.NotificationsEnabled = value;
+    }
+
+    partial void OnSkillsShDiscoveryEnabledChanged(bool value)
+    {
+        if (_loading) return;
+        try
+        {
+            _service.SkillsShDiscoveryEnabled = value;
+            SkillsShDiscoveryError = "";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Logger.Warn("Could not save the skills.sh discovery preference");
+            Logger.Warn(ex);
+            _skillsShDiscoveryEnabled = _service.SkillsShDiscoveryEnabled;
+            OnPropertyChanged(nameof(SkillsShDiscoveryEnabled));
+            SkillsShDiscoveryError = CoreTools.Translate("The skills.sh discovery preference could not be saved. Check your settings folder permissions and try again.");
+        }
     }
 
     partial void OnVersionPolicyChanged(int value)

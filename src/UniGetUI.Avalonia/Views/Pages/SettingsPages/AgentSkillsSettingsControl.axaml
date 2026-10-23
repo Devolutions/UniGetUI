@@ -30,7 +30,25 @@
         <TextBlock Classes="section-heading" Text="{t:Translate Sources}"
                    automation:AutomationProperties.HeadingLevel="2"/>
         <TextBlock Classes="help" Margin="44,0,44,4"
-                   Text="{t:Translate 'Discover searches the sources you add here. Add a repository, website index or Notion source to find skills.'}"/>
+                   Text="{t:Translate 'Discover searches your added sources. Optionally include the public skills.sh catalog using the switch below.'}"/>
+        <Border Classes="settings-card" Margin="40,0" Padding="16,12" CornerRadius="8" BorderThickness="1">
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{t:Translate Search skills.sh}" VerticalAlignment="Center"
+                               TextWrapping="Wrap" Margin="0,0,12,0"/>
+                    <ToggleSwitch x:Name="SkillsShDiscoveryToggle" Grid.Column="1"
+                                  IsChecked="{Binding SkillsShDiscoveryEnabled, Mode=TwoWay}"
+                                  automation:AutomationProperties.Name="{t:Translate Search skills.sh}"/>
+                </Grid>
+                <TextBlock Classes="help"
+                           Text="{t:Translate 'Off by default. When enabled, searches of at least two characters also send the search text to skills.sh. No sign-in is required.'}"/>
+                <TextBlock Classes="help"
+                           Text="{t:Translate 'Installing a result saves its source so updates keep working when skills.sh discovery is off. Review skills before installing them.'}"/>
+                <TextBlock x:Name="SkillsShDiscoveryErrorText" Classes="validation-error"
+                           Text="{Binding SkillsShDiscoveryError}" IsVisible="{Binding HasSkillsShDiscoveryError}"
+                           automation:AutomationProperties.LiveSetting="Assertive"/>
+            </StackPanel>
+        </Border>
         <ContentControl x:Name="SourcesHolder"/>
 
         <TextBlock Classes="section-heading" Text="{t:Translate Installation targets}"

@@ -526,9 +526,10 @@ jobs:
   report:
     name: Report and publish
     needs: [resolve, implement]
+    # Not after a cancelled implement job; after a failed one, it reports what there is.
     if: >-
       always() && needs.resolve.outputs.proceed == 'true' && needs.resolve.outputs.mode == 'implement' &&
-      needs.implement.result != 'skipped'
+      (needs.implement.result == 'success' || needs.implement.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -554,7 +555,9 @@ jobs:
           persist-credentials: false
           sparse-checkout: .github/agent
 
+      # Missing when the implement job failed before collecting the change.
       - name: Download the change
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.artifact_prefix }}agent-change

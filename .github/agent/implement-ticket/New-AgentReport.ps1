@@ -119,7 +119,7 @@ $lines.Add($(if ($reviewText) { $reviewText } else { 'The review did not run.' }
 $lines.Add('')
 $lines.Add('## Fix round')
 $lines.Add('')
-$requested = if ($fixRequest) { @($fixRequest.items) } else { @() }
+$requested = @(if ($fixRequest) { $fixRequest.items })
 if ($requested.Count -eq 0) {
     $lines.Add('Nothing to fix automatically: no check failed and no finding was marked implementable.')
 }
@@ -136,7 +136,7 @@ else {
         $lines.Add("| $($item.id): $(($item.title -replace '\|', '\|')) | $($item.severity) | $(($status -replace '\r?\n', ' ' -replace '\|', '\|')) |")
     }
 }
-$left = if ($review) { @($review.findings | Where-Object { $id = [string] $_.id; -not @($requested | Where-Object { $_.id -eq $id }).Count }) } else { @() }
+$left = @(if ($review) { $review.findings | Where-Object { $id = [string] $_.id; -not @($requested | Where-Object { $_.id -eq $id }).Count } })
 if ($left.Count -gt 0) {
     $lines.Add('')
     $lines.Add("Left for the maintainer (not implementable, or nits): $(($left | ForEach-Object { "$($_.id) ($($_.severity))" }) -join ', ').")

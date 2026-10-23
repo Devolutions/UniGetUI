@@ -111,7 +111,7 @@ permissions:
   contents: read
 
 env:
-  REVIEW_MODELS: claude-opus-5.5,claude-sonnet-5.5,gpt-6-luna,auto
+  REVIEW_MODELS: claude-sonnet-5.5,claude-opus-5.5,gpt-6-luna,auto
 
 jobs:
   resolve:
@@ -400,7 +400,7 @@ jobs:
           NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         run: |
           .\.github\agent\Invoke-CopilotAgent.ps1 `
-            -Prompt "Read .github/agent/implement-ticket/PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET." `
+            -Prompt "Read .github/agent/implement-ticket/PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET. Save screenshots in $env:AGENT_SCREENSHOTS, and write the pull request description to the file at $env:AGENT_PR_BODY." `
             -OutputDir (Join-Path $env:AGENT_DIR 'out') `
             -Models $env:COPILOT_MODEL `
             -McpConfig (Join-Path $env:GITHUB_WORKSPACE '.github\agent\implement-ticket\mcp-config.json')
@@ -604,6 +604,14 @@ jobs:
             -ReviewDir (Join-Path $env:RUNNER_TEMP 'agent-review') `
             -OutputDir (Join-Path $env:RUNNER_TEMP 'report') `
             -ImplementRunner $env:IMPLEMENT_RUNNER
+
+      - name: Upload the report
+        if: always() && steps.report.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-report
+          path: ${{ runner.temp }}/report
+          if-no-files-found: warn
 
       - name: Open or update the pull request
         id: publish

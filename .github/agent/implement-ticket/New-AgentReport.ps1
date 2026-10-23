@@ -130,6 +130,7 @@ if ($phases.Count -gt 0) {
 
 $report = $lines -join "`n"
 $report | Set-Content -LiteralPath (Join-Path $OutputDir 'report.md') -Encoding utf8NoBOM
+Write-Host $report
 $description = Read-Text (Join-Path $ChangeDir 'pr.md')
 "$description`n`n$report" | Set-Content -LiteralPath (Join-Path $OutputDir 'body.md') -Encoding utf8NoBOM
 

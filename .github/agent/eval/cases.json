@@ -1,0 +1,20 @@
+[
+  {
+    "id": "5561",
+    "pr": 5561,
+    "base": "c08ea86e90282ad5be03cb9149e7ddfc9807afb7",
+    "ticket": "In the package details window, the main action button has a fixed width. In French, \"Mettre à jour vers la version 2026.1.0_1\" is cut in the middle of the version number, with no ellipsis. An underscore in a version number is also hidden: \"Update to version 2026.1.0_1\" shows \"Update to version 2026.1.01\". Make the whole label readable."
+  },
+  {
+    "id": "5567",
+    "pr": 5567,
+    "base": "1757d479f07475b6c33017a0d93f642079b7bb55",
+    "ticket": "The header of the operations panel counts a failed operation among the completed ones: with one operation running, one failed and one succeeded, it reads \"2 of 3 operations completed\". When the panel is collapsed, this line is the only text left, next to a small red dot. The header should tell the user that operations failed."
+  },
+  {
+    "id": "5556",
+    "pr": 5556,
+    "base": "694ea3d0bb1eb973207d266ead10c359b1220837",
+    "ticket": "The Software Updates page opens with every row checked, so one click on \"Ignore selected packages\" ignores the updates of every package, for all versions, with no confirmation. The page then shows its empty state, and undoing it means removing the packages one by one in \"Manage ignored updates\". Protect users from doing this by accident."
+  }
+]

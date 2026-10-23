@@ -2,22 +2,57 @@ name: Agent - Implement Ticket
 
 # An AI agent (GitHub Copilot CLI) implements a ticket in UniGetUI, builds and runs its change
 # on a live Windows desktop (see .github/actions/README.md), and checks it with screenshots.
-# A second job opens a draft pull request with the change and those screenshots.
+#
+#   resolve        turns the trigger into a request; acknowledges it on the issue or PR
+#   spec           (mode spec) an agent writes a spec; spec-publish posts it on the issue for
+#                  a maintainer to approve with "/agent implement"
+#   implement      the agent implements the ticket and the approved spec; the workflow then
+#                  checks the change itself (build, tests, formatting, translations) and
+#                  outlines what changed between the agent's before/after screenshots
+#   review         a second agent, on a different model, reviews the change
+#   report         reports checks, review and metrics; opens a draft pull request, or pushes
+#                  to the agent pull request it iterates on, and comments on the issue
+#
+# Triggers: run it by hand; label an issue agent:spec or agent:implement; comment
+# "/agent spec" or "/agent implement [guidance]" on an issue; comment "/agent <feedback>" on
+# an agent pull request. Labels and comments only start runs for users with write access,
+# and only from the default branch's copy of this workflow. agent-eval.yml calls it too.
 #
 # This is a plain workflow rather than a gh-aw one because gh-aw's agent sandbox needs Linux,
-# and the desktop only exists on the Windows runner. It keeps gh-aw's split, though: the
-# agent job has a read-only token, and only the pull-request job, which runs no agent, can
-# write. The ticket is untrusted input; the draft pull request is for human review.
+# and the desktop only exists on the Windows runner. It keeps gh-aw's split, though: agent
+# jobs have read-only tokens, and only jobs that run no agent can write. Tickets, comments
+# and pull request text are untrusted input; everything the agent makes is for human review.
 
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: implement the ticket, or only write a spec for it
+        type: choice
+        options: [implement, spec]
+        default: implement
       issue:
         description: Number of the issue to implement (or leave empty and describe the ticket below)
         required: false
         default: ''
       ticket:
         description: Ticket text, used when no issue is given, or as extra guidance for the issue
+        required: false
+        default: ''
+      spec_run_id:
+        description: Run ID of an approved spec run to implement
+        required: false
+        default: ''
+      pr:
+        description: Number of an agent pull request to iterate on, with the feedback below
+        required: false
+        default: ''
+      continue_run_id:
+        description: Run ID of an earlier implement run to continue from, with the feedback below (no pull request)
+        required: false
+        default: ''
+      feedback:
+        description: Feedback on the earlier change, with pr or continue_run_id
         required: false
         default: ''
       create_pr:
@@ -28,71 +63,282 @@ on:
         description: Copilot model (empty for the repository default)
         required: false
         default: ''
+      review_model:
+        description: Copilot model(s) for the review, comma-separated, first available that differs from the implementer's
+        required: false
+        default: ''
+      base_sha:
+        description: Commit to start from (empty for the branch the workflow runs on)
+        required: false
+        default: ''
+      artifact_prefix:
+        description: Prefix for the artifact names
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      ticket:
+        type: string
+        required: true
+      base_sha:
+        type: string
+        default: ''
+      model:
+        type: string
+        default: ''
+      review_model:
+        type: string
+        default: ''
+      artifact_prefix:
+        type: string
+        required: true
+      create_pr:
+        type: boolean
+        default: false
+    outputs:
+      has-changes:
+        value: ${{ jobs.implement.outputs.has-changes }}
+      checks-passed:
+        value: ${{ jobs.report.outputs.checks-passed }}
+      review-verdict:
+        value: ${{ jobs.report.outputs.review-verdict }}
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
 
-concurrency:
-  group: agent-implement-ticket-${{ inputs.issue || github.run_id }}
-  cancel-in-progress: false
+env:
+  REVIEW_MODELS: claude-opus-5.5,claude-sonnet-5.5,gpt-6-luna,auto
 
 jobs:
-  implement:
-    name: Implement on a live desktop
-    runs-on: windows-latest
-    timeout-minutes: 120
+  resolve:
+    name: Resolve the request
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && startsWith(github.event.label.name, 'agent:')) ||
+      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/agent'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
-      issues: read
+      actions: read
+      issues: write
+      pull-requests: write
+    outputs:
+      proceed: ${{ steps.resolve.outputs.proceed }}
+      mode: ${{ steps.resolve.outputs.mode }}
+      issue: ${{ steps.resolve.outputs.issue }}
+      pr: ${{ steps.resolve.outputs.pr }}
+      base-sha: ${{ steps.resolve.outputs.base-sha }}
+      head-branch: ${{ steps.resolve.outputs.head-branch }}
+      create-pr: ${{ steps.resolve.outputs.create-pr }}
+    steps:
+      - name: Checkout the workflow's scripts
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          sparse-checkout: .github/agent
+
+      - name: Resolve the request
+        id: resolve
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IN_MODE: ${{ inputs.mode }}
+          IN_ISSUE: ${{ inputs.issue }}
+          IN_PR: ${{ inputs.pr }}
+          IN_TICKET: ${{ inputs.ticket }}
+          IN_FEEDBACK: ${{ inputs.feedback }}
+          IN_CREATE_PR: ${{ inputs.create_pr }}
+          IN_SPEC_RUN_ID: ${{ inputs.spec_run_id }}
+          IN_CONTINUE_RUN_ID: ${{ inputs.continue_run_id }}
+          IN_BASE_SHA: ${{ inputs.base_sha }}
+        run: |
+          ./.github/agent/implement-ticket/Resolve-AgentRequest.ps1 -OutputDir (Join-Path $env:RUNNER_TEMP 'request')
+
+      - name: Upload the request
+        if: steps.resolve.outputs.proceed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-request
+          path: ${{ runner.temp }}/request
+
+  spec:
+    name: Write a spec
+    needs: resolve
+    if: needs.resolve.outputs.proceed == 'true' && needs.resolve.outputs.mode == 'spec'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: agent-${{ needs.resolve.outputs.issue || github.run_id }}-${{ inputs.artifact_prefix }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      copilot-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.base-sha }}
+          persist-credentials: false
+
+      # Older bases get this workflow's tooling (.github/agent and .github/actions).
+      - name: Use this workflow's tooling
+        shell: pwsh
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          git fetch --quiet --depth 1 origin $env:WORKFLOW_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Could not fetch $env:WORKFLOW_SHA" }
+          git checkout $env:WORKFLOW_SHA -- .github/agent .github/actions
+          if ($LASTEXITCODE -ne 0) { throw 'Could not check out the workflow tooling' }
+
+      - name: Download the request
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-request
+          path: ${{ runner.temp }}/request
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install GitHub Copilot CLI
+        shell: pwsh
+        run: |
+          npm install --global --no-fund --no-audit @github/copilot@1.0.96
+          if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
+
+      - name: Run the spec agent
+        shell: pwsh
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_MODEL: ${{ inputs.model || vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'auto' }}
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'spec'
+          New-Item -Path $out -ItemType Directory -Force | Out-Null
+          $env:AGENT_TICKET = Join-Path $env:RUNNER_TEMP 'request/ticket.md'
+          $env:AGENT_SPEC = Join-Path $out 'spec.md'
+          ./.github/agent/Invoke-CopilotAgent.ps1 `
+            -Prompt "Read .github/agent/implement-ticket/SPEC_PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET." `
+            -OutputDir $out `
+            -Models $env:COPILOT_MODEL `
+            -McpConfig (Join-Path $env:GITHUB_WORKSPACE '.github/agent/implement-ticket/mcp-config.json')
+          if (-not (Test-Path -LiteralPath $env:AGENT_SPEC)) { throw 'The spec agent did not write a spec' }
+          Get-Content -LiteralPath $env:AGENT_SPEC -Raw | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
+
+      - name: Upload the spec
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-spec
+          path: ${{ runner.temp }}/spec
+          if-no-files-found: warn
+
+  spec-publish:
+    name: Post the spec for approval
+    needs: [resolve, spec]
+    if: needs.spec.result == 'success' && needs.resolve.outputs.issue != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    steps:
+      - name: Download the spec
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-spec
+          path: ${{ runner.temp }}/spec
+
+      - name: Post the spec on the issue
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ needs.resolve.outputs.issue }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          $spec = Get-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'spec/spec.md') -Raw
+          @(
+            "Proposed spec, written by the [agent workflow]($env:RUN_URL). Comment ``/agent implement`` to implement it, optionally followed by more guidance, or edit the issue and comment ``/agent spec`` for a new one."
+            ''
+            '<!-- agent-spec-begin -->'
+            $spec.Trim()
+            '<!-- agent-spec-end -->'
+          ) -join "`n" | gh issue comment $env:ISSUE --repo $env:GITHUB_REPOSITORY --body-file -
+          if ($LASTEXITCODE -ne 0) { throw "Could not comment on issue $env:ISSUE" }
+
+  implement:
+    name: Implement on a live desktop
+    needs: resolve
+    if: needs.resolve.outputs.proceed == 'true' && needs.resolve.outputs.mode == 'implement'
+    runs-on: windows-latest
+    timeout-minutes: 120
+    concurrency:
+      group: agent-${{ needs.resolve.outputs.pr || needs.resolve.outputs.issue || github.run_id }}-${{ inputs.artifact_prefix }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
       copilot-requests: write
     outputs:
       has-changes: ${{ steps.export.outputs.has-changes }}
+      checks-passed: ${{ steps.checks.outputs.checks-passed }}
+      runner-name: ${{ runner.name }}
 
     steps:
       # The agent works in this checkout, so it must not hold a git credential.
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ needs.resolve.outputs.base-sha }}
           persist-credentials: false
 
+      - name: Download the request
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-request
+          path: ${{ runner.temp }}/agent/request
+
+      # Older bases get this workflow's tooling (.github/agent and .github/actions), and a
+      # continued run gets its earlier change. Both are committed locally, so the change the
+      # agent makes is diffed against them.
       - name: Prepare the ticket
         shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ inputs.issue }}
-          TICKET: ${{ inputs.ticket }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
           $agentDir = Join-Path $env:RUNNER_TEMP 'agent'
+          $request = Join-Path $agentDir 'request'
           $screenshots = Join-Path $agentDir 'screenshots'
           New-Item -Path $screenshots -ItemType Directory -Force | Out-Null
-          $ticketPath = Join-Path $agentDir 'ticket.md'
 
-          $ticket = [System.Text.StringBuilder]::new()
-          if (-not [string]::IsNullOrWhiteSpace($env:ISSUE)) {
-            $issue = gh issue view $env:ISSUE --repo $env:GITHUB_REPOSITORY --json number,title,body,url,comments | ConvertFrom-Json
-            if ($LASTEXITCODE -ne 0) { throw "Could not read issue $env:ISSUE" }
-            [void] $ticket.AppendLine("# $($issue.title)").AppendLine().AppendLine($issue.body)
-            foreach ($comment in @($issue.comments)) {
-              [void] $ticket.AppendLine().AppendLine("## Comment by $($comment.author.login)").AppendLine().AppendLine($comment.body)
-            }
-            if (-not [string]::IsNullOrWhiteSpace($env:TICKET)) {
-              [void] $ticket.AppendLine().AppendLine('## Additional guidance from the maintainer who started this run').AppendLine().AppendLine($env:TICKET)
-            }
+          git fetch --quiet --depth 1 origin $env:WORKFLOW_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Could not fetch $env:WORKFLOW_SHA" }
+          git checkout $env:WORKFLOW_SHA -- .github/agent .github/actions
+          if ($LASTEXITCODE -ne 0) { throw 'Could not check out the workflow tooling' }
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git -c user.name=agent-workflow -c user.email=agent-workflow@localhost commit --quiet --message "Agent workflow tooling at $env:WORKFLOW_SHA"
           }
-          elseif (-not [string]::IsNullOrWhiteSpace($env:TICKET)) {
-            [void] $ticket.AppendLine($env:TICKET)
+          foreach ($previous in Get-ChildItem -LiteralPath $request -Filter 'previous-*.patch' -File | Sort-Object Name) {
+            git apply --index $previous.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Could not apply the earlier change $($previous.Name)" }
+            git -c user.name=agent-workflow -c user.email=agent-workflow@localhost commit --quiet --message "Earlier agent change ($($previous.Name))"
           }
-          else {
-            throw 'Give an issue number or a ticket text'
-          }
-          $ticket.ToString() | Set-Content -Path $ticketPath -Encoding utf8NoBOM
-          Get-Content -Path $ticketPath | Write-Host
 
+          Get-Content -Path (Join-Path $request 'ticket.md') | Write-Host
           @(
             "AGENT_DIR=$agentDir"
-            "AGENT_TICKET=$ticketPath"
+            "AGENT_TICKET=$(Join-Path $request 'ticket.md')"
+            "AGENT_SPEC=$(Join-Path $request 'spec.md')"
+            "AGENT_FEEDBACK=$(Join-Path $request 'feedback.md')"
             "AGENT_SCREENSHOTS=$screenshots"
             "AGENT_PR_BODY=$(Join-Path $agentDir 'pr.md')"
+            "AGENT_BASE_SHA=$(git rev-parse HEAD)"
           ) | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
 
           # Keep workflow scaffolding in the workspace out of the agent's patch.
@@ -104,9 +350,10 @@ jobs:
         with:
           global-json-file: global.json
 
-      # Same key as build-release.yml, so the build can reuse that workflow's packages.
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
+      # Same key as build-release.yml, so the build reuses main's packages. Restore only: a
+      # cache saved per agent branch would take another 1-2 GB of the repository's 10 GB.
+      - name: Restore NuGet packages
+        uses: actions/cache/restore@v6
         with:
           path: ${{ github.workspace }}/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
@@ -148,32 +395,37 @@ jobs:
           COPILOT_MODEL: ${{ inputs.model || vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'auto' }}
           NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
         run: |
-          $outDir = Join-Path $env:AGENT_DIR 'out'
-          New-Item -Path $outDir -ItemType Directory -Force | Out-Null
-          $prompt = "Read .github/agent/implement-ticket/PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET."
-          $mcpConfig = Join-Path $env:GITHUB_WORKSPACE '.github\agent\implement-ticket\mcp-config.json'
+          .\.github\agent\Invoke-CopilotAgent.ps1 `
+            -Prompt "Read .github/agent/implement-ticket/PROMPT.md and follow it. The ticket is in the file at $env:AGENT_TICKET." `
+            -OutputDir (Join-Path $env:AGENT_DIR 'out') `
+            -Models $env:COPILOT_MODEL `
+            -McpConfig (Join-Path $env:GITHUB_WORKSPACE '.github\agent\implement-ticket\mcp-config.json')
 
-          copilot `
-            --prompt $prompt `
-            --model $env:COPILOT_MODEL `
-            --allow-all-tools `
-            --allow-all-paths `
-            --disable-builtin-mcps `
-            --additional-mcp-config "@$mcpConfig" `
-            --secret-env-vars COPILOT_GITHUB_TOKEN GITHUB_ENV GITHUB_OUTPUT GITHUB_PATH `
-            --share (Join-Path $outDir 'transcript.md') `
-            --log-dir (Join-Path $outDir 'logs')
-          if ($LASTEXITCODE -ne 0) { throw "Copilot CLI exited with code $LASTEXITCODE" }
+      - name: Check the change
+        id: checks
+        if: always() && steps.agent.outcome != 'skipped'
+        shell: pwsh
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+        run: |
+          .\.github\agent\implement-ticket\Test-AgentChange.ps1 -BaseSha $env:AGENT_BASE_SHA -OutputDir (Join-Path $env:AGENT_DIR 'out')
+
+      - name: Prepare the screenshots
+        if: always() && steps.agent.outcome != 'skipped'
+        shell: pwsh
+        run: |
+          .\.github\agent\implement-ticket\New-ScreenshotEvidence.ps1 `
+            -ScreenshotsDir $env:AGENT_SCREENSHOTS `
+            -OutputDir (Join-Path $env:AGENT_DIR 'out') `
+            -PullRequestBody $env:AGENT_PR_BODY
 
       - name: Collect the change
         id: export
         if: always() && steps.agent.outcome != 'skipped'
         shell: pwsh
-        env:
-          BASE_SHA: ${{ github.sha }}
         run: |
           .\.github\agent\implement-ticket\Export-AgentChange.ps1 `
-            -BaseSha $env:BASE_SHA `
+            -BaseSha $env:AGENT_BASE_SHA `
             -PullRequestBody $env:AGENT_PR_BODY `
             -ScreenshotsDir $env:AGENT_SCREENSHOTS `
             -OutputDir (Join-Path $env:AGENT_DIR 'out')
@@ -183,7 +435,7 @@ jobs:
         if: always() && steps.export.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
-          name: agent-change
+          name: ${{ inputs.artifact_prefix }}agent-change
           path: ${{ runner.temp }}/agent/out
           if-no-files-found: warn
 
@@ -191,44 +443,208 @@ jobs:
         if: always()
         uses: ./.github/actions/desktop-session-cleanup
         with:
-          artifact-name: agent-desktop-session
+          artifact-name: ${{ inputs.artifact_prefix }}agent-desktop-session
 
-  pull-request:
-    name: Open draft pull request
-    needs: implement
-    if: needs.implement.outputs.has-changes == 'true' && inputs.create_pr
+  review:
+    name: Review the change
+    needs: [resolve, implement]
+    if: needs.implement.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
-      contents: write
-      pull-requests: write
-
+      contents: read
+      copilot-requests: write
     steps:
-      - name: Checkout base commit
+      - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.sha }}
-          token: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
+          ref: ${{ needs.resolve.outputs.base-sha }}
+          persist-credentials: false
+
+      - name: Download the request
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-request
+          path: ${{ runner.temp }}/request
 
       - name: Download the change
         uses: actions/download-artifact@v8
         with:
-          name: agent-change
+          name: ${{ inputs.artifact_prefix }}agent-change
+          path: ${{ runner.temp }}/change
+
+      # The same base as the agent's (this workflow's tooling and any earlier change, committed
+      # locally), then the change staged on top, so "git diff --cached" shows exactly the change.
+      - name: Apply the change
+        shell: pwsh
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          git fetch --quiet --depth 1 origin $env:WORKFLOW_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Could not fetch $env:WORKFLOW_SHA" }
+          git checkout $env:WORKFLOW_SHA -- .github/agent .github/actions
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git -c user.name=agent-workflow -c user.email=agent-workflow@localhost commit --quiet --message 'Agent workflow tooling'
+          }
+          foreach ($previous in Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'request') -Filter 'previous-*.patch' -File | Sort-Object Name) {
+            git apply --index $previous.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Could not apply the earlier change $($previous.Name)" }
+            git -c user.name=agent-workflow -c user.email=agent-workflow@localhost commit --quiet --message "Earlier agent change ($($previous.Name))"
+          }
+          git apply --index (Join-Path $env:RUNNER_TEMP 'change/change.patch')
+          if ($LASTEXITCODE -ne 0) { throw 'Could not apply the change' }
+
+          $reviewInput = Join-Path $env:RUNNER_TEMP 'review-input'
+          New-Item -Path $reviewInput -ItemType Directory -Force | Out-Null
+          foreach ($file in @('request/ticket.md', 'request/spec.md', 'request/feedback.md', 'change/pr.md', 'change/checks.md', 'change/evidence.md')) {
+            $path = Join-Path $env:RUNNER_TEMP $file
+            if (Test-Path -LiteralPath $path) { Copy-Item -LiteralPath $path -Destination $reviewInput }
+          }
+          $shots = Join-Path $env:RUNNER_TEMP 'change/screenshots'
+          if (Test-Path -LiteralPath $shots) { Copy-Item -LiteralPath $shots -Destination $reviewInput -Recurse }
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install GitHub Copilot CLI
+        shell: pwsh
+        run: |
+          npm install --global --no-fund --no-audit @github/copilot@1.0.96
+          if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
+
+      # A different model from the implementer's: the first one in the list that Copilot offers.
+      - name: Run the review agent
+        shell: pwsh
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+          REVIEW_MODEL_LIST: ${{ inputs.review_model || env.REVIEW_MODELS }}
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'review'
+          $env:AGENT_REVIEW_INPUT = Join-Path $env:RUNNER_TEMP 'review-input'
+          $env:AGENT_REVIEW_OUTPUT = $out
+          $implementer = Get-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'change/metrics.json') -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+          $avoid = if ($implementer) { @($implementer.models) } else { @() }
+          ./.github/agent/Invoke-CopilotAgent.ps1 `
+            -Prompt 'Read .github/agent/implement-ticket/REVIEW_PROMPT.md and follow it.' `
+            -OutputDir $out `
+            -Models ($env:REVIEW_MODEL_LIST -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) `
+            -AvoidModels $avoid `
+            -McpConfig (Join-Path $env:GITHUB_WORKSPACE '.github/agent/implement-ticket/mcp-config.json')
+          if (-not (Test-Path -LiteralPath (Join-Path $out 'review.md'))) { throw 'The review agent did not write review.md' }
+
+      - name: Upload the review
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-review
+          path: ${{ runner.temp }}/review
+          if-no-files-found: warn
+
+  report:
+    name: Report and publish
+    needs: [resolve, implement, review]
+    if: >-
+      always() && needs.resolve.outputs.proceed == 'true' && needs.resolve.outputs.mode == 'implement' &&
+      needs.implement.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      checks-passed: ${{ steps.report.outputs.checks-passed }}
+      review-verdict: ${{ steps.report.outputs.review-verdict }}
+    steps:
+      - name: Checkout the base or the pull request branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.head-branch || needs.resolve.outputs.base-sha }}
+          token: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
+
+      - name: Checkout the workflow's scripts
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: agent-tools
+          persist-credentials: false
+          sparse-checkout: .github/agent
+
+      - name: Download the change
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-change
           path: ${{ runner.temp }}/agent-change
 
-      - name: Open draft pull request
+      - name: Download the review
+        if: needs.review.result == 'success'
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_prefix }}agent-review
+          path: ${{ runner.temp }}/agent-review
+
+      - name: Write the report
+        id: report
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMPLEMENT_RUNNER: ${{ needs.implement.outputs.runner-name }}
+        run: |
+          Add-Content -Path '.git/info/exclude' -Value '/agent-tools/' -Encoding utf8
+          ./agent-tools/.github/agent/implement-ticket/New-AgentReport.ps1 `
+            -ChangeDir (Join-Path $env:RUNNER_TEMP 'agent-change') `
+            -ReviewDir (Join-Path $env:RUNNER_TEMP 'agent-review') `
+            -OutputDir (Join-Path $env:RUNNER_TEMP 'report') `
+            -ImplementRunner $env:IMPLEMENT_RUNNER
+
+      - name: Open or update the pull request
+        id: publish
+        if: needs.implement.outputs.has-changes == 'true' && needs.resolve.outputs.create-pr == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
-          ISSUE: ${{ inputs.issue }}
-          BASE_BRANCH: ${{ github.ref_name }}
+          ISSUE: ${{ needs.resolve.outputs.issue }}
+          PR: ${{ needs.resolve.outputs.pr }}
+          HEAD_BRANCH: ${{ needs.resolve.outputs.head-branch }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          $branch = if ($env:ISSUE) { "agent/issue-$($env:ISSUE)-$($env:GITHUB_RUN_ID)" } else { "agent/ticket-$($env:GITHUB_RUN_ID)" }
-          ./.github/agent/implement-ticket/Publish-AgentPullRequest.ps1 `
+          $branch = if ($env:HEAD_BRANCH) { $env:HEAD_BRANCH } elseif ($env:ISSUE) { "agent/issue-$($env:ISSUE)-$($env:GITHUB_RUN_ID)" } else { "agent/ticket-$($env:GITHUB_RUN_ID)" }
+          $base = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { $env:GITHUB_REF_NAME } else { $env:BASE_BRANCH }
+          ./agent-tools/.github/agent/implement-ticket/Publish-AgentPullRequest.ps1 `
             -ChangeDir (Join-Path $env:RUNNER_TEMP 'agent-change') `
+            -BodyPath (Join-Path $env:RUNNER_TEMP 'report/body.md') `
             -Repository $env:GITHUB_REPOSITORY `
-            -BaseBranch $env:BASE_BRANCH `
+            -BaseBranch $base `
             -BranchName $branch `
             -RunUrl $env:RUN_URL `
-            -IssueNumber $env:ISSUE
+            -IssueNumber $env:ISSUE `
+            -PullRequestNumber $env:PR
+
+      - name: Report back on the issue
+        if: always() && needs.resolve.outputs.issue != '' && needs.resolve.outputs.pr == ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ needs.resolve.outputs.issue }}
+          PR_URL: ${{ steps.publish.outputs.pr-url }}
+          COMPARE_URL: ${{ steps.publish.outputs.compare-url }}
+          HAS_CHANGES: ${{ needs.implement.outputs.has-changes }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          $outcome = if ($env:PR_URL) {
+            "Opened $env:PR_URL."
+          } elseif ($env:COMPARE_URL) {
+            "The change is ready to open as a pull request: $env:COMPARE_URL."
+          } elseif ($env:HAS_CHANGES -eq 'true') {
+            'The change is in the run''s artifacts.'
+          } else {
+            'The agent made no change; its explanation is in the run.'
+          }
+          $report = Get-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'report/report.md') -Raw -ErrorAction SilentlyContinue
+          @("The [agent run]($env:RUN_URL) finished. $outcome", '', '<details><summary>Checks, review and metrics</summary>', '', $report, '', '</details>') -join "`n" |
+            gh issue comment $env:ISSUE --repo $env:GITHUB_REPOSITORY --body-file -

@@ -1,0 +1,118 @@
+name: Agent - Eval
+
+# Measures the implement-ticket agent on merged pull requests (.github/agent/eval/cases.json):
+# for each case it runs agent-implement-ticket.yml on the problem the pull request solved,
+# from the commit before it, then scores the results (checks, review verdict, how close the
+# changed files are to the human change, time and Copilot usage). Compare prompt changes,
+# models or the Avalonia docs MCP by running it before and after.
+
+on:
+  workflow_dispatch:
+    inputs:
+      cases:
+        description: Case ids to run, comma-separated (empty for every case)
+        required: false
+        default: ''
+      model:
+        description: Copilot model for the implementer (empty for the repository default)
+        required: false
+        default: ''
+      review_model:
+        description: Copilot model(s) for the reviewer, comma-separated
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Pick the cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cases: ${{ steps.pick.outputs.cases }}
+    steps:
+      - name: Checkout the cases
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/agent/eval
+
+      - name: Pick the cases
+        id: pick
+        shell: pwsh
+        env:
+          CASE_IDS: ${{ inputs.cases }}
+        run: |
+          $wanted = @($env:CASE_IDS -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+          $cases = @(Get-Content -LiteralPath .github/agent/eval/cases.json -Raw | ConvertFrom-Json |
+            Where-Object { $wanted.Count -eq 0 -or $wanted -contains $_.id })
+          if ($cases.Count -eq 0) { throw "No case matches '$env:CASE_IDS'" }
+          "cases=$(ConvertTo-Json -InputObject $cases -Compress -Depth 4)" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+
+  run:
+    name: Case
+    needs: plan
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ${{ fromJSON(needs.plan.outputs.cases) }}
+    # The called workflow's jobs declare these; the eval never opens pull requests or comments.
+    permissions:
+      actions: read
+      contents: write
+      copilot-requests: write
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/agent-implement-ticket.yml
+    secrets: inherit
+    with:
+      ticket: ${{ matrix.case.ticket }}
+      base_sha: ${{ matrix.case.base }}
+      model: ${{ inputs.model }}
+      review_model: ${{ inputs.review_model }}
+      artifact_prefix: eval-${{ matrix.case.id }}-
+      create_pr: false
+
+  score:
+    name: Score the cases
+    needs: [plan, run]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout the scorer
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/agent/eval
+
+      - name: Download the results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: eval-*
+          path: ${{ runner.temp }}/results
+
+      - name: Score
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CASE_IDS: ${{ inputs.cases }}
+        run: |
+          ./.github/agent/eval/Measure-AgentEval.ps1 `
+            -CasesPath .github/agent/eval/cases.json `
+            -ArtifactsDir (Join-Path $env:RUNNER_TEMP 'results') `
+            -OutputDir (Join-Path $env:RUNNER_TEMP 'eval') `
+            -CaseIds $env:CASE_IDS
+
+      - name: Upload the report
+        uses: actions/upload-artifact@v7
+        with:
+          name: eval-report
+          path: ${{ runner.temp }}/eval

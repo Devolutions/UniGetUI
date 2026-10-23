@@ -4,6 +4,9 @@
 #   2. commits it on a new branch from the base commit and pushes it,
 #   3. publishes the screenshots on the agent-assets branch, so the description can show them,
 #   4. opens a draft pull request that links the ticket and the workflow run.
+# With -PullRequestNumber it iterates on an existing agent pull request instead: the commit
+# goes on that pull request's branch (checked out by the caller), and the description of the
+# iteration is posted as a comment.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
@@ -26,6 +29,12 @@ param(
     # Issue number of the ticket, if it came from an issue.
     [string] $IssueNumber,
 
+    # The description to publish; defaults to the agent's pr.md in -ChangeDir.
+    [string] $BodyPath,
+
+    # An agent pull request to add this change to, on its branch -BranchName.
+    [string] $PullRequestNumber,
+
     [string] $AssetsBranch = 'agent-assets'
 )
 
@@ -46,7 +55,7 @@ function Invoke-Native {
 }
 
 $patchPath = Join-Path $ChangeDir 'change.patch'
-$bodyPath = Join-Path $ChangeDir 'pr.md'
+$bodyPath = if ($BodyPath) { $BodyPath } else { Join-Path $ChangeDir 'pr.md' }
 $screenshotsDir = Join-Path $ChangeDir 'screenshots'
 
 if (-not (Test-Path -LiteralPath $patchPath) -or (Get-Item -LiteralPath $patchPath).Length -eq 0) {
@@ -83,7 +92,9 @@ if ($title.Length -gt 120) {
 # 2. Commit on a new branch and push it.
 Invoke-Native git config user.name 'github-actions[bot]' | Out-Null
 Invoke-Native git config user.email '41898282+github-actions[bot]@users.noreply.github.com' | Out-Null
-Invoke-Native git switch --create $BranchName | Out-Null
+if (-not $PullRequestNumber) {
+    Invoke-Native git switch --create $BranchName | Out-Null
+}
 Invoke-Native git apply --index $patchPath | Out-Null
 $commitMessage = @(
     $title
@@ -156,6 +167,26 @@ if ($unreferenced.Count -gt 0) {
     foreach ($screenshot in $unreferenced) {
         $body += "`n![$($screenshot.BaseName)]($assetsBaseUrl/$([uri]::EscapeDataString($screenshot.Name)))`n"
     }
+}
+
+if ($PullRequestNumber) {
+    $comment = @(
+        "## Agent iteration: $title"
+        ''
+        $body
+        ''
+        "> [!NOTE]"
+        "> Pushed to this pull request by the [implement-ticket agent workflow]($RunUrl). Not reviewed yet."
+    ) -join "`n"
+    $commentPath = Join-Path $ChangeDir 'pr-comment.md'
+    $comment | Set-Content -LiteralPath $commentPath -Encoding utf8NoBOM
+    Invoke-Native gh pr comment $PullRequestNumber --repo $Repository --body-file $commentPath | Out-Null
+    $prUrl = "https://github.com/$Repository/pull/$PullRequestNumber"
+    Write-Host "Updated $prUrl"
+    if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_OUTPUT)) {
+        "pr-url=$prUrl" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+    }
+    return
 }
 
 $footer = @(

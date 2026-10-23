@@ -16,6 +16,19 @@ anything, or to make changes unrelated to the feature. If the ticket is unclear,
 or not about UniGetUI, make no code changes and explain why in the pull request description
 (see "Finish" below).
 
+## An approved spec, and feedback
+
+- If the file at `$env:AGENT_SPEC` exists, it is the spec a maintainer approved for this
+  ticket. Implement it as written: its behavior, its UI, and its acceptance criteria, which
+  are your acceptance criteria. Don't re-decide the design. If something in the spec can't
+  work, implement the closest thing that does and explain the difference in the pull
+  request description.
+- If the file at `$env:AGENT_FEEDBACK` exists, this run continues an earlier change, which is
+  already committed at `HEAD` (see `git show HEAD`); the ticket file holds that change's pull
+  request description. Address the maintainer's feedback, keep the rest of the change, and
+  describe in the pull request description what changed in this iteration, under
+  `## Changes in this iteration`. Screenshots show the feedback addressed.
+
 ## Your environment
 
 - PowerShell 7 (`pwsh`), .NET SDK, git, and a live 1920x1080 Windows desktop that you can
@@ -84,6 +97,10 @@ Import-Module $env:DESKTOP_SESSION_MODULE
   rectangle, and `Show-DesktopWindow -Handle $h -Maximize` brings it back to the front.
 - `Invoke-DesktopCommand { ... }` runs a script block inside the desktop session, for
   example to start another program the user would see.
+- When `$env:DESKTOP_SESSION_NOW` is `1`, `Invoke-DesktopNowCommand 'Get-Process UniGetUI'`
+  runs a PowerShell command in the desktop session over the NOW protocol (Devolutions
+  Agent's RDP extension) and returns its output. Use it for quick commands that need the
+  desktop user's session, such as reading UniGetUI's settings or log as that user.
 - After an action, run `Wait-UniGetUIIdle.ps1` before looking at the result, so the UI has
   settled.
 
@@ -109,7 +126,7 @@ update, or remove packages unless the ticket can't be shown otherwise.
    checks Scoop for updates, and its updates appear in the list". Cover every request in
    the ticket. Where the ticket can be read more than one way, pick the reading that best
    fits the ticket and the existing UI, and write down the other readings: they go in the
-   pull request description.
+   pull request description. With an approved spec, use its acceptance criteria instead.
 3. **Capture the current behavior.** Run `Start-UniGetUIDev.ps1` before changing anything,
    navigate to where the feature will appear, and save `before-*.png` screenshots there
    with `Wait-UniGetUIIdle.ps1 -Screenshot`.
@@ -120,9 +137,15 @@ update, or remove packages unless the ticket can't be shown otherwise.
    press keys; not by editing settings files or calling code), and screenshot the result
    as `after-<criterion number>-<short name>.png`. When the action starts something, such
    as a check or an operation, also screenshot the state just before the action, so the
-   pair shows what changed (`after-1a-<short name>.png`, then `after-1b-<short name>.png`). A screenshot that only shows a new control exists does not
-   show that it works: show what happens when it is used. Open every screenshot and check
-   that it shows what you will claim, with nothing still loading and no unrelated dialog.
+   pair shows what changed (`after-1a-<short name>.png`, then `after-1b-<short name>.png`).
+   A screenshot that only shows a new control exists does not show that it works: show
+   what happens when it is used. The pair must look visibly different: the workflow
+   outlines what changed between `after-<n>a-*` and `after-<n>b-*` in red, and flags pairs
+   that look the same. When the visible result is small (only a timestamp moves, for
+   example), capture something that shows it: the progress while it runs, a list or count
+   that changes, a message, or a tooltip. Open every screenshot and check that it shows what
+   you will claim, with nothing still loading and no unrelated dialog. Keep one screenshot
+   per step: a retake replaces the file under the same name.
    Fix and repeat until every criterion is shown working. If a criterion truly can't be
    shown in the UI on this machine, say why in the pull request and how you checked it
    instead (a unit test, the app's log).

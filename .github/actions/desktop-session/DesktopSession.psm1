@@ -239,6 +239,25 @@ function Invoke-DesktopCommand {
     Invoke-Command -Session (Get-DesktopPSSession) -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
 }
 
+# Runs a command in the desktop session over the NOW protocol: Devolutions Agent's RDP
+# extension runs it as the session's user, and its output comes back over the RDP virtual
+# channel. Needs the desktop-session action's now-channel input (DESKTOP_SESSION_NOW=1).
+# Throws when the command fails; returns its output.
+function Invoke-DesktopNowCommand {
+    param(
+        [Parameter(Mandatory)]
+        [string] $Command,
+
+        [ValidateSet('powershell', 'pwsh')]
+        [string] $Shell = 'powershell'
+    )
+
+    if ($env:DESKTOP_SESSION_NOW -ne '1') {
+        throw 'The NOW channel is not available in this desktop session (desktop-session now-channel input is off)'
+    }
+    Invoke-DesktopAgent now $Shell $Command
+}
+
 # Starts a program on the desktop and returns its process id and Windows session id.
 function Start-DesktopProcess {
     param(
@@ -419,6 +438,7 @@ Export-ModuleMember -Function @(
     'Get-DesktopPSSession',
     'Close-DesktopPSSession',
     'Invoke-DesktopCommand',
+    'Invoke-DesktopNowCommand',
     'Start-DesktopProcess',
     'Get-DesktopWindow',
     'Show-DesktopWindow'

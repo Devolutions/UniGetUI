@@ -176,6 +176,11 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "NOW negotiation with DevolutionsSession failed (exit code $LASTEXITCODE)"
         }
+        # Tells later steps (and Invoke-DesktopNowCommand) that the NOW channel is up.
+        $env:DESKTOP_SESSION_NOW = '1'
+        if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_ENV)) {
+            'DESKTOP_SESSION_NOW=1' | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
+        }
         Write-Host '::endgroup::'
     }
 

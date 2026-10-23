@@ -1,0 +1,257 @@
+name: Translation Sync
+
+# Once a day, translates every string that lang_en.json has and another language file lacks,
+# and opens one pull request with all of it. lang_en.json is never changed.
+#
+#   1. plan:      lists the languages with missing keys.
+#   2. translate: one AI agent (GitHub Copilot CLI) per language, in parallel, writes that
+#                 language's translations. It has a read-only token and no git credential.
+#   3. merge:     runs no agent. From a clean checkout and a fresh export of the missing keys,
+#                 it takes only the agents' translation files, rejects entries with broken
+#                 placeholders or unknown keys, validates every language file, and opens the
+#                 pull request.
+#
+# While a previous translation pull request is still open, the run does nothing, so the same
+# keys are never translated twice.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      languages:
+        description: Only these language codes, comma separated (empty for all)
+        required: false
+        default: ''
+      model:
+        description: Copilot model (empty for the repository default)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: translation-sync
+  cancel-in-progress: false
+
+env:
+  PR_LABEL: automated-translations
+
+jobs:
+  plan:
+    name: Find missing translations
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      languages: ${{ steps.export.outputs.languages }}
+      has-work: ${{ steps.export.outputs.has-work }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Skip while a translation pull request is open
+        id: open-pr
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $open = gh pr list --repo $env:GITHUB_REPOSITORY --label $env:PR_LABEL --state open --json number --jq 'length'
+          if ($LASTEXITCODE -ne 0) { throw "gh pr list failed with exit code $LASTEXITCODE" }
+          $skip = [int]$open -gt 0
+          if ($skip) { Write-Host "A pull request labelled $env:PR_LABEL is still open; skipping this run." }
+          "skip=$($skip.ToString().ToLowerInvariant())" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+
+      - name: List languages with missing keys
+        id: export
+        if: steps.open-pr.outputs.skip != 'true'
+        shell: pwsh
+        env:
+          LANGUAGES: ${{ inputs.languages }}
+        run: |
+          $batchDir = Join-Path $env:RUNNER_TEMP 'translations'
+          ./scripts/translation/Export-PendingTranslations.ps1 -OutputDirectory $batchDir -LanguageCodes $env:LANGUAGES
+          $codes = @(Get-Content -Path (Join-Path $batchDir 'plan.json') -Raw | ConvertFrom-Json | ForEach-Object { $_.code })
+          "languages=$(ConvertTo-Json -InputObject $codes -Compress)" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+          "has-work=$(($codes.Count -gt 0).ToString().ToLowerInvariant())" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+
+  translate:
+    name: Translate ${{ matrix.language }}
+    needs: plan
+    if: needs.plan.outputs.has-work == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      copilot-requests: write
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        language: ${{ fromJSON(needs.plan.outputs.languages) }}
+
+    steps:
+      # The agent works in this checkout, so it must not hold a git credential.
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Export the missing keys
+        shell: pwsh
+        env:
+          LANGUAGE: ${{ matrix.language }}
+        run: |
+          $batchDir = Join-Path $env:RUNNER_TEMP 'translations'
+          ./scripts/translation/Export-PendingTranslations.ps1 -OutputDirectory $batchDir -LanguageCodes $env:LANGUAGE
+          "BATCH_DIR=$batchDir" | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install GitHub Copilot CLI
+        shell: pwsh
+        run: |
+          npm install --global --no-fund --no-audit @github/copilot@1.0.96
+          if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
+
+      # The token only allows Copilot requests and reading this public repository, and it is
+      # hidden from the agent's shell. The agent has no GitHub tools and no git credential.
+      - name: Run the agent
+        shell: pwsh
+        timeout-minutes: 100
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_MODEL: ${{ inputs.model || vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'auto' }}
+        run: |
+          $logDir = Join-Path $env:RUNNER_TEMP 'logs'
+          New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+          $prompt = "Read .github/agent/translation-sync/PROMPT.md and follow it. The batch directory is $env:BATCH_DIR."
+
+          copilot `
+            --prompt $prompt `
+            --model $env:COPILOT_MODEL `
+            --allow-all-tools `
+            --allow-all-paths `
+            --disable-builtin-mcps `
+            --secret-env-vars COPILOT_GITHUB_TOKEN GITHUB_ENV GITHUB_OUTPUT GITHUB_PATH `
+            --share (Join-Path $logDir 'transcript.md') `
+            --log-dir $logDir
+          if ($LASTEXITCODE -ne 0) { throw "Copilot CLI exited with code $LASTEXITCODE" }
+
+      - name: Upload the translations
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: translated-${{ matrix.language }}
+          path: ${{ runner.temp }}/translations/${{ matrix.language }}.translated*.json
+          if-no-files-found: warn
+
+      - name: Upload the transcript
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: transcript-${{ matrix.language }}
+          path: ${{ runner.temp }}/logs/transcript.md
+          if-no-files-found: ignore
+
+  merge:
+    name: Merge and open pull request
+    needs: [plan, translate]
+    if: always() && needs.plan.outputs.has-work == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout base commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          token: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
+
+      - name: Download the translations
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          pattern: translated-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/translated
+
+      # The missing keys are exported again here, from this clean checkout of the same commit,
+      # so only the agents' *.translated.json files are taken from the agent jobs.
+      - name: Merge and validate the translations
+        id: merge
+        shell: pwsh
+        env:
+          LANGUAGES: ${{ inputs.languages }}
+        run: |
+          $batchDir = Join-Path $env:RUNNER_TEMP 'translations'
+          $translatedDir = Join-Path $env:RUNNER_TEMP 'translated'
+          New-Item -Path $translatedDir -ItemType Directory -Force | Out-Null
+          ./scripts/translation/Export-PendingTranslations.ps1 -OutputDirectory $batchDir -LanguageCodes $env:LANGUAGES | Out-Null
+
+          ./scripts/translation/Import-PendingTranslations.ps1 `
+            -WorkDirectory $batchDir `
+            -TranslatedDirectory $translatedDir `
+            -SummaryPath (Join-Path $env:RUNNER_TEMP 'summary.md')
+          ./scripts/translation/Verify-Translations.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Translation verification failed' }
+
+          $changed = @(git diff --name-only)
+          $unexpected = @($changed | Where-Object { $_ -notmatch '^src/Languages/lang_[A-Za-z_-]+\.json$' -or $_ -eq 'src/Languages/lang_en.json' })
+          if ($unexpected.Count -gt 0) { throw "Unexpected changed files: $($unexpected -join ', ')" }
+
+          Get-Content -Path (Join-Path $env:RUNNER_TEMP 'summary.md') | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
+          "has-changes=$(($changed.Count -gt 0).ToString().ToLowerInvariant())" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+
+      - name: Open pull request
+        if: steps.merge.outputs.has-changes == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN || github.token }}
+          BASE_BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          $languageCount = @(git diff --name-only).Count
+          $branch = "automation/translations-$env:GITHUB_RUN_ID"
+          $title = "Translate missing strings in $languageCount languages"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch --create $branch
+          git add -- src/Languages
+          git commit --quiet --message "$title`n`nTranslated by the translation-sync workflow: $env:RUN_URL"
+          if ($LASTEXITCODE -ne 0) { throw 'git commit failed' }
+          git push --quiet origin "HEAD:refs/heads/$branch"
+          if ($LASTEXITCODE -ne 0) { throw 'git push failed' }
+
+          $bodyPath = Join-Path $env:RUNNER_TEMP 'pr-body.md'
+          @(
+            "Machine translations of the strings that ``lang_en.json`` has and these languages were missing, produced by the [translation-sync workflow]($env:RUN_URL). Native speakers are welcome to review them."
+            ''
+            (Get-Content -Path (Join-Path $env:RUNNER_TEMP 'summary.md') -Raw)
+            ''
+            'Entries that were rejected or left out stay missing and are offered again in the next run, which starts once this pull request is merged or closed.'
+          ) -join "`n" | Set-Content -Path $bodyPath -Encoding utf8NoBOM
+
+          gh label create $env:PR_LABEL --repo $env:GITHUB_REPOSITORY --color 0E8A16 --description 'Opened by the translation-sync workflow' --force | Out-Null
+          gh pr create `
+            --repo $env:GITHUB_REPOSITORY `
+            --base $env:BASE_BRANCH `
+            --head $branch `
+            --title $title `
+            --body-file $bodyPath `
+            --label translations `
+            --label $env:PR_LABEL
+          if ($LASTEXITCODE -ne 0) { throw 'gh pr create failed' }

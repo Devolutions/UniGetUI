@@ -493,52 +493,55 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                         continue;
                     }
 
-                    var packageIds = new StringBuilder();
-                    var packageVers = new StringBuilder();
                     var packageIdVersion = new Dictionary<string, string>();
                     foreach (var package in pair.Value)
-                    {
-                        packageIds.Append(package.Id + "|");
-                        packageVers.Append(package.VersionString + "|");
                         packageIdVersion[package.Id.ToLower()] = package.VersionString;
-                    }
                     var packageIdScope = BuildInstalledScopeMap(pair.Value);
-
-                    var SearchUrl =
-                        $"{pair.Key.Url.ToString().Trim('/')}/GetUpdates()"
-                        + $"?packageIds=%27{HttpUtility.UrlEncode(packageIds.ToString().Trim('|'))}%27"
-                        + $"&versions=%27{HttpUtility.UrlEncode(packageVers.ToString().Trim('|'))}%27"
-                        + $"&includePrerelease={(canPrerelease ? "true" : "false")}"
-                        + $"&includeAllVersions=0";
 
                     using HttpClient client = new(CoreTools.GenericHttpClientParameters);
                     client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-                    using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
-                    using HttpResponseMessage response = client.Send(request);
 
-                    if (!response.IsSuccessStatusCode)
+                    foreach (
+                        string SearchUrl in BuildV2UpdateUrls(pair.Key, pair.Value, canPrerelease)
+                    )
                     {
-                        logger.Error(
-                            $"Failed to fetch api at Url={SearchUrl} with status code {response.StatusCode}"
-                        );
-                        errors++;
-                    }
-                    else
-                    {
-                        string SearchResults = response
-                            .Content.ReadAsStringAsync()
-                            .GetAwaiter()
-                            .GetResult();
-                        Packages.AddRange(
-                            ParseUpdatesResponse(
-                                SearchResults,
-                                packageIdVersion,
-                                packageIdScope,
-                                pair.Key,
-                                this,
-                                logger
-                            )
-                        );
+                        try
+                        {
+                            using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+                            using HttpResponseMessage response = client.Send(request);
+
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                logger.Error(
+                                    $"Failed to fetch api at Url={SearchUrl} with status code {response.StatusCode}"
+                                );
+                                errors++;
+                                continue;
+                            }
+
+                            string SearchResults = response
+                                .Content.ReadAsStringAsync()
+                                .GetAwaiter()
+                                .GetResult();
+                            Packages.AddRange(
+                                ParseUpdatesResponse(
+                                    SearchResults,
+                                    packageIdVersion,
+                                    packageIdScope,
+                                    pair.Key,
+                                    this,
+                                    logger
+                                )
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(
+                                $"Failed to fetch api at Url={SearchUrl} on source {pair.Key.Name}"
+                            );
+                            logger.Error(ex);
+                            errors++;
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -553,6 +556,81 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             logger.Close(errors);
             return KeepUpdatesNewerThanInstalled(Packages, installedPackages);
         }
+
+        internal const int MaxV2UpdateUrlLength = 8000;
+
+        internal IReadOnlyList<string> BuildV2UpdateUrls(
+            IManagerSource source,
+            IReadOnlyList<IPackage> installedPackages,
+            bool canPrerelease
+        )
+        {
+            var entries = new List<(string Id, string Version)>();
+            var indexById = new Dictionary<string, int>();
+            foreach (var package in installedPackages)
+            {
+                string key = package.Id.ToLower();
+                if (!indexById.TryGetValue(key, out int index))
+                {
+                    indexById[key] = entries.Count;
+                    entries.Add((package.Id, package.VersionString));
+                }
+                else if (IsOlderVersion(package.VersionString, entries[index].Version))
+                {
+                    entries[index] = (entries[index].Id, package.VersionString);
+                }
+            }
+
+            string prefix = $"{source.Url.ToString().Trim('/')}/GetUpdates()?packageIds=%27";
+            const string middle = "%27&versions=%27";
+            string suffix =
+                $"%27&includePrerelease={(canPrerelease ? "true" : "false")}&includeAllVersions=0";
+            string separator = HttpUtility.UrlEncode("|");
+            int fixedLength = prefix.Length + middle.Length + suffix.Length;
+
+            var urls = new List<string>();
+            var ids = new StringBuilder();
+            var versions = new StringBuilder();
+            int count = 0;
+
+            foreach (var (id, version) in entries)
+            {
+                string encodedId = HttpUtility.UrlEncode(id);
+                string encodedVersion = HttpUtility.UrlEncode(version);
+                int added =
+                    encodedId.Length + encodedVersion.Length + (count > 0 ? 2 * separator.Length : 0);
+
+                if (
+                    count > 0
+                    && fixedLength + ids.Length + versions.Length + added > MaxV2UpdateUrlLength
+                )
+                {
+                    urls.Add(prefix + ids + middle + versions + suffix);
+                    ids.Clear();
+                    versions.Clear();
+                    count = 0;
+                }
+
+                if (count > 0)
+                {
+                    ids.Append(separator);
+                    versions.Append(separator);
+                }
+                ids.Append(encodedId);
+                versions.Append(encodedVersion);
+                count++;
+            }
+
+            if (count > 0)
+                urls.Add(prefix + ids + middle + versions + suffix);
+
+            return urls;
+        }
+
+        private bool IsOlderVersion(string version, string other) =>
+            CompareVersions(version, other) is { } comparison
+                ? comparison < 0
+                : CoreTools.VersionStringToStruct(version) < CoreTools.VersionStringToStruct(other);
 
         internal IReadOnlyList<Package>? GetAvailableUpdatesV3(
             IManagerSource source,

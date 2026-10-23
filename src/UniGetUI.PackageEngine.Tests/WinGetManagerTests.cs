@@ -1930,6 +1930,58 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetLocalIdentifierRetryDropsTheScopeAndArchitectureThatHidTheInstalledEntry()
+    {
+        const string fanControlLocalIdentifier =
+            @"ARP\Machine\X86\{141A88F8-31AC-49EA-B428-2BE8C19DED83}_is1";
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Rem0o.FanControl")
+            .WithVersion("251")
+            .WithNewVersion("268")
+            .Build();
+        NativePackageHandler.AddLocalIdentifier(package, fanControlLocalIdentifier);
+        static InstallOptions UserScopeX64() =>
+            new() { InstallationScope = PackageScope.User, Architecture = Architecture.x64 };
+
+        var firstAttempt = manager.OperationHelper.GetParameters(
+            package,
+            UserScopeX64(),
+            OperationType.Update
+        );
+        Assert.Contains("--scope", firstAttempt);
+        Assert.Contains("--architecture", firstAttempt);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+
+        var retryAttempt = manager.OperationHelper.GetParameters(
+            package,
+            UserScopeX64(),
+            OperationType.Update
+        );
+        Assert.Contains($"\"{fanControlLocalIdentifier}\"", retryAttempt);
+        Assert.DoesNotContain("--scope", retryAttempt);
+        Assert.DoesNotContain("--architecture", retryAttempt);
+
+        var manualCommand = manager.OperationHelper.GetStandaloneParameters(
+            package,
+            UserScopeX64(),
+            OperationType.Update
+        );
+        Assert.Contains($"\"{fanControlLocalIdentifier}\"", manualCommand);
+        Assert.DoesNotContain("--scope", manualCommand);
+        Assert.DoesNotContain("--architecture", manualCommand);
+    }
+
+    [Fact]
     public void WinGetUninstallRetriesWithTheLocalIdentifierWhenNoInstalledPackageMatches()
     {
         var manager = new WinGet();

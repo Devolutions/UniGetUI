@@ -24,29 +24,39 @@ internal static class MacAdminFileInstaller
             await File.WriteAllTextAsync(staged, contents);
 
             string folder = Path.GetDirectoryName(destination)!;
-            string command = $"/bin/mkdir -p {ShellQuote(folder)} && /usr/bin/install -m 0644 {ShellQuote(staged)} {ShellQuote(destination)}";
-            var startInfo = new ProcessStartInfo("/usr/bin/osascript")
-            {
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-            };
-            startInfo.ArgumentList.Add("-e");
-            startInfo.ArgumentList.Add($"do shell script \"{AppleScriptEscape(command)}\" with prompt \"{AppleScriptEscape(prompt)}\" with administrator privileges");
-
-            using var process = Process.Start(startInfo)
-                ?? throw new IOException("Could not start the administrator prompt.");
-            string error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            if (process.ExitCode == 0) return true;
-            if (error.Contains($"({UserCanceledError})", StringComparison.Ordinal)) return false;
-            throw new IOException(error.Trim());
+            return await RunAsync(
+                $"/bin/mkdir -p {ShellQuote(folder)} && /usr/bin/install -m 0644 {ShellQuote(staged)} {ShellQuote(destination)}",
+                prompt);
         }
         finally
         {
             try { Directory.Delete(stagingDirectory, recursive: true); }
             catch { /* best effort cleanup of a temp folder */ }
         }
+    }
+
+    /// <summary>
+    /// Runs the shell <paramref name="command"/> as root after the administrator prompt.
+    /// Returns false when the user cancels it, and throws when the command fails.
+    /// </summary>
+    public static async Task<bool> RunAsync(string command, string prompt)
+    {
+        var startInfo = new ProcessStartInfo("/usr/bin/osascript")
+        {
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+        };
+        startInfo.ArgumentList.Add("-e");
+        startInfo.ArgumentList.Add($"do shell script \"{AppleScriptEscape(command)}\" with prompt \"{AppleScriptEscape(prompt)}\" with administrator privileges");
+
+        using var process = Process.Start(startInfo)
+            ?? throw new IOException("Could not start the administrator prompt.");
+        string error = await process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        if (process.ExitCode == 0) return true;
+        if (error.Contains($"({UserCanceledError})", StringComparison.Ordinal)) return false;
+        throw new IOException(error.Trim());
     }
 
     internal static string ShellQuote(string value) => "'" + value.Replace("'", "'\\''") + "'";

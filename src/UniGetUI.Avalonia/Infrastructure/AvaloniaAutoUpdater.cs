@@ -212,6 +212,30 @@ internal static partial class AvaloniaAutoUpdater
             if (content.Contains(AttemptFinishedMarker))
                 return;
 
+            if (MacUpdateTargetResolver.TryGetSwapFailure(content, out string failedBundle))
+            {
+                Logger.Warn($"The previous update could not replace {failedBundle}.");
+                try
+                {
+                    File.AppendAllText(
+                        _updateLogPath,
+                        $"{Environment.NewLine}{AttemptFinishedMarker} bundle swap failed (detected on next launch) at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Could not mark the failed update attempt as finished: {ex.Message}");
+                }
+
+                RaiseStatus(
+                    CoreTools.Translate("The update could not be applied."),
+                    CoreTools.Translate("UniGetUI could not replace {0}, so it is still running the previous version. Open the log to see what happened.", failedBundle),
+                    InfoBarSeverity.Error,
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
+                return;
+            }
+
             string currentVer = CoreData.VersionName;
             string? targetVer = null;
             foreach (string line in content.Split('\n'))
@@ -519,6 +543,11 @@ internal static partial class AvaloniaAutoUpdater
             RecordTargetVersion(candidate.VersionName);
             LogUpdateInfo($"Update to UniGetUI {candidate.VersionName} is available.");
 
+            if (OperatingSystem.IsMacOS() && ReportMacUpdateTargetIfBlocked(ResolveMacUpdateTarget()))
+            {
+                return false;
+            }
+
             string installerName;
             if (OperatingSystem.IsWindows())
                 installerName = "UniGetUI Updater.exe";
@@ -545,7 +574,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Cached valid installer found, preparing to launch...");
-                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.VersionName, autoLaunch, IsManual());
+                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, autoLaunch, IsManual());
             }
 
             string installerValidationFailureMarkerPath =
@@ -625,7 +654,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Downloaded installer is valid, preparing to launch...");
-                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.VersionName, autoLaunch, IsManual());
+                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, autoLaunch, IsManual());
             }
 
             UpdaterDownloadEngine.RecordFailure(
@@ -718,6 +747,7 @@ internal static partial class AvaloniaAutoUpdater
     private static async Task<bool> PrepareAndLaunchAsync(
         AutoUpdaterHelpers.UpdaterAttemptCoordinator.AttemptScope attempt,
         string installerPath,
+        string installerHash,
         string versionName,
         bool autoLaunch,
         bool manualCheck)
@@ -800,7 +830,7 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             LogUpdateInfo("Installing update \u2014 launching installer.");
-            await LaunchInstallerAsync(installerPath, handoff);
+            await LaunchInstallerAsync(installerPath, installerHash, handoff);
             return true;
         }
         finally
@@ -809,11 +839,11 @@ internal static partial class AvaloniaAutoUpdater
         }
     }
 
-    private static async Task LaunchInstallerAsync(string installerLocation, TaskCompletionSource handoff)
+    private static async Task LaunchInstallerAsync(string installerLocation, string installerHash, TaskCompletionSource handoff)
     {
         if (OperatingSystem.IsMacOS())
         {
-            await LaunchMacInstallerAsync(installerLocation);
+            await LaunchMacInstallerAsync(installerLocation, installerHash);
             return;
         }
 
@@ -935,9 +965,15 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     [SupportedOSPlatform("macos")]
-    private static async Task LaunchMacInstallerAsync(string installerLocation)
+    private static async Task LaunchMacInstallerAsync(string installerLocation, string installerHash)
     {
         LogUpdateInfo($"Applying macOS update from archive: {installerLocation}");
+
+        MacUpdateTarget updateTarget = ResolveMacUpdateTarget();
+        if (ReportMacUpdateTargetIfBlocked(updateTarget))
+        {
+            return;
+        }
 
         RaiseStatus(
             CoreTools.Translate("UniGetUI is being updated..."),
@@ -1000,8 +1036,7 @@ internal static partial class AvaloniaAutoUpdater
             return;
         }
 
-        // Replace the *running* bundle wherever it lives, falling back to /Applications.
-        string target = ResolveRunningMacAppBundle() ?? "/Applications/UniGetUI.app";
+        string target = updateTarget.BundlePath;
 
         if (!Directory.Exists(target))
         {
@@ -1024,6 +1059,12 @@ internal static partial class AvaloniaAutoUpdater
 
         LogUpdateInfo($"Replacing {target} with the freshly-extracted bundle and relaunching.");
 
+        if (updateTarget.Status == MacUpdateTargetStatus.NotWritable)
+        {
+            await ApplyMacUpdateAsAdminAsync(target, installerLocation, installerHash);
+            return;
+        }
+
         // The swap is handed to a detached helper that waits for THIS process to exit
         // before touching the bundle, so the running app never has its files yanked out
         // from under it. On success the helper relaunches the new bundle; on any failure
@@ -1032,10 +1073,10 @@ internal static partial class AvaloniaAutoUpdater
         // relaunched copy confirms success via CheckForOrphanedUpdateAttempt() by
         // comparing its own version against the recorded target version.
         //
-        // Arguments are passed positionally ($1=pid, $2=target, $3=new app) so no path
-        // is ever interpolated into the script text.
+        // Arguments are passed positionally ($1=pid, $2=target, $3=new app, $4=update log,
+        // $5=failure marker, $6=redacted target) so no path is ever interpolated into the script text.
         const string swap = """
-            pid="$1"; target="$2"; newapp="$3"
+            pid="$1"; target="$2"; newapp="$3"; log="$4"; marker="$5"; shown="$6"
             i=0
             while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
             rm -rf "$target.old"
@@ -1046,11 +1087,21 @@ internal static partial class AvaloniaAutoUpdater
               else
                 rm -rf "$target"
                 mv "$target.old" "$target"
+                printf '\n%s %s\n' "$marker" "$shown" >> "$log"
               fi
+            else
+              printf '\n%s %s\n' "$marker" "$shown" >> "$log"
             fi
             /usr/bin/open -na "$target"
             """;
-        if (!TrySpawnSwapHelper(swap, Environment.ProcessId.ToString(CultureInfo.InvariantCulture), target, newApp))
+        if (!TrySpawnSwapHelper(
+                swap,
+                Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
+                target,
+                newApp,
+                _updateLogPath,
+                MacUpdateTargetResolver.SwapFailedMarker,
+                Logger.Redact(target)))
         {
             // We could not even launch the helper, so nothing was changed. Report and bail
             // without exiting so the user keeps a working copy.
@@ -1067,6 +1118,81 @@ internal static partial class AvaloniaAutoUpdater
 
         // Match the Windows flow: terminate the running copy so the helper can replace
         // the bundle and relaunch the freshly-installed version.
+        Environment.Exit(0);
+    }
+
+    // Swaps a bundle the user cannot write to through the macOS administrator prompt, while
+    // this process still runs, then relaunches the new bundle once it has exited.
+    [SupportedOSPlatform("macos")]
+    private static async Task ApplyMacUpdateAsAdminAsync(string target, string archive, string expectedHash)
+    {
+        string pid = Environment.ProcessId.ToString(CultureInfo.InvariantCulture);
+        string command = string.Join(
+            ' ',
+            "/bin/sh -c",
+            MacAdminFileInstaller.ShellQuote(MacUpdateTargetResolver.ElevatedSwapScript),
+            "sh",
+            MacAdminFileInstaller.ShellQuote(target),
+            MacAdminFileInstaller.ShellQuote(archive),
+            MacAdminFileInstaller.ShellQuote(expectedHash.ToLowerInvariant()),
+            pid);
+
+        bool swapped;
+        // Keeps a Quit from exiting on its handoff timeout while the user still has the prompt open.
+        using IDisposable prompt = InstallerHandoffs.BeginInteraction();
+        try
+        {
+            swapped = await MacAdminFileInstaller.RunAsync(
+                command,
+                CoreTools.Translate("UniGetUI needs administrator rights to install its update."));
+        }
+        catch (Exception ex)
+        {
+            LogUpdateError($"Could not replace {target} with administrator rights:");
+            LogUpdateError(ex);
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                ex.Message,
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("administrator swap failed");
+            return;
+        }
+
+        if (!swapped)
+        {
+            LogUpdateWarn("The administrator prompt was cancelled; the update was not installed.");
+            RaiseStatus(
+                CoreTools.Translate("An update for UniGetUI is available, but installing it requires administrator rights."),
+                CoreTools.Translate("Your account cannot modify {0} without administrator rights.", target),
+                InfoBarSeverity.Warning,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("administrator prompt cancelled");
+            return;
+        }
+
+        const string relaunch = """
+            pid="$1"; target="$2"
+            i=0
+            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+            /usr/bin/open -na "$target"
+            """;
+        if (!TrySpawnSwapHelper(relaunch, pid, target))
+        {
+            // The new version is already in place; it only needs to be opened again.
+            RaiseStatus(
+                CoreTools.Translate("Update installed."),
+                CoreTools.Translate("Restart UniGetUI to start using the new version."),
+                InfoBarSeverity.Success,
+                isClosable: true);
+            MarkAttemptFinished("administrator swap succeeded; relaunch helper could not start");
+            return;
+        }
+
         Environment.Exit(0);
     }
 
@@ -1340,21 +1466,64 @@ internal static partial class AvaloniaAutoUpdater
         return stagingDir;
     }
 
-    // Walks up from the running executable to the enclosing ".app" bundle directory.
     [SupportedOSPlatform("macos")]
-    private static string? ResolveRunningMacAppBundle()
+    private static MacUpdateTarget ResolveMacUpdateTarget()
     {
-        // Environment.ProcessPath is typically /Applications/UniGetUI.app/Contents/MacOS/UniGetUI.
-        string? dir = Path.GetDirectoryName(Environment.ProcessPath);
-        while (!string.IsNullOrEmpty(dir))
+        MacUpdateTarget target = MacUpdateTargetResolver.Resolve(
+            Environment.ProcessPath,
+            MacBundleLocation.TryGetTranslocatedOriginalPath,
+            Directory.Exists,
+            MacBundleLocation.IsWritable,
+            MacBundleLocation.IsOnReadOnlyVolume);
+
+        if (target.RunningBundlePath is not null && MacUpdateTargetResolver.IsTranslocatedPath(target.RunningBundlePath))
         {
-            if (dir.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
-            {
-                return dir;
-            }
-            dir = Path.GetDirectoryName(dir);
+            LogUpdateInfo(
+                $"UniGetUI is running from the translocated copy {target.RunningBundlePath}; "
+                + $"update target resolved to {target.BundlePath} ({target.Status}).");
         }
-        return null;
+
+        return target;
+    }
+
+    private static bool ReportMacUpdateTargetIfBlocked(MacUpdateTarget target)
+    {
+        switch (target.Status)
+        {
+            case MacUpdateTargetStatus.TranslocatedUnresolved:
+                LogUpdateWarn(
+                    $"UniGetUI is running from the temporary location {target.BundlePath} and its original location could not be resolved; the update will not be applied.");
+                RaiseStatus(
+                    CoreTools.Translate("UniGetUI cannot update itself from a temporary location."),
+                    CoreTools.Translate("macOS is running UniGetUI from a temporary copy that cannot be modified. Move UniGetUI to the Applications folder, open it from there, and try again."),
+                    InfoBarSeverity.Warning,
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
+                MarkAttemptFinished("running from a translocated location that could not be resolved");
+                return true;
+
+            case MacUpdateTargetStatus.ReadOnlyVolume:
+                LogUpdateWarn(
+                    $"UniGetUI is running from {target.BundlePath}, which is on a read-only volume; the update will not be downloaded.");
+                RaiseStatus(
+                    CoreTools.Translate("UniGetUI cannot update itself from a read-only location."),
+                    CoreTools.Translate("UniGetUI is running from {0}, which cannot be modified, for example a mounted disk image. Move UniGetUI to the Applications folder, open it from there, and try again.", target.BundlePath),
+                    InfoBarSeverity.Warning,
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
+                MarkAttemptFinished("update target is on a read-only volume");
+                return true;
+
+            case MacUpdateTargetStatus.NotWritable:
+                LogUpdateInfo(
+                    $"The current user cannot replace {target.BundlePath} (the bundle or its parent folder is not writable); administrator rights will be requested to install the update.");
+                return false;
+
+            default:
+                return false;
+        }
     }
 
     // ------------------------------------------------------------------ update check sources

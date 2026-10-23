@@ -4,6 +4,7 @@ public sealed class InstallerHandoffTracker
 {
     private readonly object _lock = new();
     private readonly HashSet<TaskCompletionSource> _pending = [];
+    private int _interactions;
 
     public bool HasPending
     {
@@ -29,6 +30,14 @@ public sealed class InstallerHandoffTracker
             _pending.Remove(handoff);
     }
 
+    // Marks a step the user must answer, such as an administrator prompt, until disposed.
+    // WaitForAllAsync does not give up on its timeout while one is open.
+    public IDisposable BeginInteraction()
+    {
+        Interlocked.Increment(ref _interactions);
+        return new Interaction(this);
+    }
+
     public async Task<bool> WaitForAllAsync(TimeSpan timeout)
     {
         Task[] pending;
@@ -38,14 +47,29 @@ public sealed class InstallerHandoffTracker
         if (pending.Length == 0)
             return true;
 
-        try
+        while (true)
         {
-            await Task.WhenAll(pending).WaitAsync(timeout);
-            return true;
+            try
+            {
+                await Task.WhenAll(pending).WaitAsync(timeout);
+                return true;
+            }
+            catch (TimeoutException)
+            {
+                if (Volatile.Read(ref _interactions) == 0)
+                    return false;
+            }
         }
-        catch (TimeoutException)
+    }
+
+    private sealed class Interaction(InstallerHandoffTracker tracker) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
         {
-            return false;
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+                Interlocked.Decrement(ref tracker._interactions);
         }
     }
 }

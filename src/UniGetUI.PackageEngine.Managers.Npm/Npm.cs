@@ -200,8 +200,167 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             + CoreTools.EscapePowerShellSingleQuoted(query)
             + " --json";
 
-        public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
-            CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "npm.cmd" : "npm");
+        public override IReadOnlyList<string> FindCandidateExecutableFiles()
+        {
+            if (OperatingSystem.IsWindows())
+                return CoreTools.WhichMultiple("npm.cmd");
+
+            return CoreTools.WhichMultiple("npm")
+                .Concat(
+                    GetNvmBinDirectories(
+                            Environment.GetEnvironmentVariable,
+                            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+                        )
+                        .Select(directory => Path.Join(directory, "npm"))
+                        .Where(IsExecutableFile)
+                )
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        internal static IReadOnlyList<string> GetNvmBinDirectories(
+            Func<string, string?> readEnvironmentVariable,
+            string userProfileDirectory
+        )
+        {
+            string nvmDirectory;
+            if (readEnvironmentVariable("NVM_DIR")?.Trim() is { Length: > 0 } configured)
+                nvmDirectory = configured;
+            else if (userProfileDirectory.Trim() is { Length: > 0 } userProfile)
+                nvmDirectory = Path.Join(userProfile, ".nvm");
+            else
+                return [];
+
+            List<(Version Version, string Directory)> installed = [];
+            try
+            {
+                string versionsDirectory = Path.Join(nvmDirectory, "versions", "node");
+                if (!Directory.Exists(versionsDirectory))
+                    return [];
+
+                foreach (string directory in Directory.EnumerateDirectories(versionsDirectory))
+                {
+                    string name = Path.GetFileName(directory);
+                    if (name.StartsWith('v') && Version.TryParse(name[1..], out Version? version))
+                        installed.Add((version, directory));
+                }
+            }
+            catch (IOException)
+            {
+                return [];
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return [];
+            }
+
+            installed.Sort((a, b) => b.Version.CompareTo(a.Version));
+
+            if (ResolveNvmAlias(nvmDirectory, "default") is { } defaultVersion)
+            {
+                int index = installed.FindIndex(entry => MatchesNvmVersion(entry.Version, defaultVersion));
+                if (index > 0)
+                {
+                    var entry = installed[index];
+                    installed.RemoveAt(index);
+                    installed.Insert(0, entry);
+                }
+            }
+
+            return installed.Select(entry => Path.Join(entry.Directory, "bin")).ToArray();
+        }
+
+        private static string? ResolveNvmAlias(string nvmDirectory, string alias)
+        {
+            for (int hop = 0; hop < 8; hop++)
+            {
+                string value;
+                try
+                {
+                    string aliasFile = Path.Join(nvmDirectory, "alias", alias);
+                    if (!File.Exists(aliasFile))
+                        return null;
+                    value = File.ReadAllText(aliasFile).Trim();
+                }
+                catch (IOException)
+                {
+                    return null;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return null;
+                }
+
+                if (value.Length is 0 || value is "node" or "stable")
+                    return null;
+                if (IsNvmVersionSpecification(value))
+                    return value;
+                alias = value;
+            }
+
+            return null;
+        }
+
+        private static bool IsNvmVersionSpecification(string value)
+        {
+            string[] parts = (value.StartsWith('v') ? value[1..] : value).Split('.');
+            return parts.Length is >= 1 and <= 3
+                && parts.All(part => part.Length > 0 && part.All(char.IsAsciiDigit));
+        }
+
+        private static bool MatchesNvmVersion(Version version, string specification)
+        {
+            string[] parts = specification.TrimStart('v').Split('.');
+            int[] components = [version.Major, version.Minor, version.Build];
+            if (parts.Length > components.Length)
+                return false;
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!int.TryParse(parts[i], out int value) || value != components[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsExecutableFile(string path)
+        {
+            if (!File.Exists(path))
+                return false;
+
+            if (OperatingSystem.IsWindows())
+                return true;
+
+            const UnixFileMode ExecutableBits =
+                UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+
+            try
+            {
+                return (File.GetUnixFileMode(path) & ExecutableBits) is not 0;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        internal static string AppendDirectoryToPath(string? currentPath, string directory)
+        {
+            if (string.IsNullOrEmpty(currentPath))
+                return directory;
+
+            string trimmedDirectory = Path.TrimEndingDirectorySeparator(directory);
+            bool alreadyPresent = currentPath
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+                .Any(entry => Path.TrimEndingDirectorySeparator(entry) == trimmedDirectory);
+
+            return alreadyPresent ? currentPath : currentPath + Path.PathSeparator + directory;
+        }
 
         protected override void _loadManagerExecutableFile(
             out bool found,
@@ -219,6 +378,17 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 callArguments =
                     $"-NoProfile -ExecutionPolicy Bypass -Command \"{_executable.Replace(" ", "` ")}\" ";
                 return;
+            }
+
+            if (found && Path.GetDirectoryName(_executable) is { Length: > 0 } executableDirectory)
+            {
+                string? currentPath = Environment.GetEnvironmentVariable("PATH");
+                string updatedPath = AppendDirectoryToPath(currentPath, executableDirectory);
+                if (updatedPath != currentPath)
+                {
+                    Environment.SetEnvironmentVariable("PATH", updatedPath);
+                    Logger.Info($"Added {executableDirectory} to the PATH so npm can reach its node");
+                }
             }
 
             path = _executable;

@@ -42,6 +42,7 @@ runs:
       shell: pwsh
       env:
         NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+        NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
         OUTPUT_DIR: ${{ inputs.output-dir }}
         # MSBuild reads environment variables as properties. As in build-release.yml, build
         # project references one at a time without the shared compiler server: parallel

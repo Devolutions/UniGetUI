@@ -53,6 +53,7 @@ jobs:
     env:
       CONFIGURATION: Release
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
 
     steps:
       - name: Checkout repository

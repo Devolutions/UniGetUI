@@ -155,6 +155,7 @@ jobs:
       UNIGETUI_OPENSEARCH_USERNAME: ${{ secrets.UNIGETUI_OPENSEARCH_USERNAME }}
       UNIGETUI_OPENSEARCH_PASSWORD: ${{ secrets.UNIGETUI_OPENSEARCH_PASSWORD }}
       NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
+      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}\.nuget\http-cache
     strategy:
       fail-fast: false
       matrix:
@@ -471,6 +472,7 @@ jobs:
       UNIGETUI_OPENSEARCH_USERNAME: ${{ secrets.UNIGETUI_OPENSEARCH_USERNAME }}
       UNIGETUI_OPENSEARCH_PASSWORD: ${{ secrets.UNIGETUI_OPENSEARCH_PASSWORD }}
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
       SIGNING_IDENTITY: 'Developer ID Application: Devolutions inc.'
     strategy:
       fail-fast: false

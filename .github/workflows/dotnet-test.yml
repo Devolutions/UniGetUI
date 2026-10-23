@@ -30,13 +30,15 @@ on:
 
   workflow_dispatch:
 
+env:
+  # NuGet's package and HTTP caches go in the workspace, on D: on Windows runners, instead of
+  # their default folders on C:, the runner's slow OS disk. Set here for every job and action.
+  NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
+  NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}\.nuget\http-cache
+
 jobs:
   test-codebase:
     runs-on: windows-latest
-    env:
-      NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
-      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}\.nuget\http-cache
-
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v7

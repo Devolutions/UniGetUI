@@ -37,6 +37,10 @@ on:
         default: true
 
 env:
+  # NuGet's package and HTTP caches go in the workspace, on D: on Windows runners, instead of
+  # their default folders on C:, the runner's slow OS disk. Set here for every job and action.
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
   LINUX_GLIBC_BASELINE: '2.27'
 
 jobs:
@@ -154,8 +158,6 @@ jobs:
       UNIGETUI_GITHUB_CLIENT_SECRET: ${{ secrets.UNIGETUI_GITHUB_CLIENT_SECRET }}
       UNIGETUI_OPENSEARCH_USERNAME: ${{ secrets.UNIGETUI_OPENSEARCH_USERNAME }}
       UNIGETUI_OPENSEARCH_PASSWORD: ${{ secrets.UNIGETUI_OPENSEARCH_PASSWORD }}
-      NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
-      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}\.nuget\http-cache
     strategy:
       fail-fast: false
       matrix:
@@ -471,8 +473,6 @@ jobs:
       UNIGETUI_GITHUB_CLIENT_SECRET: ${{ secrets.UNIGETUI_GITHUB_CLIENT_SECRET }}
       UNIGETUI_OPENSEARCH_USERNAME: ${{ secrets.UNIGETUI_OPENSEARCH_USERNAME }}
       UNIGETUI_OPENSEARCH_PASSWORD: ${{ secrets.UNIGETUI_OPENSEARCH_PASSWORD }}
-      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
-      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
       SIGNING_IDENTITY: 'Developer ID Application: Devolutions inc.'
     strategy:
       fail-fast: false

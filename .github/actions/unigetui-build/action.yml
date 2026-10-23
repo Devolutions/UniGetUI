@@ -40,9 +40,9 @@ runs:
     - name: Build UniGetUI installer
       id: build
       shell: pwsh
+      # NuGet's cache folders (NUGET_PACKAGES, NUGET_HTTP_CACHE_PATH) come from the calling
+      # workflow's env.
       env:
-        NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
-        NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
         OUTPUT_DIR: ${{ inputs.output-dir }}
         # MSBuild reads environment variables as properties. As in build-release.yml, build
         # project references one at a time without the shared compiler server: parallel

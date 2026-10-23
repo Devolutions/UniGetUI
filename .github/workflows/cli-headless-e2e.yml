@@ -15,6 +15,12 @@ on:
       - 'global.json'
   workflow_dispatch:
 
+env:
+  # NuGet's package and HTTP caches go in the workspace, on D: on Windows runners, instead of
+  # their default folders on C:, the runner's slow OS disk. Set here for every job and action.
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
+
 jobs:
   cli-headless-e2e:
     strategy:
@@ -52,8 +58,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CONFIGURATION: Release
-      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
-      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
 
     steps:
       - name: Checkout repository

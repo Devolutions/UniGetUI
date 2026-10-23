@@ -28,6 +28,12 @@ on:
 permissions:
   contents: read
 
+env:
+  # NuGet's package and HTTP caches go in the workspace, on D: on Windows runners, instead of
+  # their default folders on C:, the runner's slow OS disk. Set here for every job and action.
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
+
 jobs:
   desktop-smoke:
     name: UniGetUI (${{ matrix.unigetui_source }}) in an RDP desktop session

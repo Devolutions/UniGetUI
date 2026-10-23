@@ -908,7 +908,8 @@
                         </Panel>
                     </Button>
                     <!-- Close: X -->
-                    <Button Width="46" Height="44"
+                    <Button x:Name="CaptionCloseButton"
+                            Width="46" Height="44"
                             Classes="caption caption-close"
                                                         automation:AutomationProperties.Name="{t:Translate Close}"
                             ToolTip.Tip="{t:Translate Close}"

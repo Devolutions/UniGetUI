@@ -1414,7 +1414,8 @@ public partial class MainWindow : Window
                 inset = frame.Right / (dpi / 96.0);
         }
 
-        WindowButtons.Margin = new Thickness(0, 0, inset, 0);
+        CaptionCloseButton.Width = 46 + inset;
+        CaptionCloseButton.Padding = new Thickness(0, 0, inset, 0);
     }
 
     private void ApplyWindowBorderColor(nint handle)

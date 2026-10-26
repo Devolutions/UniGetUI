@@ -27,6 +27,13 @@ internal sealed class MacPkgOperationHelper : BasePkgOperationHelper, IManagedPa
         IPackage package, OperationType operation, IReadOnlyList<string> processOutput, int returnCode) =>
         returnCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure;
 
+    // An update installs its known newer version, else the newest the feed has; reinstalling the installed
+    // version, as an update with no newer one known would ask for, never upgrades anything.
+    internal static string? TargetVersion(IPackage package, InstallOptions options, OperationType operation) =>
+        operation == OperationType.Update
+            ? package.NewVersionString.Length > 0 && package.NewVersionString != package.VersionString ? package.NewVersionString : null
+            : options.Version.Length > 0 ? options.Version : null;
+
     public async Task<OperationVeredict?> TryPerformAsync(IPackage package, InstallOptions options,
         OperationType operation, Action<string> log, Action<OperationProgress> progress,
         CancellationToken cancellationToken)
@@ -37,9 +44,13 @@ internal sealed class MacPkgOperationHelper : BasePkgOperationHelper, IManagedPa
             return OperationVeredict.Failure;
         }
 
-        string? version = operation == OperationType.Update ? package.NewVersionString
-            : options.Version.Length > 0 ? options.Version : null;
-        var item = await Task.Run(() => _manager.FindFeedItem(package, version), cancellationToken)
+        string? version = TargetVersion(package, options, operation);
+        var item = await Task.Run(() =>
+        {
+            // Installs act on what the feed publishes now, not on the listing kept for a few minutes.
+            _manager.RefreshPackageIndexes();
+            return _manager.FindFeedItem(package, version);
+        }, cancellationToken)
             ?? throw new InvalidOperationException(
                 $"The package feed {package.Source.Name} does not publish {package.Id}{(version is null ? "" : " " + version)} for this Mac.");
 

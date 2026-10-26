@@ -18,8 +18,9 @@ internal sealed class PkgHelperRequest
     [JsonPropertyName("id")]
     public required string Id { get; init; }
 
+    // Empty or absent for the newest; the source generator leaves an absent value null, not "".
     [JsonPropertyName("version")]
-    public string Version { get; init; } = "";
+    public string? Version { get; init; }
 }
 
 /// <summary>One line the helper sends back: a line of log, or the final result.</summary>
@@ -55,7 +56,10 @@ internal static class PkgHelperClient
 
     public static bool IsAvailable => File.Exists(SocketPath);
 
-    /// <summary>The helper's verdict, or null when it cannot be reached, so the caller can fall back.</summary>
+    /// <summary>
+    /// The helper's verdict, or null when it cannot be reached or refuses (a feed it does not trust), so
+    /// the caller falls back to the administrator prompt: refused only means "not without a password".
+    /// </summary>
     public static async Task<OperationVeredict?> TryInstallAsync(string catalog, PkgFeedItem item, Action<string> log)
     {
         using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
@@ -87,7 +91,12 @@ internal static class PkgHelperClient
                 continue;
             if (message.Message is { Length: > 0 } explanation)
                 log(explanation);
-            return result == PkgHelperMessage.Success ? OperationVeredict.Success : OperationVeredict.Failure;
+            return result switch
+            {
+                PkgHelperMessage.Success => OperationVeredict.Success,
+                PkgHelperMessage.Refused => null,
+                _ => OperationVeredict.Failure,
+            };
         }
         log("The UniGetUI package helper ended the connection without a result.");
         return OperationVeredict.Failure;

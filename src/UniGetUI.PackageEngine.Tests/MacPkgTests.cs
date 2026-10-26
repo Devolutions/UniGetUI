@@ -1285,6 +1285,21 @@ public sealed class MacPkgTests : IDisposable
         }
     }
 
+    [Fact]
+    public void AnUpdateWithoutANewerVersionInstallsTheNewestPublished()
+    {
+        var manager = new MacPkg();
+        var source = new Classes.Manager.ManagerSource(manager, "mac", new Uri("https://h/"));
+        var options = new Serializable.InstallOptions();
+        Interfaces.IPackage Upgradable(string installed, string offered) =>
+            new PackageClasses.Package("App", "com.example.app.pkg", installed, offered, source, manager);
+        Assert.Equal("2.0", MacPkgOperationHelper.TargetVersion(Upgradable("1.0", "2.0"), options, Enums.OperationType.Update));
+        Assert.Null(MacPkgOperationHelper.TargetVersion(Upgradable("1.0", "1.0"), options, Enums.OperationType.Update));
+        Assert.Null(MacPkgOperationHelper.TargetVersion(Upgradable("1.0", "1.0"), options, Enums.OperationType.Install));
+        options.Version = "1.5";
+        Assert.Equal("1.5", MacPkgOperationHelper.TargetVersion(Upgradable("1.0", "1.0"), options, Enums.OperationType.Install));
+    }
+
     // ── Root helper ────────────────────────────────────────────────────────
 
     private string HelperCatalog(string feed) => WritePackage("SoftwareCatalog.json", Encoding.UTF8.GetBytes($$"""
@@ -1373,6 +1388,32 @@ public sealed class MacPkgTests : IDisposable
         }
     }
 
+    [Theory]
+    [InlineData("""{"catalog":"mac","id":"com.example.app.pkg"}""", "success")]
+    [InlineData("""{"catalog":"mac","id":"com.example.app.pkg","version":null}""", "success")]
+    [InlineData("""{"catalog":null,"id":"com.example.app.pkg"}""", "refused")]
+    public async Task ARequestAsSentOverTheSocketIsAnsweredWhateverItOmits(string json, string expected)
+    {
+        // Requests are deserialized by the source generator, which leaves absent values null.
+        string feed = Path.Combine(_directory, "feed");
+        WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0", "App"));
+        PkgCatalogFeeds.TestCatalogPathOverride = HelperCatalog(feed);
+        TrustedPath.TestOverride = _ => null;
+        var previous = PkgInstaller.RunProcess;
+        PkgInstaller.RunProcess = (_, _, _) => Task.FromResult((0, "accepted"));
+        try
+        {
+            var request = System.Text.Json.JsonSerializer.Deserialize(json, PkgHelperJsonContext.Default.PkgHelperRequest)!;
+            Assert.Equal(expected, (await PkgHelperCommand.InstallAsync(request, _ => { })).Result);
+        }
+        finally
+        {
+            PkgInstaller.RunProcess = previous;
+            PkgCatalogFeeds.TestCatalogPathOverride = null;
+            TrustedPath.TestOverride = null;
+        }
+    }
+
     [Fact]
     public async Task WhenTheHelperDoesNotAnswerTheAdministratorPromptIsUsed()
     {
@@ -1397,11 +1438,53 @@ public sealed class MacPkgTests : IDisposable
             Assert.Equal(Enums.OperationVeredict.Success,
                 await PkgInstaller.InstallAsync(item, "App", log.Add, _ => { }, CancellationToken.None, feedId: "mac"));
             Assert.Equal("/usr/bin/osascript", ran);
-            Assert.Contains(log, l => l.Contains("does not answer", StringComparison.Ordinal));
+            Assert.Contains(log, l => l.Contains("did not install this package", StringComparison.Ordinal));
         }
         finally
         {
             (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgHelperClient.SocketPath) = previous;
+        }
+    }
+
+    [Fact]
+    public async Task WhenTheHelperRefusesTheAdministratorPromptIsOffered()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        // The helper refuses an unprotected feed; an administrator can still approve the install.
+        string feed = Path.Combine(_directory, "feed");
+        WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0", "App"));
+        string socket = Path.Combine("/tmp", $"ugpkg-{Guid.NewGuid():N}"[..20] + ".sock");
+        var previous = (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgHelperClient.SocketPath);
+        var ran = new List<string>();
+        PkgCatalogFeeds.TestCatalogPathOverride = HelperCatalog(feed);
+        TrustedPath.TestOverride = path => path == feed ? "any user can change it." : null;
+        PkgHelperClient.SocketPath = socket;
+        PkgInstaller.IsRoot = () => false;
+        PkgInstaller.RunProcess = (file, _, _) =>
+        {
+            lock (ran) ran.Add(file);
+            return Task.FromResult((0, "accepted"));
+        };
+        using var stop = new CancellationTokenSource();
+        var server = PkgHelperCommand.ServeAsync(socket, _ => { }, stop.Token);
+        try
+        {
+            var item = Assert.Single(PkgFeed.List(new Uri(feed)));
+            var log = new List<string>();
+            Assert.Equal(Enums.OperationVeredict.Success,
+                await PkgInstaller.InstallAsync(item, "App", log.Add, _ => { }, CancellationToken.None, feedId: "mac"));
+            Assert.Contains(log, l => l.Contains("not protected", StringComparison.Ordinal));
+            Assert.Contains("/usr/bin/osascript", ran);
+        }
+        finally
+        {
+            stop.Cancel();
+            await server;
+            (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgHelperClient.SocketPath) = previous;
+            PkgCatalogFeeds.TestCatalogPathOverride = null;
+            TrustedPath.TestOverride = null;
         }
     }
 

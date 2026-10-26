@@ -36,7 +36,7 @@ internal static class PkgInstaller
             progress(OperationProgress.ForStage(OperationProgressStage.Installing));
             if (await PkgHelperClient.TryInstallAsync(feedId, item, log) is { } verdict)
                 return verdict;
-            log("The UniGetUI package helper does not answer; asking for administrator rights instead.");
+            log("The UniGetUI package helper did not install this package; asking for administrator rights instead.");
         }
 
         (int code, string output) result;

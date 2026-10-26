@@ -202,6 +202,12 @@ public static class PkgHelperCommand
             {
                 result = new PkgHelperMessage { Result = PkgHelperMessage.Refused, Message = $"The request was refused: {ex.Message}" };
             }
+            catch (Exception ex)
+            {
+                // A request must always end with an answer and a trace, never in a silently faulted task.
+                journal($"  Unexpected error: {ex}");
+                result = new PkgHelperMessage { Result = PkgHelperMessage.Failure, Message = $"The helper failed: {ex.Message}" };
+            }
             journal($"  {result.Result}: {result.Message}");
             await Send(result);
         }
@@ -228,14 +234,16 @@ public static class PkgHelperCommand
     {
         static PkgHelperMessage Refuse(string why) => new() { Result = PkgHelperMessage.Refused, Message = why };
 
-        if (!IsField(request.Catalog) || !IsField(request.Id) || (request.Version.Length > 0 && !IsField(request.Version)))
+        string version = request.Version ?? "";
+        if (!IsField(request.Catalog) || !IsField(request.Id) || (version.Length > 0 && !IsField(version)))
             return Refuse("The request names no valid catalog, package or version.");
         if (TrustedPath.WhyUntrusted(PkgCatalogFeeds.CatalogPath) is { } catalogReason)
             return Refuse($"The software catalog is not protected, so the helper does not act on it: {catalogReason}");
-        if (PkgCatalogFeeds.Load().Cast<PkgFeedDeclaration?>()
-                .FirstOrDefault(f => string.Equals(f!.Value.Id, request.Catalog, StringComparison.OrdinalIgnoreCase))
-            is not { } feed)
+        var feeds = PkgCatalogFeeds.Load()
+            .Where(f => string.Equals(f.Id, request.Catalog, StringComparison.OrdinalIgnoreCase)).Take(1).ToArray();
+        if (feeds.Length == 0)
             return Refuse($"No catalog with the id {request.Catalog} declares a package feed.");
+        var feed = feeds[0];
         Uri location = feed.Location;
         if (location.IsFile && TrustedPath.WhyUntrusted(location.LocalPath) is { } feedReason)
             return Refuse($"The package feed is not protected, so the helper does not install from it: {feedReason}");
@@ -245,12 +253,12 @@ public static class PkgHelperCommand
             PkgFeed.ForgetCachedIndexes();
             var machine = RuntimeInformation.OSArchitecture;
             var candidates = PkgFeed.List(location).Where(i => i.Id == request.Id).ToArray();
-            var item = request.Version.Length == 0
+            var item = version.Length == 0
                 ? PkgFeed.Latest(candidates, new MacPkg().CompareVersions, machine).FirstOrDefault()
-                : candidates.Where(i => i.Version == request.Version && PkgMetadata.ArchitectureFit(i.Architectures, machine) > 0)
+                : candidates.Where(i => i.Version == version && PkgMetadata.ArchitectureFit(i.Architectures, machine) > 0)
                     .OrderByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, machine)).FirstOrDefault();
             if (item is null)
-                return Refuse($"The feed of {request.Catalog} does not publish {request.Id} {request.Version} for this Mac.");
+                return Refuse($"The feed of {request.Catalog} does not publish {request.Id} {version} for this Mac.");
             if (item.Location.IsFile && TrustedPath.WhyUntrusted(item.Location.LocalPath) is { } fileReason)
                 return Refuse($"The package file is not protected, so the helper does not install it: {fileReason}");
 
@@ -271,6 +279,6 @@ public static class PkgHelperCommand
         }
     }
 
-    private static bool IsField(string value) =>
-        value.Length is > 0 and <= MaxFieldLength && !value.Any(char.IsControl);
+    private static bool IsField(string? value) =>
+        value is { Length: > 0 and <= MaxFieldLength } && !value.Any(char.IsControl);
 }

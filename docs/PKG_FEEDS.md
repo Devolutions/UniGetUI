@@ -130,7 +130,8 @@ Gatekeeper checks as any install, and refuses:
   installer package (so that the app belongs to root), and keep feeds out of shared folders such as
   `/Users/Shared`.
 
-When the helper is not running, UniGetUI falls back to the administrator prompt.
+When the helper is not running, or refuses a package (such as one from an unprotected feed), UniGetUI
+falls back to the administrator prompt, which an administrator can still approve.
 
 ## Limits
 

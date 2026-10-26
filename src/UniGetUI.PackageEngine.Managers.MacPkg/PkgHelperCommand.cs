@@ -1,0 +1,276 @@
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
+using System.Text.Json;
+using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
+
+namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
+
+/// <summary>
+/// <c>unigetui pkg-helper</c>: a root daemon that installs packages the software catalog publishes, so
+/// standard users install them without an administrator password, the way a management agent would.
+/// </summary>
+public static class PkgHelperCommand
+{
+    public const string Command = "pkg-helper";
+    public const string Label = "com.devolutions.unigetui.pkghelper";
+    internal const string SocketPath = "/var/run/" + Label + ".sock";
+    internal const string DaemonPath = "/Library/LaunchDaemons/" + Label + ".plist";
+    private const string LogPath = "/Library/Logs/UniGetUI-pkg-helper.log";
+    private const int MaxFieldLength = 512;
+
+    public static bool IsCommand(string[] args) =>
+        args.Length > 0 && string.Equals(args[0], Command, StringComparison.OrdinalIgnoreCase);
+
+    public static int Run(string[] args, TextWriter output, TextWriter error)
+    {
+        string verb = args.Length == 1 ? args[0] : "";
+        if (verb is not ("serve" or "install-daemon" or "remove-daemon"))
+        {
+            output.WriteLine($"Usage: unigetui {Command} install-daemon | remove-daemon | serve");
+            output.WriteLine("  install-daemon  Lets standard users install catalog packages without an administrator password.");
+            output.WriteLine("  remove-daemon   Stops and removes that helper.");
+            output.WriteLine("  serve           Runs the helper (what launchd starts; run the two commands above instead).");
+            return args.Length == 1 && args[0] is "-h" or "--help" ? 0 : 2;
+        }
+        if (!OperatingSystem.IsMacOS() || !CoreTools.IsAdministrator())
+        {
+            error.WriteLine($"{Command} {verb} must run as root on macOS (sudo).");
+            return 1;
+        }
+        try
+        {
+            return verb switch
+            {
+                "install-daemon" => InstallDaemon(output, error),
+                "remove-daemon" => RemoveDaemon(output),
+                _ => Serve(output, error),
+            };
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or SocketException)
+        {
+            error.WriteLine(ex.Message);
+            return 1;
+        }
+    }
+
+    // ── Daemon setup ───────────────────────────────────────────────────────
+
+    // The daemon runs this very executable as root, so a standard user able to replace it, or the catalog
+    // naming what it installs, would own the Mac: both must be out of their reach.
+    private static string? WhyUnsafeToServe()
+    {
+        string executable = Environment.ProcessPath ?? "";
+        return TrustedPath.WhyUntrusted(executable) is { } program
+            ? $"UniGetUI itself is not protected: {program} Install UniGetUI with its installer package, so that it belongs to root."
+            : null;
+    }
+
+    private static int InstallDaemon(TextWriter output, TextWriter error)
+    {
+        if (WhyUnsafeToServe() is { } reason)
+        {
+            error.WriteLine(reason);
+            return 1;
+        }
+        File.WriteAllText(DaemonPath, DaemonPlist(Environment.ProcessPath!));
+        File.SetUnixFileMode(DaemonPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+        Tool.Run("/bin/launchctl", ["bootout", $"system/{Label}"]);
+        var started = Tool.Run("/bin/launchctl", ["bootstrap", "system", DaemonPath]);
+        if (started.ExitCode != 0)
+        {
+            error.WriteLine($"launchctl could not start the helper: {started.Output.Trim()}");
+            return 1;
+        }
+        output.WriteLine($"The UniGetUI package helper is installed ({DaemonPath}) and running. Its log is {LogPath}.");
+        return 0;
+    }
+
+    private static int RemoveDaemon(TextWriter output)
+    {
+        Tool.Run("/bin/launchctl", ["bootout", $"system/{Label}"]);
+        File.Delete(DaemonPath);
+        File.Delete(SocketPath);
+        output.WriteLine("The UniGetUI package helper is removed; installs ask for an administrator password again.");
+        return 0;
+    }
+
+    internal static string DaemonPlist(string executable) => $"""
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key><string>{Label}</string>
+            <key>ProgramArguments</key>
+            <array>
+                <string>{SecurityElement.Escape(executable)}</string>
+                <string>{Command}</string>
+                <string>serve</string>
+            </array>
+            <key>RunAtLoad</key><true/>
+            <key>KeepAlive</key><true/>
+            <key>StandardOutPath</key><string>{LogPath}</string>
+            <key>StandardErrorPath</key><string>{LogPath}</string>
+        </dict>
+        </plist>
+        """;
+
+    // ── Serving ────────────────────────────────────────────────────────────
+
+    private static int Serve(TextWriter output, TextWriter error)
+    {
+        if (WhyUnsafeToServe() is { } reason)
+        {
+            error.WriteLine(reason);
+            return 1;
+        }
+        output.WriteLine($"{DateTime.Now:s} Listening on {SocketPath}.");
+        ServeAsync(SocketPath, line => output.WriteLine($"{DateTime.Now:s} {line}"), CancellationToken.None)
+            .GetAwaiter().GetResult();
+        return 0;
+    }
+
+    private static readonly SemaphoreSlim OneInstallAtATime = new(1, 1);
+
+    /// <summary>Accepts connections until canceled; any local user may connect and ask.</summary>
+    internal static async Task ServeAsync(string socketPath, Action<string> journal, CancellationToken cancellationToken)
+    {
+        File.Delete(socketPath);
+        using var listener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        listener.Bind(new UnixDomainSocketEndPoint(socketPath));
+        File.SetUnixFileMode(socketPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead
+            | UnixFileMode.GroupWrite | UnixFileMode.OtherRead | UnixFileMode.OtherWrite);
+        listener.Listen(16);
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var client = await listener.AcceptAsync(cancellationToken);
+                _ = Task.Run(() => HandleAsync(client, journal), CancellationToken.None);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            File.Delete(socketPath);
+        }
+    }
+
+    private static async Task HandleAsync(Socket client, Action<string> journal)
+    {
+        using (client)
+        await using (var stream = new NetworkStream(client, ownsSocket: false))
+        {
+            var writeLock = new SemaphoreSlim(1, 1);
+            async Task Send(PkgHelperMessage message)
+            {
+                byte[] line = Encoding.UTF8.GetBytes(
+                    JsonSerializer.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage) + "\n");
+                await writeLock.WaitAsync();
+                try { await stream.WriteAsync(line); }
+                catch (IOException) { } // The user's app went away; the install goes on and is journaled.
+                finally { writeLock.Release(); }
+            }
+
+            PkgHelperMessage result;
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                string line = await ReadLineAsync(stream, timeout.Token);
+                var request = JsonSerializer.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperRequest)
+                    ?? throw new InvalidDataException("The request is empty.");
+                journal($"Asked to install {request.Id} {request.Version} from catalog {request.Catalog}.");
+                await OneInstallAtATime.WaitAsync();
+                try
+                {
+                    result = await InstallAsync(request, text =>
+                    {
+                        journal("  " + text);
+                        Send(new PkgHelperMessage { Log = text }).GetAwaiter().GetResult();
+                    });
+                }
+                finally
+                {
+                    OneInstallAtATime.Release();
+                }
+            }
+            catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or OperationCanceledException)
+            {
+                result = new PkgHelperMessage { Result = PkgHelperMessage.Refused, Message = $"The request was refused: {ex.Message}" };
+            }
+            journal($"  {result.Result}: {result.Message}");
+            await Send(result);
+        }
+    }
+
+    private static async Task<string> ReadLineAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var line = new MemoryStream();
+        byte[] one = new byte[1];
+        while (await stream.ReadAsync(one, cancellationToken) == 1 && one[0] != (byte)'\n')
+        {
+            if (line.Length >= PkgHelperClient.MaxLineLength)
+                throw new InvalidDataException("The request is too long.");
+            line.WriteByte(one[0]);
+        }
+        return Encoding.UTF8.GetString(line.ToArray());
+    }
+
+    /// <summary>
+    /// Installs what a request names, found by the helper itself in a feed the root-owned catalog
+    /// declares, after the same checks as any install; anything else is refused.
+    /// </summary>
+    internal static async Task<PkgHelperMessage> InstallAsync(PkgHelperRequest request, Action<string> log)
+    {
+        static PkgHelperMessage Refuse(string why) => new() { Result = PkgHelperMessage.Refused, Message = why };
+
+        if (!IsField(request.Catalog) || !IsField(request.Id) || (request.Version.Length > 0 && !IsField(request.Version)))
+            return Refuse("The request names no valid catalog, package or version.");
+        if (TrustedPath.WhyUntrusted(PkgCatalogFeeds.CatalogPath) is { } catalogReason)
+            return Refuse($"The software catalog is not protected, so the helper does not act on it: {catalogReason}");
+        if (PkgCatalogFeeds.Load().Cast<PkgFeedDeclaration?>()
+                .FirstOrDefault(f => string.Equals(f!.Value.Id, request.Catalog, StringComparison.OrdinalIgnoreCase))
+            is not { } feed)
+            return Refuse($"No catalog with the id {request.Catalog} declares a package feed.");
+        Uri location = feed.Location;
+        if (location.IsFile && TrustedPath.WhyUntrusted(location.LocalPath) is { } feedReason)
+            return Refuse($"The package feed is not protected, so the helper does not install from it: {feedReason}");
+
+        try
+        {
+            PkgFeed.ForgetCachedIndexes();
+            var machine = RuntimeInformation.OSArchitecture;
+            var candidates = PkgFeed.List(location).Where(i => i.Id == request.Id).ToArray();
+            var item = request.Version.Length == 0
+                ? PkgFeed.Latest(candidates, new MacPkg().CompareVersions, machine).FirstOrDefault()
+                : candidates.Where(i => i.Version == request.Version && PkgMetadata.ArchitectureFit(i.Architectures, machine) > 0)
+                    .OrderByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, machine)).FirstOrDefault();
+            if (item is null)
+                return Refuse($"The feed of {request.Catalog} does not publish {request.Id} {request.Version} for this Mac.");
+            if (item.Location.IsFile && TrustedPath.WhyUntrusted(item.Location.LocalPath) is { } fileReason)
+                return Refuse($"The package file is not protected, so the helper does not install it: {fileReason}");
+
+            using var prepared = await PkgInstaller.PrepareAsync(item, feed.AllowUnsignedPackages, log, _ => { },
+                CancellationToken.None);
+            log(prepared.Description);
+            var (code, output) = await PkgInstaller.RunProcess("/bin/sh", ["-c", prepared.Command], CancellationToken.None);
+            foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                log(line);
+            return code == 0
+                ? new PkgHelperMessage { Result = PkgHelperMessage.Success, Message = $"{item.Id} {item.Version} is installed." }
+                : new PkgHelperMessage { Result = PkgHelperMessage.Failure, Message = $"The installer exited with code {code}." };
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or HttpRequestException
+            or UnauthorizedAccessException or System.Xml.XmlException)
+        {
+            return new PkgHelperMessage { Result = PkgHelperMessage.Failure, Message = ex.Message };
+        }
+    }
+
+    private static bool IsField(string value) =>
+        value.Length is > 0 and <= MaxFieldLength && !value.Any(char.IsControl);
+}

@@ -4,8 +4,8 @@ using UniGetUI.Core.Logging;
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 /// <summary>
-/// A .dmg holding an app to drag to /Applications, the way most vendors ship Mac apps. It is
-/// mounted read-only and out of sight of Finder; the app at its root describes the package.
+/// A .dmg holding an app to drag to /Applications, the way most vendors ship Mac apps, or an installer
+/// package. It is mounted read-only and out of sight of Finder; what is at its root describes it.
 /// </summary>
 internal sealed class DiskImage : IDisposable
 {
@@ -15,8 +15,6 @@ internal sealed class DiskImage : IDisposable
     public string MountPoint { get; }
 
     private DiskImage(string mountPoint) => MountPoint = mountPoint;
-
-    public static bool IsDiskImage(string path) => path.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase);
 
     public static DiskImage Mount(string image)
     {
@@ -52,47 +50,57 @@ internal sealed class DiskImage : IDisposable
         TryDeleteDirectory(MountPoint);
     }
 
-    /// <summary>The app at the image's root. Links (such as the usual one to /Applications) are ignored.</summary>
-    public string FindApp()
+    /// <summary>
+    /// What the image installs: one installer package, else one app, at its root. Links (such as the
+    /// usual one to /Applications) and an uninstaller beside it are ignored.
+    /// </summary>
+    public (string Path, bool IsPackage) FindContent()
     {
-        var apps = new DirectoryInfo(MountPoint).EnumerateDirectories("*.app")
-            .Where(d => d.LinkTarget is null)
-            .Select(d => d.FullName)
+        var root = new DirectoryInfo(MountPoint).EnumerateFileSystemInfos()
+            .Where(i => i.LinkTarget is null && !i.Name.StartsWith('.'))
             .ToList();
-        if (apps.Count > 1)
-            apps.RemoveAll(a => Path.GetFileName(a).Contains("uninstall", StringComparison.OrdinalIgnoreCase));
-        return apps.Count switch
+        var packages = root.OfType<FileInfo>()
+            .Where(f => f.Extension.Equals(".pkg", StringComparison.OrdinalIgnoreCase)
+                || f.Extension.Equals(".mpkg", StringComparison.OrdinalIgnoreCase))
+            .Select(f => f.FullName).ToList();
+        var apps = root.OfType<DirectoryInfo>()
+            .Where(d => d.Name.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            .Select(d => d.FullName).ToList();
+        if (packages.Count + apps.Count > 1)
         {
-            1 => apps[0],
-            0 => throw new InvalidDataException("The disk image has no app at its root."),
-            _ => throw new InvalidDataException("The disk image has several apps at its root: "
-                + string.Join(", ", apps.Select(Path.GetFileName)) + "."),
-        };
+            packages.RemoveAll(p => FeedFile.IsUninstaller(Path.GetFileName(p)));
+            apps.RemoveAll(a => FeedFile.IsUninstaller(Path.GetFileName(a)));
+        }
+        if (packages.Count == 1)
+            return (packages[0], true);
+        if (packages.Count == 0 && apps.Count == 1)
+            return (apps[0], false);
+        throw new InvalidDataException(packages.Count + apps.Count == 0
+            ? "The disk image has no app or installer package at its root."
+            : "The disk image holds several apps or packages at its root: "
+                + string.Join(", ", packages.Concat(apps).Select(Path.GetFileName)) + ".");
     }
 
-    /// <summary>Reads the app a disk image carries; with <paramref name="iconFile"/>, also saves its icon as a PNG.</summary>
-    public static PkgMetadata ReadMetadata(string image, string? iconFile = null)
+    /// <summary>
+    /// Reads what a disk image carries; with <paramref name="iconFile"/>, also saves its icon as a PNG
+    /// (for a wrapped package, only when <paramref name="iconFromPayload"/> allows reading its payload).
+    /// </summary>
+    public static PkgMetadata ReadMetadata(string image, string? iconFile = null, bool iconFromPayload = true)
     {
         using var mounted = Mount(image);
-        string app = mounted.FindApp();
-        var metadata = FromApp(app);
+        var (content, isPackage) = mounted.FindContent();
+        if (isPackage)
+            return PkgMetadata.Read(content, iconFromPayload ? iconFile : null) with { WrapsPackage = true };
+        var metadata = FromApp(content);
         if (iconFile is not null)
-            TryExtractIcon(app, iconFile);
+            TryExtractIcon(content, iconFile);
         return metadata;
     }
 
     internal static PkgMetadata FromApp(string app)
     {
         var plist = AppBundle.ReadInfoPlist(app);
-        string id = plist.GetValueOrDefault("CFBundleIdentifier") ?? "";
-        string? version = AppBundle.VersionOf(plist);
-        if (id.Length == 0 || string.IsNullOrEmpty(version))
-            throw new InvalidDataException($"{Path.GetFileName(app)} has no bundle identifier or version.");
-        string name = Path.GetFileName(app);
-        string? title = plist.GetValueOrDefault("CFBundleDisplayName") is { Length: > 0 } display ? display
-            : Path.GetFileNameWithoutExtension(name);
-        return new PkgMetadata(id, version, title, AppBundle.ReadArchitectures(app, plist),
-            new AppBundleInfo(id, "/Applications/" + name, version));
+        return AppBundle.Describe(Path.GetFileName(app), plist, AppBundle.ReadArchitectures(app, plist));
     }
 
     // An app without an .icns (or naming one it lacks) falls back to any .icns it carries, or has none.

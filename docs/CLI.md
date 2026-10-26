@@ -356,7 +356,8 @@ These parameters are accepted by the app executables in addition to the automati
 | `--enable-secure-setting-for-user <user> <key>` / `--disable-secure-setting-for-user <user> <key>` | Toggles one secure setting for a specified user. | May require elevation. |
 | `--delete-shortcuts <path> [<path>...]` | Deletes desktop or Start Menu shortcuts, then quits. | Used by UniGetUI to remove shortcuts the current user is not allowed to delete; refuses any path that is not a `.lnk` or `.url` under a desktop or Start Menu folder. |
 | `<bundle-file>` | Loads a valid bundle file into the Package Bundles page. | Supported extensions include `.ubundle`, `.json`, `.yaml`, and `.xml`. |
-| `pkg-index <folder>` | Writes the `index.json` that publishes a folder of macOS `.pkg` and `.dmg` files as a web feed, then quits. | macOS and Linux builds only; `.dmg` files are read on macOS only. Exits 3 when a file in the folder could not be read. See [PKG_FEEDS.md](PKG_FEEDS.md). |
+| `pkg-helper install-daemon` / `remove-daemon` | Installs (or removes) the root service that lets standard users install catalog packages without an administrator password. | macOS, as root. `pkg-helper serve` is what the service runs. See [PKG_FEEDS.md](PKG_FEEDS.md). |
+| `pkg-index <folder>` | Writes the `index.json` that publishes a folder of macOS `.pkg`, `.dmg` and `.zip` files as a web feed, then quits. | macOS and Linux builds only; `.dmg` files are read on macOS only. Exits 3 when a file in the folder could not be read. See [PKG_FEEDS.md](PKG_FEEDS.md). |
 
 ## Other environment variables
 

@@ -47,6 +47,12 @@ sealed class Program
             Environment.ExitCode = PkgIndexCommand.Run(args[1..], Console.Out, Console.Error);
             return;
         }
+
+        if (PkgHelperCommand.IsCommand(args))
+        {
+            Environment.ExitCode = PkgHelperCommand.Run(args[1..], Console.Out, Console.Error);
+            return;
+        }
 #endif
 
 #if WINDOWS

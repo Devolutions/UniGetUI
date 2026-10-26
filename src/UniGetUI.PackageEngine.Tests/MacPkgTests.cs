@@ -864,7 +864,7 @@ public sealed class MacPkgTests : IDisposable
         Assert.Equal(4, items.Count);
         Assert.Equal(new AppBundleInfo("com.good", "/Applications/Good.app", "1"), items[0].App);
         Assert.All(items.Skip(1), i => Assert.Null(i.App));
-        Assert.All(items, i => Assert.True(i.IsDiskImage));
+        Assert.All(items, i => Assert.Equal(FeedFileKind.DiskImage, i.Kind));
     }
 
     [Fact]
@@ -1143,6 +1143,317 @@ public sealed class MacPkgTests : IDisposable
         File.WriteAllBytes(file, ProductArchive("com.example.app.pkg", "2.0", "App"));
         File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(1));
         Assert.Equal(("App", "2.0"), (PkgFeed.TryReadFile(file)?.Title, PkgFeed.TryReadFile(file)?.Version));
+    }
+
+    // ── Zip archives and disk images holding a package ──────────────────
+
+    [Fact]
+    public void TheAppInAZipIsFoundAtItsRootOrOneFolderDown()
+    {
+        string P(string app) => app + "/Contents/Info.plist";
+        Assert.Equal("Visual Studio Code.app", ZipApp.FindApp(
+            [P("Visual Studio Code.app"), P("Visual Studio Code.app/Contents/Frameworks/Code Helper.app"),
+             P("__MACOSX/._Visual Studio Code.app"), "Visual Studio Code.app/Contents/MacOS/Electron"]));
+        Assert.Equal("Tool-1.0/Tool.app", ZipApp.FindApp([P("Tool-1.0/Tool.app"), P("Tool-1.0/Uninstall Tool.app")]));
+        Assert.Throws<InvalidDataException>(() => ZipApp.FindApp([P("a/b/Deep.app")]));
+        Assert.Throws<InvalidDataException>(() => ZipApp.FindApp([P("One.app"), P("Two.app")]));
+        Assert.Throws<InvalidDataException>(() => ZipApp.FindApp(["readme.txt"]));
+    }
+
+    [Fact]
+    public void AZipIsDescribedByItsAppWithoutBeingExtracted()
+    {
+        string zip = Path.Combine(_directory, "Tool.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            void Add(string name, byte[] data)
+            {
+                using var stream = archive.CreateEntry(name).Open();
+                stream.Write(data);
+            }
+            Add("Tool.app/Contents/Info.plist", Encoding.UTF8.GetBytes("""
+                <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.tool</string>
+                <key>CFBundleShortVersionString</key><string>4.5</string><key>CFBundleExecutable</key><string>Tool</string>
+                <key>CFBundleDisplayName</key><string>Example Tool</string></dict></plist>
+                """));
+            Add("Tool.app/Contents/MacOS/Tool", FatHeader(0x01000007, 0x0100000C));
+        }
+        var metadata = PkgMetadata.Read(zip);
+        Assert.Equal(("com.example.tool", "4.5", "Example Tool"), (metadata.Id, metadata.Version, metadata.Title));
+        Assert.Equal(["x86_64", "arm64"], metadata.Architectures);
+        Assert.Equal(new AppBundleInfo("com.example.tool", "/Applications/Tool.app", "4.5"), metadata.App);
+        Assert.False(metadata.WrapsPackage);
+    }
+
+    [Theory]
+    [InlineData("App.pkg", false, false)]
+    [InlineData("App.dmg", false, true)]
+    [InlineData("App.dmg", true, false)]
+    [InlineData("App.zip", false, true)]
+    public void OnlyAnAppCopiedIntoPlaceIsRecognizedWithoutAReceipt(string file, bool wrapsPackage, bool copiesAnApp) =>
+        Assert.Equal(copiesAnApp, new PkgFeedItem("id", "App", "1", new Uri("https://h/" + file), null, 0, [], null,
+            null, wrapsPackage).CopiesAnApp);
+
+    [Fact]
+    public async Task AZippedAppIsInstalledWithItsSymlinks()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        string source = Path.Combine(_directory, "zip-source");
+        string app = WriteApp(source, "Zipped.app", "com.example.zipped", "2.0", "/usr/bin/true");
+        Directory.CreateDirectory(Path.Combine(app, "Contents", "Frameworks", "Lib.framework", "Versions", "A"));
+        File.CreateSymbolicLink(Path.Combine(app, "Contents", "Frameworks", "Lib.framework", "Versions", "Current"), "A");
+        string zip = Path.Combine(_directory, "feed", "Zipped-2.0.zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(zip)!);
+        Run("/usr/bin/ditto", "-c", "-k", "--keepParent", app, zip);
+
+        var metadata = PkgMetadata.Read(zip);
+        Assert.Equal(("com.example.zipped", "2.0"), (metadata.Id, metadata.Version));
+        var item = new PkgFeedItem(metadata.Id, "Zipped", metadata.Version, new Uri(zip), null, 0, [], null, metadata.App);
+
+        string root = Path.Combine(_directory, "disk");
+        var previousIsRoot = PkgInstaller.IsRoot;
+        PkgInstaller.IsRoot = () => true;
+        AppBundle.TestRootOverride = root;
+        try
+        {
+            var log = new List<string>();
+            Assert.Equal(Enums.OperationVeredict.Success, await PkgInstaller.InstallAsync(item, "Zipped", log.Add, _ => { },
+                CancellationToken.None, allowUnsigned: true));
+            string installed = Path.Combine(root, "Applications", "Zipped.app");
+            Assert.Equal("2.0", AppBundle.FindInstalled(item.App!)?.Version);
+            Assert.Equal("A", new DirectoryInfo(Path.Combine(installed, "Contents", "Frameworks", "Lib.framework", "Versions", "Current")).LinkTarget);
+        }
+        finally
+        {
+            PkgInstaller.IsRoot = previousIsRoot;
+            AppBundle.TestRootOverride = null;
+        }
+    }
+
+    [Fact]
+    public async Task ADiskImageHoldingAPackageIsThatPackage()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        string payload = Path.Combine(_directory, "pkgroot", "Applications", "Wrapped.app", "Contents");
+        Directory.CreateDirectory(payload);
+        File.WriteAllText(Path.Combine(payload, "Info.plist"),
+            """<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.wrapped</string><key>CFBundleShortVersionString</key><string>3.0</string></dict></plist>""");
+        string imageSource = Path.Combine(_directory, "image");
+        Directory.CreateDirectory(imageSource);
+        Run("/usr/bin/pkgbuild", "--root", Path.Combine(_directory, "pkgroot"), "--identifier", "com.example.wrapped.pkg",
+            "--version", "3.0", "--install-location", "/", Path.Combine(imageSource, "Install Wrapped.pkg"));
+        WriteApp(imageSource, "Uninstall Wrapped.app", "com.example.wrapped.uninstaller", "3.0");
+        string image = Path.Combine(_directory, "Wrapped.dmg");
+        Run("/usr/bin/hdiutil", "create", "-quiet", "-fs", "HFS+", "-format", "UDZO", "-srcfolder", imageSource, "-volname", "Wrapped", image);
+
+        var metadata = PkgMetadata.Read(image);
+        Assert.Equal(("com.example.wrapped.pkg", "3.0", true), (metadata.Id, metadata.Version, metadata.WrapsPackage));
+        Assert.Equal(new AppBundleInfo("com.example.wrapped", "/Applications/Wrapped.app", "3.0"), metadata.App);
+
+        var item = new PkgFeedItem(metadata.Id, "Wrapped", "3.0", new Uri(image), null, 0, [], null, metadata.App, true);
+        var previous = PkgInstaller.RunProcess;
+        var previousIsRoot = PkgInstaller.IsRoot;
+        string? command = null;
+        bool packageWasMounted = false;
+        PkgInstaller.IsRoot = () => true;
+        PkgInstaller.RunProcess = (file, args, _) =>
+        {
+            if (file == "/bin/sh")
+            {
+                command = args[1];
+                string package = System.Text.RegularExpressions.Regex.Match(command, "-pkg '([^']+)'").Groups[1].Value;
+                packageWasMounted = File.Exists(package) && package.Contains("UniGetUI-dmg", StringComparison.Ordinal);
+            }
+            return Task.FromResult((0, "accepted"));
+        };
+        try
+        {
+            Assert.Equal(Enums.OperationVeredict.Success,
+                await PkgInstaller.InstallAsync(item, "Wrapped", _ => { }, _ => { }, CancellationToken.None));
+            Assert.StartsWith("/usr/sbin/installer -pkg ", command);
+            Assert.EndsWith("Install Wrapped.pkg' -target / 2>&1", command);
+            Assert.True(packageWasMounted);
+        }
+        finally
+        {
+            PkgInstaller.RunProcess = previous;
+            PkgInstaller.IsRoot = previousIsRoot;
+        }
+    }
+
+    // ── Root helper ────────────────────────────────────────────────────────
+
+    private string HelperCatalog(string feed) => WritePackage("SoftwareCatalog.json", Encoding.UTF8.GetBytes($$"""
+        {"version":1,"catalogs":[{"id":"mac","name":"Mac apps","packages":[],"pkgFeed":"{{feed.Replace("\\", "\\\\")}}"}]}
+        """));
+
+    [Fact]
+    public async Task AStandardUserInstallsThroughTheHelperWithoutAPrompt()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string feed = Path.Combine(_directory, "feed");
+        WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0", "App"));
+        string socket = Path.Combine("/tmp", $"ugpkg-{Guid.NewGuid():N}"[..20] + ".sock");
+        var previous = (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgHelperClient.SocketPath);
+        var commands = new List<string>();
+        PkgCatalogFeeds.TestCatalogPathOverride = HelperCatalog(feed);
+        TrustedPath.TestOverride = _ => null;
+        PkgHelperClient.SocketPath = socket;
+        PkgInstaller.IsRoot = () => false;
+        PkgInstaller.RunProcess = (file, args, _) =>
+        {
+            lock (commands) commands.Add(file + " " + string.Join(' ', args));
+            return Task.FromResult((0, file == "/bin/sh" ? "installer: The install was successful." : "accepted"));
+        };
+        using var stop = new CancellationTokenSource();
+        var server = PkgHelperCommand.ServeAsync(socket, _ => { }, stop.Token);
+        try
+        {
+            var item = Assert.Single(PkgFeed.List(new Uri(feed)));
+            var log = new List<string>();
+            Assert.Equal(Enums.OperationVeredict.Success,
+                await PkgInstaller.InstallAsync(item, "App", log.Add, _ => { }, CancellationToken.None, feedId: "mac"));
+            Assert.Contains(log, l => l.Contains("package helper", StringComparison.Ordinal));
+            Assert.Contains("installer: The install was successful.", log);
+            Assert.DoesNotContain(commands, c => c.StartsWith("/usr/bin/osascript", StringComparison.Ordinal));
+            Assert.Contains(commands, c => c.StartsWith("/bin/sh -c /usr/sbin/installer -pkg ", StringComparison.Ordinal));
+        }
+        finally
+        {
+            stop.Cancel();
+            await server;
+            (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgHelperClient.SocketPath) = previous;
+            PkgCatalogFeeds.TestCatalogPathOverride = null;
+            TrustedPath.TestOverride = null;
+        }
+        Assert.False(File.Exists(socket));
+    }
+
+    [Fact]
+    public async Task TheHelperRefusesWhatTheCatalogDoesNotPublishFromAProtectedPlace()
+    {
+        string feed = Path.Combine(_directory, "feed");
+        WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0", "App"));
+        PkgCatalogFeeds.TestCatalogPathOverride = HelperCatalog(feed);
+        var previous = PkgInstaller.RunProcess;
+        bool ran = false;
+        PkgInstaller.RunProcess = (_, _, _) => { ran = true; return Task.FromResult((0, "")); };
+        try
+        {
+            async Task<string?> Ask(string catalog, string id, string version = "") =>
+                (await PkgHelperCommand.InstallAsync(new PkgHelperRequest { Catalog = catalog, Id = id, Version = version }, _ => { })).Result;
+
+            TrustedPath.TestOverride = _ => null;
+            Assert.Equal(PkgHelperMessage.Refused, await Ask("other", "com.example.app.pkg"));
+            Assert.Equal(PkgHelperMessage.Refused, await Ask("mac", "com.example.missing.pkg"));
+            Assert.Equal(PkgHelperMessage.Refused, await Ask("mac", "com.example.app.pkg", "9.9"));
+            Assert.Equal(PkgHelperMessage.Refused, await Ask("mac", "com.example.app.pkg\n--evil"));
+
+            TrustedPath.TestOverride = path => path == feed ? "any user can change it" : null;
+            Assert.Equal(PkgHelperMessage.Refused, await Ask("mac", "com.example.app.pkg"));
+            TrustedPath.TestOverride = path => path.EndsWith("SoftwareCatalog.json", StringComparison.Ordinal) ? "any user can change it" : null;
+            Assert.Equal(PkgHelperMessage.Refused, await Ask("mac", "com.example.app.pkg"));
+            Assert.False(ran);
+
+            TrustedPath.TestOverride = _ => null;
+            Assert.Equal(PkgHelperMessage.Success, await Ask("mac", "com.example.app.pkg", "1.0"));
+            Assert.True(ran);
+        }
+        finally
+        {
+            PkgInstaller.RunProcess = previous;
+            PkgCatalogFeeds.TestCatalogPathOverride = null;
+            TrustedPath.TestOverride = null;
+        }
+    }
+
+    [Fact]
+    public async Task WhenTheHelperDoesNotAnswerTheAdministratorPromptIsUsed()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string source = WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
+        var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri(source), null, 0, [], null);
+        string deadSocket = WritePackage("dead.sock", []);
+        var previous = (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgHelperClient.SocketPath);
+        string? ran = null;
+        PkgHelperClient.SocketPath = deadSocket;
+        PkgInstaller.IsRoot = () => false;
+        PkgInstaller.RunProcess = (file, _, _) =>
+        {
+            if (file != PkgInstaller.SpctlPath) ran = file;
+            return Task.FromResult((0, "accepted"));
+        };
+        try
+        {
+            var log = new List<string>();
+            Assert.Equal(Enums.OperationVeredict.Success,
+                await PkgInstaller.InstallAsync(item, "App", log.Add, _ => { }, CancellationToken.None, feedId: "mac"));
+            Assert.Equal("/usr/bin/osascript", ran);
+            Assert.Contains(log, l => l.Contains("does not answer", StringComparison.Ordinal));
+        }
+        finally
+        {
+            (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgHelperClient.SocketPath) = previous;
+        }
+    }
+
+    [Fact]
+    public void OnlyPathsStandardUsersCannotChangeAreTrusted()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        Assert.Null(TrustedPath.WhyUntrusted("/usr/bin/true"));
+        Assert.Contains("any user", TrustedPath.WhyUntrusted("/Users/Shared"));
+        Assert.Contains("could not be resolved", TrustedPath.WhyUntrusted(Path.Combine(_directory, "missing")));
+    }
+
+    [Fact]
+    public void TheDaemonDefinitionRunsTheHelperFromThisExecutable()
+    {
+        string plist = PkgHelperCommand.DaemonPlist("/Applications/UniGetUI & Co.app/Contents/MacOS/UniGetUI");
+        Assert.Contains("<string>/Applications/UniGetUI &amp; Co.app/Contents/MacOS/UniGetUI</string>", plist);
+        Assert.Contains("<string>pkg-helper</string>", plist);
+        Assert.Contains("<string>serve</string>", plist);
+        Assert.Equal("com.devolutions.unigetui.pkghelper", AppBundle.ParseXmlPlist(Encoding.UTF8.GetBytes(plist))["Label"]);
+        Assert.Equal(2, PkgHelperCommand.Run([], new StringWriter(), new StringWriter()));
+    }
+
+    // ── Feed preview ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void TheFeedPreviewListsPackagesAndExplainsSkippedFiles()
+    {
+        string feed = Path.Combine(_directory, "preview");
+        WritePackage("preview/App-1.0.pkg", ProductArchive("com.example.app.pkg", "1.0", "App", "arm64"));
+        WritePackage("preview/sub/Broken.pkg", Encoding.UTF8.GetBytes("not a package"));
+        TrustedPath.TestOverride = path => path == feed ? "any user can change it." : null;
+        try
+        {
+            var inspection = PkgFeedInspector.Inspect(feed);
+            var package = Assert.Single(inspection.Packages);
+            Assert.Equal(("App", "com.example.app.pkg", "1.0", "App-1.0.pkg", ".pkg"),
+                (package.Name, package.Id, package.Version, package.File, package.Kind));
+            Assert.Equal(["arm64"], package.Architectures);
+            var problem = Assert.Single(inspection.Problems);
+            Assert.Equal(Path.Combine("sub", "Broken.pkg"), problem.File);
+            Assert.Contains("not a flat installer package", problem.Reason);
+            if (OperatingSystem.IsMacOS())
+                Assert.Contains("package helper will not install from it", inspection.Warning);
+        }
+        finally { TrustedPath.TestOverride = null; }
+
+        Assert.False(PkgFeedInspector.IsValidLocation("http://software.example.com/"));
+        Assert.Throws<InvalidDataException>(() => PkgFeedInspector.Inspect("relative/folder"));
+        Assert.Throws<DirectoryNotFoundException>(() => PkgFeedInspector.Inspect(Path.Combine(_directory, "unmounted")));
     }
 
     // ── Real packages ──────────────────────────────────────────────────────

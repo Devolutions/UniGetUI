@@ -737,4 +737,33 @@ public class CatalogEditorTests : IDisposable
         Assert.Equal(("Mac software", "https://software.example.com/mac/"), (saved[0].Name, saved[0].PkgFeed));
         Assert.Null(saved[1].PkgFeed);
     }
+
+    [Fact]
+    public async Task EditingAPackageFeedMarksTheCatalogChangedAndSavesIt()
+    {
+        await SoftwareCatalog.SaveAsync(FilePath, [new() { Id = "mac", Name = "Mac apps", Packages = [] }]);
+        var vm = new CatalogEditorViewModel();
+        Assert.True(await vm.LoadAsync(FilePath));
+        var catalog = Assert.Single(vm.Catalogs);
+        Assert.False(vm.IsDirty);
+        catalog.PkgFeed = "/Volumes/Software/mac";
+        catalog.AllowUnsignedPackages = true;
+        Assert.True(vm.IsDirty);
+        Assert.True(await vm.SaveAsync(FilePath));
+
+        var saved = Assert.Single(await SoftwareCatalog.LoadAsync(FilePath));
+        Assert.Equal(("/Volumes/Software/mac", (bool?)true), (saved.PkgFeed, saved.AllowUnsignedPackages));
+    }
+
+    [Theory]
+    [InlineData("", true)]
+    [InlineData("https://software.example.com/mac/", true)]
+    [InlineData("ftp://software.example.com/mac/", false)]
+    [InlineData("relative/folder", false)]
+    public void ThePackageFeedDialogAcceptsOnlyUsableLocations(string location, bool valid)
+    {
+        var editor = new PkgFeedEditorViewModel(location, false, () => Task.FromResult<string?>(null));
+        Assert.Equal(valid, editor.IsValid);
+        Assert.Equal(valid, editor.ValidationMessage.Length == 0);
+    }
 }

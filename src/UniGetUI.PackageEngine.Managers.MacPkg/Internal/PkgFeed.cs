@@ -9,7 +9,7 @@ using UniGetUI.Core.Tools;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
-/// <summary>One installable .pkg or .dmg of a feed, with the app it installs when known.</summary>
+/// <summary>One installable .pkg, .dmg or .zip of a feed, with the app it installs when known.</summary>
 internal sealed record PkgFeedItem(
     string Id,
     string Name,
@@ -19,9 +19,13 @@ internal sealed record PkgFeedItem(
     long Size,
     IReadOnlyList<string> Architectures,
     Uri? Icon,
-    AppBundleInfo? App = null)
+    AppBundleInfo? App = null,
+    bool WrapsPackage = false)
 {
-    public bool IsDiskImage => DiskImage.IsDiskImage(Location.AbsolutePath);
+    public FeedFileKind Kind => FeedFile.KindOf(Location.AbsolutePath);
+
+    /// <summary>An app copied into place leaves no receipt: only the app itself shows it is installed.</summary>
+    public bool CopiesAnApp => Kind == FeedFileKind.Archive || (Kind == FeedFileKind.DiskImage && !WrapsPackage);
 }
 
 /// <summary>
@@ -35,7 +39,6 @@ internal static class PkgFeed
     private const int MaxIndexBytes = 8 * 1024 * 1024;
     private static readonly TimeSpan IndexLifetime = TimeSpan.FromMinutes(5);
     private static readonly string[] IconExtensions = [".png", ".jpg", ".jpeg"];
-    private static readonly string[] PackageExtensions = [".pkg", ".mpkg", ".dmg"];
 
     private readonly record struct ParsedFile(long Size, DateTime WriteTimeUtc, PkgMetadata Metadata);
     private readonly record struct CachedIndex(DateTime FetchedUtc, IReadOnlyList<PkgFeedItem> Items);
@@ -205,9 +208,9 @@ internal static class PkgFeed
             IgnoreInaccessible = true,
             AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
         };
-        // Bundle-style packages are directories; only flat packages and disk images (files) are read.
+        // Bundle-style packages are directories; only flat packages, disk images and archives (files) are read.
         return Directory.EnumerateFiles(directory, "*", options)
-            .Where(f => PackageExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
+            .Where(f => FeedFile.Extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
             .Order(StringComparer.Ordinal);
     }
 
@@ -221,32 +224,39 @@ internal static class PkgFeed
     {
         try
         {
-            lock (FileLocks.GetOrAdd(file, _ => new object()))
-            {
-                var info = new FileInfo(file);
-                if (ParsedFiles.TryGetValue(file, out var cached)
-                    && cached.Size == info.Length && cached.WriteTimeUtc == info.LastWriteTimeUtc)
-                    return cached.Metadata;
-                // What was read from a file is kept on disk per file version, so a file is read once. A disk
-                // image's icon comes with the mount; a package's waits for TryExtractIcon, as it costs a
-                // pass through the payload.
-                string icon = ExtractedIconPath(info);
-                string saved = Path.ChangeExtension(icon, ".json");
-                var metadata = TryLoadMetadata(saved);
-                if (metadata is null)
-                {
-                    metadata = PkgMetadata.Read(file, DiskImage.IsDiskImage(file) && !File.Exists(icon) ? icon : null);
-                    TryWriteFile(saved, JsonSerializer.SerializeToUtf8Bytes(metadata, PkgMetadataJsonContext.Default.PkgMetadata));
-                }
-                ParsedFiles[file] = new ParsedFile(info.Length, info.LastWriteTimeUtc, metadata);
-                return metadata;
-            }
+            return ReadFile(file);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
-            or System.Xml.XmlException or EndOfStreamException)
+        catch (Exception ex) when (IsUnreadable(ex))
         {
             Logger.Warn($"Skipping {file}: it could not be read as an installer package ({ex.Message})");
             return null;
+        }
+    }
+
+    internal static bool IsUnreadable(Exception ex) => ex is IOException or UnauthorizedAccessException
+        or InvalidDataException or System.Xml.XmlException or EndOfStreamException;
+
+    /// <summary>Reads a feed file, from the caches when it has not changed; throws when it cannot be read.</summary>
+    internal static PkgMetadata ReadFile(string file)
+    {
+        lock (FileLocks.GetOrAdd(file, _ => new object()))
+        {
+            var info = new FileInfo(file);
+            if (ParsedFiles.TryGetValue(file, out var cached)
+                && cached.Size == info.Length && cached.WriteTimeUtc == info.LastWriteTimeUtc)
+                return cached.Metadata;
+            // What was read from a file is kept on disk per file version, so a file is read once. An app's
+            // icon comes with reading it; a package's waits for FindOrExtractIcon, as its payload is large.
+            string icon = ExtractedIconPath(info);
+            string saved = Path.ChangeExtension(icon, ".json");
+            var metadata = TryLoadMetadata(saved);
+            if (metadata is null)
+            {
+                metadata = PkgMetadata.Read(file, File.Exists(icon) ? null : icon, iconFromPayload: false);
+                TryWriteFile(saved, JsonSerializer.SerializeToUtf8Bytes(metadata, PkgMetadataJsonContext.Default.PkgMetadata));
+            }
+            ParsedFiles[file] = new ParsedFile(info.Length, info.LastWriteTimeUtc, metadata);
+            return metadata;
         }
     }
 
@@ -259,7 +269,8 @@ internal static class PkgFeed
         new FileInfo(file).Length,
         metadata.Architectures,
         FindIcon(file) is { } icon ? new Uri(icon) : null,
-        metadata.App);
+        metadata.App,
+        metadata.WrapsPackage);
 
     /// <summary>An image next to the package with the same name, else the icon already taken from the package's app.</summary>
     internal static string? FindIcon(string packageFile)
@@ -310,7 +321,7 @@ internal static class PkgFeed
 
     // Bump when what is read from a file changes, so files are read again instead of trusting what
     // an older reader made of them (its metadata, or an icon it could not find).
-    private const string ReaderVersion = "3";
+    private const string ReaderVersion = "4";
 
     // Named from the reader version and the file's path, size and write time, so a replaced
     // package gets its new icon.
@@ -413,7 +424,8 @@ internal static class PkgFeed
                 entry.Size,
                 entry.Architectures ?? [],
                 ResolveWithin(indexUrl, entry.Icon),
-                entry.App?.ToInfo()));
+                entry.App?.ToInfo(),
+                entry.WrapsPackage is true));
         }
         return items;
     }

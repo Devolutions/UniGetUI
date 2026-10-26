@@ -111,7 +111,7 @@ retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path 
 V3 has no `IsLatestVersion`, so the client picks "latest" itself using the comparator described
 in the next section.
 
-## macOS installer packages (.pkg and .dmg)
+## macOS installer packages (.pkg, .dmg and .zip)
 
 `UniGetUI.PackageEngine.Managers.MacPkg` (id `pkg`, macOS only) installs IT-published `.pkg` and
 `.dmg` files through the Software Catalog; the administrator workflow is in `docs/PKG_FEEDS.md`.
@@ -137,6 +137,15 @@ in the next section.
   through `Tool`, which drains both pipes. `ManagerCapabilities.CanUninstall` is false, and the UI
   refuses uninstalls for such managers; `InstalledPackagesKeepTheirSource` is false (as for
   Chocolatey), so catalogs sharing a feed all see its installed packages.
+- A `.dmg` may hold one app or one `.pkg` (`WrapsPackage`, recognized by receipt); a `.zip` holds one
+  app, read with `ZipApp` and extracted with `ditto`. `PkgInstaller.PrepareAsync` stages and checks
+  every kind and returns the one root command to run.
+- `unigetui pkg-helper` (`PkgHelperCommand`) is an optional root LaunchDaemon on a Unix socket. A
+  client sends only catalog id, package id and version (`PkgHelperClient`); the helper resolves the
+  feed itself from the catalog, refuses paths standard users could change (`TrustedPath`), then
+  runs the same `PrepareAsync`. Installs fall back to the administrator prompt when it is absent.
+- The Catalog Editor's **Package feed** dialog (`PkgFeedEditor`, `PkgFeedEditorViewModel`) edits
+  `pkgFeed`/`allowUnsignedPackages` and previews a feed through `PkgFeedInspector`.
 
 ## Version comparison across ecosystems
 

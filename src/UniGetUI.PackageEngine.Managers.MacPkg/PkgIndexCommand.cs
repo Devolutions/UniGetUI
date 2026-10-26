@@ -68,6 +68,7 @@ public static class PkgIndexCommand
                 Architectures = metadata.Architectures.Count > 0 ? [.. metadata.Architectures] : null,
                 Icon = icon is null ? null : RelativeUrlPath(folder, icon),
                 App = PkgFeedIndexApp.From(metadata.App),
+                WrapsPackage = metadata.WrapsPackage ? true : null,
             });
         }
         return (new PkgFeedIndex { Version = PkgFeedIndex.CurrentVersion, Packages = [.. entries] }, skipped);

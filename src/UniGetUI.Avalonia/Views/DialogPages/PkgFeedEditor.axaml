@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:Class="UniGetUI.Avalonia.Views.DialogPages.PkgFeedEditor"
+             x:DataType="vm:PkgFeedEditorViewModel"
+             Width="560">
+
+    <StackPanel Spacing="10">
+        <TextBlock TextWrapping="Wrap" Opacity="0.85"
+                   Text="{t:Translate Text='Every .pkg, .dmg and .zip file in this folder or web address appears in the catalog. Leave it empty for a catalog without a feed.'}"/>
+
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Grid.Column="0"
+                     Text="{Binding Location}"
+                     PlaceholderText="https://software.example.com/mac/"
+                     automation:AutomationProperties.Name="{t:Translate Package feed location}"/>
+            <Button Grid.Column="1"
+                    Content="{t:Translate Choose folder...}"
+                    Command="{Binding BrowseCommand}"/>
+        </Grid>
+        <TextBlock Text="{Binding ValidationMessage}"
+                   IsVisible="{Binding !IsValid}"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   TextWrapping="Wrap"/>
+
+        <CheckBox IsChecked="{Binding AllowUnsignedPackages}">
+            <TextBlock TextWrapping="Wrap"
+                       Text="{t:Translate Text='Allow packages that are not signed and notarized (for your own packages; keep the feed where only administrators can change it)'}"/>
+        </CheckBox>
+
+        <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{x:Static vm:PkgFeedEditorViewModel.CanPreview}">
+            <Button Content="{t:Translate Check feed}" Command="{Binding CheckCommand}"/>
+            <ProgressBar IsIndeterminate="True" Width="80" IsVisible="{Binding IsChecking}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding Warning}"
+                   IsVisible="{Binding HasWarning}"
+                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                   TextWrapping="Wrap"/>
+
+        <ScrollViewer MaxHeight="260" IsVisible="{x:Static vm:PkgFeedEditorViewModel.CanPreview}">
+            <StackPanel Spacing="2">
+                <ItemsControl ItemsSource="{Binding Packages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FeedPreviewRow">
+                            <StackPanel Margin="0,3">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Detail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Problems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FeedPreviewRow">
+                            <StackPanel Margin="0,3">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+                                <TextBlock Text="{Binding Detail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </StackPanel>
+</UserControl>

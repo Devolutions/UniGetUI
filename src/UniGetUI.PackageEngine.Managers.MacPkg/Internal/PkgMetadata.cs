@@ -11,17 +11,26 @@ namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 /// detection rules: its receipt identifier (or bundle id), version, title and the app it installs.
 /// </summary>
 internal sealed record PkgMetadata(string Id, string Version, string? Title, IReadOnlyList<string> Architectures,
-    AppBundleInfo? App = null)
+    AppBundleInfo? App = null, bool WrapsPackage = false)
 {
     internal const int MaxMetadataBytes = 4 * 1024 * 1024;
 
-    /// <summary>Reads a .pkg or a .dmg; with <paramref name="iconFile"/>, also saves its app's icon there as a PNG.</summary>
-    public static PkgMetadata Read(string path, string? iconFile = null)
+    /// <summary>
+    /// Reads a .pkg, .dmg or .zip; with <paramref name="iconFile"/>, also saves its app's icon there as a
+    /// PNG, unless that means reading a package's payload and <paramref name="iconFromPayload"/> is false.
+    /// </summary>
+    public static PkgMetadata Read(string path, string? iconFile = null, bool iconFromPayload = true)
     {
-        if (DiskImage.IsDiskImage(path))
-            return DiskImage.ReadMetadata(path, iconFile);
-        using var stream = File.OpenRead(path);
-        return Read(stream, iconFile);
+        switch (FeedFile.KindOf(path))
+        {
+            case FeedFileKind.DiskImage:
+                return DiskImage.ReadMetadata(path, iconFile, iconFromPayload);
+            case FeedFileKind.Archive:
+                return ZipApp.ReadMetadata(path, iconFile);
+            default:
+                using (var stream = File.OpenRead(path))
+                    return Read(stream, iconFromPayload ? iconFile : null);
+        }
     }
 
     public static PkgMetadata Read(Stream stream, string? iconFile = null)
@@ -75,9 +84,8 @@ internal sealed record PkgMetadata(string Id, string Version, string? Title, IRe
     }
 
     /// <summary>
-    /// The app a component installs, where it lands and its name, saving its icon when asked. Only
-    /// the payload holds the icon, and the identity of an app installed into its own folder, so it
-    /// is read (in one pass) only for those.
+    /// The app a component installs, where it lands and its name, saving its icon when asked. The payload
+    /// holds the icon and an app-folder install's identity, so it is read, in one pass, only for those.
     /// </summary>
     private static (AppBundleInfo? App, string? Title) ReadComponentApp(XElement info, XarArchive archive,
         string payloadPath, string? iconFile)

@@ -31,6 +31,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     private readonly CatalogPackagesLoader _loader;
     private CatalogEditorCatalog? _observedCatalog;
     private Button? _renameButton;
+    private Button? _feedButton;
     private Button? _addButton;
     private Button? _discardButton;
     private bool _pickingFile;
@@ -102,6 +103,8 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             () => _ = ShowDetailsForPackage(SelectedItem));
         _renameButton = vm.AddToolbarButton("rename", CoreTools.Translate("Rename catalog"),
             () => _ = RenameCatalogAsync());
+        _feedButton = vm.AddToolbarButton("package", CoreTools.Translate("Package feed"),
+            () => _ = EditPkgFeedAsync());
     }
 
     protected override ContextMenu GenerateContextMenu()
@@ -168,9 +171,42 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     {
         ViewModel.SubtitleSuffix = _document.IsDirty ? " · " + CoreTools.Translate("Unsaved changes") : "";
         _renameButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
+        _feedButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
         _addButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
         _discardButton?.IsEnabled = _document.CanDiscardChanges && !_pickingFile;
         SetMainButtonState(_document.CanEdit && !_pickingFile, showDropdown: false);
+    }
+
+    // A catalog can list every macOS .pkg, .dmg and .zip of a folder or web feed; IT sets it here and
+    // can check what the feed publishes before deploying the catalog.
+    private async Task EditPkgFeedAsync()
+    {
+        if (!_document.CanEdit || _pickingFile || _document.SelectedCatalog is not { } catalog
+            || GetMainWindow() is not { } window) return;
+        var editor = new PkgFeedEditorViewModel(catalog.PkgFeed, catalog.AllowUnsignedPackages is true, async () =>
+        {
+            var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = CoreTools.Translate("Choose the folder of the package feed"),
+                AllowMultiple = false,
+            });
+            return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+        });
+        var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Package feed of {0}", catalog.Name),
+            new PkgFeedEditor { DataContext = editor }, CoreTools.Translate("Apply"), CoreTools.Translate("Cancel"))
+        { FocusPrimaryButton = false };
+        var confirm = dialog.GetControl<Button>("PrimaryButton");
+        editor.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(PkgFeedEditorViewModel.IsValid)) confirm.IsEnabled = editor.IsValid;
+        };
+        confirm.IsEnabled = editor.IsValid;
+        await dialog.ShowDialog(window);
+        if (dialog.Result is not true || !_document.CanEdit || !ReferenceEquals(_document.SelectedCatalog, catalog)
+            || !editor.IsValid) return;
+        string location = editor.Location.Trim();
+        catalog.PkgFeed = location.Length > 0 ? location : null;
+        catalog.AllowUnsignedPackages = location.Length > 0 && editor.AllowUnsignedPackages ? true : null;
     }
 
     private async Task RenameCatalogAsync()

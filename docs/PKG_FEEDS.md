@@ -1,7 +1,7 @@
-# Publishing macOS apps (.pkg and .dmg)
+# Publishing macOS apps (.pkg, .dmg and .zip)
 
 The software catalog can offer apps that no package manager carries: an administrator publishes
-the vendor's `.pkg` or `.dmg` unchanged, and users install and update it from the
+the vendor's `.pkg`, `.dmg` or `.zip` unchanged, and users install and update it from the
 **Software Catalog** page.
 
 There is nothing to repackage and no detection rule to write. UniGetUI reads each file's
@@ -11,12 +11,17 @@ identifier, version and app from the file itself, then checks the Mac:
   Without a receipt, the app the package installs counts too when it is in place under its bundle
   id, so an app that a management tool or the user installed another way is recognized.
 - **`.dmg`:** a disk image with one app at its root (the usual "drag to Applications" image).
-  Installed when that app is in `/Applications` under its bundle id, at its bundle version.
+  Installed when that app is in `/Applications` under its bundle id, at its bundle version. A disk
+  image holding an installer package instead is treated as that `.pkg`.
+- **`.zip`:** an archive holding one app, at its root or one folder down, as some vendors ship
+  it (Visual Studio Code, for one). Recognized like a `.dmg`'s app.
 
 ## Set up a feed once
 
-A feed is a location holding `.pkg` and `.dmg` files. Declare it as the `pkgFeed` of a catalog in the
-machine-wide catalog file, `/Library/Application Support/Devolutions/UniGetUI/SoftwareCatalog.json`:
+A feed is a location holding `.pkg`, `.dmg` and `.zip` files. In the Catalog Editor, select a
+catalog and choose **Package feed**: enter the folder or web address, then **Check feed** lists
+every package it publishes and every file it skips, with the reason. Or declare it as the
+`pkgFeed` of a catalog in the machine-wide catalog file, `/Library/Application Support/Devolutions/UniGetUI/SoftwareCatalog.json`:
 
 ```json
 {
@@ -97,14 +102,41 @@ to an Intel Mac.
   only once the new one is in place. Once that step starts it cannot be canceled, since stopping
   it halfway would leave a broken app.
 - Packages cannot be uninstalled from UniGetUI.
+- With the package helper installed (below), no password is asked, and standard users can
+  install too.
 - When the feed is unreachable (off the VPN, share not mounted), UniGetUI keeps showing the
   packages it last listed. Installing needs the feed again.
+
+## Installing without an administrator password
+
+By default, installing asks for an administrator password, which standard users do not have. The
+package helper is a small root service, like a management agent's, that installs what the catalog
+publishes without asking. Set it up once per Mac from a deployment script, after UniGetUI itself:
+
+```bash
+sudo /Applications/UniGetUI.app/Contents/MacOS/UniGetUI pkg-helper install-daemon
+```
+
+It runs from `/Library/LaunchDaemons/com.devolutions.unigetui.pkghelper.plist` and logs to
+`/Library/Logs/UniGetUI-pkg-helper.log`. `pkg-helper remove-daemon` removes it.
+
+A user can only ask it for a package by catalog id, package id and version. The helper reads the
+catalog, lists the feed, stages and checks the package itself, with the same hash, identity and
+Gatekeeper checks as any install, and refuses:
+
+- anything a catalog does not publish;
+- a catalog file, folder feed or package file that a standard user could change: each must belong
+  to root or an administrator and be writable by no one else. So install UniGetUI with its
+  installer package (so that the app belongs to root), and keep feeds out of shared folders such as
+  `/Users/Shared`.
+
+When the helper is not running, UniGetUI falls back to the administrator prompt.
 
 ## Limits
 
 - Only flat packages are read; legacy bundle packages (a `.pkg` that is a folder) are skipped.
-- A `.dmg` must hold exactly one app at its root (an uninstaller app beside it is ignored). An
-  image that holds a `.pkg` instead is not supported.
+- A `.dmg` must hold exactly one installer package or one app at its root (an uninstaller beside
+  it is ignored); a `.zip` exactly one app.
 - A product archive is identified by its first component. Without that component's receipt or the
   app it installs, the product shows as not installed, even if other components are present.
 - An app is looked for only where the package installs it: an app renamed or moved elsewhere is

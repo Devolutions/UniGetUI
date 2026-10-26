@@ -23,65 +23,151 @@ internal static class PkgInstaller
     /// <summary>Whether UniGetUI already runs as root, so no prompt is needed. Replaceable for tests.</summary>
     internal static Func<bool> IsRoot { get; set; } = CoreTools.IsAdministrator;
 
+    /// <summary>
+    /// Installs through the root helper when IT set it up (no password asked), else as root behind the
+    /// administrator prompt. <paramref name="feedId"/> names the feed for the helper, which looks it up itself.
+    /// </summary>
     public static async Task<OperationVeredict> InstallAsync(PkgFeedItem item, string displayName,
         Action<string> log, Action<OperationProgress> progress, CancellationToken cancellationToken,
-        bool allowUnsigned = false)
+        bool allowUnsigned = false, string? feedId = null)
+    {
+        if (feedId is not null && !IsRoot() && PkgHelperClient.IsAvailable)
+        {
+            progress(OperationProgress.ForStage(OperationProgressStage.Installing));
+            if (await PkgHelperClient.TryInstallAsync(feedId, item, log) is { } verdict)
+                return verdict;
+            log("The UniGetUI package helper does not answer; asking for administrator rights instead.");
+        }
+
+        (int code, string output) result;
+        using (var prepared = await PrepareAsync(item, allowUnsigned, log, progress, cancellationToken))
+        {
+            // From here on the operation cannot be canceled: a root installer or copy cut short leaves
+            // a half-installed app, and the staged file and mounted image must outlive it.
+            cancellationToken.ThrowIfCancellationRequested();
+            log(prepared.Description);
+            result = await RunAsRootAsync(prepared.Command, displayName, CancellationToken.None);
+        }
+        var (code, output) = result;
+        foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            log(line);
+        if (code == 0)
+            return OperationVeredict.Success;
+        if (output.Contains($"({UserCanceledAppleScriptError})", StringComparison.Ordinal))
+        {
+            log("The administrator prompt was canceled.");
+            return OperationVeredict.Canceled;
+        }
+        log($"The installer exited with code {code}.");
+        return OperationVeredict.Failure;
+    }
+
+    /// <summary>A verified package ready to install: the root shell command that installs it, and what
+    /// it needs to stay in place (the staged file, a mounted image) until that command is done.</summary>
+    internal sealed class PreparedInstall : IDisposable
+    {
+        private readonly string _stagingDirectory;
+        private DiskImage? _image;
+
+        public PreparedInstall(string stagingDirectory) => _stagingDirectory = stagingDirectory;
+
+        public string Command { get; set; } = "";
+        public string Description { get; set; } = "";
+
+        public DiskImage Mount(string image) => _image = DiskImage.Mount(image);
+
+        public void Dispose()
+        {
+            _image?.Dispose();
+            try { Directory.Delete(_stagingDirectory, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    /// <summary>
+    /// Stages a private copy of the package and checks it is what the feed listed, signed as Gatekeeper
+    /// requires; then gives the command that installs it. The root helper runs the same steps as root.
+    /// </summary>
+    internal static async Task<PreparedInstall> PrepareAsync(PkgFeedItem item, bool allowUnsigned, Action<string> log,
+        Action<OperationProgress> progress, CancellationToken cancellationToken)
     {
         if (allowUnsigned && item.Location.IsFile)
             RefuseFilesOthersCanWrite(item.Location.LocalPath);
         string stagingDirectory = Path.Combine(Path.GetTempPath(), "UniGetUI-pkg", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stagingDirectory);
+        var prepared = new PreparedInstall(stagingDirectory);
         try
         {
             if (!OperatingSystem.IsWindows())
                 File.SetUnixFileMode(stagingDirectory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             // A fixed name keeps the vendor's file name out of the elevated command line.
-            string staged = Path.Combine(stagingDirectory, item.IsDiskImage ? "package.dmg" : "package.pkg");
+            string staged = Path.Combine(stagingDirectory, "package" + item.Kind switch
+            {
+                FeedFileKind.DiskImage => ".dmg",
+                FeedFileKind.Archive => ".zip",
+                _ => ".pkg",
+            });
             await StageAsync(item, staged, log, progress, cancellationToken);
             VerifyHash(item, staged);
 
             progress(OperationProgress.ForStage(OperationProgressStage.Installing));
             log($"Installing {item.Id} {item.Version}...");
-            // From here on the operation cannot be canceled: a root installer or copy cut short leaves
-            // a half-installed app, and the staged file and mounted image must outlive it.
-            (int code, string output) result;
-            if (item.IsDiskImage)
+            string? package = null, app = null;
+            switch (item.Kind)
             {
-                using var image = DiskImage.Mount(staged);
-                string app = image.FindApp();
-                VerifyIdentity(item, DiskImage.FromApp(app));
-                await VerifySignatureAsync(app, "execute", allowUnsigned, log, cancellationToken);
-                string destination = AppBundle.OnDisk("/Applications/" + SafeAppName(app));
-                cancellationToken.ThrowIfCancellationRequested();
-                log($"Copying {Path.GetFileName(app)} to {destination}...");
-                result = await RunAsRootAsync(CopyAppCommand(app, destination), displayName, CancellationToken.None);
+                case FeedFileKind.Package:
+                    package = staged;
+                    break;
+                case FeedFileKind.DiskImage:
+                    var (content, isPackage) = prepared.Mount(staged).FindContent();
+                    if (isPackage)
+                        package = content;
+                    else
+                        app = content;
+                    break;
+                case FeedFileKind.Archive:
+                    app = await ExtractAppAsync(staged, Path.Combine(stagingDirectory, "extracted"), cancellationToken);
+                    break;
+            }
+
+            if (package is not null)
+            {
+                VerifyIdentity(item, PkgMetadata.Read(package));
+                await VerifySignatureAsync(package, "install", allowUnsigned, log, cancellationToken);
+                prepared.Command = InstallPkgCommand(package);
+                prepared.Description = $"Running the installer for {Uri.UnescapeDataString(Path.GetFileName(item.Location.AbsolutePath))}...";
             }
             else
             {
-                VerifyIdentity(item, PkgMetadata.Read(staged));
-                await VerifySignatureAsync(staged, "install", allowUnsigned, log, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                result = await RunAsRootAsync(InstallPkgCommand(staged), displayName, CancellationToken.None);
+                VerifyIdentity(item, DiskImage.FromApp(app!));
+                await VerifySignatureAsync(app!, "execute", allowUnsigned, log, cancellationToken);
+                string destination = AppBundle.OnDisk("/Applications/" + SafeAppName(app!));
+                prepared.Command = CopyAppCommand(app!, destination);
+                prepared.Description = $"Copying {Path.GetFileName(app)} to {destination}...";
             }
-            var (code, output) = result;
-            foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                log(line);
-            if (code == 0)
-                return OperationVeredict.Success;
-            if (output.Contains($"({UserCanceledAppleScriptError})", StringComparison.Ordinal))
-            {
-                log("The administrator prompt was canceled.");
-                return OperationVeredict.Canceled;
-            }
-            log($"The installer exited with code {code}.");
-            return OperationVeredict.Failure;
+            return prepared;
         }
-        finally
+        catch
         {
-            try { Directory.Delete(stagingDirectory, recursive: true); }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
+            prepared.Dispose();
+            throw;
         }
+    }
+
+    // ditto unpacks as macOS does, keeping the symlinks and permissions an app bundle relies on.
+    internal static async Task<string> ExtractAppAsync(string zip, string destination, CancellationToken cancellationToken)
+    {
+        string app;
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(zip))
+            app = ZipApp.FindApp(archive.Entries.Select(e => e.FullName));
+        var result = await Tool.RunAsync("/usr/bin/ditto", ["-x", "-k", zip, destination], cancellationToken: cancellationToken);
+        if (result.ExitCode != 0)
+            throw new InvalidDataException($"The zip archive could not be extracted: {result.Output.Trim()}");
+        string path = Path.Combine(destination, app);
+        if (!Directory.Exists(path) || new DirectoryInfo(path).LinkTarget is not null)
+            throw new InvalidDataException($"The zip archive did not extract {app}.");
+        return path;
     }
 
     /// <summary>Copies a folder-feed package, or downloads a web-feed one, to the given path.</summary>

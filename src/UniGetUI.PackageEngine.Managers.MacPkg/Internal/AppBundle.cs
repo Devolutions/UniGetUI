@@ -42,6 +42,20 @@ internal static class AppBundle
         }
     }
 
+    /// <summary>What an app installed by copying it to /Applications is: its bundle id, version and name.</summary>
+    public static PkgMetadata Describe(string appName, IReadOnlyDictionary<string, string> plist,
+        IReadOnlyList<string> architectures)
+    {
+        string id = plist.GetValueOrDefault("CFBundleIdentifier") ?? "";
+        string? version = VersionOf(plist);
+        if (id.Length == 0 || string.IsNullOrEmpty(version))
+            throw new InvalidDataException($"{appName} has no bundle identifier or version.");
+        string title = plist.GetValueOrDefault("CFBundleDisplayName") is { Length: > 0 } display
+            ? display
+            : System.IO.Path.GetFileNameWithoutExtension(appName);
+        return new PkgMetadata(id, version, title, architectures, new AppBundleInfo(id, "/Applications/" + appName, version));
+    }
+
     public static string? VersionOf(IReadOnlyDictionary<string, string> plist) =>
         plist.GetValueOrDefault("CFBundleShortVersionString") is { Length: > 0 } version
             ? version

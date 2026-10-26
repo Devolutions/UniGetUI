@@ -50,6 +50,11 @@ internal sealed class PkgFeedIndexEntry
     [JsonPropertyName("app")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PkgFeedIndexApp? App { get; init; }
+
+    // A disk image that holds an installer package rather than an app.
+    [JsonPropertyName("wrapsPackage")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? WrapsPackage { get; init; }
 }
 
 internal sealed class PkgFeedIndexApp

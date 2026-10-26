@@ -44,7 +44,8 @@ internal sealed class MacPkgOperationHelper : BasePkgOperationHelper, IManagedPa
                 $"The package feed {package.Source.Name} does not publish {package.Id}{(version is null ? "" : " " + version)} for this Mac.");
 
         bool allowUnsigned = _manager.FindFeedSource(package)?.AllowUnsignedPackages is true;
-        var verdict = await PkgInstaller.InstallAsync(item, package.Name, log, progress, cancellationToken, allowUnsigned);
+        var verdict = await PkgInstaller.InstallAsync(item, package.Name, log, progress, cancellationToken, allowUnsigned,
+            feedId: package.Source.Name);
         if (verdict == OperationVeredict.Success)
             _manager.InvalidateInstalledPackages();
         return verdict;

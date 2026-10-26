@@ -21,17 +21,20 @@ public partial class CatalogEditorCatalog : ViewModelBase
 
     public ObservableCollection<CatalogEntry> Packages { get; }
 
-    // Not edited here, but kept so that saving does not drop them.
-    public string? PkgFeed { get; }
-    public bool? AllowUnsignedPackages { get; }
+    // A folder or https location of macOS packages that fills the catalog, edited from the Package feed dialog.
+    [ObservableProperty]
+    private string? _pkgFeed;
+
+    [ObservableProperty]
+    private bool? _allowUnsignedPackages;
 
     public CatalogEditorCatalog(CatalogDefinition definition)
     {
         _id = definition.Id;
         _name = definition.Name;
         Packages = new(definition.Packages);
-        PkgFeed = definition.PkgFeed;
-        AllowUnsignedPackages = definition.AllowUnsignedPackages;
+        _pkgFeed = definition.PkgFeed;
+        _allowUnsignedPackages = definition.AllowUnsignedPackages;
     }
 
     public CatalogDefinition ToDefinition() => new()

@@ -22,9 +22,12 @@ internal sealed class MacPkgDetailsHelper : BasePkgDetailsHelper
         details.Version = item.Version;
         details.InstallerUrl = item.Location;
         details.InstallerHash = item.Sha256;
-        details.InstallerType = item.IsDiskImage
-            ? CoreTools.Translate("Disk image (.dmg)")
-            : CoreTools.Translate("Installer package (.pkg)");
+        details.InstallerType = item.Kind switch
+        {
+            FeedFileKind.DiskImage => CoreTools.Translate("Disk image (.dmg)"),
+            FeedFileKind.Archive => CoreTools.Translate("Zip archive (.zip)"),
+            _ => CoreTools.Translate("Installer package (.pkg)"),
+        };
         details.InstallerSize = item.Size;
         details.ManifestUrl = item.Location.IsFile ? null : item.Location;
         details.Description = CoreTools.Translate("Published by your organization in {0}.", details.Package.Source.Name);

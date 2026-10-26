@@ -147,7 +147,7 @@ public sealed class MacPkg : PackageManager
         try
         {
             receipts = PkgReceipts.GetInstalledVersions(
-                latest.Where(p => !p.Item.IsDiskImage).Select(p => p.Item.Id), TaskLogger);
+                latest.Where(p => !p.Item.CopiesAnApp).Select(p => p.Item.Id), TaskLogger);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
         {
@@ -163,7 +163,7 @@ public sealed class MacPkg : PackageManager
                 continue;
             // The receipt decides first; without one, the app in place under its bundle id does, which
             // is how a .dmg, or an app that a management tool or the user installed another way, is recognized.
-            if (!item.IsDiskImage && receipts.TryGetValue(item.Id, out string? receipt))
+            if (!item.CopiesAnApp && receipts.TryGetValue(item.Id, out string? receipt))
                 installed.Add((source, item, receipt, CompareVersions(item.Version, receipt) > 0));
             else if (item.App is { } app && AppBundle.FindInstalled(app) is { } bundle)
                 installed.Add((source, item, bundle.Version ?? "0",

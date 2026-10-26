@@ -4,8 +4,7 @@
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              x:Class="UniGetUI.Avalonia.Views.DialogPages.PkgFeedEditor"
-             x:DataType="vm:PkgFeedEditorViewModel"
-             Width="560">
+             x:DataType="vm:PkgFeedEditorViewModel">
 
     <StackPanel Spacing="10">
         <TextBlock TextWrapping="Wrap" Opacity="0.85"

@@ -766,7 +766,32 @@ public sealed class SoftwareCatalogTests : IDisposable
 
         File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[{"Id":"jq","Name":"jq","Version":"","Source":"Homebrew","ManagerName":"Homebrew"}]}]}""");
         Assert.True(SoftwareCatalog.HasUsableCatalog(file));
+
+        // A package feed fills its catalog at run time, so an empty package list is still usable.
+        File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[],"pkgFeed":"https://h/mac/"}]}""");
+        Assert.True(SoftwareCatalog.HasUsableCatalog(file));
     }
+
+    [Fact]
+    public async Task APkgFeedIsKeptOnSaveAndOmittedWhenAbsent()
+    {
+        var catalogs = SoftwareCatalog.Parse(DocumentJson(
+            """{"id":"mac","name":"Mac apps","packages":[],"pkgFeed":"https://software.example.com/mac/"},"""
+            + CatalogJson(EntryJson)));
+        Assert.Equal("https://software.example.com/mac/", catalogs[0].PkgFeed);
+        Assert.Null(catalogs[1].PkgFeed);
+
+        string file = Path.Combine(_testRoot, "saved.json");
+        await SoftwareCatalog.SaveAsync(file, catalogs);
+        string json = File.ReadAllText(file);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(json, "pkgFeed"));
+        Assert.Equal(catalogs.Select(c => c.PkgFeed), SoftwareCatalog.Parse(json).Select(c => c.PkgFeed));
+    }
+
+    [Fact]
+    public void AnEmptyPkgFeedIsRejected() =>
+        Assert.Throws<JsonException>(() => SoftwareCatalog.Parse(DocumentJson(
+            """{"id":"mac","name":"Mac apps","packages":[],"pkgFeed":" "}""")));
 
     [Fact]
     public void CatalogIsAnIpcNavigationTarget()

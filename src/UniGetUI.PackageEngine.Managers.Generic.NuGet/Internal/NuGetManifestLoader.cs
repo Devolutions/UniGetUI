@@ -32,9 +32,14 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// <returns>A Uri object</returns>
         public static Uri GetManifestUrl(IPackage package, string? version = null)
         {
-            return new Uri(
-                $"{package.Source.Url}/Packages(Id='{package.Id}',Version='{version ?? package.VersionString}')"
-            );
+            version ??= package.VersionString;
+            // A package without a version, such as an unpinned Software Catalog entry, gets the
+            // newest listed one; "Version=''" matches nothing.
+            if (version.Length == 0)
+                return new Uri(
+                    $"{package.Source.Url}/Packages()?$filter=Id eq '{Uri.EscapeDataString(package.Id)}' and IsLatestVersion"
+                );
+            return new Uri($"{package.Source.Url}/Packages(Id='{package.Id}',Version='{version}')");
         }
 
         /// <summary>

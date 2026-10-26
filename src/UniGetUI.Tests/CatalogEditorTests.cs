@@ -718,4 +718,23 @@ public class CatalogEditorTests : IDisposable
     }
 
     public void Dispose() => Directory.Delete(_directory, true);
+
+    [Fact]
+    public async Task SavingKeepsACatalogsPkgFeed()
+    {
+        await SoftwareCatalog.SaveAsync(FilePath,
+        [
+            new() { Id = "mac", Name = "Mac apps", Packages = [], PkgFeed = "https://software.example.com/mac/" },
+            new() { Id = "tools", Name = "Tools", Packages = [Entry()] },
+        ]);
+        var vm = new CatalogEditorViewModel();
+        Assert.True(await vm.LoadAsync(FilePath));
+        vm.SelectedCatalog = vm.Catalogs.Single(c => c.Id == "mac");
+        vm.SelectedCatalog.Name = "Mac software";
+        Assert.True(await vm.SaveAsync(FilePath));
+
+        var saved = await SoftwareCatalog.LoadAsync(FilePath);
+        Assert.Equal(("Mac software", "https://software.example.com/mac/"), (saved[0].Name, saved[0].PkgFeed));
+        Assert.Null(saved[1].PkgFeed);
+    }
 }

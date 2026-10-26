@@ -19,6 +19,7 @@ using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.Managers.AptManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
+using UniGetUI.PackageEngine.Managers.MacPkgManager;
 using UniGetUI.PackageEngine.Managers.PacmanManager;
 using UniGetUI.PackageEngine.Managers.SnapManager;
 using UniGetUI.PackageEngine.Managers.FlatpakManager;
@@ -52,6 +53,7 @@ namespace UniGetUI.PackageEngine
         public static readonly Dnf? Dnf = Create(() => new Dnf());
         public static readonly Pacman? Pacman = Create(() => new Pacman());
         public static readonly Homebrew? Homebrew = Create(() => new Homebrew());
+        public static readonly MacPkg? MacPkg = Create(() => new MacPkg());
         public static readonly Snap? Snap = Create(() => new Snap());
         public static readonly Flatpak? Flatpak = Create(() => new Flatpak());
 #endif
@@ -90,6 +92,8 @@ namespace UniGetUI.PackageEngine
             candidates.Add(PowerShell);
 #else
             candidates.Insert(0, Homebrew);
+            if (OperatingSystem.IsMacOS())
+                candidates.Insert(1, MacPkg);
             if (OperatingSystem.IsLinux())
             {
                 var families = ReadLinuxDistroFamilies();

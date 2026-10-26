@@ -61,6 +61,9 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.MacPkg\UniGetUI.PackageEngine.Managers.MacPkg.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Snap\UniGetUI.PackageEngine.Managers.Snap.csproj">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>

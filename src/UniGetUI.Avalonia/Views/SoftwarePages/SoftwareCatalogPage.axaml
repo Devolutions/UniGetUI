@@ -158,7 +158,7 @@
                     <Button.Flyout>
                         <MenuFlyout>
                             <MenuItem Header="{t:Translate Update}" IsVisible="{Binding ShowUpdate}" Command="{Binding UpdateCommand}"/>
-                            <MenuItem Header="{t:Translate Uninstall}" IsVisible="{Binding IsInstalled}" Command="{Binding UninstallCommand}"/>
+                            <MenuItem Header="{t:Translate Uninstall}" IsVisible="{Binding ShowUninstall}" Command="{Binding UninstallCommand}"/>
                             <MenuItem Header="{t:Translate Package details}" Command="{Binding DetailsCommand}"/>
                         </MenuFlyout>
                     </Button.Flyout>

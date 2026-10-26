@@ -395,11 +395,25 @@ public class InstalledPackagesPage : AbstractPackagesPage
         bool? interactive = null,
         bool? remove_data = null)
     {
-        var list = packages.ToList();
+        var list = ExcludeNonUninstallable(packages);
         if (list.Count == 0 || MainWindow.Instance is not { } window) return;
         if (!await UninstallConfirmationDialog.ConfirmAsync(window, list)) return;
 
         await LaunchUninstall(list, elevated, interactive, remove_data);
+    }
+
+    // Installer packages (.pkg) have no uninstaller: say so instead of queuing an operation that fails.
+    private static List<IPackage> ExcludeNonUninstallable(IEnumerable<IPackage> packages)
+    {
+        var list = packages.ToList();
+        var refused = list.Where(p => !p.Manager.Capabilities.CanUninstall).ToList();
+        if (refused.Count > 0)
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Some packages cannot be uninstalled"),
+                CoreTools.Translate("{0} cannot be uninstalled from UniGetUI. Ask your administrator to remove it.",
+                    string.Join(", ", refused.Select(p => p.Name))),
+                MainWindow.RuntimeNotificationLevel.Error);
+        return list.Except(refused).ToList();
     }
 
     internal static async Task LaunchUninstall(
@@ -408,7 +422,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         bool? interactive = null,
         bool? remove_data = null)
     {
-        var list = packages.ToList();
+        var list = ExcludeNonUninstallable(packages);
         if (list.Count == 0) return;
 
         foreach (var pkg in list)

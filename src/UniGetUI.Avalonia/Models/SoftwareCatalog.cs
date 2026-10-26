@@ -25,6 +25,11 @@ public sealed class CatalogDefinition
     public required string Name { get; init; }
     [JsonPropertyName("packages")]
     public required CatalogEntry[] Packages { get; init; }
+
+    // A folder or https location of macOS .pkg and .dmg files: every package in it joins this catalog.
+    [JsonPropertyName("pkgFeed")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PkgFeed { get; init; }
 }
 
 public sealed class CatalogEntry
@@ -138,7 +143,8 @@ internal static class SoftwareCatalog
     {
         try
         {
-            return File.Exists(filePath) && Parse(File.ReadAllText(filePath)).Any(c => c.Packages.Length > 0);
+            return File.Exists(filePath)
+                && Parse(File.ReadAllText(filePath)).Any(c => c.Packages.Length > 0 || !string.IsNullOrWhiteSpace(c.PkgFeed));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -169,6 +175,8 @@ internal static class SoftwareCatalog
                 throw new JsonException("Every catalog requires an id, name and packages array.");
             if (!catalogIds.Add(catalog.Id))
                 throw new JsonException($"Duplicate catalog identifier: {catalog.Id}.");
+            if (catalog.PkgFeed is not null && string.IsNullOrWhiteSpace(catalog.PkgFeed))
+                throw new JsonException($"The pkgFeed of catalog {catalog.Id} is empty.");
 
             var identities = new HashSet<(string, string, string)>();
             foreach (var entry in catalog.Packages)

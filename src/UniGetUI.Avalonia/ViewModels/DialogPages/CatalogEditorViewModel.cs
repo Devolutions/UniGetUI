@@ -21,14 +21,18 @@ public partial class CatalogEditorCatalog : ViewModelBase
 
     public ObservableCollection<CatalogEntry> Packages { get; }
 
+    // Not edited here, but kept so that saving does not drop it.
+    public string? PkgFeed { get; }
+
     public CatalogEditorCatalog(CatalogDefinition definition)
     {
         _id = definition.Id;
         _name = definition.Name;
         Packages = new(definition.Packages);
+        PkgFeed = definition.PkgFeed;
     }
 
-    public CatalogDefinition ToDefinition() => new() { Id = Id, Name = Name, Packages = Packages.ToArray() };
+    public CatalogDefinition ToDefinition() => new() { Id = Id, Name = Name, Packages = Packages.ToArray(), PkgFeed = PkgFeed };
 }
 
 public sealed record CatalogAddResult(CatalogEditorCatalog Catalog, int Added, int AlreadyPresent);
@@ -365,6 +369,7 @@ public partial class CatalogEditorViewModel : ViewModelBase
         {
             Id = c.Id,
             Name = c.Name,
+            PkgFeed = c.PkgFeed,
             Packages = c.Packages.Select(p => new CatalogEntry
             {
                 Id = p.Id,

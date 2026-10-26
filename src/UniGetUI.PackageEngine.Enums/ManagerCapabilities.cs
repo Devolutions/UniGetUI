@@ -30,6 +30,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool CanSkipIntegrityChecks = false;
         public bool CanRunInteractively = false;
         public bool CanRemoveDataOnUninstall = false;
+        // False for managers that install but cannot remove, such as macOS .pkg files.
+        public bool CanUninstall = true;
         public bool CanDownloadInstaller = false;
         public bool CanUninstallPreviousVersionsAfterUpdate = false;
         public bool CanListDependencies = false;

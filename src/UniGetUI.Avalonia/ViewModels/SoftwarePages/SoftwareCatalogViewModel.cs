@@ -346,7 +346,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         UpdateStates();
         try
         {
-            var catalogs = await SoftwareCatalog.LoadAsync();
+            var catalogs = await ExpandPkgFeedsAsync(await SoftwareCatalog.LoadAsync());
             _notConfigured = false;
             BackgroundDetail = "";
 
@@ -399,6 +399,37 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
 
     private static IPackageManager? FindManager(CatalogEntry entry) =>
         PEInterface.Managers.FirstOrDefault(entry.MatchesManager);
+
+    // The macOS Installer packages manager, which serves each catalog's pkgFeed as a source of the catalog's name.
+    private const string PkgManagerId = "pkg";
+
+    /// <summary>
+    /// Adds every package of a catalog's pkgFeed to that catalog, so that publishing a .pkg in the
+    /// feed is all it takes to offer it. Entries written in the catalog itself come first and win.
+    /// </summary>
+    internal static async Task<CatalogDefinition[]> ExpandPkgFeedsAsync(CatalogDefinition[] catalogs)
+    {
+        if (catalogs.All(c => c.PkgFeed is null)
+            || PEInterface.Managers.FirstOrDefault(m => m.Id == PkgManagerId) is not { } manager
+            || !manager.IsReady())
+            return catalogs;
+        var published = await Task.Run(() => manager.FindPackages(""));
+        return catalogs.Select(c => c.PkgFeed is null ? c : new CatalogDefinition
+        {
+            Id = c.Id,
+            Name = c.Name,
+            PkgFeed = c.PkgFeed,
+            Packages =
+            [
+                .. c.Packages,
+                .. published
+                    .Where(p => string.Equals(p.Source.Name, c.Name.Trim(), StringComparison.OrdinalIgnoreCase)
+                        && !c.Packages.Any(e => e.Matches(p)))
+                    .Select(CatalogEntry.FromPackage)
+                    .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase),
+            ],
+        }).ToArray();
+    }
 
     private static (string Manager, string Source) SourceKey(CatalogEntry entry) =>
         ((FindManager(entry)?.Id ?? entry.ManagerName).ToUpperInvariant(), entry.Source.ToUpperInvariant());
@@ -807,6 +838,11 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
 
     public string SourceDisplay => $"{ManagerDisplayName}: {Entry.Source}";
 
+    private readonly bool _canUninstall =
+        PEInterface.Managers.FirstOrDefault(entry.MatchesManager)?.Capabilities.CanUninstall ?? true;
+
+    public bool ShowUninstall => IsInstalled && _canUninstall;
+
     // An administrator can pin the version the catalog installs; empty means the latest.
     public bool HasPinnedVersion => Entry.Version.Length > 0;
     public string PinnedVersionText => HasPinnedVersion ? CoreTools.Translate("Version {0}", Entry.Version) : "";
@@ -862,6 +898,7 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(ShowUpdate))]
     [NotifyPropertyChangedFor(nameof(ShowInstalledLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowUninstall))]
     private bool _isInstalled;
 
     [ObservableProperty]

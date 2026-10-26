@@ -111,6 +111,29 @@ retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path 
 V3 has no `IsLatestVersion`, so the client picks "latest" itself using the comparator described
 in the next section.
 
+## macOS installer packages (.pkg and .dmg)
+
+`UniGetUI.PackageEngine.Managers.MacPkg` (id `pkg`, macOS only) installs IT-published `.pkg` and
+`.dmg` files through the Software Catalog; the administrator workflow is in `docs/PKG_FEEDS.md`.
+
+- Its sources are not added from the UI: each catalog of the machine-wide `SoftwareCatalog.json`
+  that has a `pkgFeed` declares one, named after the catalog (`PkgCatalogFeeds`). The catalog page
+  then lists every package of that feed in the catalog (`SoftwareCatalogViewModel.ExpandPkgFeedsAsync`).
+- A feed is a `file:` folder whose `.pkg` files are read directly, or an `https:` folder read through
+  the `index.json` that `unigetui pkg-index <folder>` writes (`PkgIndexCommand`).
+- Identity comes from the file itself: for a `.pkg`, `XarArchive` + `PkgMetadata` (the first
+  component of a Distribution, else `PackageInfo`, plus its outermost app); for a `.dmg`,
+  `DiskImage` mounts it read-only and reads the app at its root. Installed state comes from
+  `pkgutil` receipts (`PkgReceipts`), else from that app being in place under its bundle id (`AppBundle`).
+- Icons come from the app too: a `.dmg`'s app, or the app's `Info.plist` and `.icns` found in one
+  forward pass through a `.pkg` payload (`PkgPayload`, gzip'd odc cpio). They are converted with
+  `sips` once per file version into the icon cache; the manager sets `SupportsCustomPackageIcons`,
+  without which the base `GetIcon` never asks it.
+- Installs run in-process (`IManagedPackageOperationHelper`): stage a private copy, verify the
+  index hash and the package identity, then `installer -pkg`, or `ditto` of a `.dmg`'s app into
+  `/Applications`, as root through `osascript ... with administrator privileges`. `ManagerCapabilities.CanUninstall` is false, and the UI refuses
+  uninstalls for such managers.
+
 ## Version comparison across ecosystems
 
 `CoreTools.VersionStringToStruct` treats `-`, `_`, `/` and `#` as plain numeric separators and

@@ -15,8 +15,6 @@ name: Translation Sync
 # keys are never translated twice.
 
 on:
-  push:
-    branches: [feat/daily-translation-sync]
   schedule:
     - cron: '17 6 * * *'
   workflow_dispatch:
@@ -75,7 +73,7 @@ jobs:
         if: steps.open-pr.outputs.skip != 'true'
         shell: pwsh
         env:
-          LANGUAGES: ${{ inputs.languages || (github.event_name == 'push' && 'fr' || '') }}
+          LANGUAGES: ${{ inputs.languages }}
         run: |
           $batchDir = Join-Path $env:RUNNER_TEMP 'translations'
           ./scripts/translation/Export-PendingTranslations.ps1 -OutputDirectory $batchDir -LanguageCodes $env:LANGUAGES
@@ -198,7 +196,7 @@ jobs:
         id: merge
         shell: pwsh
         env:
-          LANGUAGES: ${{ inputs.languages || (github.event_name == 'push' && 'fr' || '') }}
+          LANGUAGES: ${{ inputs.languages }}
         run: |
           $batchDir = Join-Path $env:RUNNER_TEMP 'translations'
           $translatedDir = Join-Path $env:RUNNER_TEMP 'translated'
@@ -224,7 +222,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.DEVOLUTIONSBOT_WRITE_TOKEN }}
-          BASE_BRANCH: ${{ github.event_name == 'push' && github.event.repository.default_branch || github.ref_name }}
+          BASE_BRANCH: ${{ github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           $languageCount = @(git diff --name-only).Count

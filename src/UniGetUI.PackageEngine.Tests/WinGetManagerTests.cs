@@ -2234,6 +2234,53 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetUpdateReturnsToTheCatalogIdentifierAfterTheLocalIdentifierAlsoFindsNothing()
+    {
+        const string ventoyLocalIdentifier =
+            @"ARP\User\X64\Ventoy.Ventoy_Microsoft.Winget.Source_8wekyb3d8bbwe";
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Ventoy.Ventoy")
+            .WithVersion("1.1.17")
+            .WithNewVersion("1.1.18")
+            .Build();
+        NativePackageHandler.AddLocalIdentifier(package, ventoyLocalIdentifier);
+
+        var firstVeredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+        OperationAssert.HasVeredict(firstVeredict, OperationVeredict.AutoRetry);
+
+        var localIdentifierAttempt = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+        Assert.Contains($"\"{ventoyLocalIdentifier}\"", localIdentifierAttempt);
+
+        var secondVeredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+        OperationAssert.HasVeredict(secondVeredict, OperationVeredict.Failure);
+
+        var manualRetry = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+        Assert.Contains("\"Ventoy.Ventoy\"", manualRetry);
+        Assert.DoesNotContain($"\"{ventoyLocalIdentifier}\"", manualRetry);
+    }
+
+    [Fact]
     public void WinGetUpdateDoesNotRetryWhenTheLocalIdentifierIsUnknown()
     {
         var manager = new WinGet();

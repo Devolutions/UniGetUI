@@ -445,6 +445,20 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         if (
             uintCode is 0x8A150014
             && operation is OperationType.Update or OperationType.Uninstall
+            && package.OverridenOptions.WinGet_UseLocalIdentifier
+        )
+        {
+            Logger.Warn(
+                $"WinGet found no installed package matching the local identifier of {package.Id} either; "
+                + "the next attempt will select the package by its catalog identifier again"
+            );
+            package.OverridenOptions.WinGet_UseLocalIdentifier = false;
+            return OperationVeredict.Failure;
+        }
+
+        if (
+            uintCode is 0x8A150014
+            && operation is OperationType.Update or OperationType.Uninstall
             && !package.OverridenOptions.WinGet_UseLocalIdentifier
             && !OperationIsBrokered(package)
             && GetFallbackIdentifier(package) is { } localIdentifier

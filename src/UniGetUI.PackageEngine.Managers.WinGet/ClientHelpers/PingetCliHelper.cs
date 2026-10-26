@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -20,6 +22,10 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
         PropertyNameCaseInsensitive = true,
     };
     private static readonly PingetCliJsonContext SerializationContext = new(SerializationOptions);
+
+    private const string MsResourcePrefix = "ms-resource:";
+    private const string MsixIdPrefix = "MSIX\\";
+    private static readonly ConcurrentDictionary<(string Identity, string Name), string> ResolvedDisplayNames = new();
 
     private readonly WinGet Manager;
     private readonly string _cliExecutablePath;
@@ -57,7 +63,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
             // Restore the version we last upgraded to when WinGet reports it as unknown (#5158).
             bool versionUnknown = WinGetPkgOperationHelper.IsUnknownVersion(match.InstalledVersion);
             var package = new Package(
-                match.Name,
+                ResolveDisplayName(match),
                 match.Id,
                 versionUnknown
                     ? WinGetPkgOperationHelper.GetLastInstalledVersion(match.Id)
@@ -93,10 +99,15 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
             "list --output json"
         );
 
+        return BuildInstalledPackages(result);
+    }
+
+    internal IReadOnlyList<Package> BuildInstalledPackages(ListResponse result)
+    {
         return result
             .Matches.Select(match =>
                 new Package(
-                    match.Name,
+                    ResolveDisplayName(match),
                     match.Id,
                     WinGetPkgOperationHelper.ResolveReportedInstalledVersion(match.Id, match.InstalledVersion),
                     GetSource(match),
@@ -295,6 +306,112 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
 
         return null;
     }
+
+    internal static string ResolveDisplayName(ListMatch match) =>
+        ResolveDisplayName(match, LoadIndirectString, ResolvedDisplayNames);
+
+    internal static string ResolveDisplayName(
+        ListMatch match,
+        Func<string, string?> loadIndirectString,
+        ConcurrentDictionary<(string Identity, string Name), string> cache
+    )
+    {
+        if (!match.Name.StartsWith(MsResourcePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return match.Name;
+        }
+
+        string? packageFullName = GetMsixPackageFullName(match.LocalId) ?? GetMsixPackageFullName(match.Id);
+        if (packageFullName is null)
+        {
+            return cache.GetOrAdd((match.Id, match.Name), static key => GetNonMsixFallbackName(key.Identity, key.Name));
+        }
+
+        return cache.GetOrAdd(
+            (packageFullName, match.Name),
+            static (key, loader) => ResolveMsixDisplayName(key.Identity, key.Name, loader),
+            loadIndirectString
+        );
+    }
+
+    private static string ResolveMsixDisplayName(
+        string packageFullName,
+        string name,
+        Func<string, string?> loadIndirectString
+    )
+    {
+        string packageName = packageFullName.Split('_')[0];
+        foreach (string reference in GetResourceReferences(name, packageName))
+        {
+            string? resolved = loadIndirectString($"@{{{packageFullName}?{reference}}}");
+            if (!string.IsNullOrWhiteSpace(resolved))
+            {
+                return resolved;
+            }
+        }
+
+        Logger.Warn(
+            $"Could not resolve the display name {name} of the MSIX package {packageFullName}; showing {packageName} instead"
+        );
+        return packageName;
+    }
+
+    private static string GetNonMsixFallbackName(string id, string name)
+    {
+        if (id.Contains('\\'))
+        {
+            Logger.Warn($"Could not resolve the display name {name} of {id}, which is not an MSIX package");
+            return name;
+        }
+
+        Logger.Warn($"Could not resolve the display name {name} of {id}, which is not an MSIX package; showing its id instead");
+        return id;
+    }
+
+    private static string? GetMsixPackageFullName(string? id)
+    {
+        if (id is null || !id.StartsWith(MsixIdPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string packageFullName = id[MsixIdPrefix.Length..];
+        return packageFullName.Contains('_') ? packageFullName : null;
+    }
+
+    private static IEnumerable<string> GetResourceReferences(string name, string packageName)
+    {
+        string reference = name[MsResourcePrefix.Length..];
+        if (reference.StartsWith("//", StringComparison.Ordinal))
+        {
+            yield return name;
+        }
+        else if (reference.StartsWith('/'))
+        {
+            yield return $"{MsResourcePrefix}//{packageName}{reference}";
+        }
+        else
+        {
+            yield return $"{MsResourcePrefix}//{packageName}/Resources/{reference}";
+            yield return $"{MsResourcePrefix}//{packageName}/{reference}";
+        }
+    }
+
+    private static string? LoadIndirectString(string source)
+    {
+        Span<char> buffer = stackalloc char[1024];
+        int result = SHLoadIndirectString(source, ref buffer[0], (uint)buffer.Length, 0);
+        if (result != 0)
+        {
+            return null;
+        }
+
+        int end = buffer.IndexOf('\0');
+        return end > 0 ? new string(buffer[..end]) : null;
+    }
+
+    [LibraryImport("shlwapi.dll", EntryPoint = "SHLoadIndirectString", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int SHLoadIndirectString(string source, ref char output, uint outputLength, nint reserved);
 
     private IManagerSource GetSource(ListMatch match)
     {

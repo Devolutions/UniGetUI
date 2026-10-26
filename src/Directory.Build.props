@@ -4,7 +4,7 @@
         <!-- IF BUILD FAILS DUE TO MISSING Microsoft.Management.Deployment NAMESPACE,
             TOGGLE THE LAST NUMBER OF THE LINE BELOW 1 UNIT UP OR DOWN, AND REBUILD-->
 
-        <SdkVersion>10.0.103</SdkVersion>
+        <SdkVersion>10.0.403</SdkVersion>
         <Authors>Devolutions Inc. and the contributors</Authors>
         <PublisherName>Devolutions Inc.</PublisherName>
         <Nullable>enable</Nullable>

@@ -173,7 +173,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      issues: write
 
     steps:
       - name: Checkout base commit
@@ -257,7 +256,6 @@ jobs:
             'Entries that were rejected or left out stay missing and are offered again in the next run, which starts once this pull request is merged or closed.'
           ) -join "`n" | Set-Content -Path $bodyPath -Encoding utf8NoBOM
 
-          gh label create $env:PR_LABEL --repo $env:GITHUB_REPOSITORY --color 0E8A16 --description 'Opened by the translation-sync workflow' --force | Out-Null
           gh pr create `
             --repo $env:GITHUB_REPOSITORY `
             --base $env:BASE_BRANCH `

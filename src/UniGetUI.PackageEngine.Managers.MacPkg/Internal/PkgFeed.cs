@@ -68,7 +68,11 @@ internal static class PkgFeed
         return false;
     }
 
-    public static void ForgetCachedIndexes() => Indexes.Clear();
+    public static void ForgetCachedIndexes()
+    {
+        Indexes.Clear();
+        Folders.Clear();
+    }
 
     private static readonly ConcurrentDictionary<Uri, IReadOnlyList<PkgFeedItem>> LastKnown = new();
 
@@ -80,7 +84,7 @@ internal static class PkgFeed
     {
         try
         {
-            var items = location.IsFile ? ScanFolder(location.LocalPath, cancellationToken) : ReadIndex(location, cancellationToken);
+            var items = location.IsFile ? ScanFolderCached(location.LocalPath, cancellationToken) : ReadIndex(location, cancellationToken);
             LastKnown[location] = items;
             return items;
         }
@@ -164,19 +168,32 @@ internal static class PkgFeed
 
     // ── Folder feeds ───────────────────────────────────────────────────────
 
+    // Icon and details lookups list the feed once per package, so a scan is reused briefly instead of
+    // walking a network share again for each; a refresh of the manager's indexes forgets it.
+    private static readonly TimeSpan FolderLifetime = TimeSpan.FromSeconds(30);
+    private static readonly ConcurrentDictionary<string, CachedIndex> Folders = new(StringComparer.Ordinal);
+
+    private static IReadOnlyList<PkgFeedItem> ScanFolderCached(string directory, CancellationToken cancellationToken)
+    {
+        if (Folders.TryGetValue(directory, out var cached) && DateTime.UtcNow - cached.FetchedUtc < FolderLifetime)
+            return cached.Items;
+        var items = ScanFolder(directory, cancellationToken);
+        Folders[directory] = new CachedIndex(DateTime.UtcNow, items);
+        return items;
+    }
+
+    // A file read for the first time mounts a disk image or reads a package's table of contents, so
+    // several are read at once to keep a cold scan of a large feed within the listing timeout.
     internal static IReadOnlyList<PkgFeedItem> ScanFolder(string directory, CancellationToken cancellationToken)
     {
         if (!Directory.Exists(directory))
             throw new DirectoryNotFoundException($"The package feed folder {directory} does not exist or is not mounted.");
 
-        var items = new List<PkgFeedItem>();
-        foreach (string file in EnumeratePackages(directory))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (TryReadFile(file) is { } metadata)
-                items.Add(ToItem(metadata, file, sha256: null));
-        }
-        return items;
+        string[] files = EnumeratePackages(directory).ToArray();
+        var items = new PkgFeedItem?[files.Length];
+        Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cancellationToken },
+            i => items[i] = TryReadFile(files[i]) is { } metadata ? ToItem(metadata, files[i], sha256: null) : null);
+        return items.OfType<PkgFeedItem>().ToArray();
     }
 
     internal static IEnumerable<string> EnumeratePackages(string directory)
@@ -210,14 +227,15 @@ internal static class PkgFeed
                 if (ParsedFiles.TryGetValue(file, out var cached)
                     && cached.Size == info.Length && cached.WriteTimeUtc == info.LastWriteTimeUtc)
                     return cached.Metadata;
-                // What was read from a file, its icon included, is kept on disk per file version, so a
-                // file is read once; one without an icon is not searched again at every launch.
+                // What was read from a file is kept on disk per file version, so a file is read once. A disk
+                // image's icon comes with the mount; a package's waits for TryExtractIcon, as it costs a
+                // pass through the payload.
                 string icon = ExtractedIconPath(info);
                 string saved = Path.ChangeExtension(icon, ".json");
                 var metadata = TryLoadMetadata(saved);
                 if (metadata is null)
                 {
-                    metadata = PkgMetadata.Read(file, File.Exists(icon) ? null : icon);
+                    metadata = PkgMetadata.Read(file, DiskImage.IsDiskImage(file) && !File.Exists(icon) ? icon : null);
                     TryWriteFile(saved, JsonSerializer.SerializeToUtf8Bytes(metadata, PkgMetadataJsonContext.Default.PkgMetadata));
                 }
                 ParsedFiles[file] = new ParsedFile(info.Length, info.LastWriteTimeUtc, metadata);
@@ -243,7 +261,7 @@ internal static class PkgFeed
         FindIcon(file) is { } icon ? new Uri(icon) : null,
         metadata.App);
 
-    /// <summary>An image next to the package with the same name, else the icon taken from the package's app.</summary>
+    /// <summary>An image next to the package with the same name, else the icon already taken from the package's app.</summary>
     internal static string? FindIcon(string packageFile)
     {
         string stem = Path.Combine(Path.GetDirectoryName(packageFile)!, Path.GetFileNameWithoutExtension(packageFile));
@@ -251,6 +269,40 @@ internal static class PkgFeed
             return sibling;
         string extracted = ExtractedIconPath(new FileInfo(packageFile));
         return File.Exists(extracted) ? extracted : null;
+    }
+
+    private const string NoIconSuffix = ".none";
+
+    /// <summary>
+    /// The package's icon, extracted from its app on first request. A file found to have none is
+    /// remembered, per reader version and file version, so its payload is not searched again.
+    /// </summary>
+    internal static string? FindOrExtractIcon(string packageFile)
+    {
+        if (FindIcon(packageFile) is { } icon)
+            return icon;
+        try
+        {
+            lock (FileLocks.GetOrAdd(packageFile, _ => new object()))
+            {
+                string destination = ExtractedIconPath(new FileInfo(packageFile));
+                if (File.Exists(destination))
+                    return destination;
+                if (File.Exists(destination + NoIconSuffix))
+                    return null;
+                PkgMetadata.Read(packageFile, destination);
+                if (File.Exists(destination))
+                    return destination;
+                TryWriteFile(destination + NoIconSuffix, []);
+                return null;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
+            or System.Xml.XmlException or EndOfStreamException)
+        {
+            Logger.Warn($"Could not extract the icon of {packageFile}: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>Where extracted icons are kept. Replaceable so tests stay out of the user's cache.</summary>

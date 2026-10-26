@@ -209,6 +209,10 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         CatalogNodes.Clear();
         _allPackages.Clear();
         _updatingCatalogSelection = true;
+        // A pkg feed's source is named by its catalog's id; people know it by the catalog's name.
+        var feedNames = catalogs.Where(c => c.PkgFeed is not null)
+            .DistinctBy(c => c.Id, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(c => c.Id, c => c.Name, StringComparer.OrdinalIgnoreCase);
         try
         {
             foreach (var catalog in catalogs)
@@ -222,7 +226,12 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 CatalogNodes.Add(node);
                 _catalogSelection.TryAdd(catalog.Id, node);
                 foreach (var entry in catalog.Packages)
-                    _allPackages.Add(new CatalogTileViewModel(entry, catalog) { Owner = this });
+                    _allPackages.Add(new CatalogTileViewModel(entry, catalog)
+                    {
+                        Owner = this,
+                        SourceLabel = FindManager(entry)?.Id == PkgManagerId
+                            && feedNames.TryGetValue(entry.Source, out string? feedName) ? feedName : entry.Source,
+                    });
             }
         }
         finally { _updatingCatalogSelection = false; }
@@ -400,7 +409,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     private static IPackageManager? FindManager(CatalogEntry entry) =>
         PEInterface.Managers.FirstOrDefault(entry.MatchesManager);
 
-    // The macOS Installer packages manager, which serves each catalog's pkgFeed as a source of the catalog's name.
+    // The macOS Installer packages manager, which serves each catalog's pkgFeed as a source named by the catalog's id.
     private const string PkgManagerId = "pkg";
 
     /// <summary>
@@ -423,7 +432,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             [
                 .. c.Packages,
                 .. published
-                    .Where(p => string.Equals(p.Source.Name, c.Name.Trim(), StringComparison.OrdinalIgnoreCase)
+                    .Where(p => string.Equals(p.Source.Name, c.Id, StringComparison.OrdinalIgnoreCase)
                         && !c.Packages.Any(e => e.Matches(p)))
                     .Select(CatalogEntry.FromPackage)
                     .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase),
@@ -443,20 +452,20 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         _updatingSourceSelection = true;
         try
         {
-            var entries = _allPackages.Select(t => t.Entry).ToArray();
-            foreach (var group in entries.GroupBy(p => SourceKey(p).Manager))
+            foreach (var group in _allPackages.ToArray().GroupBy(t => SourceKey(t.Entry).Manager))
             {
                 var root = new SourceTreeNode
                 {
-                    PackageName = FindManager(group.First())?.DisplayName ?? group.First().ManagerName,
+                    PackageName = FindManager(group.First().Entry)?.DisplayName ?? group.First().Entry.ManagerName,
                     IsExpanded = true,
                 };
-                foreach (var entry in group.DistinctBy(SourceKey))
+                foreach (var tile in group.DistinctBy(t => SourceKey(t.Entry)))
                 {
+                    var entry = tile.Entry;
                     var key = SourceKey(entry);
                     var child = new SourceTreeNode
                     {
-                        PackageName = entry.Source,
+                        PackageName = tile.SourceLabel,
                         Source = entry.Source,
                         IsSelected = previous.GetValueOrDefault(key, true),
                     };
@@ -650,7 +659,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     private static string SortKey(CatalogSortField field, CatalogTileViewModel t) => field switch
     {
         CatalogSortField.Id => t.Entry.Id,
-        CatalogSortField.Source => t.ManagerDisplayName + "/" + t.Entry.Source,
+        CatalogSortField.Source => t.ManagerDisplayName + "/" + t.SourceLabel,
         _ => t.Entry.Name,
     };
 
@@ -836,7 +845,10 @@ public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition?
     public string ManagerDisplayName { get; } =
         PEInterface.Managers.FirstOrDefault(entry.MatchesManager)?.DisplayName ?? entry.ManagerName;
 
-    public string SourceDisplay => $"{ManagerDisplayName}: {Entry.Source}";
+    // The source as people know it: a pkg feed shows its catalog's name rather than the id naming it.
+    public string SourceLabel { get; init; } = entry.Source;
+
+    public string SourceDisplay => $"{ManagerDisplayName}: {SourceLabel}";
 
     private readonly bool _canUninstall =
         PEInterface.Managers.FirstOrDefault(entry.MatchesManager)?.Capabilities.CanUninstall ?? true;

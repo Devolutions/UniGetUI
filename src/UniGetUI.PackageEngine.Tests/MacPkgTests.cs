@@ -306,6 +306,19 @@ public sealed class MacPkgTests : IDisposable
     }
 
     [Fact]
+    public void AFolderScanIsReusedUntilTheIndexesAreRefreshed()
+    {
+        string feed = Path.Combine(_directory, "reused");
+        WritePackage("reused/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
+        var location = new Uri(feed);
+        Assert.Single(PkgFeed.List(location));
+        WritePackage("reused/Tool.pkg", ProductArchive("com.example.tool.pkg", "1.0"));
+        Assert.Single(PkgFeed.List(location));
+        PkgFeed.ForgetCachedIndexes();
+        Assert.Equal(2, PkgFeed.List(location).Count);
+    }
+
+    [Fact]
     public void AMissingFolderFeedIsReported() =>
         Assert.Throws<DirectoryNotFoundException>(() => PkgFeed.ScanFolder(Path.Combine(_directory, "unmounted"), CancellationToken.None));
 
@@ -377,13 +390,18 @@ public sealed class MacPkgTests : IDisposable
               {"id":"a","name":"Mac apps","packages":[],"pkgFeed":"https://software.example.com/mac/"},
               {"id":"b","name":"Developer tools","packages":[]},
               {"id":"c","name":"Local","packages":[],"pkgFeed":"{{_directory.Replace("\\", "\\\\")}}"},
-              {"id":"d","name":"mac apps","packages":[],"pkgFeed":"https://other.example.com/"},
+              {"id":"d","name":"Mac apps","packages":[],"pkgFeed":"https://other.example.com/"},
+              {"id":"A","name":"Duplicate id","packages":[],"pkgFeed":"https://third.example.com/"},
+              {"name":"No id","packages":[],"pkgFeed":"https://fourth.example.com/"},
               {"id":"e","name":"Insecure","packages":[],"pkgFeed":"http://software.example.com/"}
             ]}
             """;
+        // Feeds are told apart by catalog id: two catalogs may share a name, not an id.
         var feeds = PkgCatalogFeeds.Parse(Encoding.UTF8.GetBytes(json));
-        Assert.Equal(["Mac apps", "Local"], feeds.Select(f => f.Name));
+        Assert.Equal(["a", "c", "d"], feeds.Select(f => f.Id));
+        Assert.Equal(["Mac apps", "Local", "Mac apps"], feeds.Select(f => f.Name));
         Assert.Equal("https://software.example.com/mac/", feeds[0].Location.AbsoluteUri);
+        Assert.Equal("https://other.example.com/", feeds[2].Location.AbsoluteUri);
         Assert.True(feeds[1].Location.IsFile);
     }
 
@@ -489,6 +507,67 @@ public sealed class MacPkgTests : IDisposable
     }
 
     [Fact]
+    public async Task CancelingDuringTheRootInstallWaitsForItToFinish()
+    {
+        string source = WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
+        var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri(source), null, 0, [], null);
+        using var cancellation = new CancellationTokenSource();
+        var previous = PkgInstaller.RunProcess;
+        bool stagedFileOutlivedTheCancel = false, tokenCouldCancel = true;
+        PkgInstaller.RunProcess = async (_, args, token) =>
+        {
+            tokenCouldCancel = token.CanBeCanceled;
+            cancellation.Cancel();
+            await Task.Delay(50, CancellationToken.None);
+            stagedFileOutlivedTheCancel = Directory.GetFiles(Path.Combine(Path.GetTempPath(), "UniGetUI-pkg"), "package.pkg",
+                SearchOption.AllDirectories).Length > 0;
+            return (0, "installer: The install was successful.");
+        };
+        try
+        {
+            Assert.Equal(Enums.OperationVeredict.Success,
+                await PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, cancellation.Token));
+            Assert.False(tokenCouldCancel);
+            Assert.True(stagedFileOutlivedTheCancel);
+        }
+        finally { PkgInstaller.RunProcess = previous; }
+    }
+
+    [Fact]
+    public async Task ACanceledOperationStopsBeforeTheRootInstall()
+    {
+        string source = WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
+        var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri(source), null, 0, [], null);
+        using var cancellation = new CancellationTokenSource();
+        var previous = PkgInstaller.RunProcess;
+        bool ran = false;
+        PkgInstaller.RunProcess = (_, _, _) => { ran = true; return Task.FromResult((0, "")); };
+        try
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => PkgInstaller.InstallAsync(item, "App", _ => { },
+                progress => { if (progress.Stage == Enums.OperationProgressStage.Installing) cancellation.Cancel(); }, cancellation.Token));
+            Assert.False(ran);
+        }
+        finally { PkgInstaller.RunProcess = previous; }
+    }
+
+    [Fact]
+    public async Task AFailedCopyLeavesTheInstalledAppInPlace()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string applications = Path.Combine(_directory, "Applications");
+        string installed = WriteApp(applications, "Example App.app", "com.example.app", "1.0");
+        string command = PkgInstaller.CopyAppCommand(Path.Combine(_directory, "missing", "Example App.app"), installed);
+        var (code, _) = await PkgInstaller.RunProcess("/bin/sh", ["-c", command], CancellationToken.None);
+
+        Assert.NotEqual(0, code);
+        Assert.Equal("1.0", AppBundle.VersionOf(AppBundle.ReadInfoPlist(installed)));
+        Assert.Equal(["Example App.app"], Directory.GetFileSystemEntries(applications).Select(Path.GetFileName));
+    }
+
+    [Fact]
     public async Task CancelingTheAdministratorPromptCancelsTheOperation()
     {
         string source = WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
@@ -530,7 +609,7 @@ public sealed class MacPkgTests : IDisposable
         {
             var manager = new MacPkg();
             var source = Assert.Single(manager.SourcesHelper.GetSources());
-            Assert.Equal("Mac apps", source.Name);
+            Assert.Equal(("mac", "Installer packages: Mac apps"), (source.Name, source.AsString_DisplayName));
 
             var available = manager.ListLatest();
             Assert.Equal(["com.example.app.pkg 2.0", "com.example.current.pkg 5.0", "com.example.tool.pkg 3.0"],
@@ -546,6 +625,7 @@ public sealed class MacPkgTests : IDisposable
             Assert.Equal("1.0", manager.FindFeedItem(package, "1.0")?.Version);
             Assert.Null(manager.FindFeedItem(package, "9.9"));
             Assert.False(manager.Capabilities.CanUninstall);
+            Assert.False(manager.Capabilities.Sources.CanBeEdited);
 
             // Without SupportsCustomPackageIcons the base helper never asks the manager for icons.
             WritePackage("feed/App-2.0.png", [0x89, 0x50, 0x4E, 0x47]);
@@ -705,6 +785,55 @@ public sealed class MacPkgTests : IDisposable
         }
     }
 
+    [Fact]
+    public void WhenReceiptsCannotBeReadAppsAreStillRecognized()
+    {
+        string feed = Path.Combine(_directory, "feed");
+        string root = Path.Combine(_directory, "disk");
+        string info = """
+            <pkg-info identifier="com.axosoft.gitkraken.pkg" version="12.6.1" install-location="/Applications">
+              <bundle path="./GitKraken.app" id="com.axosoft.gitkraken" CFBundleShortVersionString="12.6.1"/>
+            </pkg-info>
+            """;
+        WritePackage("feed/GitKraken.pkg", Xar(new XarFile("PackageInfo", Encoding.UTF8.GetBytes(info))));
+        WriteApp(Path.Combine(root, "Applications"), "GitKraken.app", "com.axosoft.gitkraken", "12.6.1");
+        string catalog = WritePackage("SoftwareCatalog.json", Encoding.UTF8.GetBytes($$"""
+            {"version":1,"catalogs":[{"id":"mac","name":"Mac apps","packages":[],"pkgFeed":"{{feed.Replace("\\", "\\\\")}}"}]}
+            """));
+
+        var previousPkgUtil = PkgReceipts.RunPkgUtil;
+        PkgReceipts.RunPkgUtil = (_, _) => (1, "");
+        PkgCatalogFeeds.TestCatalogPathOverride = catalog;
+        AppBundle.TestRootOverride = root;
+        try
+        {
+            var installed = Assert.Single(new MacPkg().ListInstalled());
+            Assert.Equal(("com.axosoft.gitkraken.pkg", "12.6.1", false), (installed.Item.Id, installed.Installed, installed.HasUpdate));
+        }
+        finally
+        {
+            PkgReceipts.RunPkgUtil = previousPkgUtil;
+            PkgCatalogFeeds.TestCatalogPathOverride = null;
+            AppBundle.TestRootOverride = null;
+        }
+    }
+
+    [Fact]
+    public async Task BinaryPlistsAreReadAndCorruptOnesFailCleanly()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        string plist = Path.Combine(_directory, "Info.plist");
+        File.WriteAllText(plist, """<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.binary</string></dict></plist>""");
+        Run("/usr/bin/plutil", "-convert", "binary1", plist);
+        Assert.Equal("com.example.binary", AppBundle.ParsePlist(File.ReadAllBytes(plist))["CFBundleIdentifier"]);
+
+        byte[] corrupt = [.. "bplist00"u8.ToArray(), .. Enumerable.Repeat((byte)0xFF, 200_000)];
+        var error = await Record.ExceptionAsync(() => Task.Run(() => AppBundle.ParsePlist(corrupt)).WaitAsync(TimeSpan.FromSeconds(30)));
+        Assert.IsType<InvalidDataException>(error);
+    }
+
     // ── Disk images (macOS only: they are mounted with hdiutil) ───────────
 
     private string BuildDiskImage(string name, string id, string version)
@@ -846,10 +975,12 @@ public sealed class MacPkgTests : IDisposable
             new XarFile("PackageInfo", Encoding.UTF8.GetBytes(info)),
             new XarFile("Payload", GzipCpio(("./NoIcon.app/Contents/Info.plist", Plist("AppIcon"))), Compressed: false)));
         Assert.NotNull(PkgFeed.TryReadFile(file));
-        Assert.Null(PkgFeed.FindIcon(file));
-        // The saved reading answers next time, so the payload is not searched again for an icon.
-        Assert.Empty(Directory.GetFiles(PkgFeed.TestIconDirectoryOverride!, "*.png"));
         Assert.Single(Directory.GetFiles(PkgFeed.TestIconDirectoryOverride!, "*.json"));
+        // Listing does not search the payload; the first icon request does, and remembers it found none.
+        Assert.Null(PkgFeed.FindIcon(file));
+        Assert.Null(PkgFeed.FindOrExtractIcon(file));
+        Assert.Single(Directory.GetFiles(PkgFeed.TestIconDirectoryOverride!, "*.png.none"));
+        Assert.Null(PkgFeed.FindOrExtractIcon(file));
     }
 
     [Fact]
@@ -920,10 +1051,15 @@ public sealed class MacPkgTests : IDisposable
 
         Assert.Equal(("com.example.hello.pkg", "1.2.0", "Hello"),
             (PkgMetadata.Read(component).Id, PkgMetadata.Read(component).Version, PkgMetadata.Read(component).Title));
-        string icon = Path.Combine(_directory, "hello.png");
+        string icon = Path.Combine(_directory, "read-icon.png");
         var metadata = PkgMetadata.Read(product, icon);
         Assert.Equal(("com.example.hello.pkg", "1.2.0", "Hello"), (metadata.Id, metadata.Version, metadata.Title));
         Assert.True(new FileInfo(icon).Length > 0, "The icon was not extracted from the payload.");
+
+        // In a feed, listing leaves the payload alone and the first icon request extracts it.
+        Assert.NotNull(PkgFeed.TryReadFile(product));
+        Assert.Null(PkgFeed.FindIcon(product));
+        Assert.True(new FileInfo(PkgFeed.FindOrExtractIcon(product)!).Length > 0);
     }
 
     private static void Run(string file, params string[] arguments)

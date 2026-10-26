@@ -1,15 +1,15 @@
 # Publishing macOS apps (.pkg and .dmg)
 
-The software catalog can offer apps that no package manager carries, the way Jamf Self Service
-does: an administrator publishes the vendor's `.pkg` or `.dmg` unchanged, and users install and
-update it from the **Software Catalog** page.
+The software catalog can offer apps that no package manager carries: an administrator publishes
+the vendor's `.pkg` or `.dmg` unchanged, and users install and update it from the
+**Software Catalog** page.
 
 There is nothing to repackage and no detection rule to write. UniGetUI reads each file's
 identifier, version and app from the file itself, then checks the Mac:
 
 - **`.pkg`:** installed when macOS holds its receipt (`pkgutil --pkgs`), at the receipt's version.
   Without a receipt, the app the package installs counts too when it is in place under its bundle
-  id, so an app that Jamf or the user installed another way is recognized.
+  id, so an app that a management tool or the user installed another way is recognized.
 - **`.dmg`:** a disk image with one app at its root (the usual "drag to Applications" image).
   Installed when that app is in `/Applications` under its bundle id, at its bundle version.
 
@@ -35,6 +35,10 @@ machine-wide catalog file, `/Library/Application Support/Devolutions/UniGetUI/So
 Every package in the feed appears in that catalog. `packages` may stay empty; any entry listed
 there as well is shown alongside the feed's packages. Keep `"packages": []` even when it is empty:
 UniGetUI versions without feed support reject a catalog without it.
+
+A feed is identified by its catalog's `id`, so renaming the catalog keeps everything in place, and
+two catalogs may share a name. To list a feed's package by hand in another catalog, use
+`"ManagerName": "pkg"` and the feed catalog's `id` as `"Source"`.
 
 A feed can be:
 
@@ -76,8 +80,10 @@ to an Intel Mac.
 
 - **Install** and **Update** download the file (or copy it from the share) and check its hash and
   identity. Behind the standard macOS administrator prompt, a `.pkg` then runs through
-  `installer`, and a `.dmg`'s app is copied to `/Applications`, replacing the previous version.
-- Packages cannot be uninstalled from UniGetUI, as with Jamf Self Service.
+  `installer`, and a `.dmg`'s app is copied to `/Applications`, replacing the previous version
+  only once the new one is in place. Once that step starts it cannot be canceled, since stopping
+  it halfway would leave a broken app.
+- Packages cannot be uninstalled from UniGetUI.
 - When the feed is unreachable (off the VPN, share not mounted), UniGetUI keeps showing the
   packages it last listed. Installing needs the feed again.
 

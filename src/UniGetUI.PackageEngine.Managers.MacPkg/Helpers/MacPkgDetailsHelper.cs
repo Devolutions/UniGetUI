@@ -2,6 +2,7 @@ using UniGetUI.Core.IconEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
 
@@ -31,7 +32,11 @@ internal sealed class MacPkgDetailsHelper : BasePkgDetailsHelper
 
     protected override CacheableIcon? GetIcon_UnSafe(IPackage package)
     {
-        var icon = _manager.FindFeedItem(package)?.Icon;
+        var item = _manager.FindFeedItem(package);
+        var icon = item?.Icon
+            ?? (item?.Location.IsFile == true && PkgFeed.FindOrExtractIcon(item.Location.LocalPath) is { } extracted
+                ? new Uri(extracted)
+                : null);
         if (icon is null)
             return null;
         return icon.IsFile ? new CacheableIcon(icon.LocalPath) : new CacheableIcon(icon, package.VersionString);

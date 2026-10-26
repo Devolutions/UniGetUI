@@ -9,7 +9,7 @@ namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
 
 /// <summary>
 /// Installs and updates run in-process (<see cref="PkgInstaller"/>). macOS has no uninstaller for
-/// .pkg, and neither does Jamf Self Service, so uninstalling is refused.
+/// .pkg, so uninstalling is refused.
 /// </summary>
 internal sealed class MacPkgOperationHelper : BasePkgOperationHelper, IManagedPackageOperationHelper
 {

@@ -2049,6 +2049,14 @@ namespace UniGetUI.Core.Tools
             }
         }
 
+        /// <summary>Quotes a value as one word for a POSIX shell (sh, bash, zsh).</summary>
+        public static string QuoteForPosixShell(string value) =>
+            "'" + value.Replace("'", "'\\''", StringComparison.Ordinal) + "'";
+
+        /// <summary>Escapes a value for use inside a double-quoted AppleScript string.</summary>
+        public static string EscapeAppleScriptString(string value) =>
+            value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+
         public static string EscapePowerShellSingleQuoted(string value)
         {
             StringBuilder builder = new();

@@ -117,7 +117,8 @@ in the next section.
 `.dmg` files through the Software Catalog; the administrator workflow is in `docs/PKG_FEEDS.md`.
 
 - Its sources are not added from the UI: each catalog of the machine-wide `SoftwareCatalog.json`
-  that has a `pkgFeed` declares one, named after the catalog (`PkgCatalogFeeds`). The catalog page
+  that has a `pkgFeed` declares one, named by the catalog's id and shown by its name
+  (`PkgCatalogFeeds`, `PkgFeedSource`), with `Sources.CanBeEdited` false. The catalog page
   then lists every package of that feed in the catalog (`SoftwareCatalogViewModel.ExpandPkgFeedsAsync`).
 - A feed is a `file:` folder whose `.pkg` files are read directly, or an `https:` folder read through
   the `index.json` that `unigetui pkg-index <folder>` writes (`PkgIndexCommand`).

@@ -39,6 +39,8 @@ internal static class PkgInstaller
 
             progress(OperationProgress.ForStage(OperationProgressStage.Installing));
             log($"Installing {item.Id} {item.Version}...");
+            // From here on the operation cannot be canceled: a root installer or copy cut short leaves
+            // a half-installed app, and the staged file and mounted image must outlive it.
             (int code, string output) result;
             if (item.IsDiskImage)
             {
@@ -46,13 +48,15 @@ internal static class PkgInstaller
                 string app = image.FindApp();
                 VerifyIdentity(item, DiskImage.FromApp(app));
                 string destination = AppBundle.OnDisk("/Applications/" + SafeAppName(app));
+                cancellationToken.ThrowIfCancellationRequested();
                 log($"Copying {Path.GetFileName(app)} to {destination}...");
-                result = await RunAsRootAsync(CopyAppCommand(app, destination), displayName, cancellationToken);
+                result = await RunAsRootAsync(CopyAppCommand(app, destination), displayName, CancellationToken.None);
             }
             else
             {
                 VerifyIdentity(item, PkgMetadata.Read(staged));
-                result = await RunAsRootAsync(InstallPkgCommand(staged), displayName, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                result = await RunAsRootAsync(InstallPkgCommand(staged), displayName, CancellationToken.None);
             }
             var (code, output) = result;
             foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -141,15 +145,21 @@ internal static class PkgInstaller
     }
 
     internal static string InstallPkgCommand(string stagedPackage) =>
-        $"{InstallerPath} -pkg {ShellQuote(stagedPackage)} -target / 2>&1";
+        $"{InstallerPath} -pkg {CoreTools.QuoteForPosixShell(stagedPackage)} -target / 2>&1";
 
-    // The app is copied beside its destination first, so a failed copy leaves the installed app untouched.
+    // The app is copied beside its destination and the installed one is moved aside, not deleted,
+    // until the new one is in place: any failed step leaves the previous version installed.
     internal static string CopyAppCommand(string sourceApp, string destinationApp)
     {
-        string temporary = Path.Combine(Path.GetDirectoryName(destinationApp)!, $".unigetui-{Guid.NewGuid():N}.app");
-        string source = ShellQuote(sourceApp), destination = ShellQuote(destinationApp), staging = ShellQuote(temporary);
-        return $"/usr/bin/ditto {source} {staging} && /bin/rm -rf {destination} && /bin/mv {staging} {destination}"
-            + $" || {{ /bin/rm -rf {staging}; exit 1; }}";
+        string directory = Path.GetDirectoryName(destinationApp)!;
+        string id = Guid.NewGuid().ToString("N");
+        string source = CoreTools.QuoteForPosixShell(sourceApp), destination = CoreTools.QuoteForPosixShell(destinationApp);
+        string staging = CoreTools.QuoteForPosixShell(Path.Combine(directory, $".unigetui-new-{id}.app"));
+        string previous = CoreTools.QuoteForPosixShell(Path.Combine(directory, $".unigetui-old-{id}.app"));
+        return $"/usr/bin/ditto {source} {staging} || {{ /bin/rm -rf {staging}; exit 1; }}; "
+            + $"if [ -e {destination} ]; then /bin/mv {destination} {previous} || {{ /bin/rm -rf {staging}; exit 1; }}; fi; "
+            + $"if /bin/mv {staging} {destination}; then /bin/rm -rf {previous}; "
+            + $"else /bin/rm -rf {staging}; [ -e {previous} ] && /bin/mv {previous} {destination}; exit 1; fi";
     }
 
     private static Task<(int, string)> RunAsRootAsync(string command, string displayName, CancellationToken cancellationToken) =>
@@ -160,14 +170,11 @@ internal static class PkgInstaller
     // osascript's "with administrator privileges" shows the standard macOS password dialog and
     // runs the shell command as root.
     internal static string ElevatedScript(string command, string displayName) =>
-        $"do shell script \"{AppleScriptEscape(command)}\""
-        + $" with prompt \"{AppleScriptEscape(CoreTools.Translate("UniGetUI wants to install {0}.", displayName))}\""
+        $"do shell script \"{CoreTools.EscapeAppleScriptString(command)}\""
+        + $" with prompt \"{CoreTools.EscapeAppleScriptString(CoreTools.Translate("UniGetUI wants to install {0}.", displayName))}\""
         + " with administrator privileges";
 
-    internal static string ShellQuote(string value) => "'" + value.Replace("'", "'\\''", StringComparison.Ordinal) + "'";
 
-    internal static string AppleScriptEscape(string value) =>
-        value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
     private static async Task<(int, string)> RunProcessAsync(string fileName, IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)

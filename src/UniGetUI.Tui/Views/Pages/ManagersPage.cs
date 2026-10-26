@@ -181,8 +181,7 @@ internal sealed class ManagerSettingsDialog : FormDialog
             TuiShell.Navigate(TuiPageIds.Logs);
         });
 
-        // vcpkg has no source commands; .pkg feeds are declared in the software catalog.
-        if (m.Capabilities.SupportsCustomSources && m.Name != "vcpkg" && m.Id != "pkg")
+        if (m.Capabilities.SupportsCustomSources && m.Name != "vcpkg" && m.Capabilities.Sources.CanBeEdited)
             BuildSources();
 
         BuildExtras();

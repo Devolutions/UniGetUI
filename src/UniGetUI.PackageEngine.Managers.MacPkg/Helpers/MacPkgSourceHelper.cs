@@ -17,7 +17,7 @@ internal sealed class MacPkgSourceHelper : BaseSourceHelper
 
     protected override IReadOnlyList<IManagerSource> GetSources_UnSafe() =>
         PkgCatalogFeeds.Load()
-            .Select(feed => (IManagerSource)new ManagerSource(Manager, feed.Name, feed.Location))
+            .Select(feed => (IManagerSource)new PkgFeedSource(Manager, feed.Id, feed.Name, feed.Location))
             .ToArray();
 
     public override string[] GetAddSourceParameters(IManagerSource source) =>
@@ -31,4 +31,18 @@ internal sealed class MacPkgSourceHelper : BaseSourceHelper
 
     protected override OperationVeredict _getRemoveSourceOperationVeredict(IManagerSource source, int ReturnCode, string[] Output) =>
         OperationVeredict.Failure;
+}
+
+/// <summary>
+/// A feed's source: named by its catalog's id, so packages keep their source when the catalog is
+/// renamed and two catalogs cannot collide, and shown by the catalog's name.
+/// </summary>
+internal sealed class PkgFeedSource : ManagerSource
+{
+    public PkgFeedSource(IPackageManager manager, string catalogId, string catalogName, Uri location)
+        : base(manager, catalogId, location)
+    {
+        AsString = $"{manager.Properties.Name}: {catalogName}";
+        AsString_DisplayName = $"{manager.DisplayName}: {catalogName}";
+    }
 }

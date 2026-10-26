@@ -35,6 +35,7 @@ public sealed class MacPkg : PackageManager
             {
                 KnowsPackageCount = false,
                 KnowsUpdateDate = false,
+                CanBeEdited = false,
             },
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
@@ -138,8 +139,18 @@ public sealed class MacPkg : PackageManager
     internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item, string Installed, bool HasUpdate)> ListInstalled()
     {
         var latest = ListLatest();
-        var receipts = PkgReceipts.GetInstalledVersions(
-            latest.Where(p => !p.Item.IsDiskImage).Select(p => p.Item.Id), TaskLogger);
+        IReadOnlyDictionary<string, string> receipts;
+        try
+        {
+            receipts = PkgReceipts.GetInstalledVersions(
+                latest.Where(p => !p.Item.IsDiskImage).Select(p => p.Item.Id), TaskLogger);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
+        {
+            // Without receipts, packages are still recognized by their apps, as disk images always are.
+            Logger.Warn($"Could not read the installer package receipts ({ex.Message}); recognizing installed apps by their bundles only.");
+            receipts = new Dictionary<string, string>();
+        }
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var installed = new List<(IManagerSource, PkgFeedItem, string, bool)>();
         foreach (var (source, item) in latest)
@@ -147,7 +158,7 @@ public sealed class MacPkg : PackageManager
             if (seen.Contains(item.Id))
                 continue;
             // The receipt decides first; without one, the app in place under its bundle id does, which
-            // is how a .dmg, or an app that Jamf or the user installed another way, is recognized.
+            // is how a .dmg, or an app that a management tool or the user installed another way, is recognized.
             if (!item.IsDiskImage && receipts.TryGetValue(item.Id, out string? receipt))
                 installed.Add((source, item, receipt, CompareVersions(item.Version, receipt) > 0));
             else if (item.App is { } app && AppBundle.FindInstalled(app) is { } bundle)

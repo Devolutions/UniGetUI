@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -25,7 +26,7 @@ internal static class MacAdminFileInstaller
 
             string folder = Path.GetDirectoryName(destination)!;
             return await RunAsync(
-                $"/bin/mkdir -p {ShellQuote(folder)} && /usr/bin/install -m 0644 {ShellQuote(staged)} {ShellQuote(destination)}",
+                $"/bin/mkdir -p {CoreTools.QuoteForPosixShell(folder)} && /usr/bin/install -m 0644 {CoreTools.QuoteForPosixShell(staged)} {CoreTools.QuoteForPosixShell(destination)}",
                 prompt);
         }
         finally
@@ -48,7 +49,7 @@ internal static class MacAdminFileInstaller
             UseShellExecute = false,
         };
         startInfo.ArgumentList.Add("-e");
-        startInfo.ArgumentList.Add($"do shell script \"{AppleScriptEscape(command)}\" with prompt \"{AppleScriptEscape(prompt)}\" with administrator privileges");
+        startInfo.ArgumentList.Add($"do shell script \"{CoreTools.EscapeAppleScriptString(command)}\" with prompt \"{CoreTools.EscapeAppleScriptString(prompt)}\" with administrator privileges");
 
         using var process = Process.Start(startInfo)
             ?? throw new IOException("Could not start the administrator prompt.");
@@ -59,7 +60,4 @@ internal static class MacAdminFileInstaller
         throw new IOException(error.Trim());
     }
 
-    internal static string ShellQuote(string value) => "'" + value.Replace("'", "'\\''") + "'";
-
-    internal static string AppleScriptEscape(string value) => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

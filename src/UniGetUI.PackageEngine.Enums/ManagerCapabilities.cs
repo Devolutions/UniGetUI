@@ -19,6 +19,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool KnowsUpdateDate { get; set; } = false;
         public bool KnowsPackageCount { get; set; } = false;
         public bool MustBeInstalledAsAdmin { get; set; } = false;
+        // False when sources are declared elsewhere (such as .pkg feeds in the software catalog), so
+        // UniGetUI shows no add or remove controls for them.
+        public bool CanBeEdited { get; set; } = true;
 
         public SourceCapabilities() { }
     }

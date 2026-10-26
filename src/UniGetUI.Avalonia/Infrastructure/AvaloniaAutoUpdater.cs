@@ -1130,11 +1130,11 @@ internal static partial class AvaloniaAutoUpdater
         string command = string.Join(
             ' ',
             "/bin/sh -c",
-            MacAdminFileInstaller.ShellQuote(MacUpdateTargetResolver.ElevatedSwapScript),
+            CoreTools.QuoteForPosixShell(MacUpdateTargetResolver.ElevatedSwapScript),
             "sh",
-            MacAdminFileInstaller.ShellQuote(target),
-            MacAdminFileInstaller.ShellQuote(archive),
-            MacAdminFileInstaller.ShellQuote(expectedHash.ToLowerInvariant()),
+            CoreTools.QuoteForPosixShell(target),
+            CoreTools.QuoteForPosixShell(archive),
+            CoreTools.QuoteForPosixShell(expectedHash.ToLowerInvariant()),
             pid);
 
         bool swapped;

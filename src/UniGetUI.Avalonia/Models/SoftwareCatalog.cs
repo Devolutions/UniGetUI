@@ -143,8 +143,9 @@ internal static class SoftwareCatalog
     {
         try
         {
-            return File.Exists(filePath)
-                && Parse(File.ReadAllText(filePath)).Any(c => c.Packages.Length > 0 || !string.IsNullOrWhiteSpace(c.PkgFeed));
+            // A pkgFeed fills its catalog only on macOS, where the Installer packages manager exists.
+            return File.Exists(filePath) && Parse(File.ReadAllText(filePath)).Any(c => c.Packages.Length > 0
+                || (OperatingSystem.IsMacOS() && !string.IsNullOrWhiteSpace(c.PkgFeed)));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {

@@ -114,6 +114,8 @@ internal static class AppBundle
         foreach (string argument in new[] { "-convert", "xml1", "-o", "-", "-" })
             startInfo.ArgumentList.Add(argument);
         using var process = Process.Start(startInfo) ?? throw new InvalidDataException("Could not start plutil.");
+        // Drained alongside stdout, so a long error message cannot fill the pipe and stall plutil.
+        var errors = process.StandardError.ReadToEndAsync();
         var writing = Task.Run(() =>
         {
             process.StandardInput.BaseStream.Write(binary);
@@ -124,7 +126,7 @@ internal static class AppBundle
         process.WaitForExit();
         writing.Wait();
         if (process.ExitCode != 0 || output.Length > MaxPlistBytes)
-            throw new InvalidDataException("plutil could not read a binary property list.");
+            throw new InvalidDataException($"plutil could not read a binary property list: {errors.Result.Trim()}");
         return output.ToArray();
     }
 

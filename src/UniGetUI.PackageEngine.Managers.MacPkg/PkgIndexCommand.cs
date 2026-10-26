@@ -77,7 +77,7 @@ public static class PkgIndexCommand
     // next to it, where a sibling image would go.
     private static string? PublishIcon(string file)
     {
-        string? icon = PkgFeed.FindIcon(file);
+        string? icon = PkgFeed.FindOrExtractIcon(file);
         if (icon is null || Path.GetDirectoryName(icon) == Path.GetDirectoryName(file))
             return icon;
         string sibling = Path.ChangeExtension(file, ".png");

@@ -767,9 +767,9 @@ public sealed class SoftwareCatalogTests : IDisposable
         File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[{"Id":"jq","Name":"jq","Version":"","Source":"Homebrew","ManagerName":"Homebrew"}]}]}""");
         Assert.True(SoftwareCatalog.HasUsableCatalog(file));
 
-        // A package feed fills its catalog at run time, so an empty package list is still usable.
+        // A package feed fills its catalog at run time, but only on macOS, where feeds are read.
         File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[],"pkgFeed":"https://h/mac/"}]}""");
-        Assert.True(SoftwareCatalog.HasUsableCatalog(file));
+        Assert.Equal(OperatingSystem.IsMacOS(), SoftwareCatalog.HasUsableCatalog(file));
     }
 
     [Fact]

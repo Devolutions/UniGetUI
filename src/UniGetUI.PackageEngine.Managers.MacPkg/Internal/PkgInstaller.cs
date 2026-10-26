@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text.Json;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
@@ -24,6 +25,17 @@ internal static class PkgInstaller
     internal static Func<bool> IsRoot { get; set; } = CoreTools.IsAdministrator;
 
     /// <summary>
+    /// UniGetUI's own executable, when it can be run as root to stage and check a package there; null when
+    /// it is not UniGetUI or a standard user could replace it. Replaceable for tests.
+    /// </summary>
+    internal static Func<string?> RootExecutable { get; set; } = () =>
+        Environment.ProcessPath is { } path
+        && Path.GetFileName(path).StartsWith("UniGetUI", StringComparison.OrdinalIgnoreCase)
+        && TrustedPath.WhyUntrusted(path) is null
+            ? path
+            : null;
+
+    /// <summary>
     /// Installs through the root helper when IT set it up (no password asked), else as root behind the
     /// administrator prompt. <paramref name="feedId"/> names the feed for the helper, which looks it up itself.
     /// </summary>
@@ -31,6 +43,8 @@ internal static class PkgInstaller
         Action<string> log, Action<OperationProgress> progress, CancellationToken cancellationToken,
         bool allowUnsigned = false, string? feedId = null)
     {
+        // Finding the package may have outlasted a cancel; past this point an install cannot be called back.
+        cancellationToken.ThrowIfCancellationRequested();
         if (feedId is not null && !IsRoot() && PkgHelperClient.IsAvailable)
         {
             progress(OperationProgress.ForStage(OperationProgressStage.Installing));
@@ -38,7 +52,10 @@ internal static class PkgInstaller
                 return verdict;
             log("The UniGetUI package helper did not install this package; asking for administrator rights instead.");
         }
+        if (!IsRoot() && RootExecutable() is { } executable)
+            return await InstallAsRootProcessAsync(executable, item, displayName, allowUnsigned, log, progress);
 
+        // Without a protected UniGetUI to run as root, the package is checked here, before the prompt.
         (int code, string output) result;
         using (var prepared = await PrepareAsync(item, allowUnsigned, log, progress, cancellationToken))
         {
@@ -59,6 +76,35 @@ internal static class PkgInstaller
             return OperationVeredict.Canceled;
         }
         log($"The installer exited with code {code}.");
+        return OperationVeredict.Failure;
+    }
+
+    // The package is staged and checked by root, in a folder the user's own processes cannot reach, so
+    // none of them can swap it between the checks and the install.
+    private static async Task<OperationVeredict> InstallAsRootProcessAsync(string executable, PkgFeedItem item,
+        string displayName, bool allowUnsigned, Action<string> log, Action<OperationProgress> progress)
+    {
+        progress(OperationProgress.ForStage(OperationProgressStage.Installing));
+        log("Asking for administrator rights; the package is then downloaded, checked and installed as root...");
+        string order = JsonSerializer.Serialize(PkgElevatedInstall.From(item, allowUnsigned),
+            PkgHelperJsonContext.Default.PkgElevatedInstall);
+        string command = $"{CoreTools.QuoteForPosixShell(executable)} {PkgHelperCommand.Command} "
+            + $"{PkgHelperCommand.InstallItemVerb} {CoreTools.QuoteForPosixShell(order)} 2>&1";
+        var (code, output) = await RunAsRootAsync(command, displayName, CancellationToken.None);
+        // do shell script ends its lines with \r.
+        string[] lines = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (code != 0 && output.Contains($"({UserCanceledAppleScriptError})", StringComparison.Ordinal))
+        {
+            log("The administrator prompt was canceled.");
+            return OperationVeredict.Canceled;
+        }
+        string? result = null;
+        foreach (string line in lines)
+            result = PkgHelperClient.Interpret(line, log) ?? result;
+        if (result == PkgHelperMessage.Success)
+            return OperationVeredict.Success;
+        if (result is null)
+            log($"UniGetUI did not finish installing as root (exit code {code}).");
         return OperationVeredict.Failure;
     }
 

@@ -43,8 +43,50 @@ internal sealed class PkgHelperMessage
     public string? Message { get; init; }
 }
 
+/// <summary>
+/// What a root process started behind the administrator prompt installs: the feed package as the user's
+/// UniGetUI found it, staged and checked again as root, where the user's own processes cannot swap it.
+/// </summary>
+internal sealed class PkgElevatedInstall
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; init; }
+
+    [JsonPropertyName("version")]
+    public required string Version { get; init; }
+
+    [JsonPropertyName("location")]
+    public required string Location { get; init; }
+
+    [JsonPropertyName("sha256")]
+    public string? Sha256 { get; init; }
+
+    [JsonPropertyName("size")]
+    public long Size { get; init; }
+
+    [JsonPropertyName("allowUnsigned")]
+    public bool AllowUnsigned { get; init; }
+
+    public static PkgElevatedInstall From(PkgFeedItem item, bool allowUnsigned) => new()
+    {
+        Id = item.Id,
+        Name = item.Name,
+        Version = item.Version,
+        Location = item.Location.AbsoluteUri,
+        Sha256 = item.Sha256,
+        Size = item.Size,
+        AllowUnsigned = allowUnsigned,
+    };
+
+    public PkgFeedItem ToItem() => new(Id, Name ?? Id, Version, new Uri(Location), Sha256, Size, [], null);
+}
+
 [JsonSerializable(typeof(PkgHelperRequest))]
 [JsonSerializable(typeof(PkgHelperMessage))]
+[JsonSerializable(typeof(PkgElevatedInstall))]
 internal partial class PkgHelperJsonContext : JsonSerializerContext;
 
 internal static class PkgHelperClient
@@ -84,13 +126,8 @@ internal static class PkgHelperClient
         {
             if (line.Length > MaxLineLength)
                 break;
-            var message = JsonSerializer.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperMessage);
-            if (message?.Log is { } text)
-                log(text);
-            if (message?.Result is not { } result)
+            if (Interpret(line, log) is not { } result)
                 continue;
-            if (message.Message is { Length: > 0 } explanation)
-                log(explanation);
             return result switch
             {
                 PkgHelperMessage.Success => OperationVeredict.Success,
@@ -100,5 +137,28 @@ internal static class PkgHelperClient
         }
         log("The UniGetUI package helper ended the connection without a result.");
         return OperationVeredict.Failure;
+    }
+
+    /// <summary>Logs one line the helper sent, and gives its result when it is the final one.</summary>
+    internal static string? Interpret(string line, Action<string> log)
+    {
+        PkgHelperMessage? message = null;
+        try
+        {
+            if (line.StartsWith('{'))
+                message = JsonSerializer.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperMessage);
+        }
+        catch (JsonException) { }
+        if (message is null)
+        {
+            // Not one of the helper's messages, such as a crash report: shown as is.
+            log(line);
+            return null;
+        }
+        if (message.Log is { } text)
+            log(text);
+        if (message.Result is not null && message.Message is { Length: > 0 } explanation)
+            log(explanation);
+        return message.Result;
     }
 }

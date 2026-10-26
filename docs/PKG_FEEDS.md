@@ -96,8 +96,9 @@ to an Intel Mac.
 
 ## What users see
 
-- **Install** and **Update** download the file (or copy it from the share) and check its hash and
-  identity. Behind the standard macOS administrator prompt, a `.pkg` then runs through
+- **Install** and **Update** ask for an administrator password with the standard macOS prompt,
+  then, as root, download the file (or copy it from the share) and check its hash, identity and
+  signature. A `.pkg` then runs through
   `installer`, and a `.dmg`'s app is copied to `/Applications`, replacing the previous version
   only once the new one is in place. Once that step starts it cannot be canceled, since stopping
   it halfway would leave a broken app.

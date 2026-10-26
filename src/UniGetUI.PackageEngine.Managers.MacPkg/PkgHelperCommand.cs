@@ -26,13 +26,14 @@ public static class PkgHelperCommand
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
     {
-        string verb = args.Length == 1 ? args[0] : "";
-        if (verb is not ("serve" or "install-daemon" or "remove-daemon"))
+        string verb = args.Length == 1 || (args.Length == 2 && args[0] == InstallItemVerb) ? args[0] : "";
+        if (verb is not ("serve" or "install-daemon" or "remove-daemon" or InstallItemVerb))
         {
             output.WriteLine($"Usage: unigetui {Command} install-daemon | remove-daemon | serve");
             output.WriteLine("  install-daemon  Lets standard users install catalog packages without an administrator password.");
             output.WriteLine("  remove-daemon   Stops and removes that helper.");
             output.WriteLine("  serve           Runs the helper (what launchd starts; run the two commands above instead).");
+            output.WriteLine($"  {InstallItemVerb} <order>  Installs one package as root (what UniGetUI runs behind the password prompt).");
             return args.Length == 1 && args[0] is "-h" or "--help" ? 0 : 2;
         }
         if (!OperatingSystem.IsMacOS() || !CoreTools.IsAdministrator())
@@ -40,12 +41,15 @@ public static class PkgHelperCommand
             error.WriteLine($"{Command} {verb} must run as root on macOS (sudo).");
             return 1;
         }
+        // As root, temporary files go in /tmp, never in a folder of the user who started the command.
+        Environment.SetEnvironmentVariable("TMPDIR", "/private/tmp/");
         try
         {
             return verb switch
             {
                 "install-daemon" => InstallDaemon(output, error),
                 "remove-daemon" => RemoveDaemon(output),
+                InstallItemVerb => InstallItem(args[1], output),
                 _ => Serve(output, error),
             };
         }
@@ -116,6 +120,35 @@ public static class PkgHelperCommand
         </dict>
         </plist>
         """;
+
+    // ── Installing behind the administrator prompt ─────────────────────────
+
+    /// <summary>
+    /// What UniGetUI runs as root behind the administrator prompt: stages and checks the package as root,
+    /// then installs it, writing the helper's messages, one per line, for the user's UniGetUI to read.
+    /// </summary>
+    internal const string InstallItemVerb = "install-item";
+
+    private static int InstallItem(string json, TextWriter output)
+    {
+        void Write(PkgHelperMessage message) =>
+            output.WriteLine(JsonSerializer.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage));
+
+        PkgHelperMessage result;
+        try
+        {
+            var order = JsonSerializer.Deserialize(json, PkgHelperJsonContext.Default.PkgElevatedInstall)
+                ?? throw new InvalidDataException("The install order is empty.");
+            result = InstallItemAsync(order.ToItem(), order.AllowUnsigned, text => Write(new PkgHelperMessage { Log = text }))
+                .GetAwaiter().GetResult();
+        }
+        catch (Exception ex) when (ex is JsonException or UriFormatException)
+        {
+            result = new PkgHelperMessage { Result = PkgHelperMessage.Failure, Message = $"The install order is invalid: {ex.Message}" };
+        }
+        Write(result);
+        return 0;
+    }
 
     // ── Serving ────────────────────────────────────────────────────────────
 
@@ -261,7 +294,7 @@ public static class PkgHelperCommand
         {
             PkgFeed.ForgetCachedIndexes();
             var machine = RuntimeInformation.OSArchitecture;
-            var candidates = PkgFeed.List(location).Where(i => i.Id == request.Id).ToArray();
+            var candidates = PkgFeed.List(location, currentOnly: true).Where(i => i.Id == request.Id).ToArray();
             var item = version.Length == 0
                 ? PkgFeed.Latest(candidates, new MacPkg().CompareVersions, machine).FirstOrDefault()
                 : candidates.Where(i => i.Version == version && PkgMetadata.ArchitectureFit(i.Architectures, machine) > 0)
@@ -270,8 +303,21 @@ public static class PkgHelperCommand
                 return Refuse($"The feed of {request.Catalog} does not publish {request.Id} {version} for this Mac.");
             if (item.Location.IsFile && TrustedPath.WhyUntrusted(item.Location.LocalPath) is { } fileReason)
                 return Refuse($"The package file is not protected, so the helper does not install it: {fileReason}");
+            return await InstallItemAsync(item, feed.AllowUnsignedPackages, log);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or HttpRequestException
+            or UnauthorizedAccessException or System.Xml.XmlException)
+        {
+            return new PkgHelperMessage { Result = PkgHelperMessage.Failure, Message = ex.Message };
+        }
+    }
 
-            using var prepared = await PkgInstaller.PrepareAsync(item, feed.AllowUnsignedPackages, log, _ => { },
+    /// <summary>Stages, checks and installs one feed package; this process must already run as root.</summary>
+    internal static async Task<PkgHelperMessage> InstallItemAsync(PkgFeedItem item, bool allowUnsigned, Action<string> log)
+    {
+        try
+        {
+            using var prepared = await PkgInstaller.PrepareAsync(item, allowUnsigned, log, _ => { },
                 CancellationToken.None);
             log(prepared.Description);
             var (code, output) = await PkgInstaller.RunProcess("/bin/sh", ["-c", prepared.Command], CancellationToken.None);

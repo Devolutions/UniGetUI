@@ -83,8 +83,10 @@ internal static class PkgFeed
     /// <summary>
     /// Lists a feed. When it cannot be reached (off the VPN, share not mounted) the last listing is
     /// reused, so installed packages keep their state; a web feed's last index also survives restarts.
+    /// <paramref name="currentOnly"/> refuses that fallback, for what authorizes an install or checks a feed.
     /// </summary>
-    public static IReadOnlyList<PkgFeedItem> List(Uri location, CancellationToken cancellationToken = default)
+    public static IReadOnlyList<PkgFeedItem> List(Uri location, CancellationToken cancellationToken = default,
+        bool currentOnly = false)
     {
         try
         {
@@ -92,7 +94,7 @@ internal static class PkgFeed
             LastKnown[location] = items;
             return items;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (!currentOnly && (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
         {
             if (LastKnown.TryGetValue(location, out var known) || TryReadSavedIndex(location, out known))
             {

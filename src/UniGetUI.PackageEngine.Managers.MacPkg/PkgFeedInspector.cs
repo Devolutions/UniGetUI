@@ -29,7 +29,7 @@ public static class PkgFeedInspector
             throw new InvalidDataException($"\"{text}\" is not an https URL or an absolute folder path.");
         PkgFeed.ForgetCachedIndexes();
         if (!location.IsFile)
-            return new FeedInspection(PkgFeed.List(location).Select(Describe).ToArray(), [], null);
+            return new FeedInspection(PkgFeed.List(location, currentOnly: true).Select(Describe).ToArray(), [], null);
 
         string folder = location.LocalPath;
         if (!Directory.Exists(folder))

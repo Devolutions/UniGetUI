@@ -49,7 +49,7 @@ internal sealed class MacPkgOperationHelper : BasePkgOperationHelper, IManagedPa
         {
             // Installs act on what the feed publishes now, not on the listing kept for a few minutes.
             _manager.RefreshPackageIndexes();
-            return _manager.FindFeedItem(package, version);
+            return _manager.FindFeedItem(package, version, currentOnly: true);
         }, cancellationToken)
             ?? throw new InvalidOperationException(
                 $"The package feed {package.Source.Name} does not publish {package.Id}{(version is null ? "" : " " + version)} for this Mac.");

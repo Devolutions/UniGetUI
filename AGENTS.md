@@ -144,6 +144,10 @@ in the next section.
   client sends only catalog id, package id and version (`PkgHelperClient`); the helper resolves the
   feed itself from the catalog, refuses paths standard users could change (`TrustedPath`), then
   runs the same `PrepareAsync`. Installs fall back to the administrator prompt when it is absent.
+- Behind the prompt, a UniGetUI that standard users cannot replace runs itself as root
+  (`pkg-helper install-item`, `PkgElevatedInstall`), so staging and checks happen where the user's
+  own processes cannot swap the package; only an unprotected build (such as a dev build) checks it
+  before the prompt instead.
 - The Catalog Editor's **Package feed** dialog (`PkgFeedEditor`, `PkgFeedEditorViewModel`) edits
   `pkgFeed`/`allowUnsignedPackages` and previews a feed through `PkgFeedInspector`.
 

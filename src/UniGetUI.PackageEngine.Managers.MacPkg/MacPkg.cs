@@ -108,12 +108,12 @@ public sealed class MacPkg : PackageManager
     internal PkgFeedSource? FindFeedSource(IPackage package) =>
         SourcesHelper.GetSources().OfType<PkgFeedSource>().FirstOrDefault(s => s.Name == package.Source.Name);
 
-    internal PkgFeedItem? FindFeedItem(IPackage package, string? version = null)
+    internal PkgFeedItem? FindFeedItem(IPackage package, string? version = null, bool currentOnly = false)
     {
         var source = FindFeedSource(package);
         if (source is null)
             return null;
-        var items = PkgFeed.List(source.Url).Where(i => i.Id == package.Id).ToArray();
+        var items = PkgFeed.List(source.Url, currentOnly: currentOnly).Where(i => i.Id == package.Id).ToArray();
         if (!string.IsNullOrEmpty(version))
             return items
                 .Where(i => i.Version == version && PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture) > 0)

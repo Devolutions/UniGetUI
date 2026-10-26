@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using System.Text.Json;
 using UniGetUI.PackageEngine.Managers.MacPkgManager;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
@@ -343,6 +344,8 @@ public sealed class MacPkgTests : IDisposable
         // Forget the brief scan cache, so the answer comes from the fallback for an unreachable feed.
         PkgFeed.ForgetCachedIndexes();
         Assert.Equal("com.example.app.pkg", Assert.Single(PkgFeed.List(location)).Id);
+        // What authorizes an install reads the feed as it is now, never its last known contents.
+        Assert.Throws<DirectoryNotFoundException>(() => PkgFeed.List(location, currentOnly: true));
         Assert.Throws<DirectoryNotFoundException>(() => PkgFeed.List(new Uri(Path.Combine(_directory, "never-seen"))));
     }
 
@@ -680,6 +683,24 @@ public sealed class MacPkgTests : IDisposable
     }
 
     [Fact]
+    public void AToolIsNotHeldByAProcessItLeftRunning()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var previous = Tool.DrainGrace;
+        Tool.DrainGrace = TimeSpan.FromMilliseconds(500);
+        try
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var result = Tool.Run("/bin/sh", ["-c", "/bin/sleep 30 & echo done"], timeout: TimeSpan.FromSeconds(20));
+            Assert.Equal((0, "done\n"), (result.ExitCode, result.Text));
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10));
+        }
+        finally { Tool.DrainGrace = previous; }
+    }
+
+    [Fact]
     public async Task ACanceledToolIsStoppedBeforeTheCancellationIsReported()
     {
         if (OperatingSystem.IsWindows())
@@ -707,6 +728,68 @@ public sealed class MacPkgTests : IDisposable
                 await PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, CancellationToken.None));
         }
         finally { PkgInstaller.RunProcess = previous; }
+    }
+
+    [Fact]
+    public async Task AnOperationCanceledBeforeTheInstallStartsInstallsNothing()
+    {
+        var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri("https://example.com/App.pkg"), null, 0, [], null);
+        var previous = PkgInstaller.RunProcess;
+        PkgInstaller.RunProcess = (_, _, _) => throw new InvalidOperationException("Nothing may run.");
+        try
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, new CancellationToken(canceled: true), feedId: "mac"));
+        }
+        finally { PkgInstaller.RunProcess = previous; }
+    }
+
+    [Fact]
+    public async Task BehindThePromptAProtectedUniGetUIStagesAndChecksThePackageAsRoot()
+    {
+        var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri("https://example.com/App 1.0.pkg"), "ab", 42, [], null);
+        var (previousRun, previousRoot, previousExecutable) = (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgInstaller.RootExecutable);
+        string? script = null;
+        string answer = "";
+        PkgInstaller.IsRoot = () => false;
+        PkgInstaller.RootExecutable = () => "/Applications/UniGetUI.app/Contents/MacOS/UniGetUI";
+        PkgInstaller.RunProcess = (file, args, _) =>
+        {
+            Assert.Equal("/usr/bin/osascript", file);
+            script = args[^1];
+            return Task.FromResult(answer.StartsWith("error") ? (1, answer) : (0, answer));
+        };
+        try
+        {
+            var log = new List<string>();
+            answer = "{\"log\":\"Downloading...\"}\r{\"result\":\"success\",\"message\":\"Installed.\"}";
+            Assert.Equal(Enums.OperationVeredict.Success,
+                await PkgInstaller.InstallAsync(item, "App", log.Add, _ => { }, CancellationToken.None, allowUnsigned: true));
+            Assert.Contains("'/Applications/UniGetUI.app/Contents/MacOS/UniGetUI' pkg-helper install-item '", script);
+            Assert.Contains("with administrator privileges", script);
+            Assert.Equal(["Downloading...", "Installed."], log.Skip(1));
+
+            var order = JsonSerializer.Deserialize(
+                JsonSerializer.Serialize(PkgElevatedInstall.From(item, allowUnsigned: true), PkgHelperJsonContext.Default.PkgElevatedInstall),
+                PkgHelperJsonContext.Default.PkgElevatedInstall)!;
+            var back = order.ToItem();
+            Assert.Equal((item.Id, item.Version, item.Location, item.Sha256, item.Size, true),
+                (back.Id, back.Version, back.Location, back.Sha256, back.Size, order.AllowUnsigned));
+
+            answer = "{\"result\":\"failure\",\"message\":\"Gatekeeper rejects it.\"}";
+            Assert.Equal(Enums.OperationVeredict.Failure,
+                await PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, CancellationToken.None));
+            answer = "Unhandled exception.";
+            Assert.Equal(Enums.OperationVeredict.Failure,
+                await PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, CancellationToken.None));
+            answer = "error 0:61: execution error: User canceled. (-128)";
+            Assert.Equal(Enums.OperationVeredict.Canceled,
+                await PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, CancellationToken.None));
+        }
+        finally
+        {
+            (PkgInstaller.RunProcess, PkgInstaller.IsRoot, PkgInstaller.RootExecutable) = (previousRun, previousRoot, previousExecutable);
+        }
     }
 
     // ── The manager ────────────────────────────────────────────────────────

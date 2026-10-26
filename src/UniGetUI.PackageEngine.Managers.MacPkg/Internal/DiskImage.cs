@@ -20,8 +20,8 @@ internal sealed class DiskImage : IDisposable
     {
         if (!OperatingSystem.IsMacOS())
             throw new InvalidDataException("Disk images can only be read on macOS.");
-        string mountPoint = Path.Combine(Path.GetTempPath(), "UniGetUI-dmg", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(mountPoint);
+        // Created at once with mode 0700 (mkdtemp), so no other user can own or swap any folder on its path.
+        string mountPoint = Directory.CreateTempSubdirectory("UniGetUI-dmg-").FullName;
         // "Y" accepts the license agreement some vendors put in front of their image. An image another
         // process has attached is "busy" until that process detaches it, so a few retries cover it.
         (int code, string output) = (0, "");

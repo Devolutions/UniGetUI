@@ -94,13 +94,11 @@ internal static class PkgInstaller
     {
         if (allowUnsigned && item.Location.IsFile)
             RefuseFilesOthersCanWrite(item.Location.LocalPath);
-        string stagingDirectory = Path.Combine(Path.GetTempPath(), "UniGetUI-pkg", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(stagingDirectory);
+        // Created at once with mode 0700 (mkdtemp), so no other user can own or swap any folder on its path.
+        string stagingDirectory = Directory.CreateTempSubdirectory("UniGetUI-pkg-").FullName;
         var prepared = new PreparedInstall(stagingDirectory);
         try
         {
-            if (!OperatingSystem.IsWindows())
-                File.SetUnixFileMode(stagingDirectory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             // A fixed name keeps the vendor's file name out of the elevated command line.
             string staged = Path.Combine(stagingDirectory, "package" + item.Kind switch
             {
@@ -199,9 +197,19 @@ internal static class PkgInstaller
     {
         byte[] buffer = new byte[1024 * 1024];
         long copied = 0;
-        int read;
-        while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+        using var stalled = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        while (true)
         {
+            // A source that stops sending must not hold the install, nor the helper's one install at a time.
+            stalled.CancelAfter(StallTimeout);
+            int read;
+            try { read = await source.ReadAsync(buffer, stalled.Token); }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new IOException($"The package stopped arriving for {StallTimeout.TotalSeconds} seconds.");
+            }
+            if (read == 0)
+                break;
             await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
             copied += read;
             progress(OperationProgress.FromDownload((ulong)copied, (ulong)Math.Max(total, 0)));
@@ -228,6 +236,7 @@ internal static class PkgInstaller
     }
 
     internal const string SpctlPath = "/usr/sbin/spctl";
+    private static readonly TimeSpan StallTimeout = TimeSpan.FromMinutes(2);
 
     /// <summary>
     /// Asks Gatekeeper, as macOS does for downloads, whether the package or app is signed by an identified

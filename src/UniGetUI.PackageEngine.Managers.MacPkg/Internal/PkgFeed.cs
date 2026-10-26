@@ -37,6 +37,7 @@ internal static class PkgFeed
     internal const string IndexFileName = "index.json";
     private const int MaxScanDepth = 3;
     private const int MaxIndexBytes = 8 * 1024 * 1024;
+    private static readonly TimeSpan IndexTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan IndexLifetime = TimeSpan.FromMinutes(5);
     private static readonly string[] IconExtensions = [".png", ".jpg", ".jpeg"];
 
@@ -370,26 +371,35 @@ internal static class PkgFeed
         if (Indexes.TryGetValue(indexUrl, out var cached) && DateTime.UtcNow - cached.FetchedUtc < IndexLifetime)
             return cached.Items;
 
-        using var client = new HttpClient(CoreTools.GenericHttpClientParameters);
-        client.Timeout = TimeSpan.FromSeconds(30);
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-        using var response = client.GetAsync(indexUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .GetAwaiter().GetResult();
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            throw new FileNotFoundException($"The package feed has no index at {indexUrl}. Run 'unigetui pkg-index' on its folder.");
-        response.EnsureSuccessStatusCode();
-        if (response.Content.Headers.ContentLength > MaxIndexBytes)
-            throw new InvalidDataException($"The package feed index at {indexUrl} is larger than {MaxIndexBytes} bytes.");
-
-        using var body = response.Content.ReadAsStream(cancellationToken);
+        // The whole exchange has one deadline: the client's own timeout ends once the headers arrive.
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(IndexTimeout);
         using var limited = new MemoryStream();
-        byte[] buffer = new byte[81920];
-        int read;
-        while ((read = body.Read(buffer)) > 0)
+        try
         {
-            if (limited.Length + read > MaxIndexBytes)
+            using var client = new HttpClient(CoreTools.GenericHttpClientParameters);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+            using var response = client.GetAsync(indexUrl, HttpCompletionOption.ResponseHeadersRead, deadline.Token)
+                .GetAwaiter().GetResult();
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                throw new FileNotFoundException($"The package feed has no index at {indexUrl}. Run 'unigetui pkg-index' on its folder.");
+            response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength > MaxIndexBytes)
                 throw new InvalidDataException($"The package feed index at {indexUrl} is larger than {MaxIndexBytes} bytes.");
-            limited.Write(buffer, 0, read);
+
+            using var body = response.Content.ReadAsStream(deadline.Token);
+            byte[] buffer = new byte[81920];
+            int read;
+            while ((read = body.ReadAsync(buffer, deadline.Token).AsTask().GetAwaiter().GetResult()) > 0)
+            {
+                if (limited.Length + read > MaxIndexBytes)
+                    throw new InvalidDataException($"The package feed index at {indexUrl} is larger than {MaxIndexBytes} bytes.");
+                limited.Write(buffer, 0, read);
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new IOException($"The package feed index at {indexUrl} did not arrive within {IndexTimeout.TotalSeconds} seconds.");
         }
 
         byte[] json = limited.ToArray();

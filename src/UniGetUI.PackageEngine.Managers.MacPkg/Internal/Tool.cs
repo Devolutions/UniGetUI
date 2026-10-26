@@ -59,9 +59,16 @@ internal static class Tool
         {
             await process.WaitForExitAsync(limit.Token);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
-            process.Kill(entireProcessTree: true);
+            // Disposing a Process leaves it running: stop it, and let it and its pipes finish, before going on.
+            try { process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { } // It has just exited.
+            await process.WaitForExitAsync(CancellationToken.None);
+            try { await Task.WhenAll(reading, errors); }
+            catch (IOException) { }
+            if (cancellationToken.IsCancellationRequested)
+                throw;
             throw new InvalidDataException($"{Path.GetFileName(file)} did not finish within {timeout}.");
         }
         await Task.WhenAll(reading, errors);

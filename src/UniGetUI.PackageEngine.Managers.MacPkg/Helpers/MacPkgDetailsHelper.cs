@@ -53,6 +53,6 @@ internal sealed class MacPkgDetailsHelper : BasePkgDetailsHelper
         _manager.ListFeedItems(package)
             .Select(i => i.Version)
             .Distinct(StringComparer.Ordinal)
-            .OrderDescending(Comparer<string>.Create((a, b) => _manager.CompareVersions(a, b) ?? string.CompareOrdinal(a, b)))
+            .OrderDescending(_manager.VersionOrder)
             .ToArray();
 }

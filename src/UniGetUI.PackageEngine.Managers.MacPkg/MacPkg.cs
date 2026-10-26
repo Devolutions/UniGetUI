@@ -31,6 +31,7 @@ public sealed class MacPkg : PackageManager
             SupportsCustomSources = true,
             SupportsEmptySearchQuery = true,
             SupportsCustomPackageIcons = true,
+            SupportsCustomVersions = true,
             SerializesOperations = true,
             Sources = new SourceCapabilities
             {
@@ -115,11 +116,15 @@ public sealed class MacPkg : PackageManager
         var items = PkgFeed.List(source.Url).Where(i => i.Id == package.Id).ToArray();
         if (!string.IsNullOrEmpty(version))
             return items
-                .Where(i => i.Version == version)
+                .Where(i => i.Version == version && PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture) > 0)
                 .OrderByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture))
                 .FirstOrDefault();
         return PkgFeed.Latest(items, CompareVersions, RuntimeInformation.OSArchitecture).FirstOrDefault();
     }
+
+    /// <summary>Orders versions as this manager compares them, falling back to their text.</summary>
+    internal IComparer<string> VersionOrder =>
+        Comparer<string>.Create((a, b) => CompareVersions(a, b) ?? string.CompareOrdinal(a, b));
 
     internal IReadOnlyList<PkgFeedItem> ListFeedItems(IPackage package)
     {
@@ -157,7 +162,9 @@ public sealed class MacPkg : PackageManager
         }
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var installed = new List<(IManagerSource, PkgFeedItem, string, bool)>();
-        foreach (var (source, item) in latest)
+        // Feeds that share a package are read newest first, so an update one of them offers is never hidden.
+        foreach (var (source, item) in latest.OrderBy(p => p.Item.Id, StringComparer.Ordinal)
+            .ThenByDescending(p => p.Item.Version, VersionOrder))
         {
             if (seen.Contains(item.Id))
                 continue;

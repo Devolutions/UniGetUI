@@ -133,6 +133,7 @@ public static class PkgHelperCommand
     }
 
     private static readonly SemaphoreSlim OneInstallAtATime = new(1, 1);
+    private static readonly TimeSpan ClientWriteTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>Accepts connections until canceled; any local user may connect and ask.</summary>
     internal static async Task ServeAsync(string socketPath, Action<string> journal, CancellationToken cancellationToken)
@@ -166,13 +167,21 @@ public static class PkgHelperCommand
         await using (var stream = new NetworkStream(client, ownsSocket: false))
         {
             var writeLock = new SemaphoreSlim(1, 1);
+            bool clientGone = false;
             async Task Send(PkgHelperMessage message)
             {
                 byte[] line = Encoding.UTF8.GetBytes(
                     JsonSerializer.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage) + "\n");
                 await writeLock.WaitAsync();
-                try { await stream.WriteAsync(line); }
-                catch (IOException) { } // The user's app went away; the install goes on and is journaled.
+                try
+                {
+                    if (clientGone)
+                        return;
+                    using var timeout = new CancellationTokenSource(ClientWriteTimeout);
+                    await stream.WriteAsync(line, timeout.Token);
+                }
+                // The user's app went away or stopped reading: it gets no more lines; the install goes on, journaled.
+                catch (Exception ex) when (ex is IOException or OperationCanceledException) { clientGone = true; }
                 finally { writeLock.Release(); }
             }
 

@@ -680,6 +680,19 @@ public sealed class MacPkgTests : IDisposable
     }
 
     [Fact]
+    public async Task ACanceledToolIsStoppedBeforeTheCancellationIsReported()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        int pid = 0;
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Tool.RunAsync("/bin/sleep", ["30"], started: p => pid = p.Id, cancellationToken: cancel.Token));
+        Assert.Throws<ArgumentException>(() => System.Diagnostics.Process.GetProcessById(pid));
+    }
+
+    [Fact]
     public async Task CancelingTheAdministratorPromptCancelsTheOperation()
     {
         string source = WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
@@ -746,6 +759,45 @@ public sealed class MacPkgTests : IDisposable
             // Without SupportsCustomPackageIcons the base helper never asks the manager for icons.
             WritePackage("feed/App-2.0.png", [0x89, 0x50, 0x4E, 0x47]);
             Assert.Equal(Path.Combine(feed, "App-2.0.png"), manager.DetailsHelper.GetIcon(package)?.LocalPath);
+        }
+        finally
+        {
+            PkgReceipts.RunPkgUtil = previousPkgUtil;
+            PkgCatalogFeeds.TestCatalogPathOverride = null;
+        }
+    }
+
+    [Fact]
+    public void AnUpdateIsFoundWhicheverFeedOffersItAndAPinnedBuildMustRunHere()
+    {
+        string first = Path.Combine(_directory, "first"), second = Path.Combine(_directory, "second");
+        WritePackage("first/App-1.0.pkg", ProductArchive("com.example.app.pkg", "1.0", "App"));
+        WritePackage("second/App-2.0.pkg", ProductArchive("com.example.app.pkg", "2.0", "App"));
+        WritePackage("second/App-0.9.pkg", ProductArchive("com.example.app.pkg", "0.9", "App", "i386"));
+        string catalog = WritePackage("SoftwareCatalog.json", Encoding.UTF8.GetBytes($$"""
+            {"version":1,"catalogs":[
+              {"id":"first","name":"First","packages":[],"pkgFeed":"{{first.Replace("\\", "\\\\")}}"},
+              {"id":"second","name":"Second","packages":[],"pkgFeed":"{{second.Replace("\\", "\\\\")}}"}]}
+            """));
+
+        var previousPkgUtil = PkgReceipts.RunPkgUtil;
+        PkgReceipts.RunPkgUtil = (_, args) => args switch
+        {
+            ["--pkgs"] => (0, "com.example.app.pkg\n"),
+            ["--pkg-info", "com.example.app.pkg"] => (0, "version: 1.0\n"),
+            _ => (1, ""),
+        };
+        PkgCatalogFeeds.TestCatalogPathOverride = catalog;
+        try
+        {
+            var manager = new MacPkg();
+            var installed = Assert.Single(manager.ListInstalled());
+            Assert.Equal(("second", "1.0", "2.0", true),
+                (installed.Source.Name, installed.Installed, installed.Item.Version, installed.HasUpdate));
+
+            var package = new PackageClasses.Package("App", "com.example.app.pkg", "1.0", installed.Source, manager);
+            Assert.Null(manager.FindFeedItem(package, "0.9"));
+            Assert.True(manager.Capabilities.SupportsCustomVersions);
         }
         finally
         {
@@ -978,7 +1030,7 @@ public sealed class MacPkgTests : IDisposable
         Assert.Equal(new AppBundleInfo("com.example.dmgapp", "/Applications/Example App.app", "3.4.5"), metadata.App);
         Assert.Contains("arm64", metadata.Architectures);
         Assert.True(new FileInfo(icon).Length > 0);
-        Assert.DoesNotContain(Directory.GetDirectories(Path.Combine(Path.GetTempPath(), "UniGetUI-dmg")),
+        Assert.DoesNotContain(Directory.GetDirectories(Path.GetTempPath(), "UniGetUI-dmg-*"),
             d => Directory.EnumerateFileSystemEntries(d).Any());
     }
 
@@ -1496,7 +1548,40 @@ public sealed class MacPkgTests : IDisposable
 
         Assert.Null(TrustedPath.WhyUntrusted("/usr/bin/true"));
         Assert.Contains("any user", TrustedPath.WhyUntrusted("/Users/Shared"));
-        Assert.Contains("could not be resolved", TrustedPath.WhyUntrusted(Path.Combine(_directory, "missing")));
+        Assert.Contains("could not be inspected", TrustedPath.WhyUntrusted(Path.Combine(_directory, "missing")));
+    }
+
+    [Fact]
+    public void ALinkIsOnlyTrustedWhereNoStandardUserCanRepointIt()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        string open = Directory.CreateDirectory(Path.Combine(_directory, "open")).FullName;
+        File.SetUnixFileMode(open, (UnixFileMode)0b111_111_111);
+        File.CreateSymbolicLink(Path.Combine(open, "feed"), "/usr/bin");
+        Assert.Null(TrustedPath.WhyUntrusted("/usr/bin/true"));
+        Assert.NotNull(TrustedPath.WhyUntrusted(Path.Combine(open, "feed", "true")));
+        // Links in protected places, such as /var and /tmp, are followed and their targets checked.
+        Assert.Null(TrustedPath.WhyUntrusted("/var/db"));
+        Assert.Contains("any user", TrustedPath.WhyUntrusted("/tmp"));
+    }
+
+    [Fact]
+    public void AnAccessEntryThatLetsOthersChangeAPathMakesItUntrusted()
+    {
+        Assert.Null(TrustedPath.WhyAccessListAllowsChanges("drwxr-x---+ 5 me staff 160 Oct 26 16:18 /Users/me\n 0: group:everyone deny delete\n"));
+        Assert.Null(TrustedPath.WhyAccessListAllowsChanges("-rw-r--r--+ 1 root wheel 2 Oct 26 16:18 /f\n 0: user:pat allow read,readattr\n"));
+        Assert.Null(TrustedPath.WhyAccessListAllowsChanges("drwxr-xr-x+ 3 root admin 96 Oct 26 16:18 /d\n 0: group:admin allow add_file,delete_child\n"));
+        Assert.Equal("0: user:pat inherited allow write,append",
+            TrustedPath.WhyAccessListAllowsChanges("-rw-r--r--+ 1 root wheel 2 Oct 26 16:18 /f\n 0: user:pat inherited allow write,append\n"));
+
+        if (!OperatingSystem.IsMacOS())
+            return;
+        string folder = Directory.CreateDirectory(Path.Combine(_directory, "acl")).FullName;
+        File.SetUnixFileMode(folder, (UnixFileMode)0b111_101_101);
+        Assert.Equal(0, Tool.Run("/bin/chmod", ["+a", "everyone allow add_file", folder]).ExitCode);
+        Assert.Contains("access control entry", TrustedPath.WhyUntrusted(folder));
     }
 
     [Fact]

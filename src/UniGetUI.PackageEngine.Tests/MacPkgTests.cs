@@ -1150,7 +1150,7 @@ public sealed class MacPkgTests : IDisposable
     [Fact]
     public void TheAppInAZipIsFoundAtItsRootOrOneFolderDown()
     {
-        string P(string app) => app + "/Contents/Info.plist";
+        static string P(string app) => app + "/Contents/Info.plist";
         Assert.Equal("Visual Studio Code.app", ZipApp.FindApp(
             [P("Visual Studio Code.app"), P("Visual Studio Code.app/Contents/Frameworks/Code Helper.app"),
              P("__MACOSX/._Visual Studio Code.app"), "Visual Studio Code.app/Contents/MacOS/Electron"]));
@@ -1361,7 +1361,7 @@ public sealed class MacPkgTests : IDisposable
         PkgInstaller.RunProcess = (_, _, _) => { ran = true; return Task.FromResult((0, "")); };
         try
         {
-            async Task<string?> Ask(string catalog, string id, string version = "") =>
+            static async Task<string?> Ask(string catalog, string id, string version = "") =>
                 (await PkgHelperCommand.InstallAsync(new PkgHelperRequest { Catalog = catalog, Id = id, Version = version }, _ => { })).Result;
 
             TrustedPath.TestOverride = _ => null;

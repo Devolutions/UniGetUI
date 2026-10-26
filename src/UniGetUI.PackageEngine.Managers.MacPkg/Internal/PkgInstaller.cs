@@ -302,8 +302,6 @@ internal static class PkgInstaller
         + $" with prompt \"{CoreTools.EscapeAppleScriptString(CoreTools.Translate("UniGetUI wants to install {0}.", displayName))}\""
         + " with administrator privileges";
 
-
-
     private static async Task<(int, string)> RunProcessAsync(string fileName, IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
     {

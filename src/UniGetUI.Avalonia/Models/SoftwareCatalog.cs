@@ -30,6 +30,11 @@ public sealed class CatalogDefinition
     [JsonPropertyName("pkgFeed")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PkgFeed { get; init; }
+
+    // Lets the feed's packages install even when Gatekeeper rejects them (unsigned or not notarized).
+    [JsonPropertyName("allowUnsignedPackages")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? AllowUnsignedPackages { get; init; }
 }
 
 public sealed class CatalogEntry
@@ -76,8 +81,7 @@ public sealed class CatalogEntry
     public bool MatchesInstalled(IPackage package) =>
         string.Equals(Id, package.Id, StringComparison.OrdinalIgnoreCase)
         && MatchesManager(package.Manager)
-        // Chocolatey's installed inventory assigns DefaultSource and does not retain feed provenance.
-        && (string.Equals(package.Manager.Id, "chocolatey", StringComparison.OrdinalIgnoreCase)
+        && (!package.Manager.Capabilities.InstalledPackagesKeepTheirSource
             || string.Equals(Source, package.Source.Name, StringComparison.OrdinalIgnoreCase));
 }
 

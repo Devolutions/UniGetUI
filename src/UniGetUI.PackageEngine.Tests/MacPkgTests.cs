@@ -340,6 +340,8 @@ public sealed class MacPkgTests : IDisposable
         var location = new Uri(feed);
         Assert.Single(PkgFeed.List(location));
         Directory.Delete(feed, recursive: true);
+        // Forget the brief scan cache, so the answer comes from the fallback for an unreachable feed.
+        PkgFeed.ForgetCachedIndexes();
         Assert.Equal("com.example.app.pkg", Assert.Single(PkgFeed.List(location)).Id);
         Assert.Throws<DirectoryNotFoundException>(() => PkgFeed.List(new Uri(Path.Combine(_directory, "never-seen"))));
     }
@@ -513,14 +515,20 @@ public sealed class MacPkgTests : IDisposable
         var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri(source), null, 0, [], null);
         using var cancellation = new CancellationTokenSource();
         var previous = PkgInstaller.RunProcess;
+        var previousIsRoot = PkgInstaller.IsRoot;
+        string? staged = null;
         bool stagedFileOutlivedTheCancel = false, tokenCouldCancel = true;
-        PkgInstaller.RunProcess = async (_, args, token) =>
+        PkgInstaller.IsRoot = () => true;
+        PkgInstaller.RunProcess = async (file, args, token) =>
         {
+            if (file != "/bin/sh")
+                return (0, "accepted");
+            // The root step names this install's own staged file; it must survive a cancel while it runs.
+            staged = System.Text.RegularExpressions.Regex.Match(args[1], "-pkg '([^']+)'").Groups[1].Value;
             tokenCouldCancel = token.CanBeCanceled;
             cancellation.Cancel();
             await Task.Delay(50, CancellationToken.None);
-            stagedFileOutlivedTheCancel = Directory.GetFiles(Path.Combine(Path.GetTempPath(), "UniGetUI-pkg"), "package.pkg",
-                SearchOption.AllDirectories).Length > 0;
+            stagedFileOutlivedTheCancel = File.Exists(staged);
             return (0, "installer: The install was successful.");
         };
         try
@@ -529,8 +537,13 @@ public sealed class MacPkgTests : IDisposable
                 await PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, cancellation.Token));
             Assert.False(tokenCouldCancel);
             Assert.True(stagedFileOutlivedTheCancel);
+            Assert.False(File.Exists(staged), "The staged file is cleaned up once the install finishes.");
         }
-        finally { PkgInstaller.RunProcess = previous; }
+        finally
+        {
+            PkgInstaller.RunProcess = previous;
+            PkgInstaller.IsRoot = previousIsRoot;
+        }
     }
 
     [Fact]
@@ -541,7 +554,11 @@ public sealed class MacPkgTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         var previous = PkgInstaller.RunProcess;
         bool ran = false;
-        PkgInstaller.RunProcess = (_, _, _) => { ran = true; return Task.FromResult((0, "")); };
+        PkgInstaller.RunProcess = (file, _, _) =>
+        {
+            ran |= file != PkgInstaller.SpctlPath;
+            return Task.FromResult((0, ""));
+        };
         try
         {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => PkgInstaller.InstallAsync(item, "App", _ => { },
@@ -567,13 +584,110 @@ public sealed class MacPkgTests : IDisposable
         Assert.Equal(["Example App.app"], Directory.GetFileSystemEntries(applications).Select(Path.GetFileName));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task APackageGatekeeperRejectsInstallsOnlyWhenTheCatalogAllowsIt(bool allowUnsigned)
+    {
+        string source = WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
+        var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri(source), null, 0, [], null);
+        var previous = PkgInstaller.RunProcess;
+        bool installed = false;
+        PkgInstaller.RunProcess = (file, args, _) =>
+        {
+            if (file == PkgInstaller.SpctlPath)
+                return Task.FromResult((3, $"{args[^1]}: rejected\nsource=no usable signature"));
+            installed = true;
+            return Task.FromResult((0, "installer: The install was successful."));
+        };
+        try
+        {
+            if (allowUnsigned)
+                Assert.Equal(Enums.OperationVeredict.Success, await PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { },
+                    CancellationToken.None, allowUnsigned: true));
+            else
+            {
+                var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+                    PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { }, CancellationToken.None));
+                Assert.Contains("no usable signature", error.Message);
+            }
+            Assert.Equal(allowUnsigned, installed);
+        }
+        finally { PkgInstaller.RunProcess = previous; }
+    }
+
+    [Fact]
+    public async Task AnUnsignedPackageAnyUserCanReplaceIsRefused()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string source = WritePackage("shared/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
+        File.SetUnixFileMode(Path.GetDirectoryName(source)!, (UnixFileMode)Convert.ToInt32("1777", 8));
+        var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri(source), null, 0, [], null);
+        var previous = PkgInstaller.RunProcess;
+        bool ran = false;
+        PkgInstaller.RunProcess = (_, _, _) => { ran = true; return Task.FromResult((0, "")); };
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => PkgInstaller.InstallAsync(item, "App", _ => { }, _ => { },
+                CancellationToken.None, allowUnsigned: true));
+            Assert.False(ran);
+        }
+        finally { PkgInstaller.RunProcess = previous; }
+    }
+
+    [Fact]
+    public void ACatalogCanAllowItsFeedsUnsignedPackages()
+    {
+        var feeds = PkgCatalogFeeds.Parse(Encoding.UTF8.GetBytes("""
+            {"version":1,"catalogs":[
+              {"id":"signed","name":"Signed","packages":[],"pkgFeed":"https://h/a/"},
+              {"id":"internal","name":"Internal","packages":[],"pkgFeed":"https://h/b/","allowUnsignedPackages":true}
+            ]}
+            """));
+        Assert.Equal([false, true], feeds.Select(f => f.AllowUnsignedPackages));
+    }
+
+    [Fact]
+    public async Task AnUpdateCutOffMidSwapIsRestoredNextTime()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        // A swap cut off after moving the old app aside: no app in place, the old one and a partial copy beside it.
+        string applications = Path.Combine(_directory, "Applications");
+        string destination = Path.Combine(applications, "Example App.app");
+        WriteApp(applications, ".Example App.unigetui-old", "com.example.app", "1.0");
+        WriteApp(applications, ".Example App.unigetui-new", "com.example.app", "partial");
+        string command = PkgInstaller.CopyAppCommand(Path.Combine(_directory, "missing", "Example App.app"), destination);
+        var (code, _) = await PkgInstaller.RunProcess("/bin/sh", ["-c", command], CancellationToken.None);
+
+        Assert.NotEqual(0, code);
+        Assert.Equal("1.0", AppBundle.VersionOf(AppBundle.ReadInfoPlist(destination)));
+        Assert.Equal(["Example App.app"], Directory.GetFileSystemEntries(applications).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public void AToolIsDrainedAndStoppedWhenItOverrunsItsTime()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var chatty = Tool.Run("/bin/sh", ["-c", "head -c 300000 /dev/zero >&2; echo done"], timeout: TimeSpan.FromSeconds(30));
+        Assert.Equal((0, "done\n", 300000), (chatty.ExitCode, chatty.Text, chatty.StandardError.Length));
+        Assert.Throws<InvalidDataException>(() => Tool.Run("/bin/sleep", ["30"], timeout: TimeSpan.FromMilliseconds(300)));
+    }
+
     [Fact]
     public async Task CancelingTheAdministratorPromptCancelsTheOperation()
     {
         string source = WritePackage("feed/App.pkg", ProductArchive("com.example.app.pkg", "1.0"));
         var item = new PkgFeedItem("com.example.app.pkg", "App", "1.0", new Uri(source), null, 0, [], null);
         var previous = PkgInstaller.RunProcess;
-        PkgInstaller.RunProcess = (_, _, _) => Task.FromResult((1, "0:61: execution error: User canceled. (-128)"));
+        PkgInstaller.RunProcess = (file, _, _) => Task.FromResult(file == PkgInstaller.SpctlPath
+            ? (0, "accepted")
+            : (1, "0:61: execution error: User canceled. (-128)"));
         try
         {
             Assert.Equal(Enums.OperationVeredict.Canceled,
@@ -609,7 +723,9 @@ public sealed class MacPkgTests : IDisposable
         {
             var manager = new MacPkg();
             var source = Assert.Single(manager.SourcesHelper.GetSources());
-            Assert.Equal(("mac", "Installer packages: Mac apps"), (source.Name, source.AsString_DisplayName));
+            // Bundles and the CLI write a source as "Manager: name" and look the part after ": " up again.
+            Assert.Equal(("mac", "Installer packages: mac"), (source.Name, source.AsString_DisplayName));
+            Assert.Same(source, manager.SourcesHelper.Factory.GetSourceIfExists(source.AsString_DisplayName.Split(": ")[^1]));
 
             var available = manager.ListLatest();
             Assert.Equal(["com.example.app.pkg 2.0", "com.example.current.pkg 5.0", "com.example.tool.pkg 3.0"],
@@ -897,7 +1013,11 @@ public sealed class MacPkgTests : IDisposable
         try
         {
             var log = new List<string>();
-            var verdict = await PkgInstaller.InstallAsync(item, "Example App", log.Add, _ => { }, CancellationToken.None);
+            // The test app is unsigned, so Gatekeeper rejects it and only the catalog opt-in lets it install.
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                PkgInstaller.InstallAsync(item, "Example App", log.Add, _ => { }, CancellationToken.None));
+            var verdict = await PkgInstaller.InstallAsync(item, "Example App", log.Add, _ => { }, CancellationToken.None,
+                allowUnsigned: true);
             Assert.True(verdict == Enums.OperationVeredict.Success, string.Join('\n', log));
             Assert.Equal("2.0", AppBundle.FindInstalled(item.App!)?.Version);
             Assert.False(File.Exists(Path.Combine(installed, "Contents", "Resources", "stale.txt")));

@@ -43,7 +43,8 @@ internal sealed class MacPkgOperationHelper : BasePkgOperationHelper, IManagedPa
             ?? throw new InvalidOperationException(
                 $"The package feed {package.Source.Name} does not publish {package.Id}{(version is null ? "" : " " + version)} for this Mac.");
 
-        var verdict = await PkgInstaller.InstallAsync(item, package.Name, log, progress, cancellationToken);
+        bool allowUnsigned = _manager.FindFeedSource(package)?.AllowUnsignedPackages is true;
+        var verdict = await PkgInstaller.InstallAsync(item, package.Name, log, progress, cancellationToken, allowUnsigned);
         if (verdict == OperationVeredict.Success)
             _manager.InvalidateInstalledPackages();
         return verdict;

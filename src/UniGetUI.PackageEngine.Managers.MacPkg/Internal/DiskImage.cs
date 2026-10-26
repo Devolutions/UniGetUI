@@ -115,32 +115,10 @@ internal sealed class DiskImage : IDisposable
         }
     }
 
-    private static (int, string) Run(string[] arguments, string? input) => RunTool(HdiUtilPath, arguments, input);
-
-    internal static (int, string) RunTool(string tool, string[] arguments, string? input)
+    private static (int, string) Run(string[] arguments, string? input)
     {
-        var startInfo = new ProcessStartInfo(tool)
-        {
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        foreach (string argument in arguments)
-            startInfo.ArgumentList.Add(argument);
-        using var process = Process.Start(startInfo) ?? throw new InvalidDataException($"Could not start {tool}.");
-        if (input is not null)
-            process.StandardInput.Write(input);
-        process.StandardInput.Close();
-        var stderr = process.StandardError.ReadToEndAsync();
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        if (!process.WaitForExit(MountTimeout))
-        {
-            process.Kill(entireProcessTree: true);
-            throw new InvalidDataException($"{Path.GetFileName(tool)} did not finish within {MountTimeout.TotalMinutes} minutes.");
-        }
-        return (process.ExitCode, stdout.Result + stderr.Result);
+        var result = Tool.Run(HdiUtilPath, arguments, input is null ? null : System.Text.Encoding.UTF8.GetBytes(input), MountTimeout);
+        return (result.ExitCode, result.Output);
     }
 
     private static void TryDeleteDirectory(string path)

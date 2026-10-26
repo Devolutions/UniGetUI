@@ -17,7 +17,7 @@ internal sealed class MacPkgSourceHelper : BaseSourceHelper
 
     protected override IReadOnlyList<IManagerSource> GetSources_UnSafe() =>
         PkgCatalogFeeds.Load()
-            .Select(feed => (IManagerSource)new PkgFeedSource(Manager, feed.Id, feed.Name, feed.Location))
+            .Select(feed => (IManagerSource)new PkgFeedSource(Manager, feed.Id, feed.Location, feed.AllowUnsignedPackages))
             .ToArray();
 
     public override string[] GetAddSourceParameters(IManagerSource source) =>
@@ -34,15 +34,17 @@ internal sealed class MacPkgSourceHelper : BaseSourceHelper
 }
 
 /// <summary>
-/// A feed's source: named by its catalog's id, so packages keep their source when the catalog is
-/// renamed and two catalogs cannot collide, and shown by the catalog's name.
+/// A feed's source, named by its catalog's id: unique, kept when the catalog is renamed, and what
+/// "Installer packages: &lt;id&gt;" (how sources are written in bundles and the CLI) resolves back to.
 /// </summary>
 internal sealed class PkgFeedSource : ManagerSource
 {
-    public PkgFeedSource(IPackageManager manager, string catalogId, string catalogName, Uri location)
+    public PkgFeedSource(IPackageManager manager, string catalogId, Uri location, bool allowUnsignedPackages)
         : base(manager, catalogId, location)
     {
-        AsString = $"{manager.Properties.Name}: {catalogName}";
-        AsString_DisplayName = $"{manager.DisplayName}: {catalogName}";
+        AllowUnsignedPackages = allowUnsignedPackages;
     }
+
+    /// <summary>Whether the catalog lets packages that Gatekeeper rejects (unsigned, not notarized) install.</summary>
+    public bool AllowUnsignedPackages { get; }
 }

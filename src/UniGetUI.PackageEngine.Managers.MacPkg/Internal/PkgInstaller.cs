@@ -24,8 +24,11 @@ internal static class PkgInstaller
     internal static Func<bool> IsRoot { get; set; } = CoreTools.IsAdministrator;
 
     public static async Task<OperationVeredict> InstallAsync(PkgFeedItem item, string displayName,
-        Action<string> log, Action<OperationProgress> progress, CancellationToken cancellationToken)
+        Action<string> log, Action<OperationProgress> progress, CancellationToken cancellationToken,
+        bool allowUnsigned = false)
     {
+        if (allowUnsigned && item.Location.IsFile)
+            RefuseFilesOthersCanWrite(item.Location.LocalPath);
         string stagingDirectory = Path.Combine(Path.GetTempPath(), "UniGetUI-pkg", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stagingDirectory);
         try
@@ -47,6 +50,7 @@ internal static class PkgInstaller
                 using var image = DiskImage.Mount(staged);
                 string app = image.FindApp();
                 VerifyIdentity(item, DiskImage.FromApp(app));
+                await VerifySignatureAsync(app, "execute", allowUnsigned, log, cancellationToken);
                 string destination = AppBundle.OnDisk("/Applications/" + SafeAppName(app));
                 cancellationToken.ThrowIfCancellationRequested();
                 log($"Copying {Path.GetFileName(app)} to {destination}...");
@@ -55,6 +59,7 @@ internal static class PkgInstaller
             else
             {
                 VerifyIdentity(item, PkgMetadata.Read(staged));
+                await VerifySignatureAsync(staged, "install", allowUnsigned, log, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
                 result = await RunAsRootAsync(InstallPkgCommand(staged), displayName, CancellationToken.None);
             }
@@ -136,6 +141,41 @@ internal static class PkgInstaller
                 $"The package file is {staged.Id} {staged.Version}, but the feed announced {item.Id} {item.Version}. Reload the feed, then try again.");
     }
 
+    internal const string SpctlPath = "/usr/sbin/spctl";
+
+    /// <summary>
+    /// Asks Gatekeeper, as macOS does for downloads, whether the package or app is signed by an identified
+    /// developer and notarized; only a catalog that allows unsigned packages lets a rejected one through.
+    /// </summary>
+    internal static async Task VerifySignatureAsync(string path, string type, bool allowUnsigned, Action<string> log,
+        CancellationToken cancellationToken)
+    {
+        var (code, output) = await RunProcess(SpctlPath, ["--assess", "--type", type, "-vv", path], cancellationToken);
+        string verdict = string.Join("; ", output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Skip(1));
+        if (code == 0)
+            log($"Gatekeeper accepts the package: {verdict}");
+        else if (allowUnsigned)
+            log($"Gatekeeper rejects the package ({verdict}), but its catalog allows unsigned packages.");
+        else
+            throw new InvalidDataException($"macOS Gatekeeper rejects this package ({verdict}). Publish a package signed "
+                + "with a Developer ID and notarized by Apple, or set allowUnsignedPackages on its catalog.");
+    }
+
+    // Unsigned packages are trusted only for where they come from: a file, or folder, that any user
+    // on the Mac can write to could hold anyone's package, so it is refused.
+    internal static void RefuseFilesOthersCanWrite(string file)
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+        foreach (string path in new[] { file, Path.GetDirectoryName(file)! })
+        {
+            if (File.GetUnixFileMode(path).HasFlag(UnixFileMode.OtherWrite))
+                throw new InvalidDataException($"{path} can be written by any user on this Mac, so its unsigned package "
+                    + "is not installed. Keep a feed that allows unsigned packages in a folder only administrators can change.");
+        }
+    }
+
     internal static string SafeAppName(string app)
     {
         string name = Path.GetFileName(app.TrimEnd('/'));
@@ -147,16 +187,18 @@ internal static class PkgInstaller
     internal static string InstallPkgCommand(string stagedPackage) =>
         $"{InstallerPath} -pkg {CoreTools.QuoteForPosixShell(stagedPackage)} -target / 2>&1";
 
-    // The app is copied beside its destination and the installed one is moved aside, not deleted,
-    // until the new one is in place: any failed step leaves the previous version installed.
+    // The old app is moved aside, not deleted, until the new one is in place; fixed non-.app working
+    // names let the next update restore an app that a cut-off swap left aside, then clear the rest.
     internal static string CopyAppCommand(string sourceApp, string destinationApp)
     {
         string directory = Path.GetDirectoryName(destinationApp)!;
-        string id = Guid.NewGuid().ToString("N");
+        string name = Path.GetFileNameWithoutExtension(destinationApp);
         string source = CoreTools.QuoteForPosixShell(sourceApp), destination = CoreTools.QuoteForPosixShell(destinationApp);
-        string staging = CoreTools.QuoteForPosixShell(Path.Combine(directory, $".unigetui-new-{id}.app"));
-        string previous = CoreTools.QuoteForPosixShell(Path.Combine(directory, $".unigetui-old-{id}.app"));
-        return $"/usr/bin/ditto {source} {staging} || {{ /bin/rm -rf {staging}; exit 1; }}; "
+        string staging = CoreTools.QuoteForPosixShell(Path.Combine(directory, $".{name}.unigetui-new"));
+        string previous = CoreTools.QuoteForPosixShell(Path.Combine(directory, $".{name}.unigetui-old"));
+        return $"if [ ! -e {destination} ] && [ -e {previous} ]; then /bin/mv {previous} {destination}; fi; "
+            + $"/bin/rm -rf {staging} {previous}; "
+            + $"/usr/bin/ditto {source} {staging} || {{ /bin/rm -rf {staging}; exit 1; }}; "
             + $"if [ -e {destination} ]; then /bin/mv {destination} {previous} || {{ /bin/rm -rf {staging}; exit 1; }}; fi; "
             + $"if /bin/mv {staging} {destination}; then /bin/rm -rf {previous}; "
             + $"else /bin/rm -rf {staging}; [ -e {previous} ] && /bin/mv {previous} {destination}; exit 1; fi";
@@ -179,20 +221,7 @@ internal static class PkgInstaller
     private static async Task<(int, string)> RunProcessAsync(string fileName, IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
     {
-        var startInfo = new ProcessStartInfo(fileName)
-        {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        foreach (string argument in arguments)
-            startInfo.ArgumentList.Add(argument);
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException($"Could not start {fileName}.");
-        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        return (process.ExitCode, (await stdout) + (await stderr));
+        var result = await Tool.RunAsync(fileName, arguments, cancellationToken: cancellationToken);
+        return (result.ExitCode, result.Output);
     }
 }

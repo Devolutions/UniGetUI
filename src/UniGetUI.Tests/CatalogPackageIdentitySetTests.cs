@@ -83,6 +83,21 @@ public class CatalogPackageIdentitySetTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void AnInventoryWithoutSourcesMatchesTheEntryOfEverySource()
+    {
+        // A macOS .pkg receipt records no feed, so two catalogs sharing one feed both see it installed.
+        var manager = CreateManager();
+        var capabilities = manager.Capabilities;
+        capabilities.InstalledPackagesKeepTheirSource = false;
+        manager.Capabilities = capabilities;
+        var installed = Package(manager, source: "mac-apps");
+        var identities = new CatalogPackageIdentitySet([installed], installedInventory: true);
+        Assert.True(identities.Contains(Entry(manager.Id, source: "mac-apps-beta")));
+        Assert.True(Entry(manager.Id, source: "mac-apps-beta").MatchesInstalled(installed));
+        Assert.False(new CatalogPackageIdentitySet([installed]).Contains(Entry(manager.Id, source: "mac-apps-beta")));
+    }
+
+    [Fact]
     public void RebuildingSnapshotsReflectsInventoryRemovalAndSourceChanges()
     {
         var manager = CreateManager();

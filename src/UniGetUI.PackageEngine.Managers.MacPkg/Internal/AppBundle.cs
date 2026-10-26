@@ -71,11 +71,11 @@ internal static class AppBundle
     public static bool ConvertIcon(string icns, string destinationPng)
     {
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destinationPng)!);
-        var (code, output) = DiskImage.RunTool("/usr/bin/sips",
-            ["-s", "format", "png", "-Z", "256", icns, "--out", destinationPng], null);
-        if (code == 0)
+        var result = Tool.Run("/usr/bin/sips", ["-s", "format", "png", "-Z", "256", icns, "--out", destinationPng],
+            timeout: TimeSpan.FromMinutes(1));
+        if (result.ExitCode == 0)
             return true;
-        Logger.Warn($"Could not convert the icon {icns}: {output.Trim()}");
+        Logger.Warn($"Could not convert the icon {icns}: {result.Output.Trim()}");
         return false;
     }
 
@@ -104,30 +104,10 @@ internal static class AppBundle
     {
         if (!OperatingSystem.IsMacOS())
             throw new InvalidDataException("Binary property lists can only be read on macOS.");
-        var startInfo = new ProcessStartInfo("/usr/bin/plutil")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        startInfo.RedirectStandardInput = true;
-        foreach (string argument in new[] { "-convert", "xml1", "-o", "-", "-" })
-            startInfo.ArgumentList.Add(argument);
-        using var process = Process.Start(startInfo) ?? throw new InvalidDataException("Could not start plutil.");
-        // Drained alongside stdout, so a long error message cannot fill the pipe and stall plutil.
-        var errors = process.StandardError.ReadToEndAsync();
-        var writing = Task.Run(() =>
-        {
-            process.StandardInput.BaseStream.Write(binary);
-            process.StandardInput.Close();
-        });
-        using var output = new MemoryStream();
-        process.StandardOutput.BaseStream.CopyTo(output);
-        process.WaitForExit();
-        writing.Wait();
-        if (process.ExitCode != 0 || output.Length > MaxPlistBytes)
-            throw new InvalidDataException($"plutil could not read a binary property list: {errors.Result.Trim()}");
-        return output.ToArray();
+        var result = Tool.Run("/usr/bin/plutil", ["-convert", "xml1", "-o", "-", "-"], binary, TimeSpan.FromSeconds(30));
+        if (result.ExitCode != 0 || result.StandardOutput.Length > MaxPlistBytes)
+            throw new InvalidDataException($"plutil could not read a binary property list: {result.StandardError.Trim()}");
+        return result.StandardOutput;
     }
 
     private const uint FatMagic = 0xCAFEBABE;

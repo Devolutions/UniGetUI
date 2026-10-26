@@ -26,6 +26,7 @@ public sealed class MacPkg : PackageManager
         {
             CanRunAsAdmin = false,
             CanUninstall = false,
+            InstalledPackagesKeepTheirSource = false,
             CanDownloadInstaller = true,
             SupportsCustomSources = true,
             SupportsEmptySearchQuery = true,
@@ -103,9 +104,12 @@ public sealed class MacPkg : PackageManager
     }
 
     /// <summary>The feed package behind a package, at the requested version or else the newest one.</summary>
+    internal PkgFeedSource? FindFeedSource(IPackage package) =>
+        SourcesHelper.GetSources().OfType<PkgFeedSource>().FirstOrDefault(s => s.Name == package.Source.Name);
+
     internal PkgFeedItem? FindFeedItem(IPackage package, string? version = null)
     {
-        var source = SourcesHelper.GetSources().FirstOrDefault(s => s.Name == package.Source.Name);
+        var source = FindFeedSource(package);
         if (source is null)
             return null;
         var items = PkgFeed.List(source.Url).Where(i => i.Id == package.Id).ToArray();

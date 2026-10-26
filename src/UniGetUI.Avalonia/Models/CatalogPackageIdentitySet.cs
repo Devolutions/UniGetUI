@@ -16,11 +16,10 @@ internal sealed class CatalogPackageIdentitySet
         foreach (var package in packages)
         {
             var manager = package.Manager;
-            // Only installed Chocolatey inventory loses feed provenance. Pending operations remain source-specific.
-            string? source = installedInventory
-                && string.Equals(manager.Id, "chocolatey", StringComparison.OrdinalIgnoreCase)
-                    ? null
-                    : package.Source.Name;
+            // Some installed inventories lose feed provenance. Pending operations remain source-specific.
+            string? source = installedInventory && !manager.Capabilities.InstalledPackagesKeepTheirSource
+                ? null
+                : package.Source.Name;
             _identities.Add(new Identity(manager.Id, package.Id, source));
             _identities.Add(new Identity(manager.Name, package.Id, source));
             _identities.Add(new Identity(manager.DisplayName, package.Id, source));

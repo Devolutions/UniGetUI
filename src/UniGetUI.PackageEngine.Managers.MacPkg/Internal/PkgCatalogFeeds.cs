@@ -6,7 +6,7 @@ using UniGetUI.Core.Logging;
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 // A feed is identified by its catalog's id, which is unique and survives renames; its name is for display.
-internal readonly record struct PkgFeedDeclaration(string Id, string Name, Uri Location);
+internal readonly record struct PkgFeedDeclaration(string Id, string Name, Uri Location, bool AllowUnsignedPackages = false);
 
 /// <summary>
 /// Reads the feeds that the machine-wide software catalog declares through each catalog's
@@ -53,7 +53,7 @@ internal static class PkgCatalogFeeds
             if (feeds.Any(f => string.Equals(f.Id, id, StringComparison.OrdinalIgnoreCase)))
                 Logger.Warn($"Ignoring the package feed of a second catalog with the id {id}.");
             else
-                feeds.Add(new PkgFeedDeclaration(id, catalog.Name.Trim(), location));
+                feeds.Add(new PkgFeedDeclaration(id, catalog.Name.Trim(), location, catalog.AllowUnsignedPackages is true));
         }
         return feeds;
     }
@@ -75,6 +75,9 @@ internal sealed class PkgCatalogDefinition
 
     [JsonPropertyName("pkgFeed")]
     public string? PkgFeed { get; init; }
+
+    [JsonPropertyName("allowUnsignedPackages")]
+    public bool? AllowUnsignedPackages { get; init; }
 }
 
 [JsonSerializable(typeof(PkgCatalogDocument))]

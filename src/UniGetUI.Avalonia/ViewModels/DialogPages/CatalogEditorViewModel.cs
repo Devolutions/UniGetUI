@@ -21,8 +21,9 @@ public partial class CatalogEditorCatalog : ViewModelBase
 
     public ObservableCollection<CatalogEntry> Packages { get; }
 
-    // Not edited here, but kept so that saving does not drop it.
+    // Not edited here, but kept so that saving does not drop them.
     public string? PkgFeed { get; }
+    public bool? AllowUnsignedPackages { get; }
 
     public CatalogEditorCatalog(CatalogDefinition definition)
     {
@@ -30,9 +31,17 @@ public partial class CatalogEditorCatalog : ViewModelBase
         _name = definition.Name;
         Packages = new(definition.Packages);
         PkgFeed = definition.PkgFeed;
+        AllowUnsignedPackages = definition.AllowUnsignedPackages;
     }
 
-    public CatalogDefinition ToDefinition() => new() { Id = Id, Name = Name, Packages = Packages.ToArray(), PkgFeed = PkgFeed };
+    public CatalogDefinition ToDefinition() => new()
+    {
+        Id = Id,
+        Name = Name,
+        Packages = Packages.ToArray(),
+        PkgFeed = PkgFeed,
+        AllowUnsignedPackages = AllowUnsignedPackages
+    };
 }
 
 public sealed record CatalogAddResult(CatalogEditorCatalog Catalog, int Added, int AlreadyPresent);
@@ -370,6 +379,7 @@ public partial class CatalogEditorViewModel : ViewModelBase
             Id = c.Id,
             Name = c.Name,
             PkgFeed = c.PkgFeed,
+            AllowUnsignedPackages = c.AllowUnsignedPackages,
             Packages = c.Packages.Select(p => new CatalogEntry
             {
                 Id = p.Id,

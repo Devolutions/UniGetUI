@@ -41,24 +41,12 @@ internal static class PkgReceipts
 
     private static (int, string) Run(IManagerLogger? logger, string[] arguments)
     {
-        var startInfo = new ProcessStartInfo(PkgUtilPath)
-        {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        foreach (string argument in arguments)
-            startInfo.ArgumentList.Add(argument);
-        using var process = new Process { StartInfo = startInfo };
-        var task = logger?.CreateNew(LoggableTaskType.ListInstalledPackages, process);
-        process.Start();
-        var stderr = process.StandardError.ReadToEndAsync();
-        string output = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        task?.AddToStdOut(output);
-        task?.AddToStdErr(stderr.Result);
-        task?.Close(process.ExitCode);
-        return (process.ExitCode, output);
+        IProcessTaskLogger? task = null;
+        var result = Tool.Run(PkgUtilPath, arguments,
+            started: process => task = logger?.CreateNew(LoggableTaskType.ListInstalledPackages, process));
+        task?.AddToStdOut(result.Text);
+        task?.AddToStdErr(result.StandardError);
+        task?.Close(result.ExitCode);
+        return (result.ExitCode, result.Text);
     }
 }

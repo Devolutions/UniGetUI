@@ -131,9 +131,12 @@ in the next section.
   `sips` once per file version into the icon cache; the manager sets `SupportsCustomPackageIcons`,
   without which the base `GetIcon` never asks it.
 - Installs run in-process (`IManagedPackageOperationHelper`): stage a private copy, verify the
-  index hash and the package identity, then `installer -pkg`, or `ditto` of a `.dmg`'s app into
-  `/Applications`, as root through `osascript ... with administrator privileges`. `ManagerCapabilities.CanUninstall` is false, and the UI refuses
-  uninstalls for such managers.
+  index hash, the package identity and its Gatekeeper verdict (`spctl --assess`, waived only by a
+  catalog's `allowUnsignedPackages`), then `installer -pkg`, or `ditto` of a `.dmg`'s app into
+  `/Applications`, as root through `osascript ... with administrator privileges`. Every tool is run
+  through `Tool`, which drains both pipes. `ManagerCapabilities.CanUninstall` is false, and the UI
+  refuses uninstalls for such managers; `InstalledPackagesKeepTheirSource` is false (as for
+  Chocolatey), so catalogs sharing a feed all see its installed packages.
 
 ## Version comparison across ecosystems
 

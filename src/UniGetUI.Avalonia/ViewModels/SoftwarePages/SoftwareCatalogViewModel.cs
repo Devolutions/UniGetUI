@@ -422,12 +422,18 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             || PEInterface.Managers.FirstOrDefault(m => m.Id == PkgManagerId) is not { } manager
             || !manager.IsReady())
             return catalogs;
-        var published = await Task.Run(() => manager.FindPackages(""));
+        // A refresh shows what IT just published, not the feed listing kept for icon lookups.
+        var published = await Task.Run(() =>
+        {
+            manager.RefreshPackageIndexes();
+            return manager.FindPackages("");
+        });
         return catalogs.Select(c => c.PkgFeed is null ? c : new CatalogDefinition
         {
             Id = c.Id,
             Name = c.Name,
             PkgFeed = c.PkgFeed,
+            AllowUnsignedPackages = c.AllowUnsignedPackages,
             Packages =
             [
                 .. c.Packages,

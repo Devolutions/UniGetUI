@@ -37,8 +37,21 @@ there as well is shown alongside the feed's packages. Keep `"packages": []` even
 UniGetUI versions without feed support reject a catalog without it.
 
 A feed is identified by its catalog's `id`, so renaming the catalog keeps everything in place, and
-two catalogs may share a name. To list a feed's package by hand in another catalog, use
-`"ManagerName": "pkg"` and the feed catalog's `id` as `"Source"`.
+two catalogs may share a name or even a feed. Outside the catalog page (Installed, Updates, bundles,
+the command line) the id is the package's source, as in `Installer packages: mac-apps`, so choose
+a readable one. To list a feed's package by hand in another catalog, use `"ManagerName": "pkg"`
+and the feed catalog's `id` as `"Source"`.
+
+### Signatures
+
+Before installing, UniGetUI asks Gatekeeper about the package the same way macOS checks anything
+downloaded: it must be signed with a Developer ID and notarized by Apple. Vendors' own packages
+and disk images usually are. A package Gatekeeper rejects is not installed.
+
+To publish your own unsigned packages, add `"allowUnsignedPackages": true` to that catalog. Its
+packages are then installed as they are, so keep its feed where only administrators can change
+it: UniGetUI refuses an unsigned file, or a file in a folder, that any user on the Mac can write
+to (such as `/Users/Shared`).
 
 A feed can be:
 

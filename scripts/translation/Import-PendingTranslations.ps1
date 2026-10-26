@@ -12,6 +12,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'Languages\TranslationJsonTools.ps1')
+. (Join-Path $PSScriptRoot 'Languages\IntentionalSourceEqualValues.ps1')
 
 $repositoryRoot = Get-FullPath -Path (Join-Path $PSScriptRoot '..\..')
 $resolvedWorkDirectory = Get-FullPath -Path $WorkDirectory
@@ -74,6 +75,14 @@ foreach ($item in $plan) {
         }
     }
 
+    $sameAsEnglish = New-Object System.Collections.Generic.List[string]
+    foreach ($entry in $accepted.GetEnumerator()) {
+        $sourceValue = [string]$sourcePatch[[string]$entry.Key]
+        if ([string]$entry.Value -ceq $sourceValue -and -not (Test-IntentionalSourceEqualValue -LanguageCode $item.code -SourceValue $sourceValue -TargetValue ([string]$entry.Value))) {
+            $sameAsEnglish.Add([string]$entry.Key)
+        }
+    }
+
     if ($accepted.Count -gt 0) {
         $languageFilePath = Join-Path $repositoryRoot $item.languageFile
         $layout = Get-JsonFileLayout -Path $languageFilePath
@@ -92,14 +101,23 @@ foreach ($item in $plan) {
             Imported = $accepted.Count
             PendingAfter = [int]$item.pendingTotal - $accepted.Count
             Rejected = $rejected
+            SameAsEnglish = $sameAsEnglish
         })
 }
 
 $summary = New-Object System.Collections.Generic.List[string]
-$summary.Add('| Language | Translated | Rejected | Still missing |')
-$summary.Add('|---|---:|---:|---:|')
+$summary.Add('| Language | Translated | Same as English | Rejected | Still missing |')
+$summary.Add('|---|---:|---:|---:|---:|')
 foreach ($result in $results) {
-    $summary.Add(('| {0} (`{1}`) | {2} | {3} | {4} |' -f $result.Language, $result.Code, $result.Imported, $result.Rejected.Count, $result.PendingAfter))
+    $summary.Add(('| {0} (`{1}`) | {2} | {3} | {4} | {5} |' -f $result.Language, $result.Code, $result.Imported, $result.SameAsEnglish.Count, $result.Rejected.Count, $result.PendingAfter))
+}
+
+foreach ($result in $results | Where-Object { $_.SameAsEnglish.Count -gt 0 }) {
+    $summary.Add('')
+    $summary.Add("Kept identical to English for ``$($result.Code)`` (check that these are names or words that really do not change):")
+    foreach ($key in $result.SameAsEnglish) {
+        $summary.Add("- ``$key``")
+    }
 }
 
 foreach ($result in $results | Where-Object { $_.Rejected.Count -gt 0 }) {

@@ -209,8 +209,13 @@ jobs:
           ./scripts/translation/Verify-Translations.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Translation verification failed' }
 
+          $changedCodes = @(git diff --name-only -- src/Languages | ForEach-Object { if ($_ -match '^src/Languages/lang_([A-Za-z_-]+)\.json$') { $Matches[1] } })
+          if ($changedCodes.Count -gt 0) {
+            ./scripts/translation/Sync-TranslationStatus.ps1 -LanguageCodes $changedCodes
+          }
+
           $changed = @(git diff --name-only)
-          $unexpected = @($changed | Where-Object { $_ -notmatch '^src/Languages/lang_[A-Za-z_-]+\.json$' -or $_ -eq 'src/Languages/lang_en.json' })
+          $unexpected = @($changed | Where-Object { ($_ -notmatch '^src/Languages/lang_[A-Za-z_-]+\.json$' -or $_ -eq 'src/Languages/lang_en.json') -and $_ -ne 'src/Languages/Data/TranslatedPercentages.json' })
           if ($unexpected.Count -gt 0) { throw "Unexpected changed files: $($unexpected -join ', ')" }
 
           Get-Content -Path (Join-Path $env:RUNNER_TEMP 'summary.md') | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
@@ -224,7 +229,7 @@ jobs:
           BASE_BRANCH: ${{ github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          $languageCount = @(git diff --name-only).Count
+          $languageCount = @(git diff --name-only -- 'src/Languages/lang_*.json').Count
           $branch = "automation/translations-$env:GITHUB_RUN_ID"
           $title = "Translate missing strings in $languageCount languages"
           git config user.name 'github-actions[bot]'
@@ -248,13 +253,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'git push failed' }
 
           $bodyPath = Join-Path $env:RUNNER_TEMP 'pr-body.md'
-          @(
+          $body = @(
             "Machine translations of the strings that ``lang_en.json`` has and these languages were missing, produced by the [translation-sync workflow]($env:RUN_URL). Native speakers are welcome to review them."
             ''
             (Get-Content -Path (Join-Path $env:RUNNER_TEMP 'summary.md') -Raw)
             ''
             'Entries that were rejected or left out stay missing and are offered again in the next run, which starts once this pull request is merged or closed.'
-          ) -join "`n" | Set-Content -Path $bodyPath -Encoding utf8NoBOM
+          ) -join "`n"
+          if ($body.Length -gt 60000) {
+            $body = $body.Substring(0, 60000) + "`n`n*The summary was cut here; the full summary is on [the workflow run]($env:RUN_URL).*"
+          }
+          $body | Set-Content -Path $bodyPath -Encoding utf8NoBOM
 
           gh pr create `
             --repo $env:GITHUB_REPOSITORY `

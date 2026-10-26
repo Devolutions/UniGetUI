@@ -469,7 +469,7 @@ function Get-PlaceholderTokens {
         $match.Value
     }
 
-    return @($tokens | Sort-Object)
+    return @($tokens | Sort-Object -CaseSensitive)
 }
 
 function Get-HtmlTokens {
@@ -483,7 +483,7 @@ function Get-HtmlTokens {
         $match.Value
     }
 
-    return @($tokens | Sort-Object)
+    return @($tokens | Sort-Object -CaseSensitive)
 }
 
 function Get-NewlineCount {
@@ -512,13 +512,13 @@ function Assert-TranslationStructure {
 
     $sourcePlaceholderSignature = (Get-PlaceholderTokens -Value $SourceValue) -join "`n"
     $translatedPlaceholderSignature = (Get-PlaceholderTokens -Value $TranslatedValue) -join "`n"
-    if ($sourcePlaceholderSignature -ne $translatedPlaceholderSignature) {
+    if ($sourcePlaceholderSignature -cne $translatedPlaceholderSignature) {
         throw "Placeholder mismatch for key '$Key'."
     }
 
     $sourceHtmlSignature = (Get-HtmlTokens -Value $SourceValue) -join "`n"
     $translatedHtmlSignature = (Get-HtmlTokens -Value $TranslatedValue) -join "`n"
-    if ($sourceHtmlSignature -ne $translatedHtmlSignature) {
+    if ($sourceHtmlSignature -cne $translatedHtmlSignature) {
         throw "HTML fragment mismatch for key '$Key'."
     }
 

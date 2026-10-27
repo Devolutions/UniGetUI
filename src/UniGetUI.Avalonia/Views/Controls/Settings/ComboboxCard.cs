@@ -60,11 +60,17 @@ public sealed partial class ComboboxCard : SettingsCard
         _inverted_val_ref.Add(value, name);
     }
 
-    public void ShowAddedItems()
+    public void ShowAddedItems() => ShowAddedItems(
+        () => CoreSettings.GetValue(settings_name),
+        value => CoreSettings.SetValue(settings_name, value));
+
+    /// <summary>Shows the added items, reading and writing the selection through the given
+    /// accessors instead of a single string setting.</summary>
+    public void ShowAddedItems(Func<string> readValue, Action<string> writeValue)
     {
         try
         {
-            string savedItem = CoreSettings.GetValue(settings_name);
+            string savedItem = readValue();
             _combobox.SelectedIndex = _elements.IndexOf(_inverted_val_ref[savedItem]);
         }
         catch
@@ -76,10 +82,7 @@ public sealed partial class ComboboxCard : SettingsCard
             try
             {
                 string selectedName = _combobox.SelectedItem?.ToString() ?? "";
-                CoreSettings.SetValue(
-                    settings_name,
-                    _values_ref[selectedName]
-                );
+                writeValue(_values_ref[selectedName]);
                 ValueChanged?.Invoke(this, EventArgs.Empty);
                 var cmd = ValueChangedCommand;
                 if (cmd?.CanExecute(null) == true)

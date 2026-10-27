@@ -63,7 +63,7 @@ internal sealed class TrayService : IDisposable
     {
         try
         {
-            _trayIcon.IsVisible = !Settings.Get(Settings.K.DisableSystemTray);
+            _trayIcon.IsVisible = Settings.IsSystemTrayIconVisible();
 
             string status;
             string tooltip;

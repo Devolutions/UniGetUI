@@ -61,9 +61,51 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         NavMenuModeSelector.ShowAddedItems();
         NavMenuModeSelector.ValueChanged += (_, _) => MainWindow.Instance?.RefreshNavigationMode();
 
+        WindowCloseBehaviorSelector.AddItem(
+            CoreTools.Translate("Keep running in the background, with a system tray icon"),
+            nameof(CoreSettings.WindowCloseBehavior.KeepRunningWithTrayIcon));
+        WindowCloseBehaviorSelector.AddItem(
+            CoreTools.Translate("Keep running in the background, without a system tray icon"),
+            nameof(CoreSettings.WindowCloseBehavior.KeepRunningWithoutTrayIcon));
+        // macOS always keeps the app running when its window closes, so quitting is not a choice there.
+        if (!OperatingSystem.IsMacOS())
+            WindowCloseBehaviorSelector.AddItem(
+                CoreTools.Translate("Quit UniGetUI"),
+                nameof(CoreSettings.WindowCloseBehavior.Quit));
+        WindowCloseBehaviorSelector.Text = CoreTools.Translate("When the main window is closed:");
+        WindowCloseBehaviorSelector.ShowAddedItems(
+            () => GetShownWindowCloseBehavior().ToString(),
+            value => CoreSettings.SetWindowCloseBehavior(Enum.Parse<CoreSettings.WindowCloseBehavior>(value)));
+        WindowCloseBehaviorSelector.ValueChanged += (_, _) => UpdateWindowCloseBehaviorDescription();
+        UpdateWindowCloseBehaviorDescription();
+
         NavigationOrderCard.Description = CoreTools.Translate(
             "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Keyboard shortcuts follow the same order.",
             OperatingSystem.IsMacOS() ? "Option+Up/Down" : "Alt+Up/Down");
         NavigationOrderCard.Click += (_, _) => MainWindow.Instance?.ResetNavigationOrder();
+    }
+
+    // A "Quit" saved on macOS (by an older version's tray checkbox) already behaves as a hidden icon there.
+    private static CoreSettings.WindowCloseBehavior GetShownWindowCloseBehavior()
+    {
+        var behavior = CoreSettings.GetWindowCloseBehavior();
+        return OperatingSystem.IsMacOS() && behavior is CoreSettings.WindowCloseBehavior.Quit
+            ? CoreSettings.WindowCloseBehavior.KeepRunningWithoutTrayIcon
+            : behavior;
+    }
+
+    private void UpdateWindowCloseBehaviorDescription()
+    {
+        WindowCloseBehaviorSelector.Description = GetShownWindowCloseBehavior() switch
+        {
+            CoreSettings.WindowCloseBehavior.KeepRunningWithoutTrayIcon when OperatingSystem.IsLinux() =>
+                CoreTools.Translate("UniGetUI keeps checking for updates. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu.")
+                + " " + CoreTools.Translate("Notifications are not available on Linux, so you will not be told when updates are found."),
+            CoreSettings.WindowCloseBehavior.KeepRunningWithoutTrayIcon =>
+                CoreTools.Translate("UniGetUI keeps checking for updates. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu."),
+            CoreSettings.WindowCloseBehavior.Quit =>
+                CoreTools.Translate("UniGetUI stops checking for updates and sending notifications until you open it again."),
+            _ => null,
+        };
     }
 }

@@ -2004,5 +2004,14 @@
   "UniGetUI could not replace {0}, so it is still running the previous version. Open the log to see what happened.": "UniGetUI could not replace {0}, so it is still running the previous version. Open the log to see what happened.",
   "UniGetUI cannot update itself from a read-only location.": "UniGetUI cannot update itself from a read-only location.",
   "UniGetUI is running from {0}, which cannot be modified, for example a mounted disk image. Move UniGetUI to the Applications folder, open it from there, and try again.": "UniGetUI is running from {0}, which cannot be modified, for example a mounted disk image. Move UniGetUI to the Applications folder, open it from there, and try again.",
-  "Copy link": "Copy link"
+  "Copy link": "Copy link",
+  "When the main window is closed:": "When the main window is closed:",
+  "Keep running in the background, with a system tray icon": "Keep running in the background, with a system tray icon",
+  "Keep running in the background, without a system tray icon": "Keep running in the background, without a system tray icon",
+  "UniGetUI keeps checking for updates. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu.": "UniGetUI keeps checking for updates. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu.",
+  "Notifications are not available on Linux, so you will not be told when updates are found.": "Notifications are not available on Linux, so you will not be told when updates are found.",
+  "UniGetUI stops checking for updates and sending notifications until you open it again.": "UniGetUI stops checking for updates and sending notifications until you open it again.",
+  "UniGetUI is still running": "UniGetUI is still running",
+  "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.",
+  "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI must keep running in the background when its window is closed for notifications to work"
 }

@@ -317,7 +317,14 @@ internal sealed class SettingsPage : UserControl, ITuiPage
         Check("Use the system UI font" + _desktopOnly, Settings.K.UseSystemUIFont);
         Choice("Navigation menu" + _desktopOnly, Settings.K.NavMenuMode,
             [new(CoreTools.Translate("Automatic"), "auto"), new(CoreTools.Translate("Docked"), "docked"), new(CoreTools.Translate("Overlay"), "overlay")]);
-        Check("Close UniGetUI to the system tray" + _desktopOnly, Settings.K.DisableSystemTray, inverted: true);
+        _form.AddChoice(CoreTools.Translate("When the main window is closed:") + _desktopOnly,
+            [
+                new(CoreTools.Translate("Keep running in the background, with a system tray icon"), nameof(Settings.WindowCloseBehavior.KeepRunningWithTrayIcon)),
+                new(CoreTools.Translate("Keep running in the background, without a system tray icon"), nameof(Settings.WindowCloseBehavior.KeepRunningWithoutTrayIcon)),
+                new(CoreTools.Translate("Quit UniGetUI"), nameof(Settings.WindowCloseBehavior.Quit)),
+            ],
+            () => Settings.GetWindowCloseBehavior().ToString(),
+            v => Settings.SetWindowCloseBehavior(Enum.Parse<Settings.WindowCloseBehavior>(v)));
         Check("Show package icons on package lists" + _desktopOnly, Settings.K.DisableIconsOnPackageLists, inverted: true);
         Check("Show illustrations on empty package lists" + _desktopOnly, Settings.K.DisablePackageIllustrations, inverted: true);
         Check("Use software rendering automatically on hosts without a GPU" + _desktopOnly, Settings.K.DisableAutoSoftwareRenderingOnGpuLessHosts, inverted: true);

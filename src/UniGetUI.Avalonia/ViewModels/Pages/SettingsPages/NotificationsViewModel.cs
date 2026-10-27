@@ -7,11 +7,11 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
 public partial class NotificationsViewModel : ViewModelBase
 {
-    [ObservableProperty] private bool _isSystemTrayEnabled;
+    [ObservableProperty] private bool _isBackgroundModeEnabled;
     [ObservableProperty] private bool _isNotificationsEnabled;
 
-    /// <summary>True when the system-tray-disabled warning should be shown.</summary>
-    public bool IsSystemTrayWarningVisible => !IsSystemTrayEnabled;
+    /// <summary>True when closing the window quits UniGetUI, which turns notifications off.</summary>
+    public bool IsSystemTrayWarningVisible => !IsBackgroundModeEnabled;
 
     // Per-type notifications are delivered only by the Windows/macOS bridges; Linux has no
     // delivery path, so the whole "Notification types" group is hidden there.
@@ -20,7 +20,7 @@ public partial class NotificationsViewModel : ViewModelBase
 
     public NotificationsViewModel()
     {
-        _isSystemTrayEnabled = !CoreSettings.Get(CoreSettings.K.DisableSystemTray);
+        _isBackgroundModeEnabled = !CoreSettings.Get(CoreSettings.K.DisableSystemTray);
         _isNotificationsEnabled = !CoreSettings.Get(CoreSettings.K.DisableNotifications);
     }
 

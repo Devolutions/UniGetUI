@@ -56,7 +56,7 @@ public static class SettingsSearchIndex
         new("Navigation menu:", ["sidebar", "nav menu", "navigation", "layout", "docked", "overlay"], typeof(Interface_P), "NavMenuModeSelector"),
         new("Navigation menu order", ["sidebar", "nav menu", "navigation", "order", "reorder", "drag", "tabs", "pages", "shortcuts"], typeof(Interface_P), "NavigationOrderCard"),
         new("Automatically switch to software rendering when Windows has no hardware GPU", ["rendering", "gpu", "software rendering"], typeof(Interface_P), "InterfaceRenderingCard"),
-        new("Close UniGetUI to the system tray", ["system tray", "background", "minimize to tray"], typeof(Interface_P), "DisableSystemTrayCard"),
+        new("When the main window is closed:", ["system tray", "tray icon", "hide icon", "background", "minimize to tray", "close", "quit"], typeof(Interface_P), "WindowCloseBehaviorSelector"),
         new("Manage UniGetUI autostart behaviour", ["autostart", "run at login", "startup"], typeof(Interface_P), "EditAutostartSettings"),
         new("Show package icons on package lists", ["package icons"], typeof(Interface_P), "InterfacePackageListsCard"),
         new("Show illustrations on package lists", ["illustrations", "package illustrations"], typeof(Interface_P), "PackageIllustrationsCard"),

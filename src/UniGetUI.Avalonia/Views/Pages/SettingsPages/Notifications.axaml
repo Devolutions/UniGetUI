@@ -19,8 +19,10 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <!-- Warning shown when system tray is disabled (Windows-only) -->
-            <TextBlock Text="{t:Translate The system tray icon must be enabled in order for notifications to work}"
+            <!-- Warning shown when closing the window quits UniGetUI (the tray icon itself is not needed) -->
+            <TextBlock Text="{t:Translate UniGetUI must keep running in the background when its window is closed for notifications to work}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
                        FontSize="14"
                        Margin="0,0,0,8"
                        HorizontalAlignment="Center"

@@ -72,10 +72,8 @@
                                               Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-                <settings:CheckboxCard x:Name="DisableSystemTrayCard"
-                                       SettingName="DisableSystemTray"
-                                       Text="{t:Translate Close UniGetUI to the system tray}"
-                                       StateChangedCommand="{Binding RefreshSystemTrayCommand}"
+                <settings:ComboboxCard x:Name="WindowCloseBehaviorSelector"
+                                       ValueChangedCommand="{Binding RefreshSystemTrayCommand}"
                                        CornerRadius="8,8,0,0"/>
 
                 <settings:ButtonCard x:Name="EditAutostartSettings"

@@ -93,6 +93,59 @@ namespace UniGetUI.Core.SettingsEngine.Tests
         }
 
         [Theory]
+        [InlineData(false, false, Settings.WindowCloseBehavior.KeepRunningWithTrayIcon)]
+        [InlineData(false, true, Settings.WindowCloseBehavior.KeepRunningWithoutTrayIcon)]
+        [InlineData(true, false, Settings.WindowCloseBehavior.Quit)]
+        [InlineData(true, true, Settings.WindowCloseBehavior.Quit)]
+        public void WindowCloseBehaviorIsReadFromTheStoredFlags(
+            bool disableSystemTray,
+            bool hideSystemTrayIcon,
+            Settings.WindowCloseBehavior expected)
+        {
+            Settings.Set(Settings.K.DisableSystemTray, disableSystemTray);
+            Settings.Set(Settings.K.HideSystemTrayIcon, hideSystemTrayIcon);
+
+            Assert.Equal(expected, Settings.GetWindowCloseBehavior());
+            Assert.Equal(
+                expected is Settings.WindowCloseBehavior.KeepRunningWithTrayIcon,
+                Settings.IsSystemTrayIconVisible()
+            );
+        }
+
+        [Theory]
+        [InlineData(Settings.WindowCloseBehavior.KeepRunningWithTrayIcon, false, false)]
+        [InlineData(Settings.WindowCloseBehavior.KeepRunningWithoutTrayIcon, false, true)]
+        [InlineData(Settings.WindowCloseBehavior.Quit, true, false)]
+        public void SetWindowCloseBehaviorWritesBothFlags(
+            Settings.WindowCloseBehavior behavior,
+            bool disableSystemTray,
+            bool hideSystemTrayIcon)
+        {
+            Settings.Set(Settings.K.DisableSystemTray, !disableSystemTray);
+            Settings.Set(Settings.K.HideSystemTrayIcon, !hideSystemTrayIcon);
+
+            Settings.SetWindowCloseBehavior(behavior);
+
+            Assert.Equal(disableSystemTray, Settings.Get(Settings.K.DisableSystemTray));
+            Assert.Equal(hideSystemTrayIcon, Settings.Get(Settings.K.HideSystemTrayIcon));
+            Assert.Equal(behavior, Settings.GetWindowCloseBehavior());
+        }
+
+        [Fact]
+        public void HidingTheTrayIconKeepsNotificationsEnabled()
+        {
+            Settings.Set(Settings.K.DisableNotifications, false);
+
+            Settings.SetWindowCloseBehavior(Settings.WindowCloseBehavior.KeepRunningWithoutTrayIcon);
+            Assert.False(Settings.AreNotificationsDisabled());
+
+            Settings.SetWindowCloseBehavior(Settings.WindowCloseBehavior.Quit);
+            Assert.True(Settings.AreNotificationsDisabled());
+
+            Settings.SetWindowCloseBehavior(Settings.WindowCloseBehavior.KeepRunningWithTrayIcon);
+        }
+
+        [Theory]
         [InlineData(Settings.K.Test1, true, false, false, true)]
         [InlineData(Settings.K.Test2, true, false, false, false)]
         [InlineData(Settings.K.Test3, true, false, true, true)]

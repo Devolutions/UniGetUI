@@ -12,6 +12,36 @@ public partial class Settings
      *
      */
 
+    public enum WindowCloseBehavior
+    {
+        KeepRunningWithTrayIcon,
+        KeepRunningWithoutTrayIcon,
+        Quit,
+    }
+
+    // Stored as two flags so that "Quit" keeps reading DisableSystemTray exactly as before, and a
+    // version that does not know HideSystemTrayIcon simply shows the icon again.
+    public static WindowCloseBehavior GetWindowCloseBehavior()
+    {
+        if (Get(K.DisableSystemTray))
+            return WindowCloseBehavior.Quit;
+
+        return Get(K.HideSystemTrayIcon)
+            ? WindowCloseBehavior.KeepRunningWithoutTrayIcon
+            : WindowCloseBehavior.KeepRunningWithTrayIcon;
+    }
+
+    public static void SetWindowCloseBehavior(WindowCloseBehavior behavior)
+    {
+        Set(K.DisableSystemTray, behavior is WindowCloseBehavior.Quit);
+        Set(K.HideSystemTrayIcon, behavior is WindowCloseBehavior.KeepRunningWithoutTrayIcon);
+    }
+
+    public static bool IsSystemTrayIconVisible() =>
+        GetWindowCloseBehavior() is WindowCloseBehavior.KeepRunningWithTrayIcon;
+
+    // Notifications depend on the process staying alive after the window closes, not on the
+    // tray icon, so hiding the icon alone leaves them enabled.
     public static bool AreNotificationsDisabled() =>
         Get(K.DisableSystemTray) || Get(K.DisableNotifications);
 

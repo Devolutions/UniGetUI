@@ -1033,17 +1033,31 @@ try {
     Wait-ForInstalledPackage -Fixture $specificUpdateFixture -ExpectedVersion ([string]$fixtureState[$specificUpdateFixture.manager].latestVersion) | Out-Null
     Add-Tested 'package update'
 
-    $updateManager = Invoke-CliFailure -Arguments @('package', 'update-manager', '--manager', [string]$bundleFixture.manager)
-    if ($updateManager.Text -notmatch 'cannot update manager packages') {
-        throw "package update-manager did not report the expected headless limitation: $($updateManager.Text)"
+    # Both bulk updates are scoped to a fixture manager: an unscoped update-all would update
+    # whatever else the runner image has installed.
+    foreach ($bulkUpdate in @(
+            @{ Command = 'update-manager'; Role = 'update-manager' },
+            @{ Command = 'update-all'; Role = 'update-all' }
+        )) {
+        $bulkFixture = Get-ManifestManagerByRole -Role $bulkUpdate.Role
+        if ($null -eq $bulkFixture) {
+            throw "The CLI E2E manifest must define a package manager fixture with the $($bulkUpdate.Role) role."
+        }
+        $bulkResult = Invoke-CliJson -Arguments @('package', $bulkUpdate.Command, '--manager', [string]$bulkFixture.manager, '--wait', 'true', '--timeout', '600')
+        Assert-JsonCommandSucceeded -Response $bulkResult -Label "package $($bulkUpdate.Command) $($bulkFixture.manager)"
+        if (-not $bulkResult.completed) {
+            throw "package $($bulkUpdate.Command) did not wait for its updates: $($bulkResult | ConvertTo-Json -Depth 10)"
+        }
+        if (@($bulkResult.results | Where-Object { $_.package.manager -ne $bulkFixture.manager }).Count -ne 0) {
+            throw "package $($bulkUpdate.Command) --manager $($bulkFixture.manager) queued updates for another manager: $($bulkResult | ConvertTo-Json -Depth 10)"
+        }
+        Add-Tested "package $($bulkUpdate.Command)"
     }
-    Add-Tested 'package update-manager' 'expected-failure'
 
-    $updateAll = Invoke-CliFailure -Arguments @('package', 'update-all')
-    if ($updateAll.Text -notmatch 'cannot update all packages') {
-        throw "package update-all did not report the expected headless limitation: $($updateAll.Text)"
+    $unknownManagerUpdate = Invoke-CliFailure -Arguments @('package', 'update-all', '--manager', 'no-such-manager')
+    if ($unknownManagerUpdate.Text -notmatch 'No package manager matching') {
+        throw "package update-all did not reject an unknown manager: $($unknownManagerUpdate.Text)"
     }
-    Add-Tested 'package update-all' 'expected-failure'
 
     $reinstall = Invoke-CliJson -Arguments (@('package', 'reinstall') + (Get-PackageArguments -Fixture $bundleFixture -IncludeSource))
     Assert-JsonCommandSucceeded -Response $reinstall -Label 'package reinstall'

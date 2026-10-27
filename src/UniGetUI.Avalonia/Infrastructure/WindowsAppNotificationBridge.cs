@@ -35,7 +35,8 @@ internal static class WindowsAppNotificationBridge
     /// </summary>
     public static string? TryParseToastLaunchArgument(string arg)
     {
-        if (string.IsNullOrEmpty(arg))
+        // Package links name a package rather than an action; StartupArgumentProcessor opens them.
+        if (string.IsNullOrEmpty(arg) || PackageLink.IsPackageLink(arg))
             return null;
 
         const string prefix = "unigetui://";

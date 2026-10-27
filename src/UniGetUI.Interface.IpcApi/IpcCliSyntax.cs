@@ -180,8 +180,8 @@ Core commands:
   bundle get|reset|import|export|add|remove|install
   package search|details|versions|installed|updates|install|download|reinstall|repair|update|uninstall|show
   package ignored list|add|remove
-  package update-all
-  package update-manager
+  package update-all [--manager <id>] [--wait true|false] [--timeout <seconds>]
+  package update-manager --manager <id> [--wait true|false] [--timeout <seconds>]
 
 Examples:
   unigetui status
@@ -189,6 +189,7 @@ Examples:
   unigetui package search --manager dotnet-tool --query dotnetsay
   unigetui package install --manager dotnet-tool --id dotnetsay --version 2.1.4 --scope Global
   unigetui operation wait --id 123 --timeout 300
+  unigetui package update-all --wait true
   unigetui backup local create
   unigetui backup github login start --launch-browser
 """;

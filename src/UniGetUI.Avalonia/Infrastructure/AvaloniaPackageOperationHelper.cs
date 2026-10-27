@@ -30,9 +30,19 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// </summary>
 internal static class AvaloniaPackageOperationHelper
 {
-    public static async Task UpdateAllAsync(bool background = false)
+    public static Task<IReadOnlyList<AbstractOperation>> UpdateAllAsync(bool background = false)
+        => UpdatePackagesAsync(UpgradablePackagesLoader.Instance.Packages.ToList(), background);
+
+    public static Task<IReadOnlyList<AbstractOperation>> UpdateAllForManagerAsync(string managerName)
+        => UpdatePackagesAsync(UpgradablePackagesLoader.Instance.Packages
+            .Where(p => p.Manager.Id.Equals(managerName, StringComparison.OrdinalIgnoreCase))
+            .ToList());
+
+    private static async Task<IReadOnlyList<AbstractOperation>> UpdatePackagesAsync(
+        IReadOnlyList<IPackage> packages, bool background = false)
     {
-        foreach (var pkg in UpgradablePackagesLoader.Instance.Packages.ToList())
+        List<AbstractOperation> started = [];
+        foreach (var pkg in packages)
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
@@ -41,23 +51,10 @@ internal static class AvaloniaPackageOperationHelper
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
+            started.Add(op);
         }
-    }
 
-    public static async Task UpdateAllForManagerAsync(string managerName)
-    {
-        foreach (var pkg in UpgradablePackagesLoader.Instance.Packages
-            .Where(p => p.Manager.Id == managerName)
-            .ToList())
-        {
-            var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
-            if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
-            var op = new UpdatePackageOperation(pkg, opts);
-            op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
-            op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
-            AvaloniaOperationRegistry.Add(op);
-            _ = op.MainThread();
-        }
+        return started;
     }
 
     public static async Task UpdateForIdAsync(string packageId)

@@ -28,6 +28,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     private MenuItem? _menuInteractive;
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
+    private MenuItem? _menuCopyLink;
 
     public DiscoverSoftwarePage(CatalogEditorViewModel? catalogEditor = null) : base(new PackagesPageData
     {
@@ -272,6 +273,8 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         var menuDetails = new MenuItem { Header = ShortcutHeader(CoreTools.Translate("Package details"), DetailsShortcut), Icon = LoadMenuIcon("info_round") };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
+        _menuCopyLink = CreateCopyLinkMenuItem();
+
         var menu = new ContextMenu();
         menu.Items.Add(menuInstall);
         menu.Items.Add(new Separator());
@@ -284,6 +287,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         menu.Items.Add(_menuDownloadInstaller);
         menu.Items.Add(new Separator());
         menu.Items.Add(menuDetails);
+        menu.Items.Add(_menuCopyLink);
 
         return menu;
     }
@@ -291,7 +295,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     protected override void WhenShowingContextMenu(IPackage package)
     {
         if (_menuAsAdmin is null || _menuInteractive is null
-            || _menuSkipHash is null || _menuDownloadInstaller is null)
+            || _menuSkipHash is null || _menuDownloadInstaller is null || _menuCopyLink is null)
         {
             Logger.Warn("Context menu items are null on DiscoverSoftwarePage");
             return;
@@ -301,6 +305,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         _menuInteractive.IsEnabled = package.Manager.Capabilities.CanRunInteractively;
         _menuSkipHash.IsEnabled = package.Manager.Capabilities.CanSkipIntegrityChecks;
         _menuDownloadInstaller.IsEnabled = package.Manager.Capabilities.CanDownloadInstaller;
+        _menuCopyLink.IsEnabled = PackageLink.CanLinkTo(package);
     }
 
     // ─── Abstract action overrides ────────────────────────────────────────────

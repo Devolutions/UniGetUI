@@ -19,6 +19,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Logging;
@@ -340,6 +341,33 @@ public abstract partial class AbstractPackagesPage : UserControl,
         Width = 16,
         Height = 16,
     };
+
+    /// <summary>"Copy link": puts a unigetui://package link to the selected package on the clipboard.</summary>
+    protected MenuItem CreateCopyLinkMenuItem()
+    {
+        var item = new MenuItem { Header = CoreTools.Translate("Copy link"), Icon = LoadMenuIcon("share") };
+        item.Click += (_, _) => _ = CopyPackageLinkAsync(SelectedItem);
+        return item;
+    }
+
+    private static async Task CopyPackageLinkAsync(IPackage? package)
+    {
+        if (package is null || !PackageLink.CanLinkTo(package)
+            || GetMainWindow() is not { } win || win.Clipboard is not { } clipboard) return;
+
+        await clipboard.SetTextAsync(PackageLink.FromPackage(package).ToUri());
+
+        if (win.DataContext is not MainWindowViewModel main) return;
+        var toast = new InfoBarViewModel
+        {
+            Title = CoreTools.Translate("A link to {0} was copied to the clipboard", package.Name),
+            Severity = InfoBarSeverity.Success,
+            IsClosable = true,
+            IsOpen = true,
+        };
+        toast.OnClosed = () => main.DismissToast(toast);
+        main.ShowToast(toast);
+    }
 
     // ─── Protected access to main toolbar controls for subclasses ─────────────
     /// <summary>Sets the icon and text of the primary action button.</summary>

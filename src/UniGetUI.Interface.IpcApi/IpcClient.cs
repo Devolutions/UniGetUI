@@ -1090,17 +1090,102 @@ public sealed class IpcClient : IDisposable
         );
     }
 
-    public async Task<IpcCommandResult> UpdateAllAsync()
+    public async Task<IpcPackageBulkOperationResult> UpdateAllAsync(string? managerName = null)
     {
-        return await SendCommandAsync(IpcHttpRoutes.Path("/packages/update-all"));
+        return await SendBulkOperationAsync(
+            IpcHttpRoutes.Path("/packages/update-all"),
+            string.IsNullOrWhiteSpace(managerName)
+                ? null
+                : new Dictionary<string, string> { ["manager"] = managerName }
+        );
     }
 
-    public async Task<IpcCommandResult> UpdateManagerAsync(string managerName)
+    public async Task<IpcPackageBulkOperationResult> UpdateManagerAsync(string managerName)
     {
-        return await SendCommandAsync(
+        return await SendBulkOperationAsync(
             IpcHttpRoutes.Path("/packages/update-manager"),
             new Dictionary<string, string> { ["manager"] = managerName }
         );
+    }
+
+    /// <summary>
+    /// Waits for every operation a bulk command queued. On timeout, returns the statuses reached
+    /// so far with <c>Completed</c> unset; the remaining operations keep running.
+    /// </summary>
+    public async Task<IpcPackageBulkOperationResult> WaitForBulkOperationAsync(
+        IpcPackageBulkOperationResult queued,
+        int timeoutSeconds = 3600,
+        int delayMilliseconds = 1000
+    )
+    {
+        if (queued.Completed || queued.Status != "success")
+        {
+            return queued;
+        }
+
+        timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 86400);
+        delayMilliseconds = Math.Clamp(delayMilliseconds, 100, 10000);
+
+        DateTime deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+        while (true)
+        {
+            var operations = (await ListOperationsAsync()).ToDictionary(operation => operation.Id);
+            var results = queued.Results
+                .Select(result => ToWaitedResult(
+                    result,
+                    operations.GetValueOrDefault(result.OperationId)
+                ))
+                .ToArray();
+            bool completed = results.All(result => result.Completed);
+
+            if (completed || DateTime.UtcNow >= deadline)
+            {
+                int failed = results.Count(result => result.Completed && result.Status == "error");
+                return new IpcPackageBulkOperationResult
+                {
+                    Status = completed && failed == 0 ? "success" : "error",
+                    Command = queued.Command,
+                    Completed = completed,
+                    Message = completed
+                        ? failed == 0 ? null : $"{failed} of {results.Length} updates did not succeed."
+                        : $"Timed out while waiting for {results.Count(result => !result.Completed)} of {results.Length} updates. They keep running in UniGetUI.",
+                    QueuedCount = queued.QueuedCount,
+                    SucceededCount = results.Count(result => result.Completed && result.Status == "success"),
+                    FailedCount = failed,
+                    Results = results,
+                };
+            }
+
+            await Task.Delay(delayMilliseconds);
+        }
+    }
+
+    internal static IpcPackageOperationResult ToWaitedResult(
+        IpcPackageOperationResult queued,
+        IpcOperationInfo? operation
+    )
+    {
+        // An operation drops out of the list when it is forgotten or pruned, which only
+        // happens once it has finished.
+        string status = operation?.Status ?? "unknown";
+        bool completed = status is "succeeded" or "failed" or "canceled" or "unknown";
+        return new IpcPackageOperationResult
+        {
+            Status = !completed || status == "succeeded" ? "success" : "error",
+            Command = queued.Command,
+            OperationId = queued.OperationId,
+            OperationStatus = status,
+            Completed = completed,
+            Message = status switch
+            {
+                "succeeded" => null,
+                "canceled" => "The operation was canceled.",
+                "unknown" => "UniGetUI no longer tracks this operation, so its result is unknown.",
+                _ when !completed => queued.Message,
+                _ => operation?.LiveLine,
+            },
+            Package = operation?.Package ?? queued.Package,
+        };
     }
 
     public async Task<IpcPackageOperationResult> InstallPackageAsync(
@@ -1240,6 +1325,23 @@ public sealed class IpcClient : IDisposable
                 BuildPackageQueryParameters(request)
             )
             ?? new IpcPackageOperationResult
+            {
+                Status = "error",
+                Message = "The IPC API returned an empty response.",
+            };
+    }
+
+    private async Task<IpcPackageBulkOperationResult> SendBulkOperationAsync(
+        string relativePath,
+        IReadOnlyDictionary<string, string>? queryParameters
+    )
+    {
+        return await ReadAuthenticatedJsonAsync<IpcPackageBulkOperationResult>(
+                HttpMethod.Post,
+                relativePath,
+                queryParameters
+            )
+            ?? new IpcPackageBulkOperationResult
             {
                 Status = "error",
                 Message = "The IPC API returned an empty response.",

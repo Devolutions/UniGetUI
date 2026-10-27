@@ -11,9 +11,6 @@ public enum BrokerUnreachableCause
     ConnectionClosed,
 }
 
-internal sealed class BrokerConnectionClosedException(string message, Exception? innerException = null)
-    : IOException(message, innerException);
-
 public static class BrokerReachability
 {
     private const int DiagnosticResponseBodyBytes = 65536;

@@ -268,7 +268,7 @@ internal static class PkgFeed
             if (metadata is null)
             {
                 metadata = PkgMetadata.Read(file, File.Exists(icon) ? null : icon, iconFromPayload: false);
-                TryWriteFile(saved, JsonSerializer.SerializeToUtf8Bytes(metadata, PkgMetadataJsonContext.Default.PkgMetadata));
+                TryWriteFile(saved, PkgJson.SerializeToUtf8Bytes(metadata, PkgMetadataJsonContext.Default.PkgMetadata));
             }
             ParsedFiles[file] = new ParsedFile(info.Length, info.LastWriteTimeUtc, metadata);
             return metadata;
@@ -350,7 +350,7 @@ internal static class PkgFeed
         try
         {
             return File.Exists(saved)
-                ? JsonSerializer.Deserialize(File.ReadAllBytes(saved), PkgMetadataJsonContext.Default.PkgMetadata)
+                ? PkgJson.Deserialize(File.ReadAllBytes(saved), PkgMetadataJsonContext.Default.PkgMetadata)
                 : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -425,7 +425,7 @@ internal static class PkgFeed
 
     internal static IReadOnlyList<PkgFeedItem> ParseIndex(byte[] json, Uri indexUrl)
     {
-        var index = JsonSerializer.Deserialize(json, PkgFeedJsonContext.Default.PkgFeedIndex)
+        var index = PkgJson.Deserialize(json, PkgFeedJsonContext.Default.PkgFeedIndex)
             ?? throw new InvalidDataException("The package feed index is empty.");
         if (index.Version != PkgFeedIndex.CurrentVersion)
             throw new InvalidDataException($"Unsupported package feed index version: {index.Version}.");

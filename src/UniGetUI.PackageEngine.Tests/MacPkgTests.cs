@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Text.Json;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Managers.MacPkgManager;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
@@ -19,12 +20,17 @@ public sealed class MacPkgTests : IDisposable
         Directory.CreateDirectory(_directory);
         PkgFeed.TestIconDirectoryOverride = Path.Combine(_directory, "extracted-icons");
         PkgInstaller.LockDirectory = Path.Combine(_directory, "lock");
+        // A CI runner may be an administrator; tests choose the elevation path themselves.
+        PkgInstaller.IsRoot = () => false;
+        PkgInstaller.RootExecutable = () => null;
     }
 
     public void Dispose()
     {
         PkgFeed.TestIconDirectoryOverride = null;
         PkgInstaller.LockDirectory = "/private/var/run/com.devolutions.unigetui";
+        PkgInstaller.IsRoot = CoreTools.IsAdministrator;
+        PkgInstaller.RootExecutable = () => null;
         Directory.Delete(_directory, recursive: true);
     }
 
@@ -177,6 +183,17 @@ public sealed class MacPkgTests : IDisposable
         byte[] huge = new byte[PkgMetadata.MaxMetadataBytes + 1];
         var archive = Xar(new XarFile("PackageInfo", huge));
         Assert.Throws<InvalidDataException>(() => PkgMetadata.Read(new MemoryStream(archive)));
+    }
+
+    [Fact]
+    public void FoldersNestedTooDeeplyAreRejected()
+    {
+        static MemoryStream Nested(int depth) => new(Xar(new XarFile(
+            string.Join('/', Enumerable.Range(0, depth).Select(i => "d" + i)) + "/PackageInfo", Encoding.UTF8.GetBytes("<pkg-info/>"))));
+        using (var shallow = Nested(10))
+            Assert.NotNull(XarArchive.Open(shallow).ReadFile(string.Join('/', Enumerable.Range(0, 10).Select(i => "d" + i)) + "/PackageInfo", 1024));
+        using var deep = Nested(100);
+        Assert.Throws<InvalidDataException>(() => XarArchive.Open(deep));
     }
 
     [Fact]

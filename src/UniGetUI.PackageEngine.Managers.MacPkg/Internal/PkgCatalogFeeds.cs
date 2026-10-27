@@ -38,7 +38,7 @@ internal static class PkgCatalogFeeds
 
     internal static IReadOnlyList<PkgFeedDeclaration> Parse(byte[] json)
     {
-        var document = JsonSerializer.Deserialize(json, PkgCatalogJsonContext.Default.PkgCatalogDocument);
+        var document = PkgJson.Deserialize(json, PkgCatalogJsonContext.Default.PkgCatalogDocument);
         var feeds = new List<PkgFeedDeclaration>();
         foreach (var catalog in document?.Catalogs ?? [])
         {

@@ -117,7 +117,7 @@ internal static class PkgHelperClient
         await using var stream = new NetworkStream(socket, ownsSocket: false);
         var request = new PkgHelperRequest { Catalog = catalog, Id = item.Id, Version = item.Version };
         await stream.WriteAsync(Encoding.UTF8.GetBytes(
-            JsonSerializer.Serialize(request, PkgHelperJsonContext.Default.PkgHelperRequest) + "\n"));
+            PkgJson.Serialize(request, PkgHelperJsonContext.Default.PkgHelperRequest) + "\n"));
         log("Installing through the UniGetUI package helper, which needs no administrator password...");
 
         // Once sent, the install is not canceled: the helper runs it as root to the end, as a prompt would.
@@ -146,7 +146,7 @@ internal static class PkgHelperClient
         try
         {
             if (line.StartsWith('{'))
-                message = JsonSerializer.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperMessage);
+                message = PkgJson.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperMessage);
         }
         catch (JsonException) { }
         if (message is null)

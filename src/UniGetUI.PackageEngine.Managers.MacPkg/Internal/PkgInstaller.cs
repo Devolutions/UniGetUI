@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text.Json;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
@@ -86,7 +85,7 @@ internal static class PkgInstaller
     {
         progress(OperationProgress.ForStage(OperationProgressStage.Installing));
         log("Asking for administrator rights; the package is then downloaded, checked and installed as root...");
-        string order = JsonSerializer.Serialize(PkgElevatedInstall.From(item, allowUnsigned),
+        string order = PkgJson.Serialize(PkgElevatedInstall.From(item, allowUnsigned),
             PkgHelperJsonContext.Default.PkgElevatedInstall);
         string command = $"{CoreTools.QuoteForPosixShell(executable)} {PkgHelperCommand.Command} "
             + $"{PkgHelperCommand.InstallItemVerb} {CoreTools.QuoteForPosixShell(order)} 2>&1";

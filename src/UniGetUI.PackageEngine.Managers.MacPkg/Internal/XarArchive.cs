@@ -53,12 +53,17 @@ internal sealed class XarArchive
         var archive = new XarArchive(stream, headerSize + (long)tocCompressed);
         XElement root = ParseXml(toc).Root?.Element("toc")
             ?? throw new InvalidDataException("The installer package has no table of contents.");
-        archive.AddFiles(root, "");
+        archive.AddFiles(root, "", 0);
         return archive;
     }
 
-    private void AddFiles(XElement parent, string prefix)
+    // Real packages nest a few folders deep; a crafted one must not exhaust the stack before it is checked.
+    private const int MaxDirectoryDepth = 64;
+
+    private void AddFiles(XElement parent, string prefix, int depth)
     {
+        if (depth > MaxDirectoryDepth)
+            throw new InvalidDataException("The installer package's folders are nested too deeply.");
         foreach (XElement file in parent.Elements("file"))
         {
             string? name = file.Element("name")?.Value;
@@ -67,7 +72,7 @@ internal sealed class XarArchive
             string path = prefix + name;
             if (file.Element("type")?.Value == "directory")
             {
-                AddFiles(file, path + "/");
+                AddFiles(file, path + "/", depth + 1);
                 continue;
             }
             if (file.Element("data") is not { } data)

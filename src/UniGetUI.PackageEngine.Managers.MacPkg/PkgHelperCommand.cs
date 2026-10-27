@@ -132,12 +132,12 @@ public static class PkgHelperCommand
     private static int InstallItem(string json, TextWriter output)
     {
         void Write(PkgHelperMessage message) =>
-            output.WriteLine(JsonSerializer.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage));
+            output.WriteLine(PkgJson.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage));
 
         PkgHelperMessage result;
         try
         {
-            var order = JsonSerializer.Deserialize(json, PkgHelperJsonContext.Default.PkgElevatedInstall)
+            var order = PkgJson.Deserialize(json, PkgHelperJsonContext.Default.PkgElevatedInstall)
                 ?? throw new InvalidDataException("The install order is empty.");
             result = InstallItemAsync(order.ToItem(), order.AllowUnsigned, text => Write(new PkgHelperMessage { Log = text }))
                 .GetAwaiter().GetResult();
@@ -204,7 +204,7 @@ public static class PkgHelperCommand
             async Task Send(PkgHelperMessage message)
             {
                 byte[] line = Encoding.UTF8.GetBytes(
-                    JsonSerializer.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage) + "\n");
+                    PkgJson.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage) + "\n");
                 await writeLock.WaitAsync();
                 try
                 {
@@ -223,7 +223,7 @@ public static class PkgHelperCommand
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 string line = await ReadLineAsync(stream, timeout.Token);
-                var request = JsonSerializer.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperRequest)
+                var request = PkgJson.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperRequest)
                     ?? throw new InvalidDataException("The request is empty.");
                 journal($"Asked to install {request.Id} {request.Version} from catalog {request.Catalog}.");
                 await OneInstallAtATime.WaitAsync();

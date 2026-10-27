@@ -1,4 +1,3 @@
-using System.Text.Json;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
@@ -34,7 +33,7 @@ public static class PkgIndexCommand
         var (index, skipped) = Build(folder);
         string destination = Path.Combine(folder, PkgFeed.IndexFileName);
         string temporary = destination + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(index, PkgFeedJsonContext.Default.PkgFeedIndex) + Environment.NewLine);
+        File.WriteAllText(temporary, PkgJson.Serialize(index, PkgFeedJsonContext.Default.PkgFeedIndex) + Environment.NewLine);
         File.Move(temporary, destination, overwrite: true);
 
         foreach (var entry in index.Packages)

@@ -13,6 +13,10 @@ internal static class BrokerPolicyFailure
             && exception.StatusCode is null
             && exception.BrokerError is null);
 
+    public static bool IsClientNotAuthenticated(BrokerClientException exception) =>
+        exception.StatusCode is 401
+        || exception.BrokerError?.Code is ErrorCode.Unauthorized or ErrorCode.Unauthenticated;
+
     public static bool IsAccessDenied(BrokerClientException exception) =>
         exception.BrokerError is { } error
         && (exception.StatusCode is 401 or 403

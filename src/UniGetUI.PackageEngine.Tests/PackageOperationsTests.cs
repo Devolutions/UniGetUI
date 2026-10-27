@@ -1426,6 +1426,24 @@ public sealed class PackageOperationsTests
         await AssertBrokerUnavailableFailure(transport);
     }
 
+    [Theory]
+    [InlineData(BrokerUnreachableCause.NotListening, "The Devolutions Agent package broker is not running")]
+    [InlineData(BrokerUnreachableCause.ConnectionClosed, "Devolutions Agent refused this copy of UniGetUI")]
+    [InlineData(BrokerUnreachableCause.Unknown, "Agent broker unavailable")]
+    public async Task BrokerOperationExplainsWhyTheBrokerIsUnreachable(BrokerUnreachableCause cause, string expectedTitle)
+    {
+        var transport = new FakeBrokerTransport(healthy: false);
+        PackageOperation.BrokerUnreachableDiagnosis = _ => Task.FromResult(cause);
+        try
+        {
+            await AssertBrokerUnavailableFailure(transport, expectedTitle);
+        }
+        finally
+        {
+            PackageOperation.BrokerUnreachableDiagnosis = null;
+        }
+    }
+
     [Fact]
     public async Task BrokerOperationFailsWithoutLocalFallbackWhenBrokerDropsAfterProbe()
     {
@@ -1550,7 +1568,9 @@ public sealed class PackageOperationsTests
     /// broker-unavailable metadata, raises <see cref="PackageOperation.BrokerUnavailable"/>,
     /// and never falls back to local process execution.
     /// </summary>
-    private static async Task AssertBrokerUnavailableFailure(FakeBrokerTransport transport)
+    private static async Task AssertBrokerUnavailableFailure(
+        FakeBrokerTransport transport,
+        string expectedTitle = "Agent broker unavailable")
     {
         bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
         bool localExecutionPrepared = false;
@@ -1570,7 +1590,12 @@ public sealed class PackageOperationsTests
             .Build();
         var package = new PackageBuilder().WithManager(manager).Build();
         string? notifiedMessage = null;
-        EventHandler<BrokerFailureDescription> onBrokerUnavailable = (_, failure) => notifiedMessage = failure.Message;
+        string? notifiedTitle = null;
+        EventHandler<BrokerFailureDescription> onBrokerUnavailable = (_, failure) =>
+        {
+            notifiedTitle = failure.Title;
+            notifiedMessage = failure.Message;
+        };
         PackageOperation.BrokerUnavailable += onBrokerUnavailable;
         PackageOperation.BrokerTransportFactory = () => transport;
         Settings.Set(Settings.K.UseAgentBroker, true);
@@ -1581,9 +1606,10 @@ public sealed class PackageOperationsTests
 
             Assert.Equal(OperationVeredict.Failure, veredict);
             Assert.Equal(
-                CoreTools.Translate("Agent broker unavailable"),
+                CoreTools.Translate(expectedTitle),
                 operation.Metadata.FailureTitle);
             Assert.False(string.IsNullOrWhiteSpace(operation.Metadata.FailureMessage));
+            Assert.Equal(operation.Metadata.FailureTitle, notifiedTitle);
             Assert.Equal(operation.Metadata.FailureMessage, notifiedMessage);
             Assert.False(localExecutionPrepared);
         }

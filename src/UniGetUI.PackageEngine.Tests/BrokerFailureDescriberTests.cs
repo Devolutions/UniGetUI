@@ -21,6 +21,18 @@ public class BrokerFailureDescriberTests
             });
 
     [Fact]
+    public void DescribeUnreachable_ExplainsEachDiagnosedCause()
+    {
+        Assert.Equal(
+            CoreTools.Translate("The Devolutions Agent package broker is not running"),
+            BrokerFailureDescriber.DescribeUnreachable(BrokerUnreachableCause.NotListening)?.Title);
+        Assert.Equal(
+            CoreTools.Translate("Devolutions Agent refused this copy of UniGetUI"),
+            BrokerFailureDescriber.DescribeUnreachable(BrokerUnreachableCause.ConnectionClosed)?.Title);
+        Assert.Null(BrokerFailureDescriber.DescribeUnreachable(BrokerUnreachableCause.Unknown));
+    }
+
+    [Fact]
     public void DescribeDenial_IncludesReasonAndRule()
     {
         var description = BrokerFailureDescriber.DescribeDenial(new DecisionInfo

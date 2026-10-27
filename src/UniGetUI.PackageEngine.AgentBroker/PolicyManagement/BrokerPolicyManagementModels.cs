@@ -11,6 +11,9 @@ public enum BrokerPolicyManagementStatus
     /// <summary>The management snapshot was retrieved and passed validation.</summary>
     Retrieved,
     AgentUnavailable,
+    BrokerNotRunning,
+    ClientRejected,
+    ClientNotAuthorized,
     /// <summary>Ordinary 404 (or an explicit UnsupportedEndpoint error code): the Agent is older and does not support this endpoint.</summary>
     Unsupported,
     AccessDenied,

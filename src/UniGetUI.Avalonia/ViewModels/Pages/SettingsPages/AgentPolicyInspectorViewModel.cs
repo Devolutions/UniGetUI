@@ -609,6 +609,21 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                     CoreTools.Translate("Communication with the package broker could not be completed. Verify that Devolutions Agent is installed and running. If the problem persists, check the Agent logs, then refresh."),
                     InfoBarSeverity.Error);
                 break;
+            case BrokerPolicyManagementStatus.BrokerNotRunning:
+                SetManagementStatus(
+                    BrokerFailureDescriber.DescribeBrokerNotRunning(),
+                    InfoBarSeverity.Error);
+                break;
+            case BrokerPolicyManagementStatus.ClientRejected:
+                SetManagementStatus(
+                    BrokerFailureDescriber.DescribeClientRejected(),
+                    InfoBarSeverity.Error);
+                break;
+            case BrokerPolicyManagementStatus.ClientNotAuthorized:
+                SetManagementStatus(
+                    BrokerFailureDescriber.DescribeClientNotAuthorized(),
+                    InfoBarSeverity.Error);
+                break;
             case BrokerPolicyManagementStatus.Unsupported:
                 SetManagementStatus(
                     CoreTools.Translate("Policy management is unsupported"),
@@ -814,6 +829,9 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                 ? AutomationLiveSetting.Assertive
                 : AutomationLiveSetting.Polite);
     }
+
+    private void SetManagementStatus(BrokerFailureDescription description, InfoBarSeverity severity) =>
+        SetManagementStatus(description.Title, description.Message, severity);
 
     private void SetManagementStatus(string title, string message, InfoBarSeverity severity)
     {

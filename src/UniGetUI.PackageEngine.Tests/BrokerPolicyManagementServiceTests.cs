@@ -316,7 +316,8 @@ public class BrokerPolicyManagementServiceTests
     [Theory]
     [InlineData(404, ErrorCode.NotFound, BrokerPolicyManagementStatus.Unsupported)]
     [InlineData(404, ErrorCode.UnsupportedEndpoint, BrokerPolicyManagementStatus.Unsupported)]
-    [InlineData(401, ErrorCode.Unauthenticated, BrokerPolicyManagementStatus.AccessDenied)]
+    [InlineData(401, ErrorCode.Unauthenticated, BrokerPolicyManagementStatus.ClientNotAuthorized)]
+    [InlineData(401, ErrorCode.Unauthorized, BrokerPolicyManagementStatus.ClientNotAuthorized)]
     [InlineData(403, ErrorCode.Forbidden, BrokerPolicyManagementStatus.AccessDenied)]
     [InlineData(403, ErrorCode.AdministratorRequired, BrokerPolicyManagementStatus.AccessDenied)]
     [InlineData(400, ErrorCode.UnsafePolicyPath, BrokerPolicyManagementStatus.UnsafePolicyPath)]
@@ -368,6 +369,33 @@ public class BrokerPolicyManagementServiceTests
     public async Task GetManagementAsync_ClassifiesTransportFailureAsUnavailable(BrokerClientErrorKind kind)
     {
         var service = CreateService(new FakeTransport(exception: new BrokerClientException(kind, "offline")));
+
+        BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyManagementStatus.AgentUnavailable, result.Status);
+    }
+
+    [Theory]
+    [InlineData(BrokerClientErrorKind.BrokerUnavailable)]
+    [InlineData(BrokerClientErrorKind.Timeout)]
+    public async Task GetManagementAsync_ReportsBrokerNotRunningWhenItsPipeIsMissing(BrokerClientErrorKind kind)
+    {
+        var transport = new FakeTransport(exception: new BrokerClientException(kind, "offline"));
+        var service = new BrokerPolicyManagementService(() => CreateClient(transport), () => true, () => false);
+
+        BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyManagementStatus.BrokerNotRunning, result.Status);
+    }
+
+    [Fact]
+    public async Task GetManagementAsync_KeepsUnknownTransportFailuresUnavailableWhenThePipeExists()
+    {
+        var transport = new FakeTransport(exception: new BrokerClientException(
+            BrokerClientErrorKind.BrokerUnavailable,
+            "transport failed",
+            innerException: new IOException("connection reset")));
+        var service = new BrokerPolicyManagementService(() => CreateClient(transport), () => true, () => true);
 
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
 

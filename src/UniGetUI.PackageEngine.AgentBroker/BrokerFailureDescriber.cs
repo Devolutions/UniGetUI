@@ -50,13 +50,12 @@ public static class BrokerFailureDescriber
     /// </summary>
     public static BrokerFailureDescription? DescribeAccessFailure(BrokerClientException exception)
     {
-        ErrorCode? code = exception.BrokerError?.Code;
-        if (exception.StatusCode is 401 || code is ErrorCode.Unauthorized or ErrorCode.Unauthenticated)
+        if (BrokerPolicyFailure.IsClientNotAuthenticated(exception))
         {
             return DescribeClientNotAuthorized();
         }
 
-        if (code is ErrorCode.AdministratorRequired)
+        if (exception.BrokerError?.Code is ErrorCode.AdministratorRequired)
         {
             return new(
                 CoreTools.Translate("Administrator rights are required"),
@@ -76,11 +75,31 @@ public static class BrokerFailureDescriber
         DescribeAccessFailure(exception)
         ?? (exception.StatusCode is 403 ? DescribeClientNotAuthorized() : null);
 
-    private static BrokerFailureDescription DescribeClientNotAuthorized() =>
+    public static BrokerFailureDescription DescribeClientNotAuthorized() =>
         new(
             CoreTools.Translate("UniGetUI is not authorized to use the Devolutions Agent"),
             CoreTools.Translate(
                 "The Devolutions Agent only accepts requests from signed, unmodified copies of UniGetUI. If you are running a development or self-built version, install an official release of UniGetUI and try again."));
+
+    public static BrokerFailureDescription DescribeBrokerNotRunning() =>
+        new(
+            CoreTools.Translate("The Devolutions Agent package broker is not running"),
+            CoreTools.Translate(
+                "UniGetUI could not find the package broker of Devolutions Agent on this computer. Make sure that Devolutions Agent is installed and running, and that its package broker is enabled in the Agent configuration. Versions of Devolutions Agent without a package broker cannot run package operations."));
+
+    public static BrokerFailureDescription DescribeClientRejected() =>
+        new(
+            CoreTools.Translate("Devolutions Agent refused this copy of UniGetUI"),
+            CoreTools.Translate(
+                "The package broker is running, but it closed the connection without answering. This usually means that it does not trust this copy of UniGetUI: the Devolutions Agent only accepts UniGetUI installed for all users in a folder that only administrators can modify, such as Program Files. If you are running a development or self-built version, install an official release of UniGetUI and try again."));
+
+    public static BrokerFailureDescription? DescribeUnreachable(BrokerUnreachableCause cause) =>
+        cause switch
+        {
+            BrokerUnreachableCause.NotListening => DescribeBrokerNotRunning(),
+            BrokerUnreachableCause.ConnectionClosed => DescribeClientRejected(),
+            _ => null,
+        };
 
     /// <summary>Explains a failed broker request.</summary>
     public static BrokerFailureDescription Describe(BrokerClientException exception)

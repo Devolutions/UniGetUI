@@ -38,7 +38,11 @@ public class BrokerPolicyTransportTests
                     Code = status == 401 ? ErrorCode.Unauthorized : ErrorCode.Forbidden,
                     Message = "structured denial",
                 });
-                yield return [endpoint, HttpResponse(status, body), "AccessDenied"];
+                yield return [
+                    endpoint,
+                    HttpResponse(status, body),
+                    endpoint == "management" && status == 401 ? "ClientNotAuthorized" : "AccessDenied",
+                ];
             }
         }
     }
@@ -69,6 +73,58 @@ public class BrokerPolicyTransportTests
         });
 
         Assert.Equal(expectedStatus, status);
+    }
+
+    [Theory]
+    [InlineData(null, true, "ClientRejected")]
+    [InlineData("", true, "ClientRejected")]
+    [InlineData("HTTP/1.1 200 OK\r\nContent-Length:", true, "AgentUnavailable")]
+    [InlineData("HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\n{", true, "AgentUnavailable")]
+    [InlineData("", false, "BrokerNotRunning")]
+    public async Task PolicyManagementTransport_TellsARefusedConnectionFromATruncatedResponse(
+        string? wireResponse,
+        bool brokerPipeExists,
+        string expectedStatus)
+    {
+        string status = await WithPipeAsync(wireResponse, async (client, token) =>
+        {
+            var service = new BrokerPolicyManagementService(() => client, () => true, () => brokerPipeExists);
+            return (await service.GetManagementAsync(token)).Status.ToString();
+        }, boundedTransport: true);
+
+        Assert.Equal(expectedStatus, status);
+    }
+
+    [Theory]
+    [InlineData(null, BrokerUnreachableCause.ConnectionClosed)]
+    [InlineData("", BrokerUnreachableCause.ConnectionClosed)]
+    [InlineData("HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\n{", BrokerUnreachableCause.Unknown)]
+    public async Task Reachability_DiagnosesARefusedConnectionOverTheBoundedTransport(
+        string? wireResponse,
+        BrokerUnreachableCause expectedCause)
+    {
+        BrokerUnreachableCause cause = await WithPipeAsync(wireResponse, (client, token) =>
+            BrokerReachability.DiagnoseAsync(() => true, () => client, token), boundedTransport: true);
+
+        Assert.Equal(expectedCause, cause);
+    }
+
+    [Fact]
+    public async Task Reachability_ReportsAMissingPipeWithoutConnecting()
+    {
+        bool connected = false;
+
+        BrokerUnreachableCause cause = await BrokerReachability.DiagnoseAsync(
+            () => false,
+            () =>
+            {
+                connected = true;
+                throw new InvalidOperationException();
+            },
+            CancellationToken.None);
+
+        Assert.Equal(BrokerUnreachableCause.NotListening, cause);
+        Assert.False(connected);
     }
 
     [Theory]

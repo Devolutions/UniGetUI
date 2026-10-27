@@ -56,7 +56,19 @@ internal sealed class BoundedNamedPipeBrokerTransport : IBrokerTransport
                 await pipe.ConnectAsync(connectCancellation.Token).ConfigureAwait(false);
             }
 
-            await WriteRequestAsync(pipe, request, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await WriteRequestAsync(pipe, request, cancellationToken).ConfigureAwait(false);
+            }
+            catch (IOException ex)
+            {
+                throw BrokerFailure(
+                    BrokerClientErrorKind.BrokerUnavailable,
+                    $"The package broker closed the connection before accepting the request for {request.Path}.",
+                    request.Path,
+                    new BrokerConnectionClosedException(ex.Message, ex));
+            }
+
             using CancellationTokenSource readCancellation =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             readCancellation.CancelAfter(ReadTimeoutMilliseconds);
@@ -137,10 +149,12 @@ internal sealed class BoundedNamedPipeBrokerTransport : IBrokerTransport
                 .ConfigureAwait(false);
             if (read == 0)
             {
+                string message = $"The package broker disconnected before sending a complete response for {path}.";
                 throw BrokerFailure(
                     incompleteResponseKind,
-                    $"The package broker disconnected before sending a complete response for {path}.",
-                    path);
+                    message,
+                    path,
+                    totalRead == 0 ? new BrokerConnectionClosedException(message) : null);
             }
 
             totalRead += read;

@@ -294,6 +294,9 @@ public class AgentPolicyInspectorViewModelTests
 
     [Theory]
     [InlineData(BrokerPolicyManagementStatus.AgentUnavailable, "Devolutions Agent is unavailable")]
+    [InlineData(BrokerPolicyManagementStatus.BrokerNotRunning, "The Devolutions Agent package broker is not running")]
+    [InlineData(BrokerPolicyManagementStatus.ClientRejected, "Devolutions Agent refused this copy of UniGetUI")]
+    [InlineData(BrokerPolicyManagementStatus.ClientNotAuthorized, "UniGetUI is not authorized to use the Devolutions Agent")]
     [InlineData(BrokerPolicyManagementStatus.AccessDenied, "Access to policy management was denied")]
     [InlineData(BrokerPolicyManagementStatus.Unsupported, "Policy management is unsupported")]
     [InlineData(BrokerPolicyManagementStatus.InvalidResponse, "The policy management response is invalid")]

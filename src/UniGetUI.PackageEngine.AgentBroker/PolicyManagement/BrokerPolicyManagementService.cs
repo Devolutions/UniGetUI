@@ -30,9 +30,10 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
 {
     private readonly Func<BrokerClient> _clientFactory;
     private readonly Func<bool> _isWindows;
+    private readonly Func<bool>? _brokerPipeExists;
 
     public BrokerPolicyManagementService()
-        : this(CreateStandardClient, OperatingSystem.IsWindows)
+        : this(CreateStandardClient, OperatingSystem.IsWindows, BrokerReachability.BrokerPipeExists)
     {
     }
 
@@ -41,10 +42,14 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
             ApiElevation.Standard,
             new BoundedNamedPipeBrokerTransport(BrokerPolicyManagementLimits.MaxResponseBodyBytes));
 
-    public BrokerPolicyManagementService(Func<BrokerClient> clientFactory, Func<bool>? isWindows = null)
+    public BrokerPolicyManagementService(
+        Func<BrokerClient> clientFactory,
+        Func<bool>? isWindows = null,
+        Func<bool>? brokerPipeExists = null)
     {
         _clientFactory = clientFactory;
         _isWindows = isWindows ?? OperatingSystem.IsWindows;
+        _brokerPipeExists = brokerPipeExists;
     }
 
     public async Task<BrokerPolicyManagementResult> GetManagementAsync(CancellationToken cancellationToken)
@@ -176,7 +181,7 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
     // per the policy management contract. This follows the BrokerPolicyInspector.MapFailure precedent:
     // BrokerClientErrorKind.BrokerError collapses every structured broker error into one kind, so
     // disambiguation must happen via StatusCode/BrokerError.Code first.
-    private static BrokerPolicyManagementStatus MapManagementFailure(BrokerClientException ex)
+    private BrokerPolicyManagementStatus MapManagementFailure(BrokerClientException ex)
     {
         if (ex.StatusCode == 404
             || ex.BrokerError?.Code is ErrorCode.NotFound or ErrorCode.UnsupportedEndpoint)
@@ -186,7 +191,9 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
 
         if (BrokerPolicyFailure.IsAccessDenied(ex))
         {
-            return BrokerPolicyManagementStatus.AccessDenied;
+            return BrokerPolicyFailure.IsClientNotAuthenticated(ex)
+                ? BrokerPolicyManagementStatus.ClientNotAuthorized
+                : BrokerPolicyManagementStatus.AccessDenied;
         }
 
         switch (ex.BrokerError?.Code)
@@ -201,8 +208,7 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
 
         return ex.Kind switch
         {
-            _ when BrokerPolicyFailure.IsTransportUnavailable(ex) =>
-                BrokerPolicyManagementStatus.AgentUnavailable,
+            _ when BrokerPolicyFailure.IsTransportUnavailable(ex) => MapUnreachable(ex),
             BrokerClientErrorKind.EmptyResponse or BrokerClientErrorKind.InvalidResponse =>
                 BrokerPolicyManagementStatus.InvalidResponse,
             BrokerClientErrorKind.BrokerError when ex.BrokerError is not null =>
@@ -210,6 +216,16 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
             _ => BrokerPolicyManagementStatus.InvalidResponse,
         };
     }
+
+    private BrokerPolicyManagementStatus MapUnreachable(BrokerClientException ex) =>
+        _brokerPipeExists is null
+            ? BrokerPolicyManagementStatus.AgentUnavailable
+            : BrokerReachability.Diagnose(ex, _brokerPipeExists) switch
+            {
+                BrokerUnreachableCause.NotListening => BrokerPolicyManagementStatus.BrokerNotRunning,
+                BrokerUnreachableCause.ConnectionClosed => BrokerPolicyManagementStatus.ClientRejected,
+                _ => BrokerPolicyManagementStatus.AgentUnavailable,
+            };
 
     private static BrokerPolicyValidationStatus MapValidationFailure(BrokerClientException ex)
     {

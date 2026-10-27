@@ -53,6 +53,8 @@ namespace UniGetUI.PackageEngine.Operations
         /// </summary>
         internal static Func<Devolutions.Now.Policy.Client.IBrokerTransport>? BrokerTransportFactory;
 
+        internal static Func<CancellationToken, Task<BrokerUnreachableCause>>? BrokerUnreachableDiagnosis;
+
         /// <summary>
         /// Interval between broker operation status polls. Internal so tests can shorten it.
         /// </summary>
@@ -479,7 +481,7 @@ namespace UniGetUI.PackageEngine.Operations
             // execution: policy evaluation and kill/pre/post actions are owned by the broker.
             if (!await client.IsAvailable(CancellationToken))
             {
-                return HandleBrokerUnavailable();
+                return await HandleBrokerUnavailable();
             }
 
             // Fetch the capabilities up front: the broker requires an authenticated client for
@@ -603,7 +605,7 @@ namespace UniGetUI.PackageEngine.Operations
                 // The broker can stop between the availability probe and the request itself;
                 // route this through the same unavailable handling as a failed probe.
                 Logger.Error($"[AgentBroker] Broker became unavailable during the operation: {ex}");
-                return HandleBrokerUnavailable();
+                return await HandleBrokerUnavailable();
             }
             catch (BrokerClientException ex)
             {
@@ -643,7 +645,7 @@ namespace UniGetUI.PackageEngine.Operations
             catch (BrokerClientException ex) when (ex.Kind is BrokerClientErrorKind.BrokerUnavailable)
             {
                 Logger.Error($"[AgentBroker] Broker became unavailable while reading its capabilities: {ex}");
-                return HandleBrokerUnavailable();
+                return await HandleBrokerUnavailable();
             }
             catch (BrokerClientException ex)
             {
@@ -988,16 +990,39 @@ namespace UniGetUI.PackageEngine.Operations
         /// actions are owned by the broker. Sets the failure metadata and raises
         /// <see cref="BrokerUnavailable"/> so the UI can notify the user.
         /// </summary>
-        private OperationVeredict HandleBrokerUnavailable()
+        private async Task<OperationVeredict> HandleBrokerUnavailable()
         {
             Line("Agent broker is not available. The operation cannot continue.", LineType.Error);
             Logger.Error("[AgentBroker] Broker not available, aborting operation");
-            string message = CoreTools.Translate(
-                "The Devolutions Agent broker is not available. The operation cannot be performed. Please ensure the Devolutions Agent is installed and running.");
-            Metadata.FailureTitle = CoreTools.Translate("Agent broker unavailable");
-            Metadata.FailureMessage = message;
-            BrokerUnavailable?.Invoke(this, new BrokerFailureDescription(Metadata.FailureTitle, message));
+            BrokerUnreachableCause cause = await DiagnoseUnreachableBroker();
+            Logger.Info($"[AgentBroker] Unreachable broker diagnosis: {cause}");
+            BrokerFailureDescription failure = BrokerFailureDescriber.DescribeUnreachable(cause)
+                ?? new BrokerFailureDescription(
+                    CoreTools.Translate("Agent broker unavailable"),
+                    CoreTools.Translate(
+                        "The Devolutions Agent broker is not available. The operation cannot be performed. Please ensure the Devolutions Agent is installed and running."));
+            Metadata.FailureTitle = failure.Title;
+            Metadata.FailureMessage = failure.Message;
+            BrokerUnavailable?.Invoke(this, failure);
             return OperationVeredict.Failure;
+        }
+
+        private async Task<BrokerUnreachableCause> DiagnoseUnreachableBroker()
+        {
+            Func<CancellationToken, Task<BrokerUnreachableCause>> diagnose =
+                BrokerUnreachableDiagnosis
+                ?? (BrokerTransportFactory is null
+                    ? BrokerReachability.DiagnoseAsync
+                    : _ => Task.FromResult(BrokerUnreachableCause.Unknown));
+            try
+            {
+                return await diagnose(CancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"[AgentBroker] Could not diagnose why the broker is unreachable: {ex}");
+                return BrokerUnreachableCause.Unknown;
+            }
         }
 
         /// <summary>

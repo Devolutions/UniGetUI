@@ -325,7 +325,7 @@ internal static class PkgInstaller
     }
 
     /// <summary>Where root installs take their machine-wide lock. Replaceable for tests.</summary>
-    internal static string LockDirectory { get; set; } = "/private/var/run/com.devolutions.unigetui";
+    internal static string LockDirectory { get; set; } = PkgHelperCommand.RootDirectory;
 
     // One root install at a time on the Mac, whether the helper or a prompt started it, so two installs
     // of one app never share its working copies. lockf holds the lock while the whole command runs.

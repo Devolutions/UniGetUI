@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Text.Json;
-using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
@@ -21,6 +20,9 @@ public static class PkgHelperCommand
     private const string LogPath = "/Library/Logs/UniGetUI-pkg-helper.log";
     private const int MaxFieldLength = 512;
 
+    /// <summary>A folder only root can reach: the install lock, and the temporary files of root processes.</summary>
+    internal const string RootDirectory = "/private/var/run/com.devolutions.unigetui";
+
     public static bool IsCommand(string[] args) =>
         args.Length > 0 && string.Equals(args[0], Command, StringComparison.OrdinalIgnoreCase);
 
@@ -36,15 +38,16 @@ public static class PkgHelperCommand
             output.WriteLine($"  {InstallItemVerb} <order>  Installs one package as root (what UniGetUI runs behind the password prompt).");
             return args.Length == 1 && args[0] is "-h" or "--help" ? 0 : 2;
         }
-        if (!OperatingSystem.IsMacOS() || !CoreTools.IsAdministrator())
+        if (!OperatingSystem.IsMacOS() || !Environment.IsPrivilegedProcess)
         {
             error.WriteLine($"{Command} {verb} must run as root on macOS (sudo).");
             return 1;
         }
-        // As root, temporary files go in /tmp, never in a folder of the user who started the command.
-        Environment.SetEnvironmentVariable("TMPDIR", "/private/tmp/");
         try
         {
+            // Before anything logs: the session log and staging files go in TMPDIR, which must not be a
+            // folder a standard user shares (/tmp) or owns (the TMPDIR of the user who started this).
+            UseRootTemporaryDirectory();
             return verb switch
             {
                 "install-daemon" => InstallDaemon(output, error),
@@ -58,6 +61,22 @@ public static class PkgHelperCommand
             error.WriteLine(ex.Message);
             return 1;
         }
+    }
+
+    private static void UseRootTemporaryDirectory()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+        const UnixFileMode RootOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+        string temporary = Path.Combine(RootDirectory, "tmp");
+        foreach (string directory in new[] { RootDirectory, temporary })
+        {
+            var info = Directory.CreateDirectory(directory, RootOnly);
+            if (info.LinkTarget is not null)
+                throw new IOException($"{directory} is a link; remove it, then try again.");
+            File.SetUnixFileMode(directory, RootOnly);
+        }
+        Environment.SetEnvironmentVariable("TMPDIR", temporary + "/");
     }
 
     // ── Daemon setup ───────────────────────────────────────────────────────

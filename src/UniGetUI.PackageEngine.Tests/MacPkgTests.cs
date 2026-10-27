@@ -28,7 +28,7 @@ public sealed class MacPkgTests : IDisposable
     public void Dispose()
     {
         PkgFeed.TestIconDirectoryOverride = null;
-        PkgInstaller.LockDirectory = "/private/var/run/com.devolutions.unigetui";
+        PkgInstaller.LockDirectory = PkgHelperCommand.RootDirectory;
         PkgInstaller.IsRoot = CoreTools.IsAdministrator;
         PkgInstaller.RootExecutable = () => null;
         Directory.Delete(_directory, recursive: true);

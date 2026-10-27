@@ -17,6 +17,15 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+#if !WINDOWS
+        // The root helper runs first, before anything that could log to a folder other users share.
+        if (PkgHelperCommand.IsCommand(args))
+        {
+            Environment.ExitCode = PkgHelperCommand.Run(args[1..], Console.Out, Console.Error);
+            return;
+        }
+#endif
+
         // Both front-ends must wait while the installer replaces their shared files.
         try
         {
@@ -45,12 +54,6 @@ sealed class Program
         if (PkgIndexCommand.IsCommand(args))
         {
             Environment.ExitCode = PkgIndexCommand.Run(args[1..], Console.Out, Console.Error);
-            return;
-        }
-
-        if (PkgHelperCommand.IsCommand(args))
-        {
-            Environment.ExitCode = PkgHelperCommand.Run(args[1..], Console.Out, Console.Error);
             return;
         }
 #endif

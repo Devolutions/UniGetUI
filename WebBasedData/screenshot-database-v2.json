@@ -10041,6 +10041,10 @@
         "https://raw.githubusercontent.com/Devolutions/MsRdpEx/master/images/MsRdpEx_installed.png"
       ]
     },
+    "Devolutions.PowerShellUniversal": {
+      "icon": "https://cdnweb.devolutions.net/web/common/logos/img-devolutions-powershell-universal-icon.svg",
+      "images": []
+    },
     "Devolutions.RemoteDesktopManager": {
       "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/remote-desktop-manager-icon.png",
       "images": []

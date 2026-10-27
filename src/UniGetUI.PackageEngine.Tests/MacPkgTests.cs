@@ -682,6 +682,29 @@ public sealed class MacPkgTests : IDisposable
         Assert.Throws<InvalidDataException>(() => Tool.Run("/bin/sleep", ["30"], timeout: TimeSpan.FromMilliseconds(300)));
     }
 
+    // Like a UI thread busy waiting on the tool: whatever is posted to it never runs.
+    private sealed class BlockedThreadContext : SynchronizationContext
+    {
+        public override void Post(SendOrPostCallback d, object? state) { }
+    }
+
+    [Fact]
+    public void AToolRunFromTheUiThreadDoesNotDeadlock()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        ToolResult? result = null;
+        var thread = new Thread(() =>
+        {
+            SynchronizationContext.SetSynchronizationContext(new BlockedThreadContext());
+            result = Tool.Run("/bin/echo", ["done"]);
+        });
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(20)));
+        Assert.Equal("done\n", result?.Text);
+    }
+
     [Fact]
     public void AToolIsNotHeldByAProcessItLeftRunning()
     {

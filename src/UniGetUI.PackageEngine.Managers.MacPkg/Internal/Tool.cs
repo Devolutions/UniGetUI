@@ -20,7 +20,8 @@ internal static class Tool
 {
     public static ToolResult Run(string file, IReadOnlyList<string> arguments, byte[]? input = null,
         TimeSpan? timeout = null, Action<Process>? started = null) =>
-        RunAsync(file, arguments, input, timeout, started, CancellationToken.None).GetAwaiter().GetResult();
+        // On the thread pool, so a caller's synchronization context (the UI thread) can never deadlock it.
+        Task.Run(() => RunAsync(file, arguments, input, timeout, started, CancellationToken.None)).GetAwaiter().GetResult();
 
     public static async Task<ToolResult> RunAsync(string file, IReadOnlyList<string> arguments, byte[]? input = null,
         TimeSpan? timeout = null, Action<Process>? started = null, CancellationToken cancellationToken = default)

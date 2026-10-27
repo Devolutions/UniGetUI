@@ -44,13 +44,19 @@ internal sealed class MacPkgOperationHelper : BasePkgOperationHelper, IManagedPa
             return OperationVeredict.Failure;
         }
 
+        // Operations start on the UI thread; staging, hashing and the tools it waits on run off it.
+        return await Task.Run(() => PerformAsync(package, options, operation, log, progress, cancellationToken),
+            CancellationToken.None);
+    }
+
+    private async Task<OperationVeredict?> PerformAsync(IPackage package, InstallOptions options,
+        OperationType operation, Action<string> log, Action<OperationProgress> progress,
+        CancellationToken cancellationToken)
+    {
         string? version = TargetVersion(package, options, operation);
-        var item = await Task.Run(() =>
-        {
-            // Installs act on what the feed publishes now, not on the listing kept for a few minutes.
-            _manager.RefreshPackageIndexes();
-            return _manager.FindFeedItem(package, version, currentOnly: true);
-        }, cancellationToken)
+        // Installs act on what the feed publishes now, not on the listing kept for a few minutes.
+        _manager.RefreshPackageIndexes();
+        var item = _manager.FindFeedItem(package, version, currentOnly: true)
             ?? throw new InvalidOperationException(
                 $"The package feed {package.Source.Name} does not publish {package.Id}{(version is null ? "" : " " + version)} for this Mac.");
 

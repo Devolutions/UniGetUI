@@ -65,7 +65,8 @@ A feed can be:
 | A web folder (https) | `https://software.example.com/mac/` | `index.json` in that folder |
 | A local folder or a mounted share | `/Volumes/Software/mac` | the `.pkg` and `.dmg` files directly |
 
-Plain `http` is refused (except on `localhost`), because the index is what pins each package's hash.
+Plain `http` is refused (except on `localhost`, for testing, and never by the package helper below),
+because the index is what pins each package's hash.
 
 ## Publish a package
 
@@ -130,6 +131,8 @@ Gatekeeper checks as any install, and refuses:
   to root or an administrator and be writable by no one else. So install UniGetUI with its
   installer package (so that the app belongs to root), and keep feeds out of shared folders such as
   `/Users/Shared`.
+- a web feed that is not served over `https`, since any user could answer on a `localhost` port
+  the real server left free.
 
 When the helper is not running, or refuses a package (such as one from an unprotected feed), UniGetUI
 falls back to the administrator prompt, which an administrator can still approve.

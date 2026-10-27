@@ -179,7 +179,7 @@ internal static class PkgInstaller
             {
                 VerifyIdentity(item, PkgMetadata.Read(package));
                 await VerifySignatureAsync(package, "install", allowUnsigned, log, cancellationToken);
-                prepared.Command = InstallPkgCommand(package);
+                prepared.Command = LockedCommand(InstallPkgCommand(package));
                 prepared.Description = $"Running the installer for {Uri.UnescapeDataString(Path.GetFileName(item.Location.AbsolutePath))}...";
             }
             else
@@ -187,7 +187,7 @@ internal static class PkgInstaller
                 VerifyIdentity(item, DiskImage.FromApp(app!));
                 await VerifySignatureAsync(app!, "execute", allowUnsigned, log, cancellationToken);
                 string destination = AppBundle.OnDisk("/Applications/" + SafeAppName(app!));
-                prepared.Command = CopyAppCommand(app!, destination);
+                prepared.Command = LockedCommand(CopyAppCommand(app!, destination));
                 prepared.Description = $"Copying {Path.GetFileName(app)} to {destination}...";
             }
             return prepared;
@@ -323,6 +323,18 @@ internal static class PkgInstaller
         if (name.StartsWith('.') || !name.EndsWith(".app", StringComparison.OrdinalIgnoreCase) || name.Any(char.IsControl))
             throw new InvalidDataException($"\"{name}\" is not an app name UniGetUI can install.");
         return name;
+    }
+
+    /// <summary>Where root installs take their machine-wide lock. Replaceable for tests.</summary>
+    internal static string LockDirectory { get; set; } = "/private/var/run/com.devolutions.unigetui";
+
+    // One root install at a time on the Mac, whether the helper or a prompt started it, so two installs
+    // of one app never share its working copies. The shell holds the lock on fd 9 until it exits.
+    internal static string LockedCommand(string command)
+    {
+        string directory = CoreTools.QuoteForPosixShell(LockDirectory);
+        string lockFile = CoreTools.QuoteForPosixShell(Path.Combine(LockDirectory, "install.lock"));
+        return $"/bin/mkdir -p -m 700 {directory} && exec 9>{lockFile} && /usr/bin/lockf -t 1800 9 || exit 75; {command}";
     }
 
     internal static string InstallPkgCommand(string stagedPackage) =>

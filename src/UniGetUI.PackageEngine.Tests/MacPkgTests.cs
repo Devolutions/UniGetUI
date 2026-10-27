@@ -18,11 +18,13 @@ public sealed class MacPkgTests : IDisposable
     {
         Directory.CreateDirectory(_directory);
         PkgFeed.TestIconDirectoryOverride = Path.Combine(_directory, "extracted-icons");
+        PkgInstaller.LockDirectory = Path.Combine(_directory, "lock");
     }
 
     public void Dispose()
     {
         PkgFeed.TestIconDirectoryOverride = null;
+        PkgInstaller.LockDirectory = "/private/var/run/com.devolutions.unigetui";
         Directory.Delete(_directory, recursive: true);
     }
 
@@ -686,6 +688,23 @@ public sealed class MacPkgTests : IDisposable
     private sealed class BlockedThreadContext : SynchronizationContext
     {
         public override void Post(SendOrPostCallback d, object? state) { }
+    }
+
+    [Fact]
+    public async Task RootInstallsTakeTurnsOnTheMachineWideLock()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string journal = Path.Combine(_directory, "journal");
+        string Step(string name) => PkgInstaller.LockedCommand(
+            $"echo {name}-start >> '{journal}'; /bin/sleep 0.5; echo {name}-end >> '{journal}'");
+        var runs = new[] { "a", "b" }.Select(name => PkgInstaller.RunProcess("/bin/sh", ["-c", Step(name)], CancellationToken.None)).ToArray();
+        Assert.All(await Task.WhenAll(runs), r => Assert.Equal(0, r.ExitCode));
+        string[] lines = File.ReadAllLines(journal);
+        Assert.Equal(4, lines.Length);
+        Assert.Equal(lines[0][..1], lines[1][..1]);
+        Assert.Equal(lines[2][..1], lines[3][..1]);
     }
 
     [Fact]
@@ -1432,7 +1451,7 @@ public sealed class MacPkgTests : IDisposable
         {
             Assert.Equal(Enums.OperationVeredict.Success,
                 await PkgInstaller.InstallAsync(item, "Wrapped", _ => { }, _ => { }, CancellationToken.None));
-            Assert.StartsWith("/usr/sbin/installer -pkg ", command);
+            Assert.Contains("; /usr/sbin/installer -pkg ", command);
             Assert.EndsWith("Install Wrapped.pkg' -target / 2>&1", command);
             Assert.True(packageWasMounted);
         }
@@ -1495,7 +1514,7 @@ public sealed class MacPkgTests : IDisposable
             Assert.Contains(log, l => l.Contains("package helper", StringComparison.Ordinal));
             Assert.Contains("installer: The install was successful.", log);
             Assert.DoesNotContain(commands, c => c.StartsWith("/usr/bin/osascript", StringComparison.Ordinal));
-            Assert.Contains(commands, c => c.StartsWith("/bin/sh -c /usr/sbin/installer -pkg ", StringComparison.Ordinal));
+            Assert.Contains(commands, c => c.StartsWith("/bin/sh -c ", StringComparison.Ordinal) && c.Contains("/usr/sbin/installer -pkg ", StringComparison.Ordinal));
         }
         finally
         {
@@ -1537,6 +1556,16 @@ public sealed class MacPkgTests : IDisposable
             TrustedPath.TestOverride = _ => null;
             Assert.Equal(PkgHelperMessage.Success, await Ask("mac", "com.example.app.pkg", "1.0"));
             Assert.True(ran);
+
+            // A loopback port is free for any user to take, so a web feed must be https for the helper.
+            ran = false;
+            PkgCatalogFeeds.TestCatalogPathOverride = WritePackage("http-catalog.json", Encoding.UTF8.GetBytes("""
+                {"version":1,"catalogs":[{"id":"web","name":"Web","packages":[],"pkgFeed":"http://127.0.0.1:9/","allowUnsignedPackages":true}]}
+                """));
+            var refusal = await PkgHelperCommand.InstallAsync(new PkgHelperRequest { Catalog = "web", Id = "com.example.app.pkg" }, _ => { });
+            Assert.Equal(PkgHelperMessage.Refused, refusal.Result);
+            Assert.Contains("https", refusal.Message);
+            Assert.False(ran);
         }
         finally
         {

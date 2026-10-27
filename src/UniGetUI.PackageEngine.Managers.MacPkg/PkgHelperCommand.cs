@@ -287,6 +287,9 @@ public static class PkgHelperCommand
             return Refuse($"No catalog with the id {request.Catalog} declares a package feed.");
         var feed = feeds[0];
         Uri location = feed.Location;
+        // Any user can listen on a loopback port the real server left free, so only https is trusted here.
+        if (!location.IsFile && location.Scheme != Uri.UriSchemeHttps)
+            return Refuse($"The package feed {location} is not served over https, so the helper does not install from it.");
         if (location.IsFile && TrustedPath.WhyUntrusted(location.LocalPath) is { } feedReason)
             return Refuse($"The package feed is not protected, so the helper does not install from it: {feedReason}");
 
@@ -301,6 +304,8 @@ public static class PkgHelperCommand
                     .OrderByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, machine)).FirstOrDefault();
             if (item is null)
                 return Refuse($"The feed of {request.Catalog} does not publish {request.Id} {version} for this Mac.");
+            if (!item.Location.IsFile && item.Location.Scheme != Uri.UriSchemeHttps)
+                return Refuse($"The package {item.Location} is not served over https, so the helper does not install it.");
             if (item.Location.IsFile && TrustedPath.WhyUntrusted(item.Location.LocalPath) is { } fileReason)
                 return Refuse($"The package file is not protected, so the helper does not install it: {fileReason}");
             return await InstallItemAsync(item, feed.AllowUnsignedPackages, log);

@@ -159,7 +159,7 @@ internal static class PkgFeed
                 int fit = PkgMetadata.ArchitectureFit(item.Architectures, machine);
                 if (fit == 0)
                     continue;
-                int order = best is null ? 1 : compare(item.Version, best.Version) ?? 0;
+                int order = best is null ? 1 : CompareReleases(item, best, compare);
                 if (order > 0 || (order == 0 && fit > bestFit))
                 {
                     best = item;
@@ -170,6 +170,18 @@ internal static class PkgFeed
                 latest.Add(best);
         }
         return latest;
+    }
+
+    /// <summary>
+    /// Orders two releases of one package: by their version, then, when a vendor republished the same
+    /// package version, by the version of the app inside, which is what an app in place is compared with.
+    /// </summary>
+    public static int CompareReleases(PkgFeedItem a, PkgFeedItem b, Func<string, string, int?> compare)
+    {
+        int order = compare(a.Version, b.Version) ?? 0;
+        if (order == 0 && a.App?.Version is { } appA && b.App?.Version is { } appB)
+            order = compare(appA, appB) ?? 0;
+        return order;
     }
 
     // ── Folder feeds ───────────────────────────────────────────────────────

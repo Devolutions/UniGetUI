@@ -290,6 +290,18 @@ public sealed class MacPkgTests : IDisposable
     }
 
     [Fact]
+    public void AmongReleasesOfOnePackageVersionTheNewestAppWins()
+    {
+        static PkgFeedItem Release(string app) => Item("app", "1.0", "arm64") with
+        {
+            App = new AppBundleInfo("com.example.app", "/Applications/App.app", app),
+        };
+        static int? Compare(string a, string b) => new Version(a).CompareTo(new Version(b));
+        foreach (var items in new[] { new[] { Release("12.5.0"), Release("12.6.1") }, [Release("12.6.1"), Release("12.5.0")] })
+            Assert.Equal("12.6.1", Assert.Single(PkgFeed.Latest(items, Compare, Architecture.Arm64)).App?.Version);
+    }
+
+    [Fact]
     public void AFolderFeedListsItsPackagesAndSkipsUnreadableFiles()
     {
         WritePackage("Example-4.2.pkg", ProductArchive("com.example.app.pkg", "4.2", "Example"));

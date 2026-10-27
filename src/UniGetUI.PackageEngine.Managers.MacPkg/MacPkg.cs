@@ -123,8 +123,10 @@ public sealed class MacPkg : PackageManager
             return items
                 .Where(i => (i.Version == version || i.App?.Version == version)
                     && PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture) > 0)
-                // An update found by the app in place names the app's version; the package's own wins a tie.
+                // An update found by the app in place names the app's version; the package's own wins a tie,
+                // then the newest app among releases of one package version.
                 .OrderByDescending(i => i.Version == version)
+                .ThenByDescending(i => i, ReleaseOrder)
                 .ThenByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture))
                 .FirstOrDefault();
         return PkgFeed.Latest(items, CompareVersions, RuntimeInformation.OSArchitecture).FirstOrDefault();
@@ -133,6 +135,10 @@ public sealed class MacPkg : PackageManager
     /// <summary>Orders versions as this manager compares them, falling back to their text.</summary>
     internal IComparer<string> VersionOrder =>
         Comparer<string>.Create((a, b) => CompareVersions(a, b) ?? string.CompareOrdinal(a, b));
+
+    /// <summary>Orders releases of one package, newest last, as <see cref="PkgFeed.CompareReleases"/> does.</summary>
+    internal IComparer<PkgFeedItem> ReleaseOrder =>
+        Comparer<PkgFeedItem>.Create((a, b) => PkgFeed.CompareReleases(a, b, CompareVersions));
 
     internal IReadOnlyList<PkgFeedItem> ListFeedItems(IPackage package)
     {
@@ -174,7 +180,7 @@ public sealed class MacPkg : PackageManager
         var installed = new List<(IManagerSource, PkgFeedItem, string, string, bool)>();
         // Feeds that share a package are read newest first, so an update one of them offers is never hidden.
         foreach (var (source, item) in latest.OrderBy(p => p.Item.Id, StringComparer.Ordinal)
-            .ThenByDescending(p => p.Item.Version, VersionOrder))
+            .ThenByDescending(p => p.Item, ReleaseOrder))
         {
             if (seen.Contains(item.Id))
                 continue;

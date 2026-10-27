@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 /// <summary>
@@ -22,8 +20,6 @@ internal static class TrustedPath
 
     /// <summary>Replaces the check in tests, which run in folders owned by the user running them.</summary>
     internal static Func<string, string?>? TestOverride { get; set; }
-
-    private static readonly ConcurrentDictionary<int, bool> Administrators = new();
 
     /// <summary>Why a standard user could change the path, or null when none could.</summary>
     public static string? WhyUntrusted(string path) => TestOverride is { } test ? test(path) : Check(path, 0);
@@ -115,7 +111,8 @@ internal static class TrustedPath
         return null;
     }
 
-    private static bool IsAdministrator(int uid) => Administrators.GetOrAdd(uid, id =>
-        Tool.Run("/usr/bin/dsmemberutil", ["checkmembership", "-u", id.ToString(), "-g", AdminGroup.ToString()])
-            .Text.Contains("is a member", StringComparison.Ordinal));
+    // Asked each time, never cached: an account removed from the admin group loses its trust at once.
+    private static bool IsAdministrator(int uid) =>
+        Tool.Run("/usr/bin/dsmemberutil", ["checkmembership", "-u", uid.ToString(), "-g", AdminGroup.ToString()])
+            .Text.Contains("is a member", StringComparison.Ordinal);
 }

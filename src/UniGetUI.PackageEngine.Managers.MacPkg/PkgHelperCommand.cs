@@ -298,10 +298,13 @@ public static class PkgHelperCommand
             PkgFeed.ForgetCachedIndexes();
             var machine = RuntimeInformation.OSArchitecture;
             var candidates = PkgFeed.List(location, currentOnly: true).Where(i => i.Id == request.Id).ToArray();
+            var manager = new MacPkg();
             var item = version.Length == 0
-                ? PkgFeed.Latest(candidates, new MacPkg().CompareVersions, machine).FirstOrDefault()
+                ? PkgFeed.Latest(candidates, manager.CompareVersions, machine).FirstOrDefault()
                 : candidates.Where(i => i.Version == version && PkgMetadata.ArchitectureFit(i.Architectures, machine) > 0)
-                    .OrderByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, machine)).FirstOrDefault();
+                    // The same choice as the user's UniGetUI: the newest app among releases of that version.
+                    .OrderByDescending(i => i, Comparer<PkgFeedItem>.Create((a, b) => PkgFeed.CompareReleases(a, b, manager.CompareVersions)))
+                    .ThenByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, machine)).FirstOrDefault();
             if (item is null)
                 return Refuse($"The feed of {request.Catalog} does not publish {request.Id} {version} for this Mac.");
             if (!item.Location.IsFile && item.Location.Scheme != Uri.UriSchemeHttps)

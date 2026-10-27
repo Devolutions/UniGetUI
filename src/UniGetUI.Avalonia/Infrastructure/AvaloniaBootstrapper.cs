@@ -217,12 +217,10 @@ internal static class AvaloniaBootstrapper
             _ipcApi.ShowPackageHandler = request =>
                 Dispatcher.UIThread.InvokeAsync(() => ShowPackage(request)).GetAwaiter().GetResult();
 
-            _ipcApi.OnUpgradeAll += (_, _) =>
-                Dispatcher.UIThread.Post(() => _ = AvaloniaPackageOperationHelper.UpdateAllAsync());
-
-            _ipcApi.OnUpgradeAllForManager += (_, managerName) =>
-                Dispatcher.UIThread.Post(() =>
-                    _ = AvaloniaPackageOperationHelper.UpdateAllForManagerAsync(managerName));
+            _ipcApi.UpdateAllHandler = managerName =>
+                Dispatcher.UIThread.InvokeAsync(() => managerName is null
+                    ? AvaloniaPackageOperationHelper.UpdateAllAsync()
+                    : AvaloniaPackageOperationHelper.UpdateAllForManagerAsync(managerName));
 
             await _ipcApi.Start();
         }

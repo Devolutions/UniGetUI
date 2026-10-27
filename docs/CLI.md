@@ -310,8 +310,8 @@ Windows only. A folder rule names the subfolder of the current user's Start Menu
 | `package ignored list` | None | None | Lists ignored-update rules tracked by UniGetUI. |
 | `package ignored add` | `--id <package-id>` | `--manager <id>`, `--version <version>`, `--source <source>` | Adds an ignored-update rule. |
 | `package ignored remove` | `--id <package-id>` | `--manager <id>`, `--version <version>`, `--source <source>` | Removes an ignored-update rule. |
-| `package update-all` | None | None | Queues updates for all currently upgradable packages. |
-| `package update-manager` | `--manager <id>` | None | Queues updates for all upgradable packages handled by one manager. |
+| `package update-all` | None | `--manager <id>`, `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Queues an update for every available update and returns their operation ids. With `--wait true`, waits for all of them (default timeout 3600 seconds) and exits with `1` if any did not succeed or the wait timed out. Works in headless sessions. |
+| `package update-manager` | `--manager <id>` | `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Same as `package update-all --manager <id>`. |
 
 ## Headless behavior
 
@@ -323,7 +323,7 @@ When UniGetUI is started with `--headless`, it exposes the same automation API w
 | `app show` | Fails with “the current UniGetUI session is running headless and has no window to show.” |
 | `app navigate` | Fails with “the current UniGetUI session is running headless and cannot navigate UI pages.” |
 | `package show` | UI-oriented; may fail or be meaningless in pure headless sessions. |
-| `package update-all`, `package update-manager` | Require GUI-side upgrade handlers. Headless sessions may return “cannot update all packages” or “cannot update manager packages.” |
+| `package update-all`, `package update-manager` | Fully supported. The headless session queues the updates itself. |
 
 ## Headless IPC options
 

@@ -531,9 +531,16 @@ public static class IpcCliCommandRunner
                         )
                     )
                 ),
-                "update-all" => await WriteJsonAsync(output, await client.UpdateAllAsync()),
-                "update-manager" => await WriteJsonAsync(
+                "update-all" => await WriteBulkOperationAsync(
                     output,
+                    client,
+                    args,
+                    await client.UpdateAllAsync(GetOptionalArgument(args, "--manager"))
+                ),
+                "update-manager" => await WriteBulkOperationAsync(
+                    output,
+                    client,
+                    args,
                     await client.UpdateManagerAsync(
                         GetRequiredArgument(
                             args,
@@ -913,6 +920,29 @@ public static class IpcCliCommandRunner
             IpcJson.Serialize(value)
         );
         return (int)IpcCliExitCode.Success;
+    }
+
+    private static async Task<int> WriteBulkOperationAsync(
+        TextWriter output,
+        IpcClient client,
+        IReadOnlyList<string> args,
+        IpcPackageBulkOperationResult queued
+    )
+    {
+        if (GetOptionalBoolArgument(args, "--wait") != true)
+        {
+            return await WriteJsonAsync(output, queued);
+        }
+
+        var result = await client.WaitForBulkOperationAsync(
+            queued,
+            GetOptionalIntArgument(args, "--timeout") ?? 3600,
+            (GetOptionalIntArgument(args, "--delay") ?? 1) * 1000
+        );
+        await output.WriteLineAsync(IpcJson.Serialize(result));
+        return result.Status == "success"
+            ? (int)IpcCliExitCode.Success
+            : (int)IpcCliExitCode.Failed;
     }
 
     private static async Task<int> WriteWrappedJsonAsync<T>(

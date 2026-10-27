@@ -405,8 +405,40 @@ packages this machine is waiting on a restart for. See
 | `POST` | `/uniget/v1/packages/uninstall` | Yes | Package action query set | `package uninstall` | Uninstalls package. |
 | `POST` | `/uniget/v1/packages/uninstall-then-reinstall` | Yes | Package action query set | `package repair` | Repair flow. |
 | `POST` | `/uniget/v1/packages/show` | Yes | Query `packageId`, `packageSource` | `package show` | UI-oriented package-details flow. |
-| `POST` | `/uniget/v1/packages/update-all` | Yes | None | `package update-all` | Requires `OnUpgradeAll` handler to be wired. |
-| `POST` | `/uniget/v1/packages/update-manager` | Yes | Query `manager` | `package update-manager` | Requires `OnUpgradeAllForManager` handler to be wired. |
+| `POST` | `/uniget/v1/packages/update-all` | Yes | Optional query `manager` | `package update-all` | Queues an update for every available update and returns their operation ids. See [Updating everything](#updating-everything). |
+| `POST` | `/uniget/v1/packages/update-manager` | Yes | Query `manager` | `package update-manager` | Same as `update-all` with `manager` set. |
+
+## Updating everything
+
+`update-all` and `update-manager` queue one update operation per available update and return at
+once; they never wait for the updates themselves. They update what the Software Updates page
+lists, so ignored updates, skipped minor updates and the minimum update age apply, and a package
+that already has an update queued or running is skipped. If the update list has not been loaded
+yet, the request waits for that first load.
+
+The response lists the operations it queued:
+
+```json
+{
+  "status": "success",
+  "command": "update-all",
+  "completed": false,
+  "message": "The updates were queued for background execution.",
+  "queuedCount": 2,
+  "succeededCount": 0,
+  "failedCount": 0,
+  "results": [
+    { "status": "success", "operationId": "…", "operationStatus": "inqueue", "completed": false, "package": { "id": "Git.Git", "manager": "winget" } }
+  ]
+}
+```
+
+Follow each one through `/uniget/v1/operations/{operationId}`, or let the CLI do it with
+`package update-all --wait true`. With no updates available, `queuedCount` is `0`, `completed` is
+`true` and `results` is empty.
+
+In a session with a window, the window queues the updates, so they also appear in its operations
+list. A headless session queues them itself.
 
 ## Pending machine restarts
 
@@ -430,8 +462,6 @@ In headless sessions:
 
 - `POST /uniget/v1/app/show` fails because there is no window to show.
 - `POST /uniget/v1/app/navigate` fails because there is no UI page stack to navigate.
-- `POST /uniget/v1/packages/update-all` fails unless a host wires `OnUpgradeAll`.
-- `POST /uniget/v1/packages/update-manager` fails unless a host wires `OnUpgradeAllForManager`.
 
 These failures are intentional and surfaced as HTTP `400` with a descriptive message.
 

@@ -28,7 +28,7 @@ Otherwise, use the launcher included with your installation:
 | Linux | Installed `.deb` and `.rpm` packages provide `uniget tui`. From an extracted archive, open its folder and run `./uniget tui`. |
 | macOS | After installing in Applications, run `/Applications/UniGetUI.app/Contents/MacOS/uniget tui`. From an extracted archive, run `./uniget tui` in its folder. |
 
-On Windows, selecting **Add to PATH** during installation lets you use `uniget` from any
+On Windows, the **Add to PATH** installer option (on by default) lets you use `uniget` from any
 folder. Open a new terminal after installation. Portable installations do not change `PATH`;
 run the launcher from the portable folder. See [the CLI guide](CLI.md#quick-start) for more
 launch options and [portable mode](PORTABLE.md) for portable installation details.

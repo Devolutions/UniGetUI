@@ -13,9 +13,9 @@ macOS. It forwards arguments and terminal input/output, waits for each command t
 returns its exit code. Keep it with the rest of the installation; copying only the launcher
 elsewhere will not work.
 
-- **Windows:** Select **Add to PATH** during a regular installation to run `uniget` from any
-  directory. This option is off by default and uses the user or system `PATH` according to
-  the install mode. Open a new terminal after installation. Without this option, run
+- **Windows:** Keep **Add to PATH** selected during a regular installation to run `uniget` from
+  any directory. This option is on by default (upgrades keep your previous choice) and uses the
+  user or system `PATH` according to the install mode. Open a new terminal after installation. Without this option, run
   `.\uniget.exe` from the installation directory.
 - **Linux:** The `.deb` and `.rpm` packages expose `uniget` on `PATH`; from an extracted tarball,
   run `./uniget` in the directory containing `UniGetUI`.
@@ -33,11 +33,11 @@ The commands below assume PowerShell is in the installation directory on Windows
 .\uniget.exe operation wait --id 123 --timeout 300
 ```
 
-For a silent Windows installation, include `ADDTOPATH=1` to opt in, or `ADDTOPATH=0` to
-explicitly deselect **Add to PATH**:
+For a silent Windows installation, include `ADDTOPATH=0` to opt out, or `ADDTOPATH=1` to
+explicitly select **Add to PATH** (for example, over a previously saved opt-out):
 
 ```powershell
-.\UniGetUI.Installer.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART ADDTOPATH=1
+.\UniGetUI.Installer.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART ADDTOPATH=0
 ```
 
 The property name is case-insensitive and accepts only `0` or `1`. It overrides the saved

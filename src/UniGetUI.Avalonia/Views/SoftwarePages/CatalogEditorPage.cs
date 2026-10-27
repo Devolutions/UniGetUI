@@ -97,10 +97,12 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             if (_document.CanEdit && !_pickingFile) _document.NewCatalog();
         });
         _addButton = vm.AddToolbarButton("catalog_add", CoreTools.Translate("Add packages"), AddPackages);
-        vm.AddToolbarButton("delete", CoreTools.Translate("Remove selection from catalog"), RemoveSelection);
-        vm.AddToolbarButton("version", CoreTools.Translate("Pin version"), () => _ = PinVersionAsync(SelectedItem));
-        vm.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
-            () => _ = ShowDetailsForPackage(SelectedItem));
+        EnableWhen(vm.AddToolbarButton("delete", CoreTools.Translate("Remove selection from catalog"), RemoveSelection),
+            () => CanEditCatalog && (HasCheckedPackages || HasSelectedItem));
+        EnableWhen(vm.AddToolbarButton("version", CoreTools.Translate("Pin version"), () => _ = PinVersionAsync(SelectedItem)),
+            () => CanEditCatalog && HasSelectedItem);
+        EnableWhen(vm.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+            () => _ = ShowDetailsForPackage(SelectedItem)), () => HasSelectedItem);
         _renameButton = vm.AddToolbarButton("rename", CoreTools.Translate("Rename catalog"),
             () => _ = RenameCatalogAsync());
         _feedButton = vm.AddToolbarButton("package", CoreTools.Translate("Package feed"),
@@ -170,12 +172,15 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     private void SyncStatus()
     {
         ViewModel.SubtitleSuffix = _document.IsDirty ? " · " + CoreTools.Translate("Unsaved changes") : "";
-        _renameButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
-        _feedButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
-        _addButton?.IsEnabled = _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
+        _renameButton?.IsEnabled = CanEditCatalog;
+        _feedButton?.IsEnabled = CanEditCatalog;
+        _addButton?.IsEnabled = CanEditCatalog;
         _discardButton?.IsEnabled = _document.CanDiscardChanges && !_pickingFile;
         SetMainButtonState(_document.CanEdit && !_pickingFile, showDropdown: false);
+        RefreshSelectionGates();
     }
+
+    private bool CanEditCatalog => _document.CanEdit && _document.HasSelectedCatalog && !_pickingFile;
 
     // A catalog can list every macOS .pkg, .dmg and .zip of a folder or web feed; IT sets it here and
     // can check what the feed publishes before deploying the catalog.

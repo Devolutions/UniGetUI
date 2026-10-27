@@ -108,6 +108,10 @@ public abstract partial class AbstractPackagesPage : UserControl,
         GenerateToolBar(ViewModel);
         configureToolbar?.Invoke(ViewModel);
         InitializeToolbarOverflow();
+        ViewModel.FilteredPackages.SelectionStateChanged += (_, _) => ScheduleSelectionGatesRefresh();
+        PackageList.SelectionChanged += (_, _) => ScheduleSelectionGatesRefresh();
+        // Posted, so subclass predicates only run once their constructor has finished
+        ScheduleSelectionGatesRefresh();
 
         // Double-click a package row → show details. DataGrid-level gestures also receive
         // header double-clicks, so require an actual row ancestor rather than blacklisting headers.
@@ -414,6 +418,46 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
             return null;
         }
+    }
+
+    protected bool HasSelectedItem => SelectedItem is not null;
+    protected bool HasCheckedPackages => ViewModel.FilteredPackages.Any(w => w.IsChecked);
+
+    // ─── Selection-dependent toolbar state ────────────────────────────────────
+    private readonly List<(Control Control, Func<bool> CanExecute)> _selectionGates = [];
+    private bool _selectionGatesRefreshPending;
+
+    /// <summary>Keeps the control enabled only while canExecute holds, rechecked whenever
+    /// packages are focused or checked.</summary>
+    protected T EnableWhen<T>(T control, Func<bool> canExecute) where T : Control
+    {
+        _selectionGates.Add((control, canExecute));
+        return control;
+    }
+
+    /// <summary>Gates the main button and its dropdown on at least one checked package.</summary>
+    protected void EnableMainButtonWhenPackagesChecked()
+    {
+        EnableWhen(MainToolbarButton, () => HasCheckedPackages);
+        EnableWhen(MainToolbarButtonDropdown, () => HasCheckedPackages);
+    }
+
+    protected void RefreshSelectionGates()
+    {
+        foreach (var (control, canExecute) in _selectionGates)
+            control.IsEnabled = canExecute();
+    }
+
+    // Select all checks every row one by one; coalesce those into a single refresh
+    private void ScheduleSelectionGatesRefresh()
+    {
+        if (_selectionGatesRefreshPending) return;
+        _selectionGatesRefreshPending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _selectionGatesRefreshPending = false;
+            RefreshSelectionGates();
+        });
     }
 
     // ─── Operation launchers (delegated to ViewModel) ─────────────────────────

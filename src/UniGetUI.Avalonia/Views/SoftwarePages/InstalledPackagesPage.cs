@@ -96,6 +96,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         SetMainButton("delete", CoreTools.Translate("Uninstall selection"), () =>
             _ = ConfirmAndLaunchUninstall(vm.FilteredPackages.GetCheckedPackages()));
 
+        EnableMainButtonWhenPackagesChecked();
         SetMainButtonDropdown(new MenuFlyout
         {
             Items = { uninstallAsAdmin, uninstallInteractive, new Separator(), downloadInstallers },
@@ -108,16 +109,16 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         ViewModel.AddToolbarSeparator(subgroup: !ViewModel.DisableReload);
-        ViewModel.AddToolbarButton("options", CoreTools.Translate("Uninstall options"),
-            () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
+        EnableWhen(ViewModel.AddToolbarButton("options", CoreTools.Translate("Uninstall options"),
+            () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual uninstall"),
-            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Uninstall));
+        EnableWhen(ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual uninstall"),
+            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Uninstall)), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
-            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
+        EnableWhen(ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
+        var ignoreButton = ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
             var packages = vm.FilteredPackages.GetCheckedPackages().ToList();
             if (MainWindow.Instance is not { } window
@@ -131,11 +132,12 @@ public class InstalledPackagesPage : AbstractPackagesPage
                 }
             }
         });
+        EnableWhen(ignoreButton, () => HasCheckedPackages);
         ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => vm.RequestManageIgnoredCommand.Execute(null));
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
-            () => _ = ExportSelectionToBundleAsync(vm));
+        EnableWhen(ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
+            () => _ = ExportSelectionToBundleAsync(vm)), () => HasCheckedPackages);
         ViewModel.AddToolbarButton("save_as", CoreTools.Translate("Export to CSV"),
             () => _ = ExportPackagesToCsvAsync());
     }

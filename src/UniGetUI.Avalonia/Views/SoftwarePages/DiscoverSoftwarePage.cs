@@ -187,6 +187,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         SetMainButton("download", CoreTools.Translate("Install selection"), () =>
             _ = LaunchInstall(vm.FilteredPackages.GetCheckedPackages()));
 
+        EnableMainButtonWhenPackagesChecked();
         SetMainButtonDropdown(new MenuFlyout
         {
             Items = { installAsAdmin, installSkipHash, installInteractive, new Separator(), downloadInstallers },
@@ -215,17 +216,17 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         ViewModel.AddToolbarSeparator(subgroup: !ViewModel.DisableReload);
-        ViewModel.AddToolbarButton("options", CoreTools.Translate("Install options"),
-            () => _ = ShowInstallationOptionsForPackage(SelectedItem));
+        EnableWhen(ViewModel.AddToolbarButton("options", CoreTools.Translate("Install options"),
+            () => _ = ShowInstallationOptionsForPackage(SelectedItem)), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual install"),
-            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Install));
+        EnableWhen(ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual install"),
+            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Install)), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
-            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
+        EnableWhen(ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
-            () => _ = ExportSelectionToBundleAsync(vm));
+        EnableWhen(ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
+            () => _ = ExportSelectionToBundleAsync(vm)), () => HasCheckedPackages);
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────

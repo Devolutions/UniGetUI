@@ -87,6 +87,7 @@ public class PackageBundlesPage : AbstractPackagesPage
         SetMainButton("download", CoreTools.Translate("Install selection"), () =>
             _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm)));
 
+        EnableMainButtonWhenPackagesChecked();
         SetMainButtonDropdown(new MenuFlyout
         {
             Items = { installAsAdmin, installInteractive, installSkipHash, new Separator(), downloadInstallers },
@@ -108,14 +109,14 @@ public class PackageBundlesPage : AbstractPackagesPage
         ViewModel.AddToolbarButton("console", CoreTools.Translate("Create .ps1 script"),
             () => _ = CreateBatchScriptAsync());
         ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("delete", CoreTools.Translate("Remove selection from bundle"), () =>
+        EnableWhen(ViewModel.AddToolbarButton("delete", CoreTools.Translate("Remove selection from bundle"), () =>
         {
             HasUnsavedChanges = true;
             _loader.RemoveRange(vm.FilteredPackages.GetCheckedPackages());
-        });
+        }), () => HasCheckedPackages);
         ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
-            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
+        EnableWhen(ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false), () => HasSelectedItem);
     }
 
     private static IReadOnlyList<IPackage> GetCheckedNonInstalledPackages(PackagesPageViewModel vm)

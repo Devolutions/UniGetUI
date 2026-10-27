@@ -68,6 +68,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         SetMainButton("update", CoreTools.Translate("Update selection"), () =>
             _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages()));
 
+        EnableMainButtonWhenPackagesChecked();
         SetMainButtonDropdown(new MenuFlyout
         {
             Items =
@@ -89,16 +90,16 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         ViewModel.AddToolbarSeparator(subgroup: !ViewModel.DisableReload);
-        ViewModel.AddToolbarButton("options", CoreTools.Translate("Update options"),
-            () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
+        EnableWhen(ViewModel.AddToolbarButton("options", CoreTools.Translate("Update options"),
+            () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual update"),
-            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Update));
+        EnableWhen(ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual update"),
+            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Update)), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator(subgroup: true);
-        ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
-            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
+        EnableWhen(ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+            () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false), () => HasSelectedItem);
         ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
+        var ignoreButton = ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
             var packages = vm.FilteredPackages.GetCheckedPackages().ToList();
             if (MainWindow.Instance is not { } window
@@ -110,6 +111,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
                 UpgradablePackagesLoader.Instance.IgnoredPackages[pkg.Id] = pkg;
             }
         });
+        EnableWhen(ignoreButton, () => HasCheckedPackages);
         ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => vm.RequestManageIgnoredCommand.Execute(null));
         ViewModel.AddToolbarSeparator(subgroup: true);

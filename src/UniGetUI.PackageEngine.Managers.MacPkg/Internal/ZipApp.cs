@@ -86,7 +86,9 @@ internal static class ZipApp
             .Where(e => e.FullName.StartsWith(resources, StringComparison.Ordinal)
                 && e.FullName.EndsWith(".icns", StringComparison.OrdinalIgnoreCase)
                 && !e.FullName[resources.Length..].Contains('/'))
-            .ToDictionary(e => e.FullName[resources.Length..], e => e, StringComparer.Ordinal);
+            // A zip may repeat a name; the first entry wins, as it does for GetEntry.
+            .GroupBy(e => e.FullName[resources.Length..], StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         string? named = AppBundle.IconFileName(plist);
         var entry = (named is not null ? icons.GetValueOrDefault(named) : null) ?? icons.Values.FirstOrDefault();
         if (entry is null)

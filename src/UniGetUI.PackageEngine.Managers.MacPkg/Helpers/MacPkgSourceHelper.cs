@@ -1,3 +1,4 @@
+using UniGetUI.Core.Classes;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.Providers;
 using UniGetUI.PackageEngine.Enums;
@@ -14,6 +15,9 @@ internal sealed class MacPkgSourceHelper : BaseSourceHelper
 {
     public MacPkgSourceHelper(MacPkg manager)
         : base(manager) { }
+
+    /// <summary>Drops the briefly cached feed list, so the next listing reads the catalog again.</summary>
+    internal void ForgetSources() => TaskRecycler<IReadOnlyList<IManagerSource>>.RemoveFromCache(_getSources);
 
     protected override IReadOnlyList<IManagerSource> GetSources_UnSafe() =>
         PkgCatalogFeeds.Load()

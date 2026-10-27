@@ -81,7 +81,12 @@ public sealed class MacPkg : PackageManager
     protected override void _loadManagerVersion(out string version) =>
         version = $"macOS {Environment.OSVersion.Version}";
 
-    public override void RefreshPackageIndexes() => PkgFeed.ForgetCachedIndexes();
+    public override void RefreshPackageIndexes()
+    {
+        PkgFeed.ForgetCachedIndexes();
+        // A catalog edited since the last listing may name other feeds.
+        ((MacPkgSourceHelper)SourcesHelper).ForgetSources();
+    }
 
     // ── Listing ────────────────────────────────────────────────────────────
 
@@ -116,8 +121,11 @@ public sealed class MacPkg : PackageManager
         var items = PkgFeed.List(source.Url, currentOnly: currentOnly).Where(i => i.Id == package.Id).ToArray();
         if (!string.IsNullOrEmpty(version))
             return items
-                .Where(i => i.Version == version && PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture) > 0)
-                .OrderByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture))
+                .Where(i => (i.Version == version || i.App?.Version == version)
+                    && PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture) > 0)
+                // An update found by the app in place names the app's version; the package's own wins a tie.
+                .OrderByDescending(i => i.Version == version)
+                .ThenByDescending(i => PkgMetadata.ArchitectureFit(i.Architectures, RuntimeInformation.OSArchitecture))
                 .FirstOrDefault();
         return PkgFeed.Latest(items, CompareVersions, RuntimeInformation.OSArchitecture).FirstOrDefault();
     }
@@ -145,7 +153,9 @@ public sealed class MacPkg : PackageManager
 
     // Only packages that a feed publishes are listed: other receipts (Apple's, or components of
     // software installed by other means) are not this manager's to show.
-    internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item, string Installed, bool HasUpdate)> ListInstalled()
+    // Installed and Offered are in one version domain (the receipt's, or the app's) so they compare; the
+    // feed's own version stays on Item, for finding the package to install.
+    internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item, string Installed, string Offered, bool HasUpdate)> ListInstalled()
     {
         var latest = ListLatest();
         IReadOnlyDictionary<string, string> receipts;
@@ -161,7 +171,7 @@ public sealed class MacPkg : PackageManager
             receipts = new Dictionary<string, string>();
         }
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        var installed = new List<(IManagerSource, PkgFeedItem, string, bool)>();
+        var installed = new List<(IManagerSource, PkgFeedItem, string, string, bool)>();
         // Feeds that share a package are read newest first, so an update one of them offers is never hidden.
         foreach (var (source, item) in latest.OrderBy(p => p.Item.Id, StringComparer.Ordinal)
             .ThenByDescending(p => p.Item.Version, VersionOrder))
@@ -171,9 +181,9 @@ public sealed class MacPkg : PackageManager
             // The receipt decides first; without one, the app in place under its bundle id does, which
             // is how a .dmg, or an app that a management tool or the user installed another way, is recognized.
             if (!item.CopiesAnApp && receipts.TryGetValue(item.Id, out string? receipt))
-                installed.Add((source, item, receipt, CompareVersions(item.Version, receipt) > 0));
+                installed.Add((source, item, receipt, item.Version, CompareVersions(item.Version, receipt) > 0));
             else if (item.App is { } app && AppBundle.FindInstalled(app) is { } bundle)
-                installed.Add((source, item, bundle.Version ?? "0",
+                installed.Add((source, item, bundle.Version ?? "0", app.Version ?? item.Version,
                     app.Version is { } offered && bundle.Version is { } present && CompareVersions(offered, present) > 0));
             else
                 continue;
@@ -190,6 +200,6 @@ public sealed class MacPkg : PackageManager
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe() =>
         ListInstalled()
             .Where(p => p.HasUpdate)
-            .Select(p => new Package(p.Item.Name, p.Item.Id, p.Installed, p.Item.Version, p.Source, this))
+            .Select(p => new Package(p.Item.Name, p.Item.Id, p.Installed, p.Offered, p.Source, this))
             .ToArray();
 }

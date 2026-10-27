@@ -329,12 +329,12 @@ internal static class PkgInstaller
     internal static string LockDirectory { get; set; } = "/private/var/run/com.devolutions.unigetui";
 
     // One root install at a time on the Mac, whether the helper or a prompt started it, so two installs
-    // of one app never share its working copies. The shell holds the lock on fd 9 until it exits.
+    // of one app never share its working copies. lockf holds the lock while the whole command runs.
     internal static string LockedCommand(string command)
     {
         string directory = CoreTools.QuoteForPosixShell(LockDirectory);
         string lockFile = CoreTools.QuoteForPosixShell(Path.Combine(LockDirectory, "install.lock"));
-        return $"/bin/mkdir -p -m 700 {directory} && exec 9>{lockFile} && /usr/bin/lockf -t 1800 9 || exit 75; {command}";
+        return $"/bin/mkdir -p -m 700 {directory} && /usr/bin/lockf -k -t 1800 {lockFile} /bin/sh -c {CoreTools.QuoteForPosixShell(command)}";
     }
 
     internal static string InstallPkgCommand(string stagedPackage) =>

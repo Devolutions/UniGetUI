@@ -529,7 +529,7 @@ public sealed class MacPkgTests : IDisposable
             if (file != "/bin/sh")
                 return (0, "accepted");
             // The root step names this install's own staged file; it must survive a cancel while it runs.
-            staged = System.Text.RegularExpressions.Regex.Match(args[1], "-pkg '([^']+)'").Groups[1].Value;
+            staged = StagedPackage(args[1]);
             tokenCouldCancel = token.CanBeCanceled;
             cancellation.Cancel();
             await Task.Delay(50, CancellationToken.None);
@@ -931,6 +931,26 @@ public sealed class MacPkgTests : IDisposable
         }
     }
 
+    [Fact]
+    public void RefreshingReadsTheCatalogAgain()
+    {
+        string catalog = Path.Combine(_directory, "SoftwareCatalog.json");
+        void Declare(params string[] ids) => File.WriteAllText(catalog, "{\"version\":1,\"catalogs\":["
+            + string.Join(',', ids.Select(id => $$"""{"id":"{{id}}","name":"{{id}}","packages":[],"pkgFeed":"https://example.com/{{id}}/"}"""))
+            + "]}");
+        Declare("a");
+        PkgCatalogFeeds.TestCatalogPathOverride = catalog;
+        try
+        {
+            var manager = new MacPkg();
+            Assert.Equal(["a"], manager.SourcesHelper.GetSources().Select(s => s.Name));
+            Declare("a", "b");
+            manager.RefreshPackageIndexes();
+            Assert.Equal(["a", "b"], manager.SourcesHelper.GetSources().Select(s => s.Name));
+        }
+        finally { PkgCatalogFeeds.TestCatalogPathOverride = null; }
+    }
+
     // ── Apps ───────────────────────────────────────────────────────────────
 
     [Fact]
@@ -1050,7 +1070,7 @@ public sealed class MacPkgTests : IDisposable
         string feed = Path.Combine(_directory, "feed");
         string root = Path.Combine(_directory, "disk");
         string info = """
-            <pkg-info identifier="com.axosoft.gitkraken.pkg" version="12.6.1" install-location="/Applications">
+            <pkg-info identifier="com.axosoft.gitkraken.pkg" version="1.0" install-location="/Applications">
               <bundle path="./GitKraken.app" id="com.axosoft.gitkraken" CFBundleShortVersionString="12.6.1"/>
             </pkg-info>
             """;
@@ -1067,8 +1087,13 @@ public sealed class MacPkgTests : IDisposable
         AppBundle.TestRootOverride = root;
         try
         {
-            var installed = Assert.Single(new MacPkg().ListInstalled());
-            Assert.Equal(("com.axosoft.gitkraken.pkg", "12.5.0", true), (installed.Item.Id, installed.Installed, installed.HasUpdate));
+            var manager = new MacPkg();
+            var installed = Assert.Single(manager.ListInstalled());
+            // The package numbers itself 1.0, its app 12.6.1: the update compares the app's versions.
+            Assert.Equal(("com.axosoft.gitkraken.pkg", "12.5.0", "12.6.1", true),
+                (installed.Item.Id, installed.Installed, installed.Offered, installed.HasUpdate));
+            var package = new PackageClasses.Package("GitKraken", installed.Item.Id, installed.Installed, installed.Source, manager);
+            Assert.Equal("1.0", manager.FindFeedItem(package, "12.6.1")?.Version);
         }
         finally
         {
@@ -1354,7 +1379,11 @@ public sealed class MacPkgTests : IDisposable
                 <key>CFBundleDisplayName</key><string>Example Tool</string></dict></plist>
                 """));
             Add("Tool.app/Contents/MacOS/Tool", FatHeader(0x01000007, 0x0100000C));
+            // A zip may repeat an entry name; reading the icon must not fail on it.
+            Add("Tool.app/Contents/Resources/Tool.icns", [1, 2, 3]);
+            Add("Tool.app/Contents/Resources/Tool.icns", [4, 5, 6]);
         }
+        PkgMetadata.Read(zip, Path.Combine(_directory, "icons", "tool.png"));
         var metadata = PkgMetadata.Read(zip);
         Assert.Equal(("com.example.tool", "4.5", "Example Tool"), (metadata.Id, metadata.Version, metadata.Title));
         Assert.Equal(["x86_64", "arm64"], metadata.Architectures);
@@ -1442,7 +1471,7 @@ public sealed class MacPkgTests : IDisposable
             if (file == "/bin/sh")
             {
                 command = args[1];
-                string package = System.Text.RegularExpressions.Regex.Match(command, "-pkg '([^']+)'").Groups[1].Value;
+                string package = StagedPackage(command);
                 packageWasMounted = File.Exists(package) && package.Contains("UniGetUI-dmg", StringComparison.Ordinal);
             }
             return Task.FromResult((0, "accepted"));
@@ -1451,8 +1480,8 @@ public sealed class MacPkgTests : IDisposable
         {
             Assert.Equal(Enums.OperationVeredict.Success,
                 await PkgInstaller.InstallAsync(item, "Wrapped", _ => { }, _ => { }, CancellationToken.None));
-            Assert.Contains("; /usr/sbin/installer -pkg ", command);
-            Assert.EndsWith("Install Wrapped.pkg' -target / 2>&1", command);
+            Assert.Contains("/usr/sbin/installer -pkg ", command);
+            Assert.EndsWith("Install Wrapped.pkg' -target / 2>&1", command.Replace("'\\''", "'").TrimEnd('\''));
             Assert.True(packageWasMounted);
         }
         finally
@@ -1478,6 +1507,10 @@ public sealed class MacPkgTests : IDisposable
     }
 
     // ── Root helper ────────────────────────────────────────────────────────
+
+    // The installer's package path in a root command, which runs inside the quoted lockf command.
+    private static string StagedPackage(string command) =>
+        System.Text.RegularExpressions.Regex.Match(command.Replace("'\\''", "'"), "-pkg '([^']+)'").Groups[1].Value;
 
     private string HelperCatalog(string feed) => WritePackage("SoftwareCatalog.json", Encoding.UTF8.GetBytes($$"""
         {"version":1,"catalogs":[{"id":"mac","name":"Mac apps","packages":[],"pkgFeed":"{{feed.Replace("\\", "\\\\")}}"}]}

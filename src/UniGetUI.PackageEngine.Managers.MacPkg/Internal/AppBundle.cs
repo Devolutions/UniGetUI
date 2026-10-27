@@ -84,6 +84,9 @@ internal static class AppBundle
     /// <summary>Converts an .icns to a 256-pixel PNG with sips, which ships with macOS.</summary>
     public static bool ConvertIcon(string icns, string destinationPng)
     {
+        // Elsewhere, such as pkg-index on Linux, the package is simply published without an icon.
+        if (!OperatingSystem.IsMacOS())
+            return false;
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destinationPng)!);
         var result = Tool.Run("/usr/bin/sips", ["-s", "format", "png", "-Z", "256", icns, "--out", destinationPng],
             timeout: TimeSpan.FromMinutes(1));

@@ -16,7 +16,25 @@ public sealed class ToolbarSelectionStateTests : IDisposable
 
     public ToolbarSelectionStateTests() => Directory.CreateDirectory(_directory);
 
-    public void Dispose() => Directory.Delete(_directory, true);
+    public void Dispose()
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Directory.Delete(_directory, true);
+                return;
+            }
+            catch (IOException) when (attempt < 20)
+            {
+                Thread.Sleep(50);
+            }
+            catch (IOException)
+            {
+                return;
+            }
+        }
+    }
 
     private static CatalogEntry Entry(string id) => new()
     {

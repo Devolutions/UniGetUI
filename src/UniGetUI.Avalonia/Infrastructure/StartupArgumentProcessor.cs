@@ -20,6 +20,26 @@ internal static class StartupArgumentProcessor
         }
     }
 
+    /// <summary>
+    /// Returns the first <c>unigetui://package</c> link in <paramref name="args"/>, logging and
+    /// skipping malformed ones.
+    /// </summary>
+    internal static PackageLink? FindPackageLink(IReadOnlyList<string> args)
+    {
+        foreach (string arg in args)
+        {
+            if (!PackageLink.IsPackageLink(arg))
+                continue;
+
+            if (PackageLink.TryParse(arg) is { } link)
+                return link;
+
+            Logger.Warn($"Ignoring a malformed package link: {arg}");
+        }
+
+        return null;
+    }
+
     public static async Task ProcessAsync(IReadOnlyList<string> args)
     {
         if (args.Count == 0)
@@ -27,11 +47,19 @@ internal static class StartupArgumentProcessor
             return;
         }
 
-        List<string> bundles = StartupBundleArguments.Resolve(args, Environment.CurrentDirectory);
-        if (bundles.Count == 0)
+        // A protocol launch carries nothing but its link, so a link and a bundle never come together.
+        PackageLink? link = FindPackageLink(args);
+        List<string> bundles = link is null
+            ? StartupBundleArguments.Resolve(args, Environment.CurrentDirectory)
+            : [];
+        if (link is null && bundles.Count == 0)
         {
             return;
         }
+
+        string request = link is not null
+            ? $"the package link {link.ToUri()}"
+            : $"the package bundle {bundles[0]}";
 
         if (bundles.Count > 1)
         {
@@ -41,26 +69,31 @@ internal static class StartupArgumentProcessor
 
         if (!await AvaloniaBootstrapper.Initialized)
         {
-            Logger.Warn(
-                $"Could not load the package bundle {bundles[0]}: UniGetUI failed to finish initializing");
+            Logger.Warn($"Could not open {request}: UniGetUI failed to finish initializing");
             return;
         }
 
         if (MainWindow.Instance is not { } window)
         {
-            Logger.Warn($"Could not load the package bundle {bundles[0]}: the main window is not available");
+            Logger.Warn($"Could not open {request}: the main window is not available");
             return;
         }
 
         if (window.DataContext is not MainWindowViewModel viewModel)
         {
-            Logger.Warn($"Could not load the package bundle {bundles[0]}: the main window has no view model");
+            Logger.Warn($"Could not open {request}: the main window has no view model");
             return;
         }
 
         if (!window.IsVisible)
         {
             window.ShowFromTray();
+        }
+
+        if (link is not null)
+        {
+            await PackageLinkHandler.OpenAsync(link, window);
+            return;
         }
 
         Logger.ImportantInfo($"Loading the package bundle {bundles[0]} requested on the command line");

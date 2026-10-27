@@ -21,6 +21,7 @@ public enum TEL_InstallReferral
     DIRECT_SEARCH,
     FROM_BUNDLE,
     ALREADY_INSTALLED,
+    FROM_LINK,
 }
 
 public enum TEL_OP_RESULT

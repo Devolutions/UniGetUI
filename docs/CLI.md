@@ -372,7 +372,35 @@ These are read by the application itself rather than by the CLI client.
 
 ## Deep links
 
-The Windows installer registers a `unigetui://` protocol handler for regular installations; a portable install does not register it, see [PORTABLE.md](PORTABLE.md). It is used to route notification clicks back into a running instance, and accepts these actions:
+The Windows installer registers a `unigetui://` protocol handler for regular installations; a portable install does not register it, see [PORTABLE.md](PORTABLE.md).
+
+### Package links
+
+A package link opens a package's details in UniGetUI, from where the user can install it:
+
+```
+unigetui://package?manager=winget&source=winget&id=TechSmith.Snagit.2025&name=Snagit%202025
+```
+
+Right-click a package on the Discover Packages or Installed Packages page and choose **Copy link** to put a link to it on the clipboard.
+
+| Parameter | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | The package identifier. It must match exactly, ignoring case. |
+| `manager` | No | The package manager's identifier, as `unigetui manager list` prints it (`winget`, `chocolatey`, `scoop`, `npm`, ...). Without it, every enabled package manager is searched. |
+| `source` | No | The source name, for package managers with several sources (`winget`, `msstore`, `community`, ...). Without it, any source matches. |
+| `version` | No | The version to install instead of the latest one. |
+| `name` | No | The package's name. It is only shown while UniGetUI looks for the package and if the package is not found; it is never used to find the package. |
+
+Values are percent-encoded. Unknown parameters are ignored. A link is refused if it has no `id`, repeats a parameter, contains a control character, has a value longer than 256 characters, or is longer than 2048 characters.
+
+A link only names a package. Opening one never installs anything by itself: it shows the package details, and the package is installed only if the user clicks Install. The installation uses the user's own install options for that package, and no installer address, argument or other install option can be passed in a link. A package that is only known to this computer, such as a WinGet "Local PC" entry, cannot be linked to.
+
+The link works whether or not UniGetUI is already running. If the package manager is disabled or not available, or the package is not found, UniGetUI says so and opens nothing.
+
+### Notification actions
+
+These links route notification clicks back into a running instance:
 
 | Deep link | Meaning |
 | --- | --- |
@@ -381,7 +409,7 @@ The Windows installer registers a `unigetui://` protocol handler for regular ins
 | `unigetui://updateAll` | Starts an update for every available package update. |
 | `unigetui://releaseSelfUpdateLock` | Allows a pending UniGetUI self-update to proceed. |
 
-Anything else after `unigetui://` is ignored. The action is only dispatched when UniGetUI is already running: a link that cold-starts the app launches it normally and the action is dropped. To drive UniGetUI programmatically, use the verb commands above or the [IPC API](IPC.md) rather than deep links.
+Anything else after `unigetui://` is ignored. A notification action is only dispatched when UniGetUI is already running: a link that cold-starts the app launches it normally and the action is dropped. To drive UniGetUI programmatically, use the verb commands above or the [IPC API](IPC.md) rather than deep links.
 
 ## Installer parameters
 

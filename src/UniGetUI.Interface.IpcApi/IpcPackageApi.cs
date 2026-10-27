@@ -374,6 +374,17 @@ public static class IpcPackageApi
         return FindAnyPackage(request);
     }
 
+    /// <summary>
+    /// Finds the package a manager search returns for the exact id (and source, when given),
+    /// as the Discover page would show it. Unlike <see cref="ResolvePackage"/> it never loads
+    /// the installed or upgradable lists first, so it stays quick on a cold start.
+    /// </summary>
+    public static IPackage FindCatalogPackage(IpcPackageActionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return FindSearchResult(request);
+    }
+
     public static IReadOnlyList<string> GetPackageVersions(IpcPackageActionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

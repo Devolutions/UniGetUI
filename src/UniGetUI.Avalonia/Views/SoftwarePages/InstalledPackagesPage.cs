@@ -31,6 +31,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
     private MenuItem? _menuUninstallThenReinstall;
     private MenuItem? _menuIgnoreUpdates;
     private MenuItem? _menuDetails;
+    private MenuItem? _menuCopyLink;
     private MenuItem? _menuOpenInstallLocation;
     private MenuItem? _menuDownloadInstaller;
     private MenuItem? _menuManual;
@@ -239,6 +240,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
         };
         _menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
+        _menuCopyLink = CreateCopyLinkMenuItem();
+
         var menu = new ContextMenu();
         menu.Items.Add(menuUninstall);
         menu.Items.Add(new Separator());
@@ -261,6 +264,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         menu.Items.Add(_menuIgnoreUpdates);
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuDetails);
+        menu.Items.Add(_menuCopyLink);
 
         return menu;
     }
@@ -271,7 +275,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
             || _menuAsAdmin is null || _menuInteractive is null || _menuRemoveData is null
             || _menuInstallationOptions is null || _menuReinstall is null
             || _menuUninstallThenReinstall is null || _menuIgnoreUpdates is null
-            || _menuDetails is null
+            || _menuDetails is null || _menuCopyLink is null
             || _menuOpenInstallLocation is null || _menuDownloadInstaller is null
             || _menuManual is null)
         {
@@ -302,6 +306,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         _menuReinstall.IsEnabled = !isLocal;
         _menuUninstallThenReinstall.IsEnabled = !isLocal;
         _menuDetails.IsEnabled = !isLocal;
+        _menuCopyLink.IsEnabled = PackageLink.CanLinkTo(package);
         _menuOpenInstallLocation.IsEnabled =
             package.Manager.DetailsHelper.GetInstallLocation(package) is not null;
 

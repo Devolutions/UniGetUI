@@ -108,7 +108,7 @@ internal sealed record PkgMetadata(string Id, string Version, string? Title, IRe
                 using var payload = archive.OpenFile(payloadPath);
                 if (payload is not null)
                 {
-                    var (plistBytes, icons) = PkgPayload.FindAppResources(payload, appInPayload);
+                    var (plistBytes, icons) = PkgPayload.FindAppResources(payload, appInPayload, keepIcons: iconFile is not null);
                     plist = plistBytes is null ? null : AppBundle.ParsePlist(plistBytes);
                     if (iconFile is not null)
                         PkgPayload.SaveIcon(plist, icons, iconFile);

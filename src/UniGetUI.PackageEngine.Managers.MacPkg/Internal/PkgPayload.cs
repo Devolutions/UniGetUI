@@ -11,6 +11,9 @@ internal static class PkgPayload
 {
     private const int HeaderSize = 76;
     private const int MaxKeptFileBytes = 8 * 1024 * 1024;
+    // Icons are kept until the plist names one, so a payload of many icons must not fill memory.
+    private const int MaxKeptIconBytes = 32 * 1024 * 1024;
+    private const int MaxKeptIcons = 32;
     private const int MaxNameBytes = 4096;
 
     /// <summary>Saves, as a PNG, the icon the app's Info.plist names, else AppIcon.icns, else any it carries.</summary>
@@ -37,10 +40,13 @@ internal static class PkgPayload
 
     /// <summary>
     /// The app's Info.plist and its Contents/Resources/*.icns by name ("." when the payload is the app). Stops early once the plist and
-    /// the icon it names have both been seen; a payload that is not gzip'd odc cpio yields nothing.
+    /// the icon it names have both been seen; a payload that is not gzip'd odc cpio yields nothing. Without
+    /// <paramref name="keepIcons"/>, only the plist is read. Beyond a few icons or bytes, further icons are skipped.
     /// </summary>
-    internal static (byte[]? InfoPlist, Dictionary<string, byte[]> Icons) FindAppResources(Stream payload, string appPath)
+    internal static (byte[]? InfoPlist, Dictionary<string, byte[]> Icons) FindAppResources(Stream payload, string appPath,
+        bool keepIcons = true)
     {
+        long keptIconBytes = 0;
         string app = Normalize(appPath);
         string root = app.Length == 0 ? "" : app + "/";
         string plistName = root + "Contents/Info.plist";
@@ -70,9 +76,12 @@ internal static class PkgPayload
                 break;
 
             bool isPlist = name == plistName;
-            bool isIcon = name.StartsWith(resources, StringComparison.Ordinal)
+            bool isIcon = keepIcons
+                && name.StartsWith(resources, StringComparison.Ordinal)
                 && name.EndsWith(".icns", StringComparison.OrdinalIgnoreCase)
-                && !name[resources.Length..].Contains('/');
+                && !name[resources.Length..].Contains('/')
+                && (name[resources.Length..] == wanted
+                    || (icons.Count < MaxKeptIcons && keptIconBytes + fileSize <= MaxKeptIconBytes));
             if ((isPlist || isIcon) && fileSize <= MaxKeptFileBytes)
             {
                 byte[] data = new byte[fileSize];
@@ -83,7 +92,12 @@ internal static class PkgPayload
                     wanted = AppBundle.IconFileName(AppBundle.ParsePlist(plist));
                 }
                 else
+                {
                     icons[name[resources.Length..]] = data;
+                    keptIconBytes += data.Length;
+                }
+                if (isPlist && !keepIcons)
+                    break;
                 if (wanted is not null && icons.ContainsKey(wanted))
                     break;
             }

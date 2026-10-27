@@ -1311,6 +1311,25 @@ public sealed class MacPkgTests : IDisposable
     }
 
     [Fact]
+    public void APayloadOfManyIconsKeepsOnlyAFewAndTheNamedOne()
+    {
+        var files = Enumerable.Range(0, 100)
+            .Select(i => ($"./App.app/Contents/Resources/Icon{i}.icns", new byte[] { (byte)i }))
+            .Append(("./App.app/Contents/Info.plist", Plist("AppIcon")))
+            .Append(("./App.app/Contents/Resources/AppIcon.icns", [42]))
+            .ToArray();
+        var (plist, icons) = PkgPayload.FindAppResources(new MemoryStream(GzipCpio(files)), "./App.app");
+        Assert.NotNull(plist);
+        Assert.Equal(33, icons.Count);
+        Assert.Equal([42], icons["AppIcon.icns"]);
+
+        // Checking an app's identity needs only its plist.
+        var (identity, none) = PkgPayload.FindAppResources(new MemoryStream(GzipCpio(files)), "./App.app", keepIcons: false);
+        Assert.NotNull(identity);
+        Assert.Empty(none);
+    }
+
+    [Fact]
     public void APayloadThatIsNotGzipCpioYieldsNothing()
     {
         var (plist, icons) = PkgPayload.FindAppResources(new MemoryStream("pbzx not gzip"u8.ToArray()), "./App.app");

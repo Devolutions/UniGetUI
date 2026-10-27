@@ -72,9 +72,19 @@
                                               Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-                <settings:ComboboxCard x:Name="WindowCloseBehaviorSelector"
-                                       ValueChangedCommand="{Binding RefreshSystemTrayCommand}"
+                <settings:CheckboxCard x:Name="DisableSystemTrayCard"
+                                       SettingName="DisableSystemTray"
+                                       Text="{t:Translate Keep UniGetUI running in the background when its window is closed}"
+                                       StateChangedCommand="{Binding RefreshSystemTrayCommand}"
                                        CornerRadius="8,8,0,0"/>
+
+                <settings:CheckboxCard x:Name="SystemTrayIconCard"
+                                       SettingName="HideSystemTrayIcon"
+                                       ForceInversion="True"
+                                       Text="{t:Translate Show the UniGetUI icon in the system tray}"
+                                       StateChangedCommand="{Binding RefreshSystemTrayCommand}"
+                                       CornerRadius="0"
+                                       BorderThickness="1,0,1,1"/>
 
                 <settings:ButtonCard x:Name="EditAutostartSettings"
                                      CornerRadius="0,0,8,8"

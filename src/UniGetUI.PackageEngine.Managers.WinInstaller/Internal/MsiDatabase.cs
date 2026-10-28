@@ -2,7 +2,8 @@ using System.Runtime.InteropServices;
 
 namespace UniGetUI.PackageEngine.Managers.WinInstallerManager.Internal;
 
-internal sealed record MsiInfo(IReadOnlyDictionary<string, string> Properties, string? Template, byte[]? Icon = null)
+internal sealed record MsiInfo(IReadOnlyDictionary<string, string> Properties, string? Template, byte[]? Icon = null,
+    string? ExternalMedia = null)
 {
     public string? Property(string name) =>
         Properties.TryGetValue(name, out string? value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : null;
@@ -43,7 +44,7 @@ internal static unsafe partial class MsiDatabase
             }
             finally { MsiCloseHandle(view); }
             return new MsiInfo(properties, SummaryString(database, TemplateProperty),
-                ReadIcon(database, properties.GetValueOrDefault("ARPPRODUCTICON")));
+                ReadIcon(database, properties.GetValueOrDefault("ARPPRODUCTICON")), ExternalMedia(database));
         }
         finally { MsiCloseHandle(database); }
     }
@@ -59,6 +60,14 @@ internal static unsafe partial class MsiDatabase
                 return icon;
         }
         return null;
+    }
+
+    private static string? ExternalMedia(nint database)
+    {
+        var cabinets = FirstColumn(database, "SELECT `Cabinet` FROM `Media`");
+        if (cabinets.FirstOrDefault(c => !c.StartsWith('#')) is { } external)
+            return external;
+        return cabinets.Count == 0 && FirstColumn(database, "SELECT `File` FROM `File`").Count > 0 ? "uncompressed files" : null;
     }
 
     private static bool IsIdentifier(string name) =>

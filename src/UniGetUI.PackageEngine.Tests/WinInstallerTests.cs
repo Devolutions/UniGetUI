@@ -349,6 +349,39 @@ public sealed class WinInstallerTests : IDisposable
         Assert.Equal("3.4.5.6", metadata.Version);
     }
 
+    [Theory]
+    [InlineData("工具", "工具")]
+    [InlineData("编辑器", "编辑器")]
+    [InlineData("Программа", "Программа")]
+    [InlineData("应用 Pro", "应用.Pro")]
+    [InlineData("Café Tool", "Café.Tool")]
+    [InlineData("-Tool", "Tool")]
+    public void AnIdKeepsTheLettersOfAnyScript(string name, string expected) =>
+        Assert.Equal(expected, InstallerFile.MakeId(name));
+
+    private const string MediaTable = "CREATE TABLE `Media` (`DiskId` SHORT NOT NULL, `LastSequence` LONG NOT NULL, `DiskPrompt` CHAR(64) LOCALIZABLE, `Cabinet` CHAR(255), `VolumeLabel` CHAR(32), `Source` CHAR(72) PRIMARY KEY `DiskId`)";
+    private const string FileTable = "CREATE TABLE `File` (`File` CHAR(72) NOT NULL, `Component_` CHAR(72) NOT NULL, `FileName` CHAR(255) NOT NULL LOCALIZABLE, `FileSize` LONG NOT NULL, `Version` CHAR(72), `Language` CHAR(20), `Attributes` SHORT, `Sequence` SHORT NOT NULL PRIMARY KEY `File`)";
+
+    [Fact]
+    public void AnMsiWhoseFilesAreOutsideItIsRefused()
+    {
+        static Dictionary<string, string> Properties() => new() { ["ProductCode"] = ProductCode, ["ProductVersion"] = "1.0" };
+
+        string external = Msi("External.msi", Properties(), "x64;1033", null,
+            MediaTable, "INSERT INTO `Media` (`DiskId`, `LastSequence`, `Cabinet`) VALUES (1, 1, 'data1.cab')");
+        Assert.Contains("data1.cab", Assert.Throws<InvalidDataException>(() => InstallerFile.Read(external)).Message);
+
+        string loose = Msi("Loose.msi", Properties(), "x64;1033", null,
+            MediaTable, "INSERT INTO `Media` (`DiskId`, `LastSequence`) VALUES (1, 1)",
+            FileTable, "INSERT INTO `File` (`File`, `Component_`, `FileName`, `FileSize`, `Sequence`) VALUES ('App', 'Main', 'app.exe', 10, 1)");
+        Assert.Contains("uncompressed", Assert.Throws<InvalidDataException>(() => InstallerFile.Read(loose)).Message);
+
+        string embedded = Msi("Embedded.msi", Properties(), "x64;1033", null,
+            MediaTable, "INSERT INTO `Media` (`DiskId`, `LastSequence`, `Cabinet`) VALUES (1, 1, '#cab1.cab')",
+            FileTable, "INSERT INTO `File` (`File`, `Component_`, `FileName`, `FileSize`, `Sequence`) VALUES ('App', 'Main', 'app.exe', 10, 1)");
+        Assert.Equal("1.0", InstallerFile.Read(embedded).Version);
+    }
+
     [Fact]
     public void AnMsiWithoutAllUsersInstallsForTheUserWithoutElevation()
     {
@@ -686,7 +719,7 @@ public sealed class WinInstallerTests : IDisposable
     }
 
     private string Msi(string relative, Dictionary<string, string> properties, string template,
-        (string Name, byte[] Data)[]? icons = null)
+        (string Name, byte[] Data)[]? icons = null, params string[] statements)
     {
         string path = Path.Combine(_directory, relative);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -696,6 +729,8 @@ public sealed class WinInstallerTests : IDisposable
             Execute(database, "CREATE TABLE `Property` (`Property` CHAR(72) NOT NULL, `Value` LONGCHAR NOT NULL PRIMARY KEY `Property`)");
             foreach (var (name, value) in properties)
                 Execute(database, $"INSERT INTO `Property` (`Property`, `Value`) VALUES ('{name}', '{value}')");
+            foreach (string statement in statements)
+                Execute(database, statement);
             if (icons is not null)
             {
                 Execute(database, "CREATE TABLE `Icon` (`Name` CHAR(72) NOT NULL, `Data` OBJECT NOT NULL PRIMARY KEY `Name`)");

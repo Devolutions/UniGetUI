@@ -159,6 +159,8 @@ computer an `arm64` build wins over an `x64` one, which wins over an `x86` one.
 
 ## Limits
 
+- An `.msi` must be a single file: one that installs from a cabinet beside it (`data1.cab`) or from
+  uncompressed files is skipped, with the reason shown by **Check feed** and `pkg-index`.
 - An `.exe` without a version in its version resource needs `version` in its manifest.
 - An `.exe` is recognized by name only when the manifest gives no `uninstallKey`, so an app renamed
   in Apps and Features is not recognized without it.

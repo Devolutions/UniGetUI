@@ -140,6 +140,8 @@ internal static partial class InstallerFile
     {
         string? productCode = InstallerDetails.Guid(msi.Property("ProductCode"))
             ?? throw new InvalidDataException("It has no ProductCode.");
+        if (msi.ExternalMedia is { } external)
+            throw new InvalidDataException($"It installs files that are not inside it ({external}). Publish a single-file .msi, with its cabinets embedded.");
         string? upgradeCode = InstallerDetails.Guid(manifest?.UpgradeCode) ?? InstallerDetails.Guid(msi.Property("UpgradeCode"));
         string version = InstallerDetails.Clean(manifest?.Version) ?? msi.Property("ProductVersion")
             ?? throw new InvalidDataException("It has no ProductVersion.");
@@ -239,12 +241,12 @@ internal static partial class InstallerFile
         return name.Length > 0 ? name : null;
     }
 
-    [GeneratedRegex(@"[^A-Za-z0-9+_-]+")]
+    [GeneratedRegex(@"[^\p{L}\p{M}\p{N}+_-]+")]
     private static partial Regex IdSeparators();
 
     internal static string MakeId(string name)
     {
-        string id = IdSeparators().Replace(name, ".").Trim('.');
+        string id = IdSeparators().Replace(name.Normalize(System.Text.NormalizationForm.FormC), ".").Trim('.', '-');
         return id.Length > 0 ? id : "package";
     }
 }

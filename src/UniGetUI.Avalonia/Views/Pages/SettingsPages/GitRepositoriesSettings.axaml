@@ -1,0 +1,69 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.GitRepositoriesSettings"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:GitRepositoriesSettingsViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,10">
+        <StackPanel Orientation="Vertical">
+
+            <settings:CheckboxCard x:Name="GitRepositoriesCard"
+                                   SettingName="EnableGitRepositories"
+                                   Text="{t:Translate Enable Git Repositories}"
+                                   Description="{t:Translate Text='Fetches your main clones, fast-forwards their default branch, and helps you remove leftover worktrees and branches.'}"
+                                   StateChangedCommand="{Binding EnabledChangedCommand}"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   CornerRadius="8"/>
+
+            <settings:TranslatedTextBlock Text="Requirements"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:SettingsCard x:Name="GitFoundCard"
+                                   CornerRadius="8"
+                                   Header="{t:Translate Git}"
+                                   Description="{Binding GitStatus}"/>
+
+            <settings:TranslatedTextBlock Text="Preferences"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:ComboboxCard x:Name="GitCheckIntervalCard"
+                                   SettingName="GitRepositoriesCheckInterval"
+                                   Text="{t:Translate Check for new commits automatically}"
+                                   ValueChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:CheckboxCard x:Name="GitAutoUpdateCard"
+                                   SettingName="GitRepositoriesAutoUpdate"
+                                   Text="{t:Translate Update clones after checking}"
+                                   Description="{t:Translate Text='Only clones on their default branch, with no local changes and no commits of their own, are fast-forwarded.'}"
+                                   StateChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:ButtonCard x:Name="OpenGitRepositoriesCard"
+                                 Text="{t:Translate Choose the clones to keep up to date}"
+                                 ButtonText="{t:Translate Open Git Repositories}"
+                                 Command="{Binding OpenCommand}"
+                                 IsEnabled="{Binding IsEnabled}"
+                                 BorderThickness="1,0,1,1"
+                                 CornerRadius="0,0,8,8"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

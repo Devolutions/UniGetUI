@@ -22,6 +22,7 @@ public sealed class GitWorktreeTests : IDisposable
         IReadOnlyList<GitWorktree> worktrees = await Service.ListWorktreesAsync(clone);
 
         Assert.Equal(4, worktrees.Count);
+        Assert.Equal(3, await Service.CountLinkedWorktreesAsync(clone));
         Assert.True(worktrees[0].IsMain);
         Assert.Equal(clone, worktrees[0].Path);
         Assert.Equal("main", worktrees[0].Branch);
@@ -39,6 +40,34 @@ public sealed class GitWorktreeTests : IDisposable
 
         GitWorktree dirtyWorktree = Assert.Single(worktrees, w => w.Path == dirty);
         Assert.True(dirtyWorktree.HasLocalChanges);
+    }
+
+    [Fact]
+    public async Task ListWorktrees_CanLeaveLocalChangesToBeCheckedOneByOne()
+    {
+        _sandbox.CreateOrigin();
+        string clone = _sandbox.Clone("clone");
+        string feature = AddWorktree(clone, "feature");
+        _sandbox.Commit(feature, "feature.txt", "work");
+        File.WriteAllText(Path.Combine(feature, "untracked.txt"), "unsaved work");
+        // A detached worktree has no branch to read in the batch, so it is described on its own.
+        string detached = Path.Combine(_sandbox.Root, "wt-detached");
+        _sandbox.Git(clone, "worktree", "add", "--quiet", "--detach", detached, "feature");
+
+        IReadOnlyList<GitWorktree> worktrees = await Service.ListWorktreesAsync(clone, checkLocalChanges: false);
+
+        GitWorktree featureWorktree = Assert.Single(worktrees, w => w.Path == feature);
+        Assert.Equal(1, featureWorktree.UniqueCommits);
+        Assert.NotNull(featureWorktree.LastCommitDate);
+        Assert.False(featureWorktree.HasLocalChanges);
+        Assert.True(await Service.HasLocalChangesAsync(feature));
+
+        GitWorktree detachedWorktree = Assert.Single(worktrees, w => w.Path == detached);
+        Assert.Null(detachedWorktree.Branch);
+        Assert.Equal(1, detachedWorktree.UniqueCommits);
+        Assert.NotNull(detachedWorktree.LastCommitDate);
+        Assert.False(await Service.HasLocalChangesAsync(detached));
+        Assert.False(await Service.HasLocalChangesAsync(Path.Combine(_sandbox.Root, "gone")));
     }
 
     [Fact]

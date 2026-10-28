@@ -1,0 +1,15 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.ExtensionsHomepage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <!-- One row per extension, added by the code-behind from AppExtensions.All -->
+        <StackPanel x:Name="ExtensionsPanel" Orientation="Vertical" Margin="0,8"/>
+    </ScrollViewer>
+
+</UserControl>

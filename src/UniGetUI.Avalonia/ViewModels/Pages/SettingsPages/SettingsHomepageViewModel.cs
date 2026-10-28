@@ -19,4 +19,5 @@ public partial class SettingsHomepageViewModel : ViewModelBase
     [RelayCommand] private void NavigateToAdministrator() => NavigationRequested?.Invoke(this, typeof(Administrator));
     [RelayCommand] private void NavigateToExperimental() => NavigationRequested?.Invoke(this, typeof(Experimental));
     [RelayCommand] private void NavigateToManagers() => NavigationRequested?.Invoke(this, typeof(ManagersHomepage));
+    [RelayCommand] private void NavigateToExtensions() => NavigationRequested?.Invoke(this, typeof(ExtensionsHomepage));
 }

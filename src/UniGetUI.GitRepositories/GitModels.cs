@@ -102,4 +102,29 @@ public sealed record GitWorktree(
     public bool IsMerged => UniqueCommits == 0;
 }
 
+/// <summary>A local branch of a clone.</summary>
+/// <param name="Name">Its short name, such as <c>feature/login</c>.</param>
+/// <param name="Upstream">The remote branch it tracks, such as <c>origin/feature/login</c>; null when none.</param>
+/// <param name="UpstreamGone">Whether the remote branch it tracked has since been deleted, as after a merged pull request.</param>
+/// <param name="AheadOfUpstream">Commits not pushed to <paramref name="Upstream"/>.</param>
+/// <param name="BehindUpstream">Commits on <paramref name="Upstream"/> not pulled into it.</param>
+/// <param name="UniqueCommits">Commits on it that are not on the remote default branch; null when unknown.</param>
+/// <param name="WorktreePath">The worktree it is checked out in, the main clone included; null when none.</param>
+/// <param name="IsDefault">Whether it is the branch the clone is kept current on.</param>
+public sealed record GitBranch(
+    string Name,
+    string? Upstream = null,
+    bool UpstreamGone = false,
+    int AheadOfUpstream = 0,
+    int BehindUpstream = 0,
+    int? UniqueCommits = null,
+    DateTimeOffset? LastCommitDate = null,
+    string Subject = "",
+    string? WorktreePath = null,
+    bool IsDefault = false)
+{
+    /// <summary>Everything committed on it is already on the remote default branch.</summary>
+    public bool IsMerged => UniqueCommits == 0;
+}
+
 public sealed record GitOperationResult(bool Success, string Output);

@@ -81,6 +81,8 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         // Refresh toggle states when returning to the managers list
         if (page is ManagersHomepage mh)
             mh.RefreshToggles();
+        if (page is ExtensionsHomepage extensions)
+            extensions.RefreshRows();
     }
 
     private async Task<bool> NavigateBackAsync(CancellationToken cancellationToken = default)
@@ -133,6 +135,9 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         if (t == typeof(Internet)) return new Internet();
         if (t == typeof(Backup)) return new Backup();
         if (t == typeof(Experimental)) return new Experimental();
+        if (t == typeof(ExtensionsHomepage)) return new ExtensionsHomepage();
+        if (AppExtensions.All.FirstOrDefault(extension => extension.SettingsPage == t) is { } extension)
+            return extension.CreateSettingsPage();
         if (t == typeof(Notifications)) return new Notifications();
         if (t == typeof(Updates)) return new Updates();
         if (t == typeof(Scheduler)) return new Scheduler();

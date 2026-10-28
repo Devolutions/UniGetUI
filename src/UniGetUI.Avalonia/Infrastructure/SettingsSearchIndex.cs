@@ -143,6 +143,12 @@ public static class SettingsSearchIndex
         new("Allow importing custom pre-install and post-install commands when importing packages from a bundle", ["import commands"], typeof(Administrator), "ImportPrePostCard"),
         new("Administrator rights and other dangerous settings", ["administrator", "dangerous"], typeof(Administrator), null),
 
+        // ── Extensions ───────────────────────────────────────────────────────
+        new("Extensions", ["extensions", "modules", "add-ons", "plugins", "optional features"], typeof(ExtensionsHomepage), null),
+        new("Enable Git Repositories", ["git", "git repositories", "clones", "worktrees", "branches"], typeof(GitRepositoriesSettings), "GitRepositoriesCard"),
+        new("Check for new commits automatically", ["git check interval", "fetch"], typeof(GitRepositoriesSettings), "GitCheckIntervalCard"),
+        new("Update clones after checking", ["git auto update", "fast-forward", "pull"], typeof(GitRepositoriesSettings), "GitAutoUpdateCard"),
+
         // ── Experimental ─────────────────────────────────────────────────────
         new("Enable Software Catalog", ["catalog", "software catalog"], typeof(Experimental), "SoftwareCatalogCard"),
         new("Show UniGetUI's version and build number on the titlebar.", ["version number", "titlebar", "build number"], typeof(Experimental), "ShowVersionNumberOnTitlebar"),
@@ -300,6 +306,8 @@ public static class SettingsSearchIndex
         nameof(Backup) => "Package backup",
         nameof(Administrator) => "Administrator rights and other dangerous settings",
         nameof(AgentPolicyInspector) => "Active package broker policy",
+        nameof(ExtensionsHomepage) => "Extensions",
+        nameof(GitRepositoriesSettings) => "Git Repositories",
         nameof(Experimental) => "Experimental settings and developer options",
         _ => "UniGetUI Settings",
     });

@@ -260,6 +260,7 @@ internal static class AvaloniaBootstrapper
                 {
                     "catalog" => window is { SoftwareCatalogEnabled: true },
                     "catalog-editor" => window is { CatalogEditorEnabled: true },
+                    "git-repositories" => window is { GitRepositoriesEnabled: true },
                     _ => true,
                 })
                 .ToArray(),
@@ -304,6 +305,11 @@ internal static class AvaloniaBootstrapper
                 if (page == "catalog-editor" && !window.CatalogEditorEnabled)
                     throw new InvalidOperationException("Catalog Editor is disabled. Enable it in Experimental settings and developer options, then restart UniGetUI.");
                 window.Navigate(page == "catalog-editor" ? PageType.CatalogEditor : PageType.Catalog);
+                break;
+            case "git-repositories":
+                if (!window.GitRepositoriesEnabled)
+                    throw new InvalidOperationException("Git Repositories is turned off. Turn it on in Settings, under Extensions.");
+                window.Navigate(PageType.GitRepositories);
                 break;
             case "settings":
                 window.Navigate(PageType.Settings);

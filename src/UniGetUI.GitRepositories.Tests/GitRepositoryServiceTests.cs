@@ -251,6 +251,24 @@ public sealed class GitRepositoryServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DefaultBranch_CanBeChosenPerRepository()
+    {
+        _sandbox.CreateOrigin();
+        string seed = Path.Combine(_sandbox.Root, "seed");
+        _sandbox.Git(seed, "push", "--quiet", "origin", "main:develop");
+        string clone = _sandbox.Clone("clone");
+        _sandbox.Git(clone, "switch", "--quiet", "develop");
+
+        GitRepositoryStatus remoteDefault = await Service.CheckAsync(clone);
+        GitRepositoryStatus chosen = await Service.CheckAsync(clone, defaultBranch: "develop");
+
+        Assert.Equal(GitRepositoryState.NotOnDefaultBranch, remoteDefault.State);
+        Assert.Equal("develop", chosen.DefaultBranch);
+        Assert.Equal("origin/develop", chosen.TrackingRef);
+        Assert.Equal(GitRepositoryState.UpToDate, chosen.State);
+    }
+
+    [Fact]
     public async Task Check_ReportsAnUnreachableRemote()
     {
         _sandbox.CreateOrigin();

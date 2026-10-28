@@ -84,6 +84,15 @@
 
             <Border Height="16"/>
 
+            <!-- ── Extensions ─────────────────────────────────────────── -->
+            <settings:SettingsPageButton CornerRadius="8"
+                Icon="Extensions"
+                Text="{t:Translate Extensions}"
+                UnderText="{t:Translate Text='Optional tools that go beyond package management'}"
+                Command="{Binding NavigateToExtensionsCommand}"/>
+
+            <Border Height="16"/>
+
             <!-- ── Internet + Experimental ────────────────────────────── -->
             <settings:SettingsPageButton CornerRadius="8,8,0,0"
                 Icon="Search"

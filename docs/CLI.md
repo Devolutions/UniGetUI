@@ -168,7 +168,7 @@ other hosts; this does not substitute for their native lock-contention tests.
 | --- | --- | --- | --- |
 | `app status` | None | None | Returns app/session state such as headless mode, page, and supported UI actions. |
 | `app show` | None | None | Shows and focuses the window when a GUI session exists. |
-| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. |
+| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` requires the Git Repositories extension to be turned on in Settings, under Extensions; no restart is needed. |
 | `app quit` | None | None | Gracefully shuts down the selected session, including headless daemons. |
 
 ### Operations

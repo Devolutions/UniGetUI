@@ -17,6 +17,7 @@ using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages;
@@ -45,6 +46,7 @@ public enum PageType
     Null, // Used for initializers
     Catalog,
     CatalogEditor,
+    GitRepositories,
 }
 
 public partial class MainWindow : Window
@@ -196,6 +198,9 @@ public partial class MainWindow : Window
     public PageType CurrentPage => ViewModel.CurrentPage_t;
     public bool SoftwareCatalogEnabled => ViewModel.Sidebar.SoftwareCatalogEnabled;
     public bool CatalogEditorEnabled => ViewModel.Sidebar.CatalogEditorEnabled;
+    public bool GitRepositoriesEnabled => ViewModel.Sidebar.GitRepositoriesEnabled;
+    public GitRepositoriesViewModel? GitRepositories => ViewModel.GitRepositories;
+    public void SetGitRepositoriesEnabled(bool enabled) => ViewModel.SetGitRepositoriesEnabled(enabled);
 
     public MainWindow()
     {

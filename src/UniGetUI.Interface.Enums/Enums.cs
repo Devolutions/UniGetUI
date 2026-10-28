@@ -91,6 +91,8 @@ namespace UniGetUI.Interface.Enums
         Snap = '\uE947',
         Flatpak = '\uE948',
         Bun = '\uE949',
+        GitBranch = '\uE94A',
+        Extensions = '\uE94B',
     }
 
     public class NotificationArguments

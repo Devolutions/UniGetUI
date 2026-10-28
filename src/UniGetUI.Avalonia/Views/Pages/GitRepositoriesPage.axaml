@@ -1,0 +1,429 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.GitRepositoriesPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:DataType="vm:GitRepositoriesViewModel">
+    <UserControl.Styles>
+        <Style Selector="#GitToolbar Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="Border.git-card">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="ListBox#RepositoryList ListBoxItem">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <!-- State badges: colour follows what the clone needs, text says it. -->
+        <Style Selector="Border.state">
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Border.state.ok">
+            <Setter Property="Background" Value="{DynamicResource StatusSuccessBackground}"/>
+        </Style>
+        <Style Selector="Border.state.ok TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusSuccessForeground}"/>
+        </Style>
+        <Style Selector="Border.state.update">
+            <Setter Property="Background" Value="{DynamicResource OperationAttentionBackgroundBrush}"/>
+        </Style>
+        <Style Selector="Border.state.warning">
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+        </Style>
+        <Style Selector="Border.state.error">
+            <Setter Property="Background" Value="{DynamicResource StatusErrorBackground}"/>
+        </Style>
+        <Style Selector="Border.state.error TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForeground}"/>
+        </Style>
+        <Style Selector="Border.tag">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,1"/>
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Border.tag.good">
+            <Setter Property="Background" Value="{DynamicResource StatusSuccessBackground}"/>
+        </Style>
+        <Style Selector="Border.tag.caution">
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+        </Style>
+        <Style Selector="Border.tag TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Name="PageGrid" Margin="8,6,8,8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <!-- The clones, then the splitter, then the panel under them: the code-behind restores and saves
+                 the panel's height, as the splitter moves it. -->
+            <RowDefinition Height="*" MinHeight="120"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="280" MinHeight="120"/>
+        </Grid.RowDefinitions>
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="80,*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+            <controls:SvgIcon Width="40" Height="40" Margin="0,0,4,0"
+                              automation:AutomationProperties.AccessibilityView="Raw"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"
+                              Path="avares://UniGetUI/Assets/Symbols/git_branch.svg"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{t:Translate Git Repositories}"
+                           FontSize="28" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="{t:Translate Text='Keep your main clones up to date on their default branch, and clean up their worktrees and branches.'}"
+                           FontSize="12" Opacity="0.6" TextWrapping="Wrap"/>
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="{Binding GitVersion}" FontSize="11" Opacity="0.5"
+                       VerticalAlignment="Bottom"/>
+        </Grid>
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="1" Name="GitToolbar" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <WrapPanel Orientation="Horizontal" ItemSpacing="4" IsEnabled="{Binding !IsGitMissing}">
+                <Button Command="{Binding AddRepositoryCommand}" CommandParameter="{Binding $self}"
+                        ToolTip.Tip="{t:Translate Text='Pick a clone to keep up to date, or a folder such as your dev folder to add every clone in it'}"
+                        automation:AutomationProperties.Name="{t:Translate Add repository}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/add_to.svg" Width="20" Height="20"/>
+                        <TextBlock Text="{t:Translate Add repository}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding CheckAllCommand}" IsEnabled="{Binding HasRepositories}"
+                        ToolTip.Tip="{t:Translate Fetch every repository and compare it with its remote}"
+                        automation:AutomationProperties.Name="{t:Translate Check all}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg" Width="20" Height="20"/>
+                        <TextBlock Text="{t:Translate Check all}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding UpdateAllCommand}" IsEnabled="{Binding HasRepositories}"
+                        ToolTip.Tip="{t:Translate Fetch every repository and fast-forward the ones that are only behind}"
+                        automation:AutomationProperties.Name="{t:Translate Update all}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg" Width="20" Height="20"/>
+                        <TextBlock Text="{t:Translate Update all}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </WrapPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center"
+                        IsEnabled="{Binding !IsGitMissing}">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="{t:Translate Check automatically:}" FontSize="12" VerticalAlignment="Center"/>
+                    <ComboBox ItemsSource="{Binding CheckIntervalOptions}"
+                              SelectedIndex="{Binding CheckIntervalIndex, Mode=TwoWay}" MinWidth="150"
+                              automation:AutomationProperties.Name="{t:Translate Check automatically}"/>
+                </StackPanel>
+                <CheckBox IsChecked="{Binding AutoUpdate, Mode=TwoWay}"
+                          ToolTip.Tip="{t:Translate Text='Only clones on their default branch, with no local changes and no commits of their own, are fast-forwarded.'}">
+                    <TextBlock Text="{t:Translate Update after checking}" FontSize="12"/>
+                </CheckBox>
+            </StackPanel>
+        </Grid>
+
+        <ProgressBar Grid.Row="2" Margin="0,4,0,4" Height="3"
+                     IsIndeterminate="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+
+        <controls:InfoBar Grid.Row="3" DataContext="{Binding Notice}" Margin="0,0,0,8"/>
+
+        <!-- Repositories -->
+        <Border Grid.Row="4" Classes="git-card">
+            <Panel>
+                <ListBox Name="RepositoryList"
+                         ItemsSource="{Binding Repositories}"
+                         SelectedItem="{Binding SelectedRepository, Mode=TwoWay}"
+                         Background="Transparent" Padding="4"
+                         Grid.IsSharedSizeScope="True"
+                         IsVisible="{Binding HasRepositories}"
+                         automation:AutomationProperties.Name="{t:Translate Git repositories}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GitRepositoryItemViewModel">
+                            <!-- Every row gives the badge and the buttons the width of the widest, so the
+                                 branch column lines up whether or not a row offers to update. -->
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="State"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Actions"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Path}" FontSize="11" Opacity="0.6"
+                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/git_branch.svg"
+                                                          Width="14" Height="14" VerticalAlignment="Center"
+                                                          automation:AutomationProperties.AccessibilityView="Raw"/>
+                                        <TextBlock Text="{Binding BranchText}" FontSize="12"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding DetailText}" FontSize="11" Opacity="0.6"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <Panel Grid.Column="2" VerticalAlignment="Center" MinWidth="170">
+                                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
+                                                 Width="120" MinWidth="0" HorizontalAlignment="Left"/>
+                                    <Border Classes="state"
+                                            Classes.ok="{Binding IsOk}"
+                                            Classes.update="{Binding IsUpdate}"
+                                            Classes.warning="{Binding IsWarning}"
+                                            Classes.error="{Binding IsError}"
+                                            IsVisible="{Binding IsIdle}"
+                                            ToolTip.Tip="{Binding StateDetail}"
+                                            automation:AutomationProperties.HelpText="{Binding StateDetail}">
+                                        <TextBlock Text="{Binding StateText}" FontSize="12"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="260"/>
+                                    </Border>
+                                </Panel>
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Button Content="{t:Translate Update}" Classes="accent"
+                                            IsVisible="{Binding CanUpdate}"
+                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).UpdateCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Content="{t:Translate Check}" IsEnabled="{Binding IsIdle}"
+                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).CheckCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Padding="8,4" automation:AutomationProperties.Name="{t:Translate More options}"
+                                            ToolTip.Tip="{t:Translate More options}">
+                                        <TextBlock Text="⋯" FontSize="14"/>
+                                        <Button.Flyout>
+                                            <MenuFlyout>
+                                                <MenuItem Header="{t:Translate Open folder}"
+                                                          Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).OpenFolderCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                                <MenuItem Header="{t:Translate Choose the branch to keep current}"
+                                                          Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).ChooseBranchCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                                <MenuItem Header="{t:Translate Remove from the list}"
+                                                          Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).RemoveFromListCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Empty state -->
+                <StackPanel IsVisible="{Binding IsEmpty}" Spacing="8" Margin="24"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="{t:Translate No repositories yet}" FontSize="18" FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{t:Translate Text='Add the main clones you keep on main or master. UniGetUI fetches them and fast-forwards the ones that are only behind, never touching local work.'}"
+                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520" Opacity="0.7"/>
+                </StackPanel>
+            </Panel>
+        </Border>
+
+        <!-- Drag to share the height between the clones and the panel under them -->
+        <GridSplitter Grid.Row="5" Name="DetailsSplitter"
+                      Classes="winui-horizontal-splitter"
+                      ResizeDirection="Rows"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      ToolTip.Tip="{t:Translate Drag to resize}"
+                      automation:AutomationProperties.AccessibilityView="Raw"/>
+
+        <!-- Worktrees or branches of the selected clone -->
+        <Grid Grid.Row="6" RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,0,0,4">
+                <ListBox SelectionMode="Single,AlwaysSelected"
+                         SelectedIndex="{Binding DetailsViewIndex, Mode=TwoWay}"
+                         Background="Transparent"
+                         BorderThickness="1"
+                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                         CornerRadius="4"
+                         Padding="0"
+                         VerticalAlignment="Center"
+                         automation:AutomationProperties.Name="{t:Translate Show}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBoxItem Classes="segment-item" Padding="12,4,12,8"
+                                 automation:AutomationProperties.Name="{t:Translate Worktrees}">
+                        <TextBlock Text="{t:Translate Worktrees}" FontSize="13"/>
+                    </ListBoxItem>
+                    <ListBoxItem Classes="segment-item" Padding="12,4,12,8"
+                                 automation:AutomationProperties.Name="{t:Translate Branches}">
+                        <TextBlock Text="{t:Translate Branches}" FontSize="13"/>
+                    </ListBoxItem>
+                </ListBox>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsEnabled="{Binding HasSelection}">
+                    <Button Command="{Binding RefreshDetailsCommand}" Padding="8,4"
+                            ToolTip.Tip="{t:Translate Read them again from git}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg" Width="16" Height="16"/>
+                            <TextBlock Text="{t:Translate Reload}" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding PruneWorktreesCommand}" Padding="8,4" IsVisible="{Binding ShowWorktrees}"
+                            ToolTip.Tip="{t:Translate Forget the worktrees whose folder was deleted}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg" Width="16" Height="16"/>
+                            <TextBlock Text="{t:Translate Prune missing}" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding DeleteMergedBranchesCommand}" Padding="8,4"
+                            IsVisible="{Binding ShowBranches}" IsEnabled="{Binding HasMergedBranches}"
+                            ToolTip.Tip="{t:Translate Delete the branches whose commits are all on the default branch}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg" Width="16" Height="16"/>
+                            <TextBlock Text="{t:Translate Delete merged}" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" Classes="git-card">
+                <Panel>
+                    <TextBlock Text="{t:Translate Select a repository to see its worktrees and branches}" Opacity="0.6"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding !HasSelection}"/>
+                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingDetails}"
+                                 VerticalAlignment="Top" Height="2" MinWidth="0"/>
+                    <ScrollViewer IsVisible="{Binding ShowBranches}" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Branches}" Margin="8,4">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GitBranchItemViewModel">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="4,6">
+                                        <StackPanel Spacing="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/git_branch.svg"
+                                                                  Width="14" Height="14" VerticalAlignment="Center"
+                                                                  automation:AutomationProperties.AccessibilityView="Raw"/>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Subject}" FontSize="11" Opacity="0.7"
+                                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Subject}"/>
+                                            <WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,2,0,0">
+                                                <Border Classes="tag" IsVisible="{Binding IsDefault}">
+                                                    <TextBlock Text="{t:Translate Default branch}"/>
+                                                </Border>
+                                                <Border Classes="tag" IsVisible="{Binding IsCheckedOut}"
+                                                        ToolTip.Tip="{Binding WorktreePath}">
+                                                    <TextBlock Text="{Binding CheckedOutText}"/>
+                                                </Border>
+                                                <Border Classes="tag good" IsVisible="{Binding IsMerged}"
+                                                        ToolTip.Tip="{t:Translate Everything committed on it is on the default branch}">
+                                                    <TextBlock Text="{t:Translate Merged}"/>
+                                                </Border>
+                                                <Border Classes="tag good" IsVisible="{Binding UpstreamGone}"
+                                                        ToolTip.Tip="{t:Translate Text='Its remote branch was deleted, as after a merged pull request'}">
+                                                    <TextBlock Text="{t:Translate Remote branch deleted}"/>
+                                                </Border>
+                                                <Border Classes="tag" IsVisible="{Binding HasUniqueCommits}">
+                                                    <TextBlock Text="{Binding UniqueCommitsText}"/>
+                                                </Border>
+                                                <Border Classes="tag" Classes.caution="{Binding IsOutOfSync}"
+                                                        IsVisible="{Binding HasUpstreamText}">
+                                                    <TextBlock Text="{Binding UpstreamText}"/>
+                                                </Border>
+                                                <Border Classes="tag" IsVisible="{Binding IsLocalOnly}"
+                                                        ToolTip.Tip="{t:Translate It does not track a remote branch}">
+                                                    <TextBlock Text="{t:Translate Local only}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding LastCommitText}" FontSize="11" Opacity="0.6"
+                                                           VerticalAlignment="Center"/>
+                                            </WrapPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                            <Button Content="{t:Translate Open folder}" IsVisible="{Binding IsCheckedOut}"
+                                                    ToolTip.Tip="{t:Translate Open the worktree it is checked out in}"
+                                                    Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).OpenBranchWorktreeCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                            <Button Content="{t:Translate Delete}" IsVisible="{Binding CanDelete}"
+                                                    Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).DeleteBranchCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <ScrollViewer IsVisible="{Binding ShowWorktrees}" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Worktrees}" Margin="8,4">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GitWorktreeItemViewModel">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="4,6">
+                                        <StackPanel Spacing="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding BranchText}" FontSize="12" Opacity="0.7" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Path}" FontSize="11" Opacity="0.6"
+                                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+                                            <WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,2,0,0">
+                                                <Border Classes="tag" IsVisible="{Binding IsMain}">
+                                                    <TextBlock Text="{t:Translate Main clone}"/>
+                                                </Border>
+                                                <Border Classes="tag good" IsVisible="{Binding IsMerged}"
+                                                        ToolTip.Tip="{t:Translate Everything committed on it is on the default branch}">
+                                                    <TextBlock Text="{t:Translate Merged}"/>
+                                                </Border>
+                                                <Border Classes="tag good" IsVisible="{Binding UpstreamGone}"
+                                                        ToolTip.Tip="{t:Translate Text='Its remote branch was deleted, as after a merged pull request'}">
+                                                    <TextBlock Text="{t:Translate Remote branch deleted}"/>
+                                                </Border>
+                                                <Border Classes="tag caution" IsVisible="{Binding HasLocalChanges}">
+                                                    <TextBlock Text="{t:Translate Has changed or untracked files}"/>
+                                                </Border>
+                                                <Border Classes="tag" IsVisible="{Binding IsCheckingChanges}" Opacity="0.6">
+                                                    <TextBlock Text="{t:Translate Looking for changed files...}"/>
+                                                </Border>
+                                                <Border Classes="tag" IsVisible="{Binding HasUniqueCommits}">
+                                                    <TextBlock Text="{Binding UniqueCommitsText}"/>
+                                                </Border>
+                                                <Border Classes="tag caution" IsVisible="{Binding IsLocked}">
+                                                    <TextBlock Text="{Binding LockText}"/>
+                                                </Border>
+                                                <Border Classes="tag caution" IsVisible="{Binding IsPrunable}">
+                                                    <TextBlock Text="{t:Translate Folder missing}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding LastCommitText}" FontSize="11" Opacity="0.6"
+                                                           VerticalAlignment="Center"/>
+                                            </WrapPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                            <Button Content="{t:Translate Open folder}" IsEnabled="{Binding CanOpen}"
+                                                    Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).OpenWorktreeFolderCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                            <Button Content="{t:Translate Remove}" IsVisible="{Binding CanRemove}"
+                                                    Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).RemoveWorktreeCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Panel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -160,6 +160,47 @@
                 </Panel>
             </ListBoxItem>
 
+            <!-- Git Repositories: an experimental page, last unless moved -->
+            <ListBoxItem x:Name="GitRepositoriesNavBtn" Tag="GitRepositories" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Git Repositories}"
+                         ToolTip.Tip="{t:Translate Git Repositories}">
+                <Panel>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                        <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/git_branch.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{t:Translate Git Repositories}"
+                                   FontSize="14"
+                                   FontWeight="Normal"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                    </Grid>
+                    <!-- Count of clones that can be fast-forwarded, styled like the updates bubble -->
+                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="3,1"
+                            MinWidth="16"
+                            Height="16"
+                            IsVisible="{Binding GitRepositoriesBadgeVisible}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="26,5,-20,0">
+                        <TextBlock Text="{Binding GitRepositoriesBadgeText}"
+                                   FontSize="9"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <ProgressBar IsIndeterminate="{Binding GitRepositoriesIsLoading}"
+                                 IsVisible="{Binding GitRepositoriesIsLoading}"
+                                 Height="2"
+                                 Width="32"
+                                 MinWidth="0"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Bottom"
+                                 Margin="4,0,0,2"/>
+                </Panel>
+            </ListBoxItem>
+
         </ListBox>
 
         <!-- Footer items -->

@@ -185,6 +185,7 @@ public partial class MainWindow
         PageType.Installed => CoreTools.Translate("Installed Packages"),
         PageType.Bundles => CoreTools.Translate("Package Bundles"),
         PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
+        PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
         PageType.Managers => CoreTools.Translate("Package Managers"),
         _ => CoreTools.Translate("Settings"),
     };

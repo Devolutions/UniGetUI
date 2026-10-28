@@ -69,10 +69,14 @@ starting the GUI or connecting to the UniGetUI IPC API. For example, `unigetui s
 lists installed agent skills, and `unigetui skills add <source>` installs skills from a source.
 On Windows PowerShell, use `.\uniget.exe skills [args...]` to wait for completion and return its exit code.
 Skill discovery searches your configured repositories, websites and Notion databases by default.
-The optional **Package Managers > Agent Skills > Sources > Search skills.sh** switch also includes
+Enable the optional desktop extension under **Settings > Extensions > Agent Skills** to use its
+dedicated sidebar page. It is off by default and independent of the bundled CLI. Skills are not
+package managers: `package search/install/update/uninstall`, package bundles and the TUI do not
+include them.
+The optional **Settings > Extensions > Agent Skills > Sources > Search skills.sh** switch also includes
 the public skills.sh catalog for searches of at least two characters. It is off by default;
-enabling it sends search text to skills.sh. This applies to GUI Discover and engine-backed
-`package search`; the bundled `skills` CLI does not provide a public-catalog `find` command.
+enabling it sends search text to skills.sh. This applies only to discovery on the Agent Skills
+extension page; the bundled `skills` CLI does not provide a public-catalog `find` command.
 Arguments and exit codes after `skills` belong to that CLI, not to the UniGetUI automation
 commands documented below.
 
@@ -115,7 +119,7 @@ Related environment variables:
   - `--name` maps to `--key` on `backup cloud download` and `backup cloud restore`
 - Boolean options use explicit values such as `--enabled true` or `--wait false`.
 - `--detach` is shorthand for asynchronous package operations (`--wait false`).
-- `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `bun`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `skills`, `snap`, `vcpkg`, `winget`, and `winps`.
+- `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `bun`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `snap`, `vcpkg`, `winget`, and `winps`.
 
 ## Command reference
 
@@ -183,7 +187,7 @@ other hosts; this does not substitute for their native lock-contention tests.
 | --- | --- | --- | --- |
 | `app status` | None | None | Returns app/session state such as headless mode, page, and supported UI actions. |
 | `app show` | None | None | Shows and focuses the window when a GUI session exists. |
-| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` requires the Git Repositories extension to be turned on in Settings, under Extensions; no restart is needed. |
+| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `agent-skills`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` and `agent-skills` require their respective extensions to be turned on in Settings, under Extensions; no restart is needed. |
 | `app quit` | None | None | Gracefully shuts down the selected session, including headless daemons. |
 
 ### Operations

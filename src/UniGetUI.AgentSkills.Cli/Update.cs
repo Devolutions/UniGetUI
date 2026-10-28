@@ -557,12 +557,12 @@ internal static class UpdateCommand
                     pinned.Add((sk.Name, action.Ref!));
                     break;
                 case PinActionKind.Unpin:
-                {
-                    var entry = Pinning.UnpinnedEntry(sk.Entry)!;
-                    lockSkills[sk.Name] = entry.DeepClone();
-                    project.Add(sk with { Entry = entry });
-                    break;
-                }
+                    {
+                        var entry = Pinning.UnpinnedEntry(sk.Entry)!;
+                        lockSkills[sk.Name] = entry.DeepClone();
+                        project.Add(sk with { Entry = entry });
+                        break;
+                    }
                 default:
                     project.Add(sk);
                     break;

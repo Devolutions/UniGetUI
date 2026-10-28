@@ -5,7 +5,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 
-namespace UniGetUI.PackageEngine.Managers.SkillsManager;
+namespace UniGetUI.Extensions.AgentSkills;
 
 internal sealed record SkillsShResult(string Name, SkillSourceLocator Source);
 

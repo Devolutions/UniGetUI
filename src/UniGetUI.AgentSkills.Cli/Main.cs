@@ -285,25 +285,25 @@ internal static class Program
                 InstallLockCommand.Run(rest);
                 break;
             case "i" or "install" or "a" or "add":
-            {
-                var (source, opts, errors) = AddCommand.ParseOptions(rest);
-                if (!inAgent && !opts.Json) ShowLogo();
-                if (errors.Count > 0)
                 {
-                    foreach (var e in errors) Term.ErrLine($"Error: {e}");
-                    if (opts.Json) Term.OutLine("[]");
-                    Term.ExitCode = 1;
-                    return;
+                    var (source, opts, errors) = AddCommand.ParseOptions(rest);
+                    if (!inAgent && !opts.Json) ShowLogo();
+                    if (errors.Count > 0)
+                    {
+                        foreach (var e in errors) Term.ErrLine($"Error: {e}");
+                        if (opts.Json) Term.OutLine("[]");
+                        Term.ExitCode = 1;
+                        return;
+                    }
+                    AddCommand.Run(source, opts);
+                    break;
                 }
-                AddCommand.Run(source, opts);
-                break;
-            }
             case "use":
-            {
-                var (source, opts, errors) = UseCommand.ParseOptions(rest);
-                UseCommand.Run(source, opts, errors);
-                break;
-            }
+                {
+                    var (source, opts, errors) = UseCommand.ParseOptions(rest);
+                    UseCommand.Run(source, opts, errors);
+                    break;
+                }
             case "preview" or "show":
                 PreviewCommand.Run(rest);
                 break;
@@ -311,11 +311,11 @@ internal static class Program
                 ValidateCommand.Run(rest);
                 break;
             case "remove" or "rm" or "r":
-            {
-                var (skills, opts) = RemoveCommand.ParseOptions(rest);
-                RemoveCommand.Run(skills, opts);
-                break;
-            }
+                {
+                    var (skills, opts) = RemoveCommand.ParseOptions(rest);
+                    RemoveCommand.Run(skills, opts);
+                    break;
+                }
             case "experimental_sync":
                 if (!inAgent) ShowLogo();
                 SyncCommand.Run(SyncCommand.ParseOptions(rest));

@@ -302,46 +302,46 @@ internal static class Json
                 sb.Append("null");
                 return;
             case JsonObject obj:
-            {
-                var ordered = OrderedEntries(obj).ToList();
-                if (ordered.Count == 0)
                 {
-                    sb.Append("{}");
+                    var ordered = OrderedEntries(obj).ToList();
+                    if (ordered.Count == 0)
+                    {
+                        sb.Append("{}");
+                        return;
+                    }
+                    sb.Append('{');
+                    var first = true;
+                    foreach (var kv in ordered)
+                    {
+                        if (!first) sb.Append(',');
+                        first = false;
+                        NewLine(sb, indent, level + 1);
+                        WriteString(sb, kv.Key);
+                        sb.Append(indent > 0 ? ": " : ":");
+                        Write(sb, kv.Value, indent, level + 1);
+                    }
+                    NewLine(sb, indent, level);
+                    sb.Append('}');
                     return;
                 }
-                sb.Append('{');
-                var first = true;
-                foreach (var kv in ordered)
-                {
-                    if (!first) sb.Append(',');
-                    first = false;
-                    NewLine(sb, indent, level + 1);
-                    WriteString(sb, kv.Key);
-                    sb.Append(indent > 0 ? ": " : ":");
-                    Write(sb, kv.Value, indent, level + 1);
-                }
-                NewLine(sb, indent, level);
-                sb.Append('}');
-                return;
-            }
             case JsonArray arr:
-            {
-                if (arr.Count == 0)
                 {
-                    sb.Append("[]");
+                    if (arr.Count == 0)
+                    {
+                        sb.Append("[]");
+                        return;
+                    }
+                    sb.Append('[');
+                    for (var i = 0; i < arr.Count; i++)
+                    {
+                        if (i > 0) sb.Append(',');
+                        NewLine(sb, indent, level + 1);
+                        Write(sb, arr[i], indent, level + 1);
+                    }
+                    NewLine(sb, indent, level);
+                    sb.Append(']');
                     return;
                 }
-                sb.Append('[');
-                for (var i = 0; i < arr.Count; i++)
-                {
-                    if (i > 0) sb.Append(',');
-                    NewLine(sb, indent, level + 1);
-                    Write(sb, arr[i], indent, level + 1);
-                }
-                NewLine(sb, indent, level);
-                sb.Append(']');
-                return;
-            }
             case JsonValue v:
                 if (v.TryGetValue<string>(out var str)) WriteString(sb, str);
                 else if (v.TryGetValue<bool>(out var b)) sb.Append(b ? "true" : "false");

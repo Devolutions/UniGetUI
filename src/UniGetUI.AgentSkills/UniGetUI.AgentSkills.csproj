@@ -40,7 +40,7 @@
   <ItemGroup>
     <!-- The CLI command flows use the library's internal core. -->
     <InternalsVisibleTo Include="UniGetUI.AgentSkills.Cli" />
-    <InternalsVisibleTo Include="UniGetUI.PackageEngine.Tests" />
+    <InternalsVisibleTo Include="UniGetUI.Extensions.AgentSkills.Tests" />
   </ItemGroup>
 
 </Project>

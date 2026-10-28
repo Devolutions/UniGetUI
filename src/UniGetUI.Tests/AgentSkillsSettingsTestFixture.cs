@@ -25,7 +25,7 @@ using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
-using SkillsManager = UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
+using SkillsManager = UniGetUI.Extensions.AgentSkills.AgentSkillsService;
 
 namespace UniGetUI.Tests;
 
@@ -39,7 +39,7 @@ internal sealed class AgentSkillsSettingsTestFixture : IDisposable
         (ConcurrentDictionary<string, bool>)typeof(SecureSettings).GetField("_cache", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
     private readonly KeyValuePair<string, bool>[] _previousSecureCache;
 
-    public string Root { get; } = Path.Combine(Path.GetTempPath(),
+    public string Root { get; } = Path.Combine(AppContext.BaseDirectory, "TestArtifacts",
         "UniGetUI-AgentSkillsSettingsTests", Guid.NewGuid().ToString("N"));
     public string InstalledRoot => Path.Combine(Root, "installed");
     public AgentInfo[] Catalogue { get; }
@@ -383,6 +383,8 @@ internal sealed class AgentSkillsSettingsLocalManager : IPackageManager
     public IReadOnlyList<IManagerSource> GetBrowsableSources() => [];
     public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotSupportedException();
     public IReadOnlyList<IPackage> GetInstalledPackages() => throw new NotSupportedException();
+    public long InstalledPackagesGeneration => 0;
+    public void InvalidateInstalledPackages() { }
     public void RefreshPackageIndexes() => throw new NotSupportedException();
     public void AttemptFastRepair() => throw new NotSupportedException();
     public IReadOnlyList<string> FindCandidateExecutableFiles() => [];

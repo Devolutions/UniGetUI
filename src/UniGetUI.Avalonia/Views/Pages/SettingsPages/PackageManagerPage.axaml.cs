@@ -19,7 +19,6 @@ using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using CornerRadius = global::Avalonia.CornerRadius;
-using SkillsPackageManager = global::UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
 using Thickness = global::Avalonia.Thickness;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
@@ -34,9 +33,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
     public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested;
 
-    public PackageManagerPage(IPackageManager manager) : this(manager, null) { }
-
-    internal PackageManagerPage(IPackageManager manager, AgentSkillsSettingsControl? skillsSettings)
+    public PackageManagerPage(IPackageManager manager)
     {
         DataContext = new PackageManagerViewModel(manager);
         InitializeComponent();
@@ -52,13 +49,13 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         ViewModel.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
         ViewModel.NavigateToAdministratorRequested += (_, _) => NavigationRequested?.Invoke(this, typeof(Administrator));
 
-        BuildPage(skillsSettings);
+        BuildPage();
         ApplyStatusBrushes();
     }
 
     // ── Dynamic UI construction ───────────────────────────────────────────────
 
-    private void BuildPage(AgentSkillsSettingsControl? skillsSettings)
+    private void BuildPage()
     {
         var manager = ViewModel.Manager;
 
@@ -85,14 +82,6 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             BuildExecutableCards(manager);
         }
 
-        if (manager is SkillsPackageManager skills)
-        {
-            InstallOptionsHeading.IsVisible = false;
-            InstallOptionsHolder.IsVisible = false;
-            ManagerSettingsHeading.IsVisible = false;
-            ExtraControls.Children.Add(skillsSettings ?? new AgentSkillsSettingsControl(skills));
-        }
-        else
         {
             // ── Install options panel
             var installOptions = new InstallOptionsPanel(manager);

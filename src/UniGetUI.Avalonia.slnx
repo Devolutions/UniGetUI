@@ -106,6 +106,14 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="UniGetUI.Extensions.AgentSkills.Tests/UniGetUI.Extensions.AgentSkills.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Extensions.AgentSkills/UniGetUI.Extensions.AgentSkills.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="UniGetUI.Extensions.GitRepositories.Tests/UniGetUI.Extensions.GitRepositories.Tests.csproj">
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -203,12 +211,6 @@
   </Folder>
   <Folder Name="/UniGetUI.PackageEngine.Managers.MacPkg/">
     <Project Path="UniGetUI.PackageEngine.Managers.MacPkg/UniGetUI.PackageEngine.Managers.MacPkg.csproj">
-      <Platform Solution="*|arm64" Project="arm64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-  </Folder>
-  <Folder Name="/UniGetUI.PackageEngine.Managers.Skills/">
-    <Project Path="UniGetUI.PackageEngine.Managers.Skills/UniGetUI.PackageEngine.Managers.Skills.csproj">
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>

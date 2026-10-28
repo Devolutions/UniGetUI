@@ -28,10 +28,22 @@ public partial class SidebarViewModel : ViewModelBase
 
     partial void OnGitRepositoriesEnabledChanged(bool value)
     {
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, value);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, value, AgentSkillsEnabled);
         if (value) return;
         GitRepositoriesBadgeCount = 0;
         GitRepositoriesIsLoading = false;
+    }
+
+    [ObservableProperty]
+    private bool _agentSkillsEnabled = Settings.Get(Settings.K.EnableAgentSkills);
+
+    partial void OnAgentSkillsEnabledChanged(bool value)
+        => NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, value);
+
+    public void SetExtensionEnabled(PageType page, bool enabled)
+    {
+        if (page == PageType.GitRepositories) GitRepositoriesEnabled = enabled;
+        if (page == PageType.AgentSkills) AgentSkillsEnabled = enabled;
     }
 
     [ObservableProperty]
@@ -40,13 +52,13 @@ public partial class SidebarViewModel : ViewModelBase
     public void ReorderNavigationPages(IReadOnlyList<PageType> pages)
     {
         NavigationPageOrder.Save(pages);
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
     }
 
     public void ResetNavigationPages()
     {
         NavigationPageOrder.Reset();
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
     }
 
     // ─── Badge properties ─────────────────────────────────────────────────────
@@ -133,7 +145,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     public SidebarViewModel()
     {
-        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
         _wasDocked = Docked;
         _isPaneOpen = Docked && !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
     }

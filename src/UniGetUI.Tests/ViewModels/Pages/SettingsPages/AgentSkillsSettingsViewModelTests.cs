@@ -3,7 +3,7 @@ using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Core.SettingsEngine;
 using static UniGetUI.Tests.AgentSkillsSettingsTestFixture;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
-using SkillsManager = UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
+using SkillsManager = UniGetUI.Extensions.AgentSkills.AgentSkillsService;
 
 namespace UniGetUI.Tests;
 

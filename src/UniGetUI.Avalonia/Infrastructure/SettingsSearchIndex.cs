@@ -148,6 +148,10 @@ public static class SettingsSearchIndex
         new("Enable Git Repositories", ["git", "git repositories", "clones", "worktrees", "branches"], typeof(GitRepositoriesSettings), "GitRepositoriesCard"),
         new("Check for new commits automatically", ["git check interval", "fetch"], typeof(GitRepositoriesSettings), "GitCheckIntervalCard"),
         new("Update clones after checking", ["git auto update", "fast-forward", "pull"], typeof(GitRepositoriesSettings), "GitAutoUpdateCard"),
+        new("Agent Skills", ["skills", "coding agents", "extensions"], typeof(AgentSkillsSettingsControl), null),
+        new("Search skills.sh", ["skills.sh", "skills discovery", "registry"], typeof(AgentSkillsSettingsControl), "SkillsShDiscoveryToggle"),
+        new("Installation targets", ["skills", "agents", "codex", "claude", "copilot"], typeof(AgentSkillsSettingsControl), "TargetModeSelector"),
+        new("Notion integration", ["skills", "notion", "sign in"], typeof(AgentSkillsSettingsControl), "NotionExpander"),
 
         // ── Experimental ─────────────────────────────────────────────────────
         new("Enable Software Catalog", ["catalog", "software catalog"], typeof(Experimental), "SoftwareCatalogCard"),
@@ -308,6 +312,7 @@ public static class SettingsSearchIndex
         nameof(AgentPolicyInspector) => "Active package broker policy",
         nameof(ExtensionsHomepage) => "Extensions",
         nameof(GitRepositoriesSettings) => "Git Repositories",
+        nameof(AgentSkillsSettingsControl) => "Agent Skills",
         nameof(Experimental) => "Experimental settings and developer options",
         _ => "UniGetUI Settings",
     });

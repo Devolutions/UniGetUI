@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
 using Devolutions.AgentSkills;
 
-namespace UniGetUI.PackageEngine.Managers.SkillsManager;
+namespace UniGetUI.Extensions.AgentSkills;
 
-internal enum SkillSourceKind
+public enum SkillSourceKind
 {
     /// <summary>A website that publishes a well-known skills index (RFC 8615).</summary>
     Index,
@@ -28,7 +28,7 @@ internal enum SkillSourceKind
 /// </param>
 /// <param name="InstallSource">What the library installs from</param>
 /// <param name="Url">A browsable address for the source</param>
-internal sealed partial record SkillSourceLocator(
+public sealed partial record SkillSourceLocator(
     SkillSourceKind Kind,
     string Name,
     string InstallSource,

@@ -2,7 +2,7 @@ using Devolutions.AgentSkills;
 using UniGetUI.Core.SecureSettings;
 using AgentSkillsClient = Devolutions.AgentSkills.SkillsManager;
 
-namespace UniGetUI.PackageEngine.Managers.SkillsManager;
+namespace UniGetUI.Extensions.AgentSkills;
 
 /// <summary>
 /// <see cref="ISkillsBackend"/> over the bundled Agent Skills library, which installs skills in

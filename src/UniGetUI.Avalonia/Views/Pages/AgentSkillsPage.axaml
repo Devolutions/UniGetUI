@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:skills="using:UniGetUI.Extensions.AgentSkills"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             x:Class="UniGetUI.Avalonia.Views.Pages.AgentSkillsPage"
+             x:DataType="vm:AgentSkillsViewModel">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24" RowSpacing="12">
+        <TextBlock Text="{t:Translate Agent Skills}" FontSize="26" FontWeight="SemiBold"/>
+        <WrapPanel Grid.Row="1">
+            <ComboBox ItemsSource="{Binding Modes}" SelectedIndex="{Binding Mode}" IsEnabled="{Binding !IsBusy}" MinWidth="140" Margin="0,0,8,8"/>
+            <TextBox Text="{Binding Query}" PlaceholderText="{t:Translate Search skills}" MinWidth="240" Margin="0,0,8,8"
+                     automation:AutomationProperties.Name="{t:Translate Search skills}"/>
+            <Button Content="{t:Translate Refresh}" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}" Margin="0,0,8,8"/>
+            <Button Content="{t:Translate Install}" Command="{Binding InstallCommand}" IsEnabled="{Binding CanInstall}" Margin="0,0,8,8"/>
+            <Button Content="{t:Translate Update}" Command="{Binding UpdateCommand}" IsEnabled="{Binding CanUpdate}" Margin="0,0,8,8"/>
+            <Button Content="{t:Translate Uninstall}" Command="{Binding RemoveCommand}" IsEnabled="{Binding CanRemove}" Margin="0,0,8,8"/>
+            <Button Content="{t:Translate Cancel}" Command="{Binding CancelCommand}" IsEnabled="{Binding IsBusy}" Margin="0,0,8,8"/>
+        </WrapPanel>
+        <ListBox Grid.Row="2" ItemsSource="{Binding Skills}" SelectedItem="{Binding SelectedSkill}"
+                 automation:AutomationProperties.Name="{t:Translate Agent Skills}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="skills:SkillItem">
+                    <StackPanel Margin="8" Spacing="4">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Id}" Opacity="0.7"/>
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Provenance}" TextWrapping="Wrap" Opacity="0.7"/>
+                        <TextBlock Text="{Binding NewVersion}" Opacity="0.7"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <StackPanel Grid.Row="3" Spacing="8">
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3"/>
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" automation:AutomationProperties.LiveSetting="Polite"/>
+            <ScrollViewer MaxHeight="120">
+                <TextBlock Text="{Binding Output}" TextWrapping="Wrap"/>
+            </ScrollViewer>
+            <TextBlock Text="{t:Translate Manage sources and installation targets in Settings > Extensions > Agent Skills.}" TextWrapping="Wrap" Opacity="0.7"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

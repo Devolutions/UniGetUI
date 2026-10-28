@@ -38,7 +38,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private SoftwareCatalogPage? CatalogPage;
     private CatalogEditorPage? _catalogEditorPage;
     public CatalogEditorViewModel? CatalogEditor { get; }
-    private GitRepositoriesPage? _gitRepositoriesPage;
+    private readonly Dictionary<PageType, AppExtensionSession> _extensions = [];
     public GitRepositoriesViewModel? GitRepositories { get; private set; }
     private SettingsBasePage? SettingsPage;
     private SettingsBasePage? ManagersPage;
@@ -467,6 +467,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (UpgradablePackagesLoader.Instance is { } upgLoader)
         {
+            upgLoader.FinishedLoading += (_, _) => Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var session in _extensions.Values) _ = session.CheckForUpdatesAsync();
+            });
             upgLoader.PackagesChanged += (_, _) =>
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -477,8 +481,8 @@ public partial class MainWindowViewModel : ViewModelBase
             // Notifications and auto-update logic are handled by SoftwareUpdatesPage.WhenPackagesLoaded
         }
 
-        if (Sidebar.GitRepositoriesEnabled)
-            StartGitRepositories();
+        foreach (var extension in AppExtensions.All.Where(extension => extension.IsEnabled))
+            SetExtensionEnabled(extension.Page, true);
 
         MaintenanceScheduler.Start();
 
@@ -667,7 +671,7 @@ public partial class MainWindowViewModel : ViewModelBase
     // ─── Extensions ──────────────────────────────────────────────────────────
 
     // Lives while the feature is on, so automatic checks and the sidebar badge run with the page closed.
-    private void StartGitRepositories()
+    internal AppExtensionSession StartGitRepositories()
     {
         var gitRepositories = GitRepositories = new GitRepositoriesViewModel();
         gitRepositories.PropertyChanged += (_, e) =>
@@ -680,23 +684,41 @@ public partial class MainWindowViewModel : ViewModelBase
                 Sidebar.SetNavItemLoading(PageType.GitRepositories, gitRepositories.IsBusy);
         };
         _ = gitRepositories.InitializeAsync();
+        return new(() => new GitRepositoriesPage(gitRepositories), () =>
+        {
+            gitRepositories.Stop();
+            GitRepositories = null;
+        });
     }
 
     /// <summary>Turns Git Repositories on or off without a restart: its sidebar entry, badge and automatic checks.</summary>
     public void SetGitRepositoriesEnabled(bool enabled)
-    {
-        if (enabled && GitRepositories is null)
-            StartGitRepositories();
-        // Off first, so leaving the page cannot pick it again as the startup page.
-        Sidebar.GitRepositoriesEnabled = enabled;
-        if (enabled || GitRepositories is not { } gitRepositories)
-            return;
+        => SetExtensionEnabled(PageType.GitRepositories, enabled);
 
-        if (_currentPage == PageType.GitRepositories)
-            LoadDefaultPage();
-        gitRepositories.Stop();
-        GitRepositories = null;
-        _gitRepositoriesPage = null;
+    public void SetExtensionEnabled(PageType page, bool enabled)
+    {
+        var extension = AppExtensions.All.First(extension => extension.Page == page);
+        Sidebar.SetExtensionEnabled(page, enabled);
+        if (enabled)
+        {
+            if (!_extensions.ContainsKey(page))
+            {
+                var session = _extensions[page] = extension.Start(this);
+                _ = session.CheckForUpdatesAsync();
+            }
+        }
+
+        else if (_extensions.Remove(page, out var session))
+        {
+            if (_currentPage == page) LoadDefaultPage();
+            session.Stop();
+        }
+    }
+
+    public void StopExtensions()
+    {
+        foreach (var session in _extensions.Values) session.Stop();
+        _extensions.Clear();
     }
 
     // ─── Navigation ──────────────────────────────────────────────────────────
@@ -710,7 +732,7 @@ public partial class MainWindowViewModel : ViewModelBase
             "bundles" => PageType.Bundles,
             "catalog" when Sidebar.SoftwareCatalogEnabled => PageType.Catalog,
             "catalog-editor" when Sidebar.CatalogEditorEnabled => PageType.CatalogEditor,
-            "git-repositories" when Sidebar.GitRepositoriesEnabled => PageType.GitRepositories,
+            var id when AppExtensions.All.FirstOrDefault(extension => extension.Id == id && extension.IsEnabled) is { } extension => extension.Page,
             "settings" => PageType.Settings,
             // A usable admin-curated catalog is the simplest starting point, so it wins over the default pages.
             _ when Sidebar.HasUsableCatalog => PageType.Catalog,
@@ -736,8 +758,7 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.Catalog => CatalogPage ??= new SoftwareCatalogPage(),
             PageType.CatalogEditor => _catalogEditorPage ??= new CatalogEditorPage(
                 CatalogEditor ?? throw new InvalidOperationException("Catalog Editor is disabled.")),
-            PageType.GitRepositories => _gitRepositoriesPage ??= new GitRepositoriesPage(
-                GitRepositories ?? throw new InvalidOperationException("Git Repositories is disabled.")),
+            var extensionPage when _extensions.TryGetValue(extensionPage, out var extension) => extension.Page,
             PageType.Settings => SettingsPage ??= new SettingsBasePage(false),
             PageType.Managers => ManagersPage ??= new SettingsBasePage(true),
             PageType.OwnLog => UniGetUILogPage ??= new UniGetUILogPage(),
@@ -795,11 +816,11 @@ public partial class MainWindowViewModel : ViewModelBase
                 MainWindow.RuntimeNotificationLevel.Error);
             return false;
         }
-        if (newPage_t is PageType.GitRepositories && !Sidebar.GitRepositoriesEnabled)
+        if (AppExtensions.All.FirstOrDefault(extension => extension.Page == newPage_t) is { IsEnabled: false } disabled)
         {
-            Logger.Warn("Git Repositories navigation was rejected because it is turned off.");
+            Logger.Warn($"{disabled.Name} navigation was rejected because it is turned off.");
             MainWindow.Instance?.ShowBanner(
-                CoreTools.Translate("Git Repositories is turned off"),
+                CoreTools.Translate("{0} is turned off", CoreTools.Translate(disabled.Name)),
                 CoreTools.Translate("Turn it on in Settings, under Extensions."),
                 MainWindow.RuntimeNotificationLevel.Error);
             return false;
@@ -892,6 +913,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.Catalog => CoreTools.Translate("Software Catalog"),
         PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
         PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
+        PageType.AgentSkills => CoreTools.Translate("Agent Skills"),
         PageType.Settings => CoreTools.Translate("Settings"),
         PageType.Managers => CoreTools.Translate("Package Managers"),
         PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),
@@ -1063,6 +1085,11 @@ public partial class MainWindowViewModel : ViewModelBase
         else if (string.Equals(action, NotificationArguments.ShowOnUpdatesTab, StringComparison.OrdinalIgnoreCase))
         {
             if (await NavigateToAsync(PageType.Updates))
+                MainWindow.Instance?.ShowFromTray();
+        }
+        else if (string.Equals(action, NotificationArguments.ShowOnAgentSkillsTab, StringComparison.OrdinalIgnoreCase))
+        {
+            if (await NavigateToAsync(PageType.AgentSkills))
                 MainWindow.Instance?.ShowFromTray();
         }
         else if (string.Equals(action, NotificationArguments.Show, StringComparison.OrdinalIgnoreCase))

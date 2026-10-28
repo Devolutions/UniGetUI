@@ -1,11 +1,10 @@
 using Devolutions.AgentSkills;
-using UniGetUI.PackageEngine.Managers.SkillsManager;
+using UniGetUI.Extensions.AgentSkills;
 
-namespace UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
+namespace UniGetUI.Extensions.AgentSkills.Tests.Infrastructure.Fakes;
 
 /// <summary>
-/// Stands in for the bundled Agent Skills library in the manager tests, recording
-/// what the manager asks of it.
+/// Stands in for the bundled Agent Skills library in the service tests.
 /// </summary>
 internal sealed class FakeSkillsBackend : ISkillsBackend
 {
@@ -27,6 +26,8 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
     public SkillOperationStatus InstallStatus { get; set; } = SkillOperationStatus.Succeeded;
 
     public string? InstallOutcomeName { get; set; }
+    public SkillUpdateResult? UpdateResult { get; set; }
+    public int AgentQueries { get; private set; }
 
     public SkillOperationStatus RemoveStatus { get; set; } = SkillOperationStatus.Succeeded;
 
@@ -41,7 +42,11 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
 
     public List<string> Removed { get; } = [];
 
-    public IReadOnlyList<AgentInfo> GetAgents() => Agents;
+    public IReadOnlyList<AgentInfo> GetAgents()
+    {
+        AgentQueries++;
+        return Agents;
+    }
 
     public IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(CancellationToken cancellationToken) =>
         Installed;
@@ -109,7 +114,7 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
     )
     {
         AppliedUpdates.Add(updates);
-        return new SkillUpdateResult(
+        return UpdateResult ?? new SkillUpdateResult(
             updates
                 .Select(update => new SkillUpdateOutcome(update.Name, SkillScope.Global, SkillOperationStatus.Succeeded))
                 .ToList()

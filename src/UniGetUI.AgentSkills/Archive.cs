@@ -246,27 +246,27 @@ internal static class Archive
                     contents = compressedBytes;
                     break;
                 case 8:
-                {
-                    using var input = new MemoryStream(compressedBytes);
-                    using var deflate = new DeflateStream(input, CompressionMode.Decompress);
-                    using var ms = new MemoryStream();
-                    var buffer = new byte[81920];
-                    int read;
-                    try
                     {
-                        while ((read = deflate.Read(buffer, 0, buffer.Length)) > 0)
+                        using var input = new MemoryStream(compressedBytes);
+                        using var deflate = new DeflateStream(input, CompressionMode.Decompress);
+                        using var ms = new MemoryStream();
+                        var buffer = new byte[81920];
+                        int read;
+                        try
                         {
-                            ms.Write(buffer, 0, read);
-                            if (ms.Length > uncompressed + 1) break;
+                            while ((read = deflate.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                ms.Write(buffer, 0, read);
+                                if (ms.Length > uncompressed + 1) break;
+                            }
                         }
+                        catch (InvalidDataException e)
+                        {
+                            throw Invalid(e.Message);
+                        }
+                        contents = ms.ToArray();
+                        break;
                     }
-                    catch (InvalidDataException e)
-                    {
-                        throw Invalid(e.Message);
-                    }
-                    contents = ms.ToArray();
-                    break;
-                }
                 default:
                     throw Invalid($"Unsupported zip compression method: {method}");
             }

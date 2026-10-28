@@ -197,6 +197,7 @@ internal static class AvaloniaBootstrapper
 
     private static async Task InitializePackageEngineAsync()
     {
+        AppExtensions.InitializePreferences();
         // LoadLoaders is called synchronously in App.axaml.cs before MainWindow creation
         await Task.Run(PEInterface.LoadManagers);
 
@@ -270,7 +271,8 @@ internal static class AvaloniaBootstrapper
                 {
                     "catalog" => window is { SoftwareCatalogEnabled: true },
                     "catalog-editor" => window is { CatalogEditorEnabled: true },
-                    "git-repositories" => window is { GitRepositoriesEnabled: true },
+                    var id when AppExtensions.All.FirstOrDefault(extension => extension.Id == id) is { } extension
+                        => window is not null && extension.IsEnabled,
                     _ => true,
                 })
                 .ToArray(),
@@ -316,10 +318,10 @@ internal static class AvaloniaBootstrapper
                     throw new InvalidOperationException("Catalog Editor is disabled. Enable it in Experimental settings and developer options, then restart UniGetUI.");
                 window.Navigate(page == "catalog-editor" ? PageType.CatalogEditor : PageType.Catalog);
                 break;
-            case "git-repositories":
-                if (!window.GitRepositoriesEnabled)
-                    throw new InvalidOperationException("Git Repositories is turned off. Turn it on in Settings, under Extensions.");
-                window.Navigate(PageType.GitRepositories);
+            case var id when AppExtensions.All.FirstOrDefault(extension => extension.Id == id) is { } extension:
+                if (!extension.IsEnabled)
+                    throw new InvalidOperationException($"{extension.Name} is turned off. Turn it on in Settings, under Extensions.");
+                window.Navigate(extension.Page);
                 break;
             case "settings":
                 window.Navigate(PageType.Settings);

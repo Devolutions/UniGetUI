@@ -100,6 +100,7 @@ namespace UniGetUI.Interface.Enums
     {
         public const string Show = "openUniGetUI";
         public const string ShowOnUpdatesTab = "openUniGetUIOnUpdatesTab";
+        public const string ShowOnAgentSkillsTab = "openUniGetUIOnAgentSkillsTab";
         public const string UpdateAllPackages = "updateAll";
         public const string ReleaseSelfUpdateLock = "releaseSelfUpdateLock";
     }

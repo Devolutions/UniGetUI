@@ -366,7 +366,8 @@ internal static partial class Ui
                     dots = dots < 4 ? dots + 0.125 : 0;
                     Thread.Sleep(delay);
                 }
-            }) { IsBackground = true };
+            })
+            { IsBackground = true };
             _thread.Start();
         }
 

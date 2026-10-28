@@ -260,26 +260,26 @@ internal static class SearchMultiselect
                     switch (entries[i])
                     {
                         case GroupEntry g:
-                        {
-                            var count = g.Items.Count(selected.Contains);
-                            var radio = count == g.Items.Count ? Pc.Green("●") : count > 0 ? Pc.Yellow("◐") : Pc.Dim("○");
-                            var label = isCursor ? Pc.Underline(Pc.Bold(g.Group)) : Pc.Bold(g.Group);
-                            var prefix = isCursor ? Pc.Cyan("❯") : " ";
-                            output.Add($"{SBar} {prefix} {Pc.Dim(g.Collapsed ? "▸" : "▾")} {radio} {label}");
-                            break;
-                        }
+                            {
+                                var count = g.Items.Count(selected.Contains);
+                                var radio = count == g.Items.Count ? Pc.Green("●") : count > 0 ? Pc.Yellow("◐") : Pc.Dim("○");
+                                var label = isCursor ? Pc.Underline(Pc.Bold(g.Group)) : Pc.Bold(g.Group);
+                                var prefix = isCursor ? Pc.Cyan("❯") : " ";
+                                output.Add($"{SBar} {prefix} {Pc.Dim(g.Collapsed ? "▸" : "▾")} {radio} {label}");
+                                break;
+                            }
                         case ItemEntry ie:
-                        {
-                            var item = items[ie.Index];
-                            var radio = selected.Contains(ie.Index) ? Pc.Green("●") : Pc.Dim("○");
-                            var label = isCursor ? Pc.Underline(item.Label) : item.Label;
-                            var hint = item.Hint != null ? Pc.Dim($" ({item.Hint})") : "";
-                            var prefix = isCursor ? Pc.Cyan("❯") : " ";
-                            var groupItems = o.SelectGroups && item.Group != null ? filtered.Where(f => items[f].Group == item.Group).ToList() : [];
-                            var tree = groupItems.Count > 0 ? $"{Pc.Dim(groupItems[^1] == ie.Index ? "└─" : "├─")} " : "";
-                            output.Add($"{SBar} {prefix} {tree}{radio} {label}{hint}");
-                            break;
-                        }
+                            {
+                                var item = items[ie.Index];
+                                var radio = selected.Contains(ie.Index) ? Pc.Green("●") : Pc.Dim("○");
+                                var label = isCursor ? Pc.Underline(item.Label) : item.Label;
+                                var hint = item.Hint != null ? Pc.Dim($" ({item.Hint})") : "";
+                                var prefix = isCursor ? Pc.Cyan("❯") : " ";
+                                var groupItems = o.SelectGroups && item.Group != null ? filtered.Where(f => items[f].Group == item.Group).ToList() : [];
+                                var tree = groupItems.Count > 0 ? $"{Pc.Dim(groupItems[^1] == ie.Index ? "└─" : "├─")} " : "";
+                                output.Add($"{SBar} {prefix} {tree}{radio} {label}{hint}");
+                                break;
+                            }
                     }
                 }
                 var hiddenBefore = start;
@@ -376,24 +376,24 @@ internal static class SearchMultiselect
                     else redraw = false;
                     break;
                 case Key.Left when o.SelectGroups:
-                {
-                    var group = entry switch
                     {
-                        GroupEntry g => g.Group,
-                        ItemEntry ie => items[ie.Index].Group,
-                        _ => null,
-                    };
-                    if (group == null)
-                    {
-                        redraw = false;
+                        var group = entry switch
+                        {
+                            GroupEntry g => g.Group,
+                            ItemEntry ie => items[ie.Index].Group,
+                            _ => null,
+                        };
+                        if (group == null)
+                        {
+                            redraw = false;
+                            break;
+                        }
+                        if (!collapsed.Contains(group)) collapsed.Add(group);
+                        var ce = BuildEntries(items, filtered, o.SelectGroups, collapsed);
+                        var pos = ce.FindIndex(e => e is GroupEntry g && g.Group == group);
+                        cursor = pos + offset;
                         break;
                     }
-                    if (!collapsed.Contains(group)) collapsed.Add(group);
-                    var ce = BuildEntries(items, filtered, o.SelectGroups, collapsed);
-                    var pos = ce.FindIndex(e => e is GroupEntry g && g.Group == group);
-                    cursor = pos + offset;
-                    break;
-                }
                 case Key.Space:
                     if (hasSelectAll && cursor == 0)
                     {
@@ -432,7 +432,7 @@ internal static class SearchMultiselect
             }
             if (redraw) frame.Render(string.Join("\n", Render(State.Active)));
         }
-        done:
+    done:
         Ui.LeaveRawMode();
         return result;
     }

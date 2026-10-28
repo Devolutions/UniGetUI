@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using UniGetUI.PackageEngine.Managers.SkillsManager;
+using UniGetUI.Extensions.AgentSkills;
 
-namespace UniGetUI.PackageEngine.Tests;
+namespace UniGetUI.Extensions.AgentSkills.Tests;
 
 public sealed class SkillsShClientTests
 {

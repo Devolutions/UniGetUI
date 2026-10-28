@@ -1,9 +1,9 @@
 using Devolutions.AgentSkills;
 
-namespace UniGetUI.PackageEngine.Managers.SkillsManager;
+namespace UniGetUI.Extensions.AgentSkills;
 
 /// <summary>
-/// The part of the bundled Agent Skills library the manager uses, always in the user (global)
+/// The part of the bundled Agent Skills library the extension uses, always in the user (global)
 /// scope. Tests replace it with a fake.
 /// </summary>
 internal interface ISkillsBackend

@@ -8,20 +8,26 @@ using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views.DialogPages;
-using UniGetUI.PackageEngine.Managers.SkillsManager;
-using SkillsManager = UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
+using UniGetUI.Extensions.AgentSkills;
+using SkillsService = UniGetUI.Extensions.AgentSkills.AgentSkillsService;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
-public sealed partial class AgentSkillsSettingsControl : UserControl
+public sealed partial class AgentSkillsSettingsControl : UserControl, ISettingsPage
 {
+    public bool CanGoBack => true;
+    public string ShortTitle => UniGetUI.Core.Tools.CoreTools.Translate("Agent Skills");
+    public event EventHandler? RestartRequired { add { } remove { } }
+    public event EventHandler<Type>? NavigationRequested { add { } remove { } }
     private readonly AgentSkillsSettingsViewModel _viewModel;
     private readonly SourceManagerCardViewModel? _sources;
     private bool _attached;
 
-    public AgentSkillsSettingsControl(SkillsManager manager)
-        : this(new AgentSkillsSettingsViewModel(manager), new SourceManagerCard(manager),
-            () => ShowDialogAsync(new MissingDependencyDialog(NotionCliTool.CreateDependency(), 1, 1)),
+    public AgentSkillsSettingsControl() : this(new SkillsService()) { }
+
+    public AgentSkillsSettingsControl(SkillsService manager)
+        : this(new AgentSkillsSettingsViewModel(manager), new AgentSkillsSourcesControl(manager),
+            () => ShowDialogAsync(new MissingDependencyDialog(AgentSkillsDependencies.CreateNotionDependency(), 1, 1)),
             () => ShowDialogAsync(new NotionSignInDialog(manager)))
     { }
 
@@ -32,6 +38,8 @@ public sealed partial class AgentSkillsSettingsControl : UserControl
         DataContext = viewModel;
         InitializeComponent();
         SourcesHolder.Content = sourceCard;
+        if (sourceCard is AgentSkillsSourcesControl extensionSources)
+            extensionSources.SourcesChanged += (_, _) => QueueRefresh();
         _sources = sourceCard?.DataContext as SourceManagerCardViewModel;
         InstallNotionButton.Click += async (_, _) =>
         {

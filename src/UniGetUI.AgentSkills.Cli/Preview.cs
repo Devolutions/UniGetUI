@@ -63,22 +63,22 @@ internal static class PreviewCommand
                     o.NoPager = true;
                     break;
                 case "--skill" or "-s" or "--file":
-                {
-                    var isFile = a == "--file";
-                    if (i + 1 < args.Count && args[i + 1].Length > 0 && !args[i + 1].StartsWith('-'))
                     {
-                        var current = isFile ? o.File : o.Skill;
-                        if (current != null) errors.Add($"Only one {(isFile ? "--file" : "--skill")} value can be provided");
-                        else if (isFile) o.File = args[i + 1];
-                        else o.Skill = args[i + 1];
-                        i++;
+                        var isFile = a == "--file";
+                        if (i + 1 < args.Count && args[i + 1].Length > 0 && !args[i + 1].StartsWith('-'))
+                        {
+                            var current = isFile ? o.File : o.Skill;
+                            if (current != null) errors.Add($"Only one {(isFile ? "--file" : "--skill")} value can be provided");
+                            else if (isFile) o.File = args[i + 1];
+                            else o.Skill = args[i + 1];
+                            i++;
+                        }
+                        else
+                        {
+                            errors.Add(isFile ? "--file requires a path" : $"{a} requires a skill name");
+                        }
+                        break;
                     }
-                    else
-                    {
-                        errors.Add(isFile ? "--file requires a path" : $"{a} requires a skill name");
-                    }
-                    break;
-                }
                 default:
                     if (a.StartsWith('-')) errors.Add($"Unknown option: {a}");
                     else sources.Add(a);

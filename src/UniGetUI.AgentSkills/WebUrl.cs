@@ -48,7 +48,12 @@ internal sealed class WebUrl
 
     private static readonly Dictionary<string, string?> SpecialSchemes = new()
     {
-        ["http"] = "80", ["https"] = "443", ["ws"] = "80", ["wss"] = "443", ["ftp"] = "21", ["file"] = null,
+        ["http"] = "80",
+        ["https"] = "443",
+        ["ws"] = "80",
+        ["wss"] = "443",
+        ["ftp"] = "21",
+        ["file"] = null,
     };
 
     private bool IsSpecial => SpecialSchemes.ContainsKey(Scheme);

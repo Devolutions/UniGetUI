@@ -1,7 +1,7 @@
 using Devolutions.AgentSkills;
-using UniGetUI.PackageEngine.Managers.SkillsManager;
+using UniGetUI.Extensions.AgentSkills;
 
-namespace UniGetUI.PackageEngine.Tests;
+namespace UniGetUI.Extensions.AgentSkills.Tests;
 
 public sealed class SkillSourceLocatorTests
 {

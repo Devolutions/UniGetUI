@@ -1,11 +1,12 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Devolutions.AgentSkills;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
-using UniGetUI.PackageEngine.Managers.SkillsManager;
+using UniGetUI.Extensions.AgentSkills;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
-using SkillsManager = UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
+using SkillsService = UniGetUI.Extensions.AgentSkills.AgentSkillsService;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
@@ -23,10 +24,10 @@ internal interface IAgentSkillsSettingsService
     void RefreshNotionSources();
 }
 
-internal sealed class AgentSkillsSettingsService(SkillsManager manager) : IAgentSkillsSettingsService
+internal sealed class AgentSkillsSettingsService(SkillsService manager) : IAgentSkillsSettingsService
 {
     public IReadOnlyList<AgentInfo> GetAgents() => manager.GetSupportedAgents();
-    public IReadOnlyList<string> TargetAgents { get => SkillsManager.TargetAgents; set => SkillsManager.TargetAgents = value; }
+    public IReadOnlyList<string> TargetAgents { get => SkillsService.TargetAgents; set => SkillsService.TargetAgents = value; }
     public bool NotificationsEnabled
     {
         get => !CoreSettings.GetDictionaryItem<string, bool>(CoreSettings.K.DisabledPackageManagerNotifications, "Skills");
@@ -34,7 +35,7 @@ internal sealed class AgentSkillsSettingsService(SkillsManager manager) : IAgent
     }
     public string SavedVersion => CoreSettings.GetValue(CoreSettings.K.SkillsNotionCliVersion);
     public bool SkillsShDiscoveryEnabled { get => manager.SkillsShDiscoveryEnabled; set => manager.SkillsShDiscoveryEnabled = value; }
-    public bool SetVersion(string version) => NotionCliTool.TrySetPinnedVersion(version);
+    public bool SetVersion(string version) => AgentSkillsDependencies.TrySetPinnedVersion(version);
     public bool HasNotionSources => manager.HasNotionSources;
     public Task<NotionStatus> GetNotionStatusAsync() => manager.GetNotionStatusAsync();
     public Task SignOutAsync() => manager.SignOutOfNotionAsync();
@@ -97,7 +98,7 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
         ? CoreTools.Translate("Version needs attention")
         : SpecificVersion ? VersionText.Trim() : CoreTools.Translate("Latest available");
 
-    public AgentSkillsSettingsViewModel(SkillsManager manager) : this(new AgentSkillsSettingsService(manager)) { }
+    public AgentSkillsSettingsViewModel(SkillsService manager) : this(new AgentSkillsSettingsService(manager)) { }
 
     internal AgentSkillsSettingsViewModel(IAgentSkillsSettingsService service)
     {

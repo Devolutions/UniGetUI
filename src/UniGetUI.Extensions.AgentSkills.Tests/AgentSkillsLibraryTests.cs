@@ -3,15 +3,10 @@ using System.Text;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
-using UniGetUI.PackageEngine.Classes.Manager;
-using UniGetUI.PackageEngine.Enums;
-using UniGetUI.PackageEngine.Interfaces;
-using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
-using UniGetUI.PackageEngine.Managers.SkillsManager;
-using UniGetUI.PackageEngine.Serializable;
+using UniGetUI.Extensions.AgentSkills;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Helpers;
 
-namespace UniGetUI.PackageEngine.Tests;
+namespace UniGetUI.Extensions.AgentSkills.Tests;
 
 /// <summary>
 /// The Agent Skills manager over the bundled library, against a well-known
@@ -36,7 +31,7 @@ public sealed class AgentSkillsLibraryTests : IDisposable
     ];
 
     private readonly string _testRoot = Path.Combine(
-        Path.GetTempPath(),
+        AppContext.BaseDirectory, "TestArtifacts",
         nameof(AgentSkillsLibraryTests),
         Guid.NewGuid().ToString("N")
     );
@@ -115,64 +110,51 @@ public sealed class AgentSkillsLibraryTests : IDisposable
     public async Task SkillFromAWellKnownIndexIsInstalledUpdatedAndRemoved()
     {
         // Offline: the local index is the only source
-        var manager = new AgentSkills(new AgentSkillsBackend(_home));
-        manager.Initialize();
-        Assert.True(manager.IsReady());
-        var sources = (IInProcessSourceHelper)manager.SourcesHelper;
-        var operations = (IInProcessPackageOperationHelper)manager.OperationHelper;
+        var manager = new AgentSkillsService(new AgentSkillsBackend(_home));
 
         // Add the index as a source: it is checked by listing its skills
-        var index = new ManagerSource(manager, "Local index", _server.BaseUri);
-        Assert.Equal(
-            OperationVeredict.Success,
-            await sources.AddSourceAsync(index, new Output(), CancellationToken.None)
-        );
+        await manager.AddSourceAsync(_server.BaseUri.AbsoluteUri);
 
-        var found = Assert.Single(manager.FindPackages("review"));
+        var found = Assert.Single(manager.Search("review"));
         Assert.Equal("code-review", found.Id);
         Assert.Equal($"127.0.0.1:{_server.BaseUri.Port}", found.Source.Name);
 
         // Install
         var output = new Output();
-        Assert.Equal(OperationVeredict.Success, await Perform(operations, found, OperationType.Install, output));
+        await manager.PerformAsync(found, SkillAction.Install, output);
         Assert.True(File.Exists(Path.Combine(_home, ".claude", "skills", "code-review", "SKILL.md")), string.Join('\n', output.Lines));
 
-        var installed = Assert.Single(manager.GetInstalledPackages());
-        Assert.True(installed.IsEquivalentTo(found));
-        string installedVersion = installed.VersionString;
+        var installed = Assert.Single(manager.ListInstalled());
+        Assert.Equal(installed.Id, found.Id);
+        Assert.Equal(installed.Source, found.Source);
+        string installedVersion = installed.Version;
         Assert.Equal(7, installedVersion.Length);
 
         // Publishing a new SKILL.md changes the index digest, which is an update
         _skillMarkdown = SkillMarkdown("Reviews code, now with a checklist");
-        var update = Assert.Single(manager.GetAvailableUpdates());
-        Assert.Equal(installedVersion, update.VersionString);
-        Assert.NotEqual(installedVersion, update.NewVersionString);
+        var update = Assert.Single(manager.CheckUpdates());
+        Assert.Equal(installedVersion, update.Version);
+        Assert.NotEqual(installedVersion, update.NewVersion);
 
-        Assert.Equal(OperationVeredict.Success, await Perform(operations, update, OperationType.Update, new Output()));
+        await manager.PerformAsync(update, SkillAction.Update);
         Assert.Contains(
             "now with a checklist",
             File.ReadAllText(Path.Combine(_home, ".claude", "skills", "code-review", "SKILL.md"))
         );
         // The library does not report the new digest of a well-known skill before the update, so the
         // offered version reads "latest"; once updated, the installed version is the new digest
-        Assert.NotEqual(installedVersion, Assert.Single(manager.GetInstalledPackages()).VersionString);
+        Assert.NotEqual(installedVersion, Assert.Single(manager.ListInstalled()).Version);
 
         // Uninstall
-        Assert.Equal(OperationVeredict.Success, await Perform(operations, update, OperationType.Uninstall, new Output()));
-        Assert.Empty(manager.GetInstalledPackages());
+        await manager.PerformAsync(update, SkillAction.Remove);
+        Assert.Empty(manager.ListInstalled());
         Assert.False(Directory.Exists(Path.Combine(_home, ".claude", "skills", "code-review")));
     }
 
-    private static Task<OperationVeredict> Perform(
-        IInProcessPackageOperationHelper operations,
-        IPackage package,
-        OperationType operation,
-        Output output
-    ) => operations.PerformAsync(package, new InstallOptions(), operation, output, CancellationToken.None);
-
-    private sealed class Output : IOperationOutput
+    private sealed class Output : IProgress<string>
     {
         public List<string> Lines { get; } = [];
+        public void Report(string line) => Lines.Add(line);
 
         public void Info(string line) => Lines.Add(line);
 
@@ -266,45 +248,31 @@ public sealed class AgentSkillsLibraryTests : IDisposable
     }
 
     [Theory]
-    [InlineData(OperationType.Install)]
-    [InlineData(OperationType.Update)]
-    public async Task ManagerReportsRequiredLockWriteFailure(OperationType operation)
+    [InlineData(SkillAction.Install)]
+    [InlineData(SkillAction.Update)]
+    public async Task ServiceReportsRequiredLockWriteFailure(SkillAction operation)
     {
-        var manager = new AgentSkills(new AgentSkillsBackend(_home));
-        AgentSkills.TargetAgents = ["claude-code"];
-        manager.Initialize();
-        Assert.True(manager.IsReady());
-        var sources = (IInProcessSourceHelper)manager.SourcesHelper;
-        var operations = (IInProcessPackageOperationHelper)manager.OperationHelper;
-        Assert.Equal(
-            OperationVeredict.Success,
-            await sources.AddSourceAsync(
-                new ManagerSource(manager, "Local index", _server.BaseUri),
-                new Output(),
-                CancellationToken.None
-            )
-        );
-        IPackage package = Assert.Single(manager.FindPackages("review"));
+        var manager = new AgentSkillsService(new AgentSkillsBackend(_home));
+        AgentSkillsService.TargetAgents = ["claude-code"];
+        await manager.AddSourceAsync(_server.BaseUri.AbsoluteUri);
+        var package = Assert.Single(manager.Search("review"));
         Assert.Equal("code-review", package.Id);
 
-        if (operation == OperationType.Update)
+        if (operation == SkillAction.Update)
         {
-            Assert.Equal(
-                OperationVeredict.Success,
-                await Perform(operations, package, OperationType.Install, new Output())
-            );
-            string oldVersion = Assert.Single(manager.GetInstalledPackages()).VersionString;
+            await manager.PerformAsync(package, SkillAction.Install);
+            string oldVersion = Assert.Single(manager.ListInstalled()).Version;
             _skillMarkdown = SkillMarkdown("Reviews code, with the next checklist");
             // Cache the real update before replacing its lock file. A fresh check afterwards
             // would see no tracking record and could incorrectly pass as an empty update.
-            package = Assert.Single(manager.GetAvailableUpdates());
+            package = Assert.Single(manager.CheckUpdates());
             Assert.Equal("code-review", package.Id);
-            Assert.Equal(oldVersion, package.VersionString);
-            Assert.NotEqual(oldVersion, package.NewVersionString);
+            Assert.Equal(oldVersion, package.Version);
+            Assert.NotEqual(oldVersion, package.NewVersion);
         }
 
         string lockPath = RequiredLockPath(Devolutions.AgentSkills.SkillScope.Global);
-        if (operation == OperationType.Update)
+        if (operation == SkillAction.Update)
         {
             Assert.True(File.Exists(lockPath));
             File.Delete(lockPath);
@@ -312,14 +280,10 @@ public sealed class AgentSkillsLibraryTests : IDisposable
         Directory.CreateDirectory(lockPath);
 
         var output = new Output();
-        Assert.Equal(OperationVeredict.Failure, await Perform(operations, package, operation, output));
+        var error = await Assert.ThrowsAsync<Devolutions.AgentSkills.SkillsException>(() =>
+            manager.PerformAsync(package, operation, output));
         AssertRequiredLockError(
-            Assert.Single(output.Lines.Where(line => line.StartsWith("ERROR: ", StringComparison.Ordinal))),
-            Devolutions.AgentSkills.SkillScope.Global,
-            lockPath
-        );
-        AssertRequiredLockError(
-            Assert.Single(output.Lines.Where(line => line.StartsWith("FAILURE: ", StringComparison.Ordinal))),
+            error.Message,
             Devolutions.AgentSkills.SkillScope.Global,
             lockPath
         );
@@ -407,15 +371,13 @@ public sealed class AgentSkillsLibraryTests : IDisposable
         // Use the persisted library inventory, not fake InstalledSkillInfo records. Initialize
         // before configuring the source so no asynchronous source-listing task is left running.
         var backend = new ForwardingSkillsBackend(client);
-        var manager = new AgentSkills(backend);
-        AgentSkills.TargetAgents = ["claude-code"];
-        manager.Initialize();
-        Assert.True(manager.IsReady());
-        Settings.SetList(AgentSkills.SourcesListKey, new List<string> { installSource });
-        var offered = Assert.Single(manager.GetAvailableUpdates());
+        var manager = new AgentSkillsService(backend);
+        AgentSkillsService.TargetAgents = ["claude-code"];
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { installSource });
+        var offered = Assert.Single(manager.CheckUpdates());
         Assert.Equal("code-review", offered.Id);
-        Assert.Equal("0222222", offered.VersionString);
-        Assert.Equal("0333333", offered.NewVersionString);
+        Assert.Equal("0222222", offered.Version);
+        Assert.Equal("0333333", offered.NewVersion);
         Assert.Equal(expectedSource["https://".Length..], offered.Source.Name);
         Assert.Equal(1, backend.UpdateChecks);
         Assert.Equal(new[] { "code-review" }, backend.CheckedSkills);
@@ -423,8 +385,8 @@ public sealed class AgentSkillsLibraryTests : IDisposable
         Assert.Empty(forwarded.Unchecked);
         AssertNotionUpdate(Assert.Single(forwarded.Updates), expectedSource, NotionFixture.Version2, NotionFixture.Version3);
 
-        Settings.SetList(AgentSkills.SourcesListKey, new List<string>());
-        Assert.Empty(manager.GetAvailableUpdates());
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string>());
+        Assert.Empty(manager.CheckUpdates());
         Assert.Equal(1, backend.UpdateChecks);
         AssertNotionTracking(client, expectedSource, NotionFixture.Version2);
     }

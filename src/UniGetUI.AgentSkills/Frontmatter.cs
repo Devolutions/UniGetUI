@@ -487,12 +487,12 @@ internal static partial class Frontmatter
                     {
                         case JsonObject { Count: > 0 }:
                         case JsonArray { Count: > 0 }:
-                        {
-                            var nested = new StringBuilder();
-                            Emit(item, indent + 2, nested);
-                            sb.Append(nested.ToString().TrimStart());
-                            break;
-                        }
+                            {
+                                var nested = new StringBuilder();
+                                Emit(item, indent + 2, nested);
+                                sb.Append(nested.ToString().TrimStart());
+                                break;
+                            }
                         case JsonObject:
                             sb.Append("{}\n");
                             break;

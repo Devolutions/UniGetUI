@@ -7,7 +7,7 @@ using UniGetUI.Avalonia.Views.Controls.Settings;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using static UniGetUI.Tests.AgentSkillsSettingsTestFixture;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
-using SkillsManager = UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
+using SkillsManager = UniGetUI.Extensions.AgentSkills.AgentSkillsService;
 
 namespace UniGetUI.Tests;
 
@@ -17,7 +17,7 @@ public sealed class AgentSkillsSettingsCompositionTests
         HeadlessUnitTestSession.GetOrStartForAssembly(typeof(AgentSkillsSettingsCompositionTests).Assembly);
 
     [Fact]
-    public Task SkillsManagerPage_UsesInjectedSettingsAndRetainsOnlyRelevantShellControls() => _session.Dispatch(() =>
+    public Task ExtensionSettingsUsesDedicatedControlWithoutPackageManagerShell() => _session.Dispatch(() =>
     {
         using var fixture = new AgentSkillsSettingsTestFixture();
         fixture.Seed();
@@ -26,43 +26,14 @@ public sealed class AgentSkillsSettingsCompositionTests
         var vm = new AgentSkillsSettingsViewModel(service);
         var source = new TextBlock { Text = "Injected local source" };
         var settings = new AgentSkillsSettingsControl(vm, source);
-        // Constructing the manager is inert; its concrete type selects the production Skills branch.
-        // The injected control keeps agent discovery and all Notion work behind the recording fake.
-        var manager = new SkillsManager();
-        var page = new PackageManagerPage(manager, settings);
-        using var host = new AgentSkillsSettingsTestWindow(page, 1100);
-        Assert.Same(manager, Assert.IsType<PackageManagerViewModel>(page.DataContext).Manager);
-        Assert.Equal("Agent Skills settings", page.ShortTitle);
-        var enable = page.FindControl<CheckboxCard_Dict>("EnableManager")!;
-        Assert.True(enable.IsEffectivelyVisible);
-        Assert.True(enable._checkbox.IsChecked);
-        Assert.False(CoreSettings.GetDictionaryItem<string, bool>(CoreSettings.K.DisabledManagers, "Skills"));
-        Assert.Equal("Enable Agent Skills", enable._textblock.Text);
-        Assert.True(page.FindControl<Border>("StatusBar")!.IsEffectivelyVisible);
-        Assert.False(page.FindControl<ContentControl>("ExecutableHolder")!.IsVisible);
-        Assert.False(page.FindControl<ContentControl>("PathHolder")!.IsVisible);
-        Assert.False(page.FindControl<TextBlock>("InstallOptionsHeading")!.IsVisible);
-        var installHolder = page.FindControl<ContentControl>("InstallOptionsHolder")!;
-        Assert.False(installHolder.IsVisible);
-        Assert.Null(installHolder.Content);
-        Assert.False(page.FindControl<TextBlock>("ManagerSettingsHeading")!.IsVisible);
-        Assert.Same(settings, Assert.Single(page.FindControl<StackPanel>("ExtraControls")!.Children));
-        Assert.Same(settings, Assert.Single(page.GetVisualDescendants().OfType<AgentSkillsSettingsControl>()));
+        using var host = new AgentSkillsSettingsTestWindow(settings, 1100);
+        Assert.Equal("Agent Skills", settings.ShortTitle);
         Assert.Same(source, settings.FindControl<ContentControl>("SourcesHolder")!.Content);
-        Assert.Empty(page.GetVisualDescendants().OfType<InstallOptionsPanel>());
-        Assert.DoesNotContain(page.GetVisualDescendants().OfType<TextBlock>(),
-            text => text.Text == "Update security");
-        Assert.DoesNotContain(page.GetVisualDescendants().OfType<ComboBox>(),
-            combo => AutomationProperties.GetName(combo) == "Minimum age for updates");
-        Assert.Same(enable, Assert.Single(page.GetVisualDescendants().OfType<CheckboxCard_Dict>()));
+        Assert.Empty(settings.GetVisualDescendants().OfType<InstallOptionsPanel>());
+        Assert.Empty(settings.GetVisualDescendants().OfType<CheckboxCard_Dict>());
         var positive = settings.FindControl<ToggleSwitch>("NotificationsToggle")!;
         Assert.True(positive.IsEffectivelyVisible);
         Assert.True(positive.IsChecked);
-        var logs = page.FindControl<SettingsPageButton>("ManagerLogs")!;
-        Assert.True(logs.IsEffectivelyVisible);
-        Assert.Equal("View Agent Skills logs", logs.Header);
-        Assert.Contains(page.GetVisualDescendants().OfType<TextBlock>(),
-            text => text.Text == "Related settings" && text.IsEffectivelyVisible);
         Assert.Equal(1, service.StatusReads);
         service.AssertNoHydrationWrites();
         before.AssertUnchanged();

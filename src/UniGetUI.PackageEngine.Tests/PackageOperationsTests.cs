@@ -140,12 +140,12 @@ public sealed class PackageOperationsTests
             inner =>
             {
                 Assert.IsType<KillProcessOperation>(inner.Operation);
-                Assert.False(inner.MustSucceed);
+                Assert.True(inner.MustSucceed);
             },
             inner =>
             {
                 Assert.IsType<KillProcessOperation>(inner.Operation);
-                Assert.False(inner.MustSucceed);
+                Assert.True(inner.MustSucceed);
             },
             inner =>
             {

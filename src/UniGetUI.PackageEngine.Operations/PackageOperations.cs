@@ -1473,7 +1473,7 @@ namespace UniGetUI.PackageEngine.Operations
                 return l;
 
             foreach (var process in opts.KillBeforeOperation)
-                l.Add(new InnerOperation(new KillProcessOperation(process), mustSucceed: false));
+                l.Add(new InnerOperation(new KillProcessOperation(process), mustSucceed: true));
 
             if (role is OperationType.Install && opts.PreInstallCommand.Any())
                 l.Add(

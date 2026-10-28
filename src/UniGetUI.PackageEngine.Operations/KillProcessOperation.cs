@@ -34,6 +34,7 @@ public class KillProcessOperation : AbstractOperation
                 $"Attempting to close all processes with name {ProcessName}...",
                 LineType.Information
             );
+            bool processSurvived = false;
             foreach (var proc in Process.GetProcessesByName(ProcessName.Replace(".exe", "")))
             {
                 using (proc)
@@ -68,12 +69,13 @@ public class KillProcessOperation : AbstractOperation
                                 $"{ProcessName} with pid={proc.Id} did not exit and will not be killed. You can change this from UniGetUI settings.",
                                 LineType.Error
                             );
+                            processSurvived = true;
                         }
                     }
                 }
             }
 
-            return OperationVeredict.Success;
+            return processSurvived ? OperationVeredict.Failure : OperationVeredict.Success;
         }
         catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
         {

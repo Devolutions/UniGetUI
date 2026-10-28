@@ -375,6 +375,35 @@ public sealed class OperationHistoryTests : IDisposable
     }
 
     [Fact]
+    public void FromOperation_Update_IgnoresAnInstallOnlyPinnedVersion()
+    {
+        var manager = new PackageManagerBuilder()
+            .WithName("Scoop")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsCustomVersionsOnUpdate = false;
+                return capabilities;
+            })
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("jq")
+            .WithVersion("1.7.1")
+            .WithNewVersion("1.8.2")
+            .Build();
+
+        using var op = new UpdatePackageOperation(
+            package,
+            new InstallOptions { Version = "1.7.1" },
+            IgnoreParallelInstalls: true
+        );
+        var record = OperationHistoryRecord.FromOperation(op, OperationHistoryRecord.StatusSucceeded);
+
+        Assert.Equal("1.7.1", record.VersionBefore);
+        Assert.Equal("1.8.2", record.VersionAfter);
+    }
+
+    [Fact]
     public void FromOperation_Update_CapturesVersionTransition()
     {
         var manager = new PackageManagerBuilder().WithName("Scoop").Build();

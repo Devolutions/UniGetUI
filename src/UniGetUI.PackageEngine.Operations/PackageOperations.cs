@@ -1680,7 +1680,9 @@ namespace UniGetUI.PackageEngine.Operations
                 );
             }
 
-            bool explicitVersionRequested = !string.IsNullOrWhiteSpace(Options.Version);
+            bool explicitVersionRequested =
+                !string.IsNullOrWhiteSpace(Options.Version)
+                && Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate;
             var installedPackage = await ResolveInstalledPackageSnapshotAsync(
                 explicitVersionRequested
                     ? Options.Version

@@ -964,6 +964,50 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task UpdateOperationSuccessfulRunIgnoresAnInstallOnlyPinnedVersion()
+    {
+        TestPackageManager? manager = null;
+        Package? installedPackage = null;
+        manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsCustomVersionsOnUpdate = false;
+                return capabilities;
+            })
+            .WithInstalledPackages(_ => [Assert.IsType<Package>(installedPackage)])
+            .Build();
+        var installedBeforeUpdate = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("jq")
+            .WithVersion("1.7.1")
+            .WithNewVersion("1.8.2")
+            .Build();
+        installedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("jq")
+            .WithVersion("1.8.2")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(installedBeforeUpdate);
+        using var operation = new SimulatedUpdatePackageOperation(
+            installedBeforeUpdate,
+            new InstallOptions { Version = "1.7.1" },
+            OperationVeredict.Success
+        );
+
+        await operation.MainThread();
+        await WaitForAsync(() =>
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(installedBeforeUpdate)
+                .Any(package => package.VersionString == "1.8.2")
+        );
+
+        Assert.DoesNotContain(
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(installedBeforeUpdate),
+            package => package.VersionString == "1.7.1"
+        );
+    }
+
+    [Fact]
     public async Task OutputSnapshotsDoNotThrowWhileLinesAreAppended()
     {
         using var operation = new LoggingStubOperation();

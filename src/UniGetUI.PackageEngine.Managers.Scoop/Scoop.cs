@@ -138,6 +138,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 SupportsCustomSources = true,
                 SupportsCustomVersions = true,
                 CanListVersions = false,
+                SupportsCustomVersionsOnUpdate = false,
                 Sources = new SourceCapabilities
                 {
                     KnowsPackageCount = true,
@@ -336,7 +337,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
         internal IReadOnlyList<Package> ParseAvailableUpdates(
             IEnumerable<string> lines,
-            IEnumerable<IPackage> installedPackages,
+            IReadOnlyList<IPackage> installedPackages,
             bool includePinnedInstalls = false
         )
         {
@@ -410,7 +411,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             if (!includePinnedInstalls)
                 return packages;
 
-            foreach (IPackage installedPackage in installedPackageMap.Values)
+            foreach (IPackage installedPackage in installedPackages)
             {
                 if (
                     !_pinnedInstalls.TryGetValue(

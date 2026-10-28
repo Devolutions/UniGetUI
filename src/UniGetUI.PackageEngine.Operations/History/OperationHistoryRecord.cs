@@ -94,8 +94,11 @@ public sealed class OperationHistoryRecord
                     record.VersionAfter = pop.Role switch
                     {
                         OperationType.Uninstall => "",
-                        _ when pop.Options.Version is { Length: > 0 } pinnedVersion =>
-                            pinnedVersion,
+                        _ when pop.Options.Version is { Length: > 0 } pinnedVersion
+                            && (
+                                pop.Role is not OperationType.Update
+                                || pop.Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate
+                            ) => pinnedVersion,
                         OperationType.Update => pop.Package.NewVersionString,
                         _ => pop.Package.VersionString,
                     };

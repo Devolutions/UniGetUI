@@ -265,7 +265,7 @@ internal static class PkgFeed
             throw new InvalidDataException($"Unsupported package feed index version: {index.Version}.");
 
         var items = new List<PkgFeedItem>();
-        foreach (var entry in index.Packages ?? [])
+        foreach (var entry in index.EntriesFor(FeedPlatform.MacOS))
         {
             if (entry is not null && !FeedLocation.HasExtension(entry.File ?? "", FeedFile.Extensions))
                 continue;

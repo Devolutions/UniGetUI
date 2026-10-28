@@ -43,6 +43,8 @@ public static class WinInstallerFeedInspector
 
 public sealed class WinInstallerIndexer : IFeedIndexer
 {
+    public FeedPlatform Platform => FeedPlatform.Windows;
+
     public IReadOnlyCollection<string> Extensions => InstallerFile.Extensions;
 
     public (IReadOnlyList<FeedIndexEntry> Entries, IReadOnlyList<FeedProblem> Skipped) Build(string folder)

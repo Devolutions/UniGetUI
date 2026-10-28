@@ -494,6 +494,9 @@ public sealed class WinInstallerTests : IDisposable
         Assert.Contains("App.pkg: App (com.example.app 1.0) (kept)", output.ToString());
 
         byte[] json = File.ReadAllBytes(Path.Combine(_directory, "index.json"));
+        var written = FeedJson.Deserialize(json, FeedIndexJsonContext.Default.FeedIndex)!;
+        Assert.Equal(["App.pkg"], written.Packages.Select(e => e.File));
+        Assert.Equal(["Tool.exe", "sub/Example.msi"], written.WindowsPackages!.Select(e => e.File));
         var indexUrl = new Uri("https://h/feed/index.json");
         var items = WinFeed.ParseIndex(json, indexUrl);
         Assert.Equal(2, items.Count);
@@ -509,13 +512,16 @@ public sealed class WinInstallerTests : IDisposable
     }
 
     [Fact]
-    public void AWebIndexEntryMustSayHowItInstalls()
+    public void AWebIndexEntryMustSayHowItInstallsAndBeListedForWindows()
     {
         string sha = new('a', 64);
         string json = $$"""
             {
               "version": 1,
               "packages": [
+                { "id": "old-style", "name": "Old", "version": "1", "file": "old.exe", "sha256": "{{sha}}", "windows": { "installer": "inno" } }
+              ],
+              "windowsPackages": [
                 { "id": "ok", "name": "Ok", "version": "1", "file": "ok.exe", "sha256": "{{sha}}", "windows": { "installer": "inno" } },
                 { "id": "noblock", "name": "No", "version": "1", "file": "no.exe", "sha256": "{{sha}}" },
                 { "id": "unknown", "name": "Unknown", "version": "1", "file": "u.exe", "sha256": "{{sha}}", "windows": { "installer": "exe" } },

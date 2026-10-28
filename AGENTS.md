@@ -160,9 +160,11 @@ format: the catalog's feed declarations (`CatalogFeeds`), feed locations and ind
 the `index.json` schema (`FeedIndex`), sources (`InstallerFeedSource`, `InstallerFeedSourceHelper`),
 staging (`FeedStaging`) and the `pkg-index` command (`FeedIndexCommand` over an `IFeedIndexer`).
 
-One `pkgFeed` and one `index.json` serve both platforms. Each reader only takes the entries whose
-file extension it owns, and `pkg-index` keeps the entries another platform wrote while their files
-still hash the same, so a mixed folder is indexed by running it once on each.
+One `pkgFeed` and one `index.json` serve both platforms. macOS entries stay under `packages`, the
+key older Macs read in full, and Windows entries go under `windowsPackages`, which they ignore, so a
+Mac never lists an installer it cannot run, whatever its release. Each reader also refuses entries
+whose file extension it does not own. `pkg-index` writes its own platform's list and keeps the other
+one while its files still hash the same, so a mixed folder is indexed by running it once on each.
 
 ## Windows installer packages (.exe and .msi)
 

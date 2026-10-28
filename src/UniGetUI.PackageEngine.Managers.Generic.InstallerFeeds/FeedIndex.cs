@@ -13,8 +13,23 @@ public sealed class FeedIndex
     [JsonPropertyName("version")]
     public required int Version { get; init; }
 
+    // The macOS packages. Their key predates Windows feeds, and Macs on older releases read every entry in it.
     [JsonPropertyName("packages")]
     public required FeedIndexEntry[] Packages { get; init; }
+
+    // Under their own key, so that older Macs never see them.
+    [JsonPropertyName("windowsPackages")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FeedIndexEntry[]? WindowsPackages { get; init; }
+
+    public FeedIndexEntry[] EntriesFor(FeedPlatform platform) =>
+        (platform == FeedPlatform.Windows ? WindowsPackages : Packages) ?? [];
+}
+
+public enum FeedPlatform
+{
+    MacOS,
+    Windows,
 }
 
 public sealed class FeedIndexEntry

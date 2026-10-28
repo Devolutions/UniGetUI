@@ -424,6 +424,53 @@ public sealed class MacPkgTests : IDisposable
         Assert.Equal(["com.example.app.pkg"], PkgFeed.ParseIndex(Encoding.UTF8.GetBytes(json), new Uri("https://h/feed/index.json")).Select(i => i.Id));
     }
 
+    [Fact]
+    public void TheMacIndexKeepsWindowsEntriesUnderTheirOwnKeySoOlderMacsNeverSeeThem()
+    {
+        string pkg = WritePackage("mac/App.pkg", ProductArchive("com.example.app.pkg", "1.0", "App", "arm64"));
+        string exe = WritePackage("win/Tool.exe", Encoding.ASCII.GetBytes("MZ installer"));
+        WritePackage("win/Changed.msi", [1]);
+        string index = Path.Combine(_directory, "index.json");
+        File.WriteAllText(index, $$"""
+            {
+              "version": 1,
+              "packages": [],
+              "windowsPackages": [
+                { "id": "Vendor.Tool", "name": "Tool", "version": "1.0", "file": "win/Tool.exe", "sha256": "{{FeedLocation.ComputeSha256(exe)}}", "windows": { "installer": "nsis" } },
+                { "id": "Vendor.Changed", "name": "Changed", "version": "1.0", "file": "win/Changed.msi", "sha256": "{{new string('0', 64)}}", "windows": { "installer": "msi" } }
+              ]
+            }
+            """);
+
+        var output = new StringWriter();
+        var error = new StringWriter();
+        Assert.Equal(3, PkgIndexCommand.Run([_directory], output, error));
+        Assert.Contains("win/Tool.exe: Tool (Vendor.Tool 1.0) (kept)", output.ToString());
+        Assert.Contains("win/Changed.msi", error.ToString());
+
+        byte[] json = File.ReadAllBytes(index);
+        var written = FeedJson.Deserialize(json, FeedIndexJsonContext.Default.FeedIndex)!;
+        Assert.Equal(["mac/App.pkg"], written.Packages.Select(e => e.File));
+        Assert.Equal(["win/Tool.exe"], written.WindowsPackages!.Select(e => e.File));
+        Assert.Equal(FeedLocation.ComputeSha256(pkg), PkgFeed.ParseIndex(json, new Uri("https://h/feed/index.json")).Single().Sha256);
+    }
+
+    [Fact]
+    public void AnIndexWithOnlyWindowsPackagesOffersNothingToAMac()
+    {
+        string sha = new('a', 64);
+        string json = $$"""
+            {
+              "version": 1,
+              "packages": [],
+              "windowsPackages": [
+                { "id": "com.example.app.pkg", "name": "App", "version": "1.0", "file": "App.pkg", "sha256": "{{sha}}" }
+              ]
+            }
+            """;
+        Assert.Empty(PkgFeed.ParseIndex(Encoding.UTF8.GetBytes(json), new Uri("https://h/feed/index.json")));
+    }
+
 #if WINDOWS
     [Fact]
     public void BothPlatformsIndexAMixedFolderInTurnWithoutLosingTheOthersEntries()
@@ -436,6 +483,7 @@ public sealed class MacPkgTests : IDisposable
         var windows = new UniGetUI.PackageEngine.Managers.WinInstallerManager.WinInstallerIndexer();
 
         Assert.Equal(0, FeedIndexCommand.Run([_directory], new StringWriter(), new StringWriter(), windows));
+        Assert.Empty(FeedJson.Deserialize(File.ReadAllBytes(index), FeedIndexJsonContext.Default.FeedIndex)!.Packages);
         Assert.Empty(PkgFeed.ParseIndex(File.ReadAllBytes(index), indexUrl));
 
         var output = new StringWriter();

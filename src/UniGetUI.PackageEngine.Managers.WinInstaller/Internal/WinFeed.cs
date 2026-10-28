@@ -162,7 +162,7 @@ internal static class WinFeed
             throw new InvalidDataException($"Unsupported package feed index version: {index.Version}.");
 
         var items = new List<WinFeedItem>();
-        foreach (var entry in index.Packages ?? [])
+        foreach (var entry in index.EntriesFor(FeedPlatform.Windows))
         {
             if (entry is not null && !FeedLocation.HasExtension(entry.File ?? "", InstallerFile.Extensions))
                 continue;

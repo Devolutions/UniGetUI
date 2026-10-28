@@ -130,7 +130,9 @@ Run it again after every change. A file it cannot read is reported and left out 
 
 A folder can hold the packages of both platforms. Run `pkg-index` on Windows for the `.exe` and
 `.msi` files and on a Mac for the `.pkg`, `.dmg` and `.zip` files: each keeps the entries the other
-wrote, as long as those files are unchanged.
+wrote, as long as those files are unchanged. Windows entries are listed separately in `index.json`,
+so Macs, including those on older UniGetUI releases, never offer a Windows installer, and Windows
+never offers a Mac package.
 
 Each package shows the icon of its installer: an `.exe`'s own icon, or the product icon an `.msi`
 gives Apps and Features (`ARPPRODUCTICON`, else its first shortcut's icon). To use another icon,

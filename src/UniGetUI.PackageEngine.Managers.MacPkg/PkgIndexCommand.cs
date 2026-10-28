@@ -16,6 +16,8 @@ public sealed class PkgIndexCommand : IFeedIndexer
     public static int Run(string[] args, TextWriter output, TextWriter error) =>
         FeedIndexCommand.Run(args, output, error, new PkgIndexCommand());
 
+    public FeedPlatform Platform => FeedPlatform.MacOS;
+
     public IReadOnlyCollection<string> Extensions => FeedFile.Extensions;
 
     public (IReadOnlyList<FeedIndexEntry> Entries, IReadOnlyList<FeedProblem> Skipped) Build(string folder)

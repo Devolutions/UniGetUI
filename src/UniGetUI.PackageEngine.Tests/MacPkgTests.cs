@@ -1641,6 +1641,16 @@ public sealed class MacPkgTests : IDisposable
     }
 
     [Fact]
+    public void AFeedPackageHasNoStandaloneCommandLine()
+    {
+        var manager = new MacPkg();
+        var source = new Classes.Manager.ManagerSource(manager, "mac", new Uri("https://h/"));
+        var package = new PackageClasses.Package("App", "com.example.app.pkg", "1.0", source, manager);
+        Assert.Throws<InvalidOperationException>(() =>
+            manager.OperationHelper.GetStandaloneParameters(package, new Serializable.InstallOptions(), Enums.OperationType.Install));
+    }
+
+    [Fact]
     public void AnUpdateWithoutANewerVersionInstallsTheNewestPublished()
     {
         var manager = new MacPkg();

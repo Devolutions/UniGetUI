@@ -18,6 +18,12 @@ internal sealed class WinInstallerOperationHelper : BasePkgOperationHelper, IMan
         IPackage package, InstallOptions options, OperationType operation) =>
         operation == OperationType.Uninstall ? ["/x", package.Id] : ["/i", package.Id];
 
+    protected override IReadOnlyList<string> _getOperationParameters(
+        IPackage package, InstallOptions options, OperationType operation, bool standalone) =>
+        standalone
+            ? throw new InvalidOperationException("Installer packages are installed by UniGetUI itself and have no command line of their own.")
+            : _getOperationParameters(package, options, operation);
+
     protected override OperationVeredict _getOperationResult(
         IPackage package, OperationType operation, IReadOnlyList<string> processOutput, int returnCode) =>
         returnCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure;

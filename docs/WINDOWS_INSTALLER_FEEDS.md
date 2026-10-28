@@ -110,7 +110,7 @@ UniGetUI reads. Every field is optional:
   itself when it needs them, as Inno Setup, WiX bundles and most installers do; give `machine` for
   one that fails instead of asking, so that UniGetUI shows the UAC prompt first. An `.msi` is
   installed for every user, behind the UAC prompt, unless it is a per-user package
-  (`ALLUSERS=2` with `MSIINSTALLPERUSER=1`) or the manifest gives `user`.
+  (no `ALLUSERS`, or `ALLUSERS=2` with `MSIINSTALLPERUSER=1`) or the manifest gives `user`.
 
 The manifest is read with the file: changing it is enough, no restart needed.
 

@@ -113,7 +113,7 @@ internal static partial class InstallerFile
             ?? CleanName(stem, isProductName: false) ?? stem;
         string version = InstallerDetails.Clean(manifest?.Version)
             ?? CleanVersion(pe.String("ProductVersion")) ?? CleanVersion(pe.FixedProductVersion)
-            ?? CleanVersion(pe.String("FileVersion"))
+            ?? CleanVersion(pe.String("FileVersion")) ?? CleanVersion(pe.FixedFileVersion)
             ?? throw new InvalidDataException($"Its version resource gives no version. Write it as \"version\" in {stem}.json.");
         string arguments = InstallerDetails.Clean(manifest?.InstallArguments) ?? InstallerKinds.InstallArguments(kind)
             ?? throw new InvalidDataException($"UniGetUI does not know how to run this {InstallerKinds.Describe(kind)} silently. "
@@ -146,7 +146,8 @@ internal static partial class InstallerFile
         string? productName = msi.Property("ProductName");
         string name = InstallerDetails.Clean(manifest?.Name) ?? CleanName(productName) ?? stem;
         string? scope = InstallerDetails.ParseScope(manifest?.Scope)
-            ?? (msi.Property("ALLUSERS") == "2" && msi.Property("MSIINSTALLPERUSER") == "1" ? InstallerDetails.UserScope
+            ?? (msi.Property("ALLUSERS") is null || (msi.Property("ALLUSERS") == "2" && msi.Property("MSIINSTALLPERUSER") == "1")
+                ? InstallerDetails.UserScope
                 : msi.Property("ALLUSERS") == "1" ? InstallerDetails.MachineScope : null);
         var details = new InstallerDetails(InstallerKind.Msi,
             InstallerDetails.Clean(manifest?.Publisher) ?? msi.Property("Manufacturer"),

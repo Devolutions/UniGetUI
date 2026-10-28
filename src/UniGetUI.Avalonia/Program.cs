@@ -3,6 +3,7 @@ using Avalonia;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
 #if WINDOWS
+using UniGetUI.Interface;
 using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 using UniGetUI.PackageEngine.Managers.WinInstallerManager;
 #else
@@ -56,6 +57,7 @@ sealed class Program
 #if WINDOWS
         if (FeedIndexCommand.IsCommand(args))
         {
+            WindowsConsoleHost.PrepareCliIO();
             Environment.ExitCode = FeedIndexCommand.Run(args[1..], Console.Out, Console.Error, new WinInstallerIndexer());
             return;
         }

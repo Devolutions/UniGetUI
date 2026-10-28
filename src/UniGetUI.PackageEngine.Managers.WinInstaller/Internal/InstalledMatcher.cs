@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.PackageEngine.Managers.WinInstallerManager.Internal;
 
@@ -29,7 +30,10 @@ internal static partial class InstalledMatcher
     }
 
     private static ArpEntry? Prefer(IEnumerable<ArpEntry> entries, InstallerDetails details) =>
-        entries.OrderByDescending(e => e.PerMachine != details.PerUser).FirstOrDefault();
+        entries.OrderByDescending(e => e.PerMachine != details.PerUser).ThenByDescending(e => e, NewestFirst).FirstOrDefault();
+
+    private static readonly IComparer<ArpEntry> NewestFirst = Comparer<ArpEntry>.Create((a, b) =>
+        CoreTools.VersionStringToStruct(a.DisplayVersion ?? "").CompareTo(CoreTools.VersionStringToStruct(b.DisplayVersion ?? "")));
 
     private static ArpEntry? FindByName(WinFeedItem item, IReadOnlyList<ArpEntry> entries)
     {
@@ -53,7 +57,7 @@ internal static partial class InstalledMatcher
                 score++;
             if (entry.PerMachine != item.Details.PerUser)
                 score++;
-            if (score > bestScore)
+            if (score > bestScore || (score == bestScore && best is not null && NewestFirst.Compare(entry, best) > 0))
                 (best, bestScore) = (entry, score);
         }
         return best;

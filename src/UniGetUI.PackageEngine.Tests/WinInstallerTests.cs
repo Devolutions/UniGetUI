@@ -322,6 +322,54 @@ public sealed class WinInstallerTests : IDisposable
     }
 
     [Fact]
+    public void TheNewestOfSeveralInstalledVersionsIsTheInstalledOne()
+    {
+        var msi = Item(UpgradeCode, "Example", "3.0", new InstallerDetails(InstallerKind.Msi, UpgradeCode: UpgradeCode));
+        var older = Entry("{00000000-0000-0000-0000-000000000001}", "Example", "1.0", msi: true);
+        var newer = Entry("{00000000-0000-0000-0000-000000000002}", "Example", "2.0", msi: true);
+        InstalledMatcher.RelatedProducts = _ => [older.Key, newer.Key];
+        Assert.Same(newer, InstalledMatcher.Find(msi, [older, newer]));
+
+        var exe = Item("Tool", "Tool", "3.0", new InstallerDetails(InstallerKind.Exe, Publisher: "Vendor"));
+        var first = Entry("A", "Tool", "1.0", "Vendor");
+        var second = Entry("B", "Tool", "2.5", "Vendor");
+        Assert.Same(second, InstalledMatcher.Find(exe, [first, second]));
+    }
+
+    [Fact]
+    public void AnExeWithOnlyAFixedFileVersionIsStillRead()
+    {
+        var pe = PeReader.Read(Cmd) with
+        {
+            Strings = new Dictionary<string, string>(),
+            FixedProductVersion = "0.0.0.0",
+            FixedFileVersion = "3.4.5.6",
+        };
+        var metadata = InstallerFile.FromExe(pe, new InstallerManifest { InstallArguments = "/q" }, "Tool");
+        Assert.Equal("3.4.5.6", metadata.Version);
+    }
+
+    [Fact]
+    public void AnMsiWithoutAllUsersInstallsForTheUserWithoutElevation()
+    {
+        string msi = Msi("PerUser.msi", new() { ["ProductCode"] = ProductCode, ["ProductVersion"] = "1.0" }, "x64;1033");
+        Assert.True(InstallerFile.Read(msi).Details.PerUser);
+        var item = WinFeed.ScanFolder(_directory, CancellationToken.None).First(i => i.Location.LocalPath.EndsWith("PerUser.msi"));
+        Assert.False(WinInstallerRunner.InstallProcess(item, "C:\\staged.msi", "C:\\log.txt").Elevated);
+    }
+
+    [Fact]
+    public void AFeedPackageHasNoStandaloneCommandLine()
+    {
+        var manager = new WinInstaller();
+        var source = new UniGetUI.PackageEngine.Classes.Manager.ManagerSource(manager, "feed", new Uri("https://h/"));
+        var package = new UniGetUI.PackageEngine.PackageClasses.Package("Tool", "Vendor.Tool", "1.0", source, manager);
+        foreach (var operation in new[] { OperationType.Install, OperationType.Update, OperationType.Uninstall })
+            Assert.Throws<InvalidOperationException>(() =>
+                manager.OperationHelper.GetStandaloneParameters(package, new UniGetUI.PackageEngine.Serializable.InstallOptions(), operation));
+    }
+
+    [Fact]
     public void AReceiptKeepsAnInstallFromBeingOfferedAgain()
     {
         var entry = Entry("Tool", "Tool", "2.0.0.1234");

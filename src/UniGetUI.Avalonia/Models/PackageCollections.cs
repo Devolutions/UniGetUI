@@ -310,14 +310,16 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
 
     private IPackage? _targetPackage;
 
-    // Some managers (Cargo, NuGet) read details for the package's own version, the installed one on update rows
+    // Some managers (Cargo, NuGet) read details for the package's own version, the installed one on update rows.
+    // The copy stays upgradable so update-only installer preferences (WinGet architecture) still apply.
     private IPackage TargetPackage
     {
         get
         {
             if (_targetPackage is { } target) return target;
             IPackage created = Package.IsUpgradable && Package.NewVersionString != Package.VersionString
-                ? new Package(Package.Name, Package.Id, Package.NewVersionString, Package.Source, Package.Manager, Package.OverridenOptions)
+                ? new Package(Package.Name, Package.Id, Package.NewVersionString, Package.NewVersionString,
+                    Package.Source, Package.Manager, Package.OverridenOptions)
                 : Package;
             return Interlocked.CompareExchange(ref _targetPackage, created, null) ?? created;
         }

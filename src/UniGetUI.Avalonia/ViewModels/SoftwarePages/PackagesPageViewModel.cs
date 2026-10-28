@@ -567,6 +567,9 @@ public partial class PackagesPageViewModel : ViewModelBase
             }
             FilterPackages();
         }
+
+        // A finished load starts its own preload; this covers changes outside one, such as bundle additions
+        if (!Loader.IsLoading) StartRowValuePreload();
     }
 
     private void Loader_FinishedLoading(object? sender, EventArgs e)

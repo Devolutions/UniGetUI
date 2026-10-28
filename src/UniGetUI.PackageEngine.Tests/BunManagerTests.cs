@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
@@ -403,6 +404,36 @@ public sealed class BunManagerTests
 
         Assert.Contains("add", parameters);
         Assert.Contains("typescript@5.4.0", parameters);
+    }
+
+    /// <summary>
+    /// Tests that the release date is the offered version's for updates, which can be older than "latest",
+    /// and the latest version's otherwise.
+    /// </summary>
+    [Fact]
+    public void ReleaseDateUsesTheOfferedVersionForUpdates()
+    {
+        var manager = new Bun();
+        var contents = JsonNode.Parse("""
+            {
+              "dist-tags": { "latest": "6.0.0" },
+              "time": { "5.2.0": "2026-01-01T00:00:00Z", "5.3.0": "2026-02-01T00:00:00Z", "6.0.0": "2026-03-01T00:00:00Z" }
+            }
+            """) as JsonObject;
+        var update = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("typescript")
+            .WithVersion("5.2.0")
+            .WithNewVersion("5.3.0")
+            .Build();
+        var available = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("typescript")
+            .WithVersion("6.0.0")
+            .Build();
+
+        Assert.Equal("2026-02-01T00:00:00Z", BunPkgDetailsHelper.GetReleaseDate(contents, update));
+        Assert.Equal("2026-03-01T00:00:00Z", BunPkgDetailsHelper.GetReleaseDate(contents, available));
     }
 
     /// <summary>

@@ -104,9 +104,11 @@ internal sealed class PackageRow : INotifyPropertyChanged
         await DetailsGate.WaitAsync();
         try
         {
-            // Update rows describe the new version, and some managers read details for the package's own version
+            // Update rows describe the new version, and some managers read details for the package's own version.
+            // The copy stays upgradable so update-only installer preferences (WinGet architecture) still apply.
             IPackage target = Package.IsUpgradable && Package.NewVersionString != Package.VersionString
-                ? new Package(Package.Name, Package.Id, Package.NewVersionString, Package.Source, Package.Manager, Package.OverridenOptions)
+                ? new Package(Package.Name, Package.Id, Package.NewVersionString, Package.NewVersionString,
+                    Package.Source, Package.Manager, Package.OverridenOptions)
                 : Package;
             await target.Details.Load();
             string host = InstallerHostDisplay.FromUrls([target.Details.InstallerUrl?.ToString()]);

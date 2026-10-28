@@ -14,6 +14,15 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
     {
         public BunPkgDetailsHelper(Bun manager) : base(manager) { }
 
+        // With BunPreferLatestVersions off, an update can offer an older line than "latest", so date the offered version
+        internal static string? GetReleaseDate(JsonObject? contents, IPackage package)
+        {
+            string datedVersion = package.IsUpgradable
+                ? package.NewVersionString
+                : contents?["dist-tags"]?["latest"]?.ToString() ?? package.VersionString;
+            return contents?["time"]?[datedVersion]?.ToString();
+        }
+
         protected override void GetDetails_UnSafe(IPackageDetails details)
         {
             try
@@ -58,7 +67,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 // Handle author which can be string or object with "name" property
                 var authorNode = contents?["author"];
                 details.Author = authorNode is JsonObject authorObj ? authorObj["name"]?.ToString() : authorNode?.ToString();
-                details.UpdateDate = contents?["time"]?[contents?["dist-tags"]?["latest"]?.ToString() ?? details.Package.VersionString]?.ToString();
+                details.UpdateDate = GetReleaseDate(contents, details.Package);
 
                 if (Uri.TryCreate(contents?["dist"]?["tarball"]?.ToString() ?? "", UriKind.RelativeOrAbsolute, out var installerUrl))
                     details.InstallerUrl = installerUrl;

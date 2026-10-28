@@ -308,6 +308,21 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
     private string TargetInstallerVersion =>
         Package.IsUpgradable ? Package.NewVersionString : Package.VersionString;
 
+    private IPackage? _targetPackage;
+
+    // Some managers (Cargo, NuGet) read details for the package's own version, the installed one on update rows
+    private IPackage TargetPackage
+    {
+        get
+        {
+            if (_targetPackage is { } target) return target;
+            IPackage created = Package.IsUpgradable && Package.NewVersionString != Package.VersionString
+                ? new Package(Package.Name, Package.Id, Package.NewVersionString, Package.Source, Package.Manager, Package.OverridenOptions)
+                : Package;
+            return Interlocked.CompareExchange(ref _targetPackage, created, null) ?? created;
+        }
+    }
+
     private async Task LoadInstallerHostAsync()
     {
         CancellationToken token = _lifetimeCts.Token;
@@ -528,11 +543,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
     private async Task<long> ResolveDownloadSizeAsync(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (!Package.Details.IsPopulated)
-            await Package.Details.Load().ConfigureAwait(false);
+        IPackageDetails details = TargetPackage.Details;
+        if (!details.IsPopulated)
+            await details.Load().ConfigureAwait(false);
 
         token.ThrowIfCancellationRequested();
-        return Package.Details.InstallerSize;
+        return details.InstallerSize;
     }
 
     private void ApplyDownloadSize(long size)
@@ -649,12 +665,13 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
     private async Task<DateTime> ResolveReleaseDateAsync(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (!Package.Details.IsPopulated)
-            await Package.Details.Load().ConfigureAwait(false);
+        IPackageDetails details = TargetPackage.Details;
+        if (!details.IsPopulated)
+            await details.Load().ConfigureAwait(false);
 
         token.ThrowIfCancellationRequested();
         // Timestamps carrying an offset become local time; bare dates are kept as published
-        return DateTime.TryParse(Package.Details.UpdateDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date)
+        return DateTime.TryParse(details.UpdateDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date)
             ? date
             : default;
     }

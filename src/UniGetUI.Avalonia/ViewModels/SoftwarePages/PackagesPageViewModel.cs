@@ -592,7 +592,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         PackagesLoaded?.Invoke(ReloadReason.External);
     }
 
-    // Sorting by a lazily loaded column needs every row's value, not just the visible ones
+    // Sorting by a lazily loaded column needs every row's value, filtered out or not, not just the visible ones
     private void StartRowValuePreload()
     {
         ObservablePackageCollection.Sorter sorter = FilteredPackages.CurrentSorter;
@@ -610,7 +610,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         _rowValuePreloadCts?.Dispose();
         _rowValuePreloadCts = new CancellationTokenSource();
         _ = PreloadRowValuesAsync(
-            FilteredPackages.ToArray(),
+            _wrappedPackages.ToArray(),
             load,
             sorter,
             _rowValuePreloadCts.Token);

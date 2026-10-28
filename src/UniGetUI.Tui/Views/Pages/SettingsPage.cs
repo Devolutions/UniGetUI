@@ -311,6 +311,11 @@ internal sealed class SettingsPage : UserControl, ITuiPage
             Settings.Set(Settings.K.ShowDownloadSizeColumn, v);
             TuiShell.InvalidatePages(TuiPageIds.Discover, TuiPageIds.Updates, TuiPageIds.Bundles);
         });
+        _form.AddCheck(CoreTools.Translate("Show the release date column"), () => Settings.Get(Settings.K.ShowReleaseDateColumn), v =>
+        {
+            Settings.Set(Settings.K.ShowReleaseDateColumn, v);
+            TuiShell.InvalidatePages(TuiPageIds.Discover, TuiPageIds.Updates, TuiPageIds.Bundles);
+        });
         _form.AddHeader(CoreTools.Translate("Desktop app"));
         Choice("Application theme:" + _desktopOnly, Settings.K.PreferredTheme,
             [new(CoreTools.Translate("Light"), "light"), new(CoreTools.Translate("Dark"), "dark"), new(CoreTools.Translate("Follow system color scheme"), "auto")]);

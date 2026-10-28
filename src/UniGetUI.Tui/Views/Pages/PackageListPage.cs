@@ -79,10 +79,13 @@ internal sealed class PackageRow : INotifyPropertyChanged
     /// <summary>Installer download size, filled in once the package details are loaded.</summary>
     public string DownloadSize { get; private set; } = "…";
 
+    /// <summary>Release date of the offered version, filled in once the package details are loaded.</summary>
+    public string ReleaseDate { get; private set; } = "…";
+
     private static readonly SemaphoreSlim DetailsGate = new(4, 4);
     private bool _detailsRequested;
 
-    /// <summary>Loads the details behind the optional host/size columns (desktop column preload).</summary>
+    /// <summary>Loads the details behind the optional host/size/date columns (desktop column preload).</summary>
     public async Task LoadColumnDetailsAsync()
     {
         if (_detailsRequested) return;
@@ -93,12 +96,17 @@ internal sealed class PackageRow : INotifyPropertyChanged
             await Package.Details.Load();
             string host = InstallerHostDisplay.FromUrls([Package.Details.InstallerUrl?.ToString()]);
             string size = Package.Details.InstallerSize > 0 ? CoreTools.FormatAsSize(Package.Details.InstallerSize) : "\u2014";
+            string date = DateTime.TryParse(Package.Details.UpdateDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime released)
+                ? released.ToString("d", CultureInfo.CurrentCulture)
+                : "\u2014";
             Dispatcher.UIThread.Post(() =>
             {
                 InstallerHost = host.Length > 0 ? host : "\u2014";
                 DownloadSize = size;
+                ReleaseDate = date;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerHost)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadSize)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ReleaseDate)));
             });
         }
         catch (Exception ex)
@@ -561,6 +569,8 @@ internal sealed class PackageListPage : UserControl, ITuiPage
             Column(CoreTools.Translate("Installer host"), r => r.InstallerHost, 18);
         if (_kind != PackagePageKind.Installed && Settings.Get(Settings.K.ShowDownloadSizeColumn))
             Column(CoreTools.Translate("Download size"), r => r.DownloadSize, 15);
+        if (_kind != PackagePageKind.Installed && Settings.Get(Settings.K.ShowReleaseDateColumn))
+            Column(CoreTools.Translate("Release date"), r => r.ReleaseDate, 14);
         Column("", r => r.State, 6);
 
         // Column-header clicks drive the page's own (persisted) sort instead of the grid's.
@@ -862,7 +872,8 @@ internal sealed class PackageListPage : UserControl, ITuiPage
         _rows = ordered.Select(p => new PackageRow(p)).ToList();
         _grid.ItemsSource = _rows;
         if (_kind != PackagePageKind.Installed
-            && (Settings.Get(Settings.K.ShowInstallerHostColumn) || Settings.Get(Settings.K.ShowDownloadSizeColumn)))
+            && (Settings.Get(Settings.K.ShowInstallerHostColumn) || Settings.Get(Settings.K.ShowDownloadSizeColumn)
+                || Settings.Get(Settings.K.ShowReleaseDateColumn)))
             foreach (var row in _rows.Take(200)) _ = row.LoadColumnDetailsAsync();
 
         if (selected is not null)

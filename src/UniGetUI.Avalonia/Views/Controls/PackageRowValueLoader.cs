@@ -46,5 +46,6 @@ public static class PackageRowValueLoader
 
         wrapper.EnsureInstallerHostLoaded();
         wrapper.EnsureDownloadSizeLoaded();
+        wrapper.EnsureReleaseDateLoaded();
     }
 }

@@ -155,6 +155,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     public bool SimilarSearchEnabled { get; private set; }
     public bool InstallerHostColumnVisible { get; }
     public bool DownloadSizeColumnVisible { get; }
+    public bool ReleaseDateColumnVisible { get; }
     // Settable so a page can say why it is empty; takes effect on the next list update.
     public string NoPackagesText { get; set; }
     public readonly string NoMatchesText;
@@ -258,6 +259,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private string _sourceHeaderText = "";
     [ObservableProperty] private string _installerHostHeaderText = "";
     [ObservableProperty] private string _downloadSizeHeaderText = "";
+    [ObservableProperty] private string _releaseDateHeaderText = "";
 
     // ─── Collections ──────────────────────────────────────────────────────────
     public ObservablePackageCollection FilteredPackages { get; } = new();
@@ -275,7 +277,7 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     private readonly ObservableCollection<PackageWrapper> _wrappedPackages = new();
     private CancellationTokenSource? _iconPreloadCts;
-    private CancellationTokenSource? _downloadSizePreloadCts;
+    private CancellationTokenSource? _rowValuePreloadCts;
     protected List<IPackageManager> UsedManagers = [];
     protected ConcurrentDictionary<IPackageManager, List<IManagerSource>> UsedSourcesForManager = new();
     protected ConcurrentDictionary<IPackageManager, SourceTreeNode> RootNodeForManager = new();
@@ -322,6 +324,8 @@ public partial class PackagesPageViewModel : ViewModelBase
             && data.PageRole != OperationType.Uninstall;
         DownloadSizeColumnVisible = Settings.Get(Settings.K.ShowDownloadSizeColumn)
             && data.PageRole != OperationType.Uninstall;
+        ReleaseDateColumnVisible = Settings.Get(Settings.K.ShowReleaseDateColumn)
+            && data.PageRole != OperationType.Uninstall;
         ReloadButtonVisible = !DisableReload;
         SearchBoxPlaceholder = CoreTools.Translate("Search for packages");
 
@@ -352,9 +356,10 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         // Restore per-page sort preferences (default: Name, ascending).
         int savedSortField = Settings.GetDictionaryItem<string, int>(Settings.K.PackageListSortFieldIndex, PageName);
-        if (savedSortField is < 0 or > 5
+        if (savedSortField is < 0 or > 6
             || (savedSortField is 3 && !RoleIsUpdateLike)
-            || (savedSortField is 5 && !DownloadSizeColumnVisible))
+            || (savedSortField is 5 && !DownloadSizeColumnVisible)
+            || (savedSortField is 6 && !ReleaseDateColumnVisible))
             savedSortField = 0;
         SortFieldIndex = savedSortField;
         SortAscending = !Settings.GetDictionaryItem<string, bool>(Settings.K.PackageListSortDescending, PageName);
@@ -583,25 +588,38 @@ public partial class PackagesPageViewModel : ViewModelBase
         _ = PreloadPackageIconsAsync(
             FilteredPackages.Take(MaximumPreloadedIcons).ToArray(),
             _iconPreloadCts.Token);
-        if (FilteredPackages.CurrentSorter is ObservablePackageCollection.Sorter.DownloadSize)
-            StartDownloadSizePreload();
+        StartRowValuePreload();
         PackagesLoaded?.Invoke(ReloadReason.External);
     }
 
-    private void StartDownloadSizePreload()
+    // Sorting by a lazily loaded column needs every row's value, not just the visible ones
+    private void StartRowValuePreload()
     {
-        if (!DownloadSizeColumnVisible) return;
+        ObservablePackageCollection.Sorter sorter = FilteredPackages.CurrentSorter;
+        Func<PackageWrapper, Task>? load = sorter switch
+        {
+            ObservablePackageCollection.Sorter.DownloadSize when DownloadSizeColumnVisible
+                => wrapper => wrapper.EnsureDownloadSizeLoadedAsync(),
+            ObservablePackageCollection.Sorter.ReleaseDate when ReleaseDateColumnVisible
+                => wrapper => wrapper.EnsureReleaseDateLoadedAsync(),
+            _ => null,
+        };
+        if (load is null) return;
 
-        _downloadSizePreloadCts?.Cancel();
-        _downloadSizePreloadCts?.Dispose();
-        _downloadSizePreloadCts = new CancellationTokenSource();
-        _ = PreloadDownloadSizesAsync(
+        _rowValuePreloadCts?.Cancel();
+        _rowValuePreloadCts?.Dispose();
+        _rowValuePreloadCts = new CancellationTokenSource();
+        _ = PreloadRowValuesAsync(
             FilteredPackages.ToArray(),
-            _downloadSizePreloadCts.Token);
+            load,
+            sorter,
+            _rowValuePreloadCts.Token);
     }
 
-    private async Task PreloadDownloadSizesAsync(
+    private async Task PreloadRowValuesAsync(
         PackageWrapper[] wrappers,
+        Func<PackageWrapper, Task> load,
+        ObservablePackageCollection.Sorter sorter,
         CancellationToken cancellationToken)
     {
         if (wrappers.Length == 0) return;
@@ -615,7 +633,7 @@ public partial class PackagesPageViewModel : ViewModelBase
                 int count = Math.Min(batchSize, wrappers.Length - start);
                 var tasks = new Task[count];
                 for (int index = 0; index < count; index++)
-                    tasks[index] = wrappers[start + index].EnsureDownloadSizeLoadedAsync();
+                    tasks[index] = load(wrappers[start + index]);
 
                 await Task.WhenAll(tasks).WaitAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -623,7 +641,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         catch (OperationCanceledException) { return; }
 
         if (cancellationToken.IsCancellationRequested) return;
-        if (FilteredPackages.CurrentSorter is not ObservablePackageCollection.Sorter.DownloadSize) return;
+        if (FilteredPackages.CurrentSorter != sorter) return;
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
@@ -662,7 +680,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
         IsLoading = true;
         _iconPreloadCts?.Cancel();
-        _downloadSizePreloadCts?.Cancel();
+        _rowValuePreloadCts?.Cancel();
         UpdateSubtitle();
     }
 
@@ -816,6 +834,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         3 => "New version",
         4 => "Source",
         5 => "Download size",
+        6 => "Release date",
         _ => "Name",
     });
 
@@ -828,11 +847,12 @@ public partial class PackagesPageViewModel : ViewModelBase
             3 => ObservablePackageCollection.Sorter.NewVersion,
             4 => ObservablePackageCollection.Sorter.Source,
             5 => ObservablePackageCollection.Sorter.DownloadSize,
+            6 => ObservablePackageCollection.Sorter.ReleaseDate,
             _ => ObservablePackageCollection.Sorter.Name,
         });
         OnPropertyChanged(nameof(SortFieldName));
         FilterPackages();
-        if (value is 5) StartDownloadSizePreload();
+        StartRowValuePreload();
         Settings.SetDictionaryItem(Settings.K.PackageListSortFieldIndex, PageName, value);
     }
 
@@ -1071,6 +1091,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         SourceHeaderText = isList ? CoreTools.Translate("Source") : "";
         InstallerHostHeaderText = isList ? CoreTools.Translate("Installer host") : "";
         DownloadSizeHeaderText = isList ? CoreTools.Translate("Download size") : "";
+        ReleaseDateHeaderText = isList ? CoreTools.Translate("Release date") : "";
     }
 
     public bool IsListViewMode => ViewMode == PackageViewMode.List;
@@ -1199,6 +1220,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     [RelayCommand] private void SortByNewVersion() => SortFieldIndex = 3;
     [RelayCommand] private void SortBySource() => SortFieldIndex = 4;
     [RelayCommand] private void SortByDownloadSize() => SortFieldIndex = 5;
+    [RelayCommand] private void SortByReleaseDate() => SortFieldIndex = 6;
     [RelayCommand] private void SetSortAscending() => SortAscending = true;
     [RelayCommand] private void SetSortDescending() => SortAscending = false;
 

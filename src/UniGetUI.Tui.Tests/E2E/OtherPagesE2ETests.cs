@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using NUnit.Framework;
 using UniGetUI.Core.SettingsEngine;
@@ -536,6 +537,21 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         finally
         {
             await OnUi(() => Settings.Set(Settings.K.ShowDownloadSizeColumn, false));
+        }
+    }
+
+    [Test]
+    public async Task ReleaseDateColumn_ShowsDatesOnceDetailsLoad()
+    {
+        await OnUi(() => Settings.Set(Settings.K.ShowReleaseDateColumn, true));
+        try
+        {
+            await ResetAsync(TuiPageIds.Updates);
+            await WaitForTextAsync("Release date", new DateTime(2026, 9, 1).ToString("d", CultureInfo.CurrentCulture));
+        }
+        finally
+        {
+            await OnUi(() => Settings.Set(Settings.K.ShowReleaseDateColumn, false));
         }
     }
 

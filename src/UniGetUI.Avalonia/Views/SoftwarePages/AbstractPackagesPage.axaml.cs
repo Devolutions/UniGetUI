@@ -70,6 +70,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // "New version" sort option is only relevant on the updates page
         OrderByNewVersion_Menu.IsVisible = ViewModel.RoleIsUpdateLike;
         OrderByDownloadSize_Menu.IsVisible = ViewModel.DownloadSizeColumnVisible;
+        OrderByReleaseDate_Menu.IsVisible = ViewModel.ReleaseDateColumnVisible;
 
         // Stamp initial checkmarks, then keep them in sync with sort-property changes
         UpdateSortMenuChecks();
@@ -520,6 +521,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         OrderByNewVersion_Menu.Icon = Check(ViewModel.SortFieldIndex == 3);
         OrderBySource_Menu.Icon = Check(ViewModel.SortFieldIndex == 4);
         OrderByDownloadSize_Menu.Icon = Check(ViewModel.SortFieldIndex == 5);
+        OrderByReleaseDate_Menu.Icon = Check(ViewModel.SortFieldIndex == 6);
         OrderByAscending_Menu.Icon = Check(ViewModel.SortAscending);
         OrderByDescending_Menu.Icon = Check(!ViewModel.SortAscending);
     }

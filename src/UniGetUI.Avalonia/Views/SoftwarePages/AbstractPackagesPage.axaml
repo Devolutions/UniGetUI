@@ -886,6 +886,23 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                                <DataGridTemplateColumn CanUserSort="False"
+                                                        Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).ReleaseDateHeaderText}"
+                                                        Width="*"
+                                                        IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).ReleaseDateColumnVisible}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                  controls:PackageRowValueLoader.Track="True"
+                                                  automation:AutomationProperties.Name="{Binding ReleaseDateText}">
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/history.svg"
+                                                                  Width="24" Height="24" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding ReleaseDateText}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -1223,6 +1240,7 @@
                             <MenuItem x:Name="OrderByNewVersion_Menu" Header="{t:Translate New version}" Command="{Binding SortByNewVersionCommand}"/>
                             <MenuItem x:Name="OrderBySource_Menu"     Header="{t:Translate Source}"      Command="{Binding SortBySourceCommand}"/>
                             <MenuItem x:Name="OrderByDownloadSize_Menu" Header="{t:Translate Download size}" Command="{Binding SortByDownloadSizeCommand}"/>
+                            <MenuItem x:Name="OrderByReleaseDate_Menu" Header="{t:Translate Release date}" Command="{Binding SortByReleaseDateCommand}"/>
                             <Separator/>
                             <MenuItem x:Name="OrderByAscending_Menu"  Header="{t:Translate Ascendant}"   Command="{Binding SetSortAscendingCommand}"/>
                             <MenuItem x:Name="OrderByDescending_Menu" Header="{t:Translate Descendant}"  Command="{Binding SetSortDescendingCommand}"/>

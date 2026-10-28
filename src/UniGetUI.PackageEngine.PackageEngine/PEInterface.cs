@@ -15,6 +15,7 @@ using UniGetUI.PackageEngine.Managers.ChocolateyManager;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
 using UniGetUI.PackageEngine.Managers.ScoopManager;
 using UniGetUI.PackageEngine.Managers.WingetManager;
+using UniGetUI.PackageEngine.Managers.WinInstallerManager;
 #else
 using UniGetUI.PackageEngine.Managers.AptManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
@@ -37,6 +38,7 @@ namespace UniGetUI.PackageEngine
         public static readonly WinGet? WinGet = Create(() => new WinGet());
         public static readonly Scoop? Scoop = Create(() => new Scoop());
         public static readonly Chocolatey? Chocolatey = Create(() => new Chocolatey());
+        public static readonly WinInstaller? WinInstaller = Create(() => new WinInstaller());
 #endif
         public static readonly Npm? Npm = Create(() => new Npm());
         public static readonly Bun? Bun = Create(() => new Bun());
@@ -88,7 +90,7 @@ namespace UniGetUI.PackageEngine
         {
             List<IPackageManager?> candidates = [Npm, Bun, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
 #if WINDOWS
-            candidates.InsertRange(0, [WinGet, Scoop, Chocolatey]);
+            candidates.InsertRange(0, [WinGet, WinInstaller, Scoop, Chocolatey]);
             candidates.Add(PowerShell);
 #else
             candidates.Insert(0, Homebrew);

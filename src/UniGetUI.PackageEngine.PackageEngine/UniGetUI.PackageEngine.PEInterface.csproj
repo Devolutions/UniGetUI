@@ -15,6 +15,7 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Cargo\UniGetUI.PackageEngine.Managers.Cargo.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dotnet\UniGetUI.PackageEngine.Managers.Dotnet.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Generic.NuGet\UniGetUI.PackageEngine.Managers.Generic.NuGet.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds\UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Npm\UniGetUI.PackageEngine.Managers.Npm.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pip\UniGetUI.PackageEngine.Managers.Pip.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.PowerShell7\UniGetUI.PackageEngine.Managers.PowerShell7.csproj" />
@@ -33,6 +34,10 @@
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Scoop\UniGetUI.PackageEngine.Managers.Scoop.csproj"
+                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.WinInstaller\UniGetUI.PackageEngine.Managers.WinInstaller.csproj"
                           SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>

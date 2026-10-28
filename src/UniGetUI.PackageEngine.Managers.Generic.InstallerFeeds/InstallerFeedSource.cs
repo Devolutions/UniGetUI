@@ -3,25 +3,40 @@ using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.Providers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
-using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
-namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
+namespace UniGetUI.PackageEngine.Managers.InstallerFeeds;
+
+/// <summary>
+/// A feed's source, named by its catalog's id: unique, kept when the catalog is renamed, and what
+/// "Installer packages: &lt;id&gt;" (how sources are written in bundles and the CLI) resolves back to.
+/// </summary>
+public sealed class InstallerFeedSource : ManagerSource
+{
+    public InstallerFeedSource(IPackageManager manager, string catalogId, Uri location, bool allowUnsignedPackages)
+        : base(manager, catalogId, location)
+    {
+        AllowUnsignedPackages = allowUnsignedPackages;
+    }
+
+    /// <summary>Whether the catalog lets packages that the platform's signature check rejects install.</summary>
+    public bool AllowUnsignedPackages { get; }
+}
 
 /// <summary>
 /// Feeds come from the machine-wide software catalog, which an administrator deploys; they cannot
 /// be added or removed from UniGetUI.
 /// </summary>
-internal sealed class MacPkgSourceHelper : BaseSourceHelper
+public sealed class InstallerFeedSourceHelper : BaseSourceHelper
 {
-    public MacPkgSourceHelper(MacPkg manager)
+    public InstallerFeedSourceHelper(IPackageManager manager)
         : base(manager) { }
 
     /// <summary>Drops the briefly cached feed list, so the next listing reads the catalog again.</summary>
-    internal void ForgetSources() => TaskRecycler<IReadOnlyList<IManagerSource>>.RemoveFromCache(_getSources);
+    public void ForgetSources() => TaskRecycler<IReadOnlyList<IManagerSource>>.RemoveFromCache(_getSources);
 
     protected override IReadOnlyList<IManagerSource> GetSources_UnSafe() =>
-        PkgCatalogFeeds.Load()
-            .Select(feed => (IManagerSource)new PkgFeedSource(Manager, feed.Id, feed.Location, feed.AllowUnsignedPackages))
+        CatalogFeeds.Load()
+            .Select(feed => (IManagerSource)new InstallerFeedSource(Manager, feed.Id, feed.Location, feed.AllowUnsignedPackages))
             .ToArray();
 
     public override string[] GetAddSourceParameters(IManagerSource source) =>
@@ -35,20 +50,4 @@ internal sealed class MacPkgSourceHelper : BaseSourceHelper
 
     protected override OperationVeredict _getRemoveSourceOperationVeredict(IManagerSource source, int ReturnCode, string[] Output) =>
         OperationVeredict.Failure;
-}
-
-/// <summary>
-/// A feed's source, named by its catalog's id: unique, kept when the catalog is renamed, and what
-/// "Installer packages: &lt;id&gt;" (how sources are written in bundles and the CLI) resolves back to.
-/// </summary>
-internal sealed class PkgFeedSource : ManagerSource
-{
-    public PkgFeedSource(IPackageManager manager, string catalogId, Uri location, bool allowUnsignedPackages)
-        : base(manager, catalogId, location)
-    {
-        AllowUnsignedPackages = allowUnsignedPackages;
-    }
-
-    /// <summary>Whether the catalog lets packages that Gatekeeper rejects (unsigned, not notarized) install.</summary>
-    public bool AllowUnsignedPackages { get; }
 }

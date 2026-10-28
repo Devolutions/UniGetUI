@@ -115,13 +115,14 @@ in the next section.
 
 `UniGetUI.PackageEngine.Managers.MacPkg` (id `pkg`, macOS only) installs IT-published `.pkg` and
 `.dmg` files through the Software Catalog; the administrator workflow is in `docs/PKG_FEEDS.md`.
+Its format-agnostic parts live in the shared feed project described in the next section.
 
 - Its sources are not added from the UI: each catalog of the machine-wide `SoftwareCatalog.json`
   that has a `pkgFeed` declares one, named by the catalog's id and shown by its name
-  (`PkgCatalogFeeds`, `PkgFeedSource`), with `Sources.CanBeEdited` false. The catalog page
+  (`CatalogFeeds`, `InstallerFeedSource`), with `Sources.CanBeEdited` false. The catalog page
   then lists every package of that feed in the catalog (`SoftwareCatalogViewModel.ExpandPkgFeedsAsync`).
 - A feed is a `file:` folder whose `.pkg` files are read directly, or an `https:` folder read through
-  the `index.json` that `unigetui pkg-index <folder>` writes (`PkgIndexCommand`).
+  the `index.json` that `unigetui pkg-index <folder>` writes (`PkgIndexCommand`, an `IFeedIndexer`).
 - Identity comes from the file itself: for a `.pkg`, `XarArchive` + `PkgMetadata` (the first
   component of a Distribution, else `PackageInfo`, plus its outermost app); for a `.dmg`,
   `DiskImage` mounts it read-only and reads the app at its root. Installed state comes from
@@ -150,6 +151,51 @@ in the next section.
   before the prompt instead.
 - The Catalog Editor's **Package feed** dialog (`PkgFeedEditor`, `PkgFeedEditorViewModel`) edits
   `pkgFeed`/`allowUnsignedPackages` and previews a feed through `PkgFeedInspector`.
+
+## Installer feeds shared by macOS and Windows
+
+`UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds` holds what does not depend on the file
+format: the catalog's feed declarations (`CatalogFeeds`), feed locations and index path checks
+(`FeedLocation`), the cached folder/web listing with its last-known fallback (`FeedListing<TItem>`),
+the `index.json` schema (`FeedIndex`), sources (`InstallerFeedSource`, `InstallerFeedSourceHelper`),
+staging (`FeedStaging`) and the `pkg-index` command (`FeedIndexCommand` over an `IFeedIndexer`).
+
+One `pkgFeed` and one `index.json` serve both platforms. Each reader only takes the entries whose
+file extension it owns, and `pkg-index` keeps the entries another platform wrote while their files
+still hash the same, so a mixed folder is indexed by running it once on each.
+
+## Windows installer packages (.exe and .msi)
+
+`UniGetUI.PackageEngine.Managers.WinInstaller` (id `installer`, Windows only) is the Windows
+counterpart of `pkg`; the administrator workflow is in `docs/WINDOWS_INSTALLER_FEEDS.md`.
+
+- Identity comes from the file: an `.msi` through msi.dll (`MsiDatabase`: Property table and the
+  summary Template), keyed by its `UpgradeCode`; an `.exe` through a managed, bounded PE reader
+  (`PeReader`: version resource, sections, appended data, largest icon) and `InstallerKinds.Detect`
+  (Inno Setup, NSIS, WiX Burn, InstallShield). A `<name>.json` beside the file
+  (`InstallerManifest`) fills in or overrides anything, and is required for an unknown installer's
+  silent switches. `pkg-index` bakes all of it into the entry's `windows` block.
+- Installed state comes from Apps and Features (`ArpEntries`, both registry views of HKLM and
+  HKCU), matched by `InstalledMatcher`: the manifest's `uninstallKey`, else an MSI's related
+  products or a bundle's `BundleUpgradeCode`, else, for an `.exe` only, its cleaned display name
+  with an agreeing publisher. `InstallReceipts` remembers the registered version an install left,
+  so an installer whose `DisplayVersion` differs from its own version is not offered forever.
+- Installs run in-process (`WinInstallerRunner`): stage a private copy held open against writes,
+  verify the index hash, the identity (re-read with the original manifest) and Authenticode
+  (`Authenticode`, WinVerifyTrust, waived only by `allowUnsignedPackages`), then run it silently,
+  an `.msi` through `runas` unless it is per-user, an `.exe` unelevated unless its manifest says
+  `"scope": "machine"` (Inno and Burn elevate themselves; ERROR_ELEVATION_REQUIRED retries
+  elevated); `ProhibitElevation` refuses. Uninstalls run the registered command made silent and,
+  for an `.exe`, wait for the entry to disappear, since NSIS uninstallers return at once. An entry
+  elevates only when it is per-machine, which for Windows Installer products comes from their
+  `AssignmentType`, not the hive: per-user MSI products are registered under HKLM too.
+- Tests swap `ArpEntries.Source`, `InstalledMatcher.RelatedProducts`, `Authenticode.Verify` and
+  `WinInstallerRunner.RunProcess`; `WinInstallerTests` builds real `.msi` fixtures through msi.dll
+  and `.exe` fixtures from `cmd.exe` plus an appended NSIS or Inno header.
+  `WinInstallerEndToEndTests` installs, updates and uninstalls real per-user MSI and Inno Setup
+  packages (folder and web feeds, and through the operation classes) when
+  `UNIGETUI_INSTALLER_E2E=1`, and per-machine ones behind UAC when it is `elevated`; otherwise
+  they report as skipped.
 
 ## Version comparison across ecosystems
 

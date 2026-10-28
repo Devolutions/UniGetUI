@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Text.Json;
+using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
@@ -151,12 +152,12 @@ public static class PkgHelperCommand
     private static int InstallItem(string json, TextWriter output)
     {
         void Write(PkgHelperMessage message) =>
-            output.WriteLine(PkgJson.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage));
+            output.WriteLine(FeedJson.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage));
 
         PkgHelperMessage result;
         try
         {
-            var order = PkgJson.Deserialize(json, PkgHelperJsonContext.Default.PkgElevatedInstall)
+            var order = FeedJson.Deserialize(json, PkgHelperJsonContext.Default.PkgElevatedInstall)
                 ?? throw new InvalidDataException("The install order is empty.");
             result = InstallItemAsync(order.ToItem(), order.AllowUnsigned, text => Write(new PkgHelperMessage { Log = text }))
                 .GetAwaiter().GetResult();
@@ -223,7 +224,7 @@ public static class PkgHelperCommand
             async Task Send(PkgHelperMessage message)
             {
                 byte[] line = Encoding.UTF8.GetBytes(
-                    PkgJson.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage) + "\n");
+                    FeedJson.Serialize(message, PkgHelperJsonContext.Default.PkgHelperMessage) + "\n");
                 await writeLock.WaitAsync();
                 try
                 {
@@ -242,7 +243,7 @@ public static class PkgHelperCommand
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 string line = await ReadLineAsync(stream, timeout.Token);
-                var request = PkgJson.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperRequest)
+                var request = FeedJson.Deserialize(line, PkgHelperJsonContext.Default.PkgHelperRequest)
                     ?? throw new InvalidDataException("The request is empty.");
                 journal($"Asked to install {request.Id} {request.Version} from catalog {request.Catalog}.");
                 await OneInstallAtATime.WaitAsync();
@@ -298,9 +299,9 @@ public static class PkgHelperCommand
         string version = request.Version ?? "";
         if (!IsField(request.Catalog) || !IsField(request.Id) || (version.Length > 0 && !IsField(version)))
             return Refuse("The request names no valid catalog, package or version.");
-        if (TrustedPath.WhyUntrusted(PkgCatalogFeeds.CatalogPath) is { } catalogReason)
+        if (TrustedPath.WhyUntrusted(CatalogFeeds.CatalogPath) is { } catalogReason)
             return Refuse($"The software catalog is not protected, so the helper does not act on it: {catalogReason}");
-        var feeds = PkgCatalogFeeds.Load()
+        var feeds = CatalogFeeds.Load()
             .Where(f => string.Equals(f.Id, request.Catalog, StringComparison.OrdinalIgnoreCase)).Take(1).ToArray();
         if (feeds.Length == 0)
             return Refuse($"No catalog with the id {request.Catalog} declares a package feed.");

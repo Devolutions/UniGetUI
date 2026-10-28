@@ -1,8 +1,7 @@
 using System.Diagnostics;
-using System.Security.Cryptography;
-using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
@@ -85,7 +84,7 @@ internal static class PkgInstaller
     {
         progress(OperationProgress.ForStage(OperationProgressStage.Installing));
         log("Asking for administrator rights; the package is then downloaded, checked and installed as root...");
-        string order = PkgJson.Serialize(PkgElevatedInstall.From(item, allowUnsigned),
+        string order = FeedJson.Serialize(PkgElevatedInstall.From(item, allowUnsigned),
             PkgHelperJsonContext.Default.PkgElevatedInstall);
         string command = $"{CoreTools.QuoteForPosixShell(executable)} {PkgHelperCommand.Command} "
             + $"{PkgHelperCommand.InstallItemVerb} {CoreTools.QuoteForPosixShell(order)} 2>&1";
@@ -214,63 +213,12 @@ internal static class PkgInstaller
     }
 
     /// <summary>Copies a folder-feed package, or downloads a web-feed one, to the given path.</summary>
-    public static async Task StageAsync(PkgFeedItem item, string destination, Action<string> log,
-        Action<OperationProgress> progress, CancellationToken cancellationToken)
-    {
-        progress(OperationProgress.ForStage(OperationProgressStage.Downloading));
-        if (item.Location.IsFile)
-        {
-            log($"Copying {item.Location.LocalPath}...");
-            await using var source = File.OpenRead(item.Location.LocalPath);
-            await using var target = File.Create(destination);
-            await CopyAsync(source, target, source.Length, progress, cancellationToken);
-            return;
-        }
-
-        log($"Downloading {item.Location}...");
-        using var client = new HttpClient(CoreTools.GenericHttpClientParameters);
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-        using var response = await client.GetAsync(item.Location, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        await using (var body = await response.Content.ReadAsStreamAsync(cancellationToken))
-        await using (var target = File.Create(destination))
-            await CopyAsync(body, target, response.Content.Headers.ContentLength ?? item.Size, progress, cancellationToken);
-    }
-
-    private static async Task CopyAsync(Stream source, Stream target, long total, Action<OperationProgress> progress,
-        CancellationToken cancellationToken)
-    {
-        byte[] buffer = new byte[1024 * 1024];
-        long copied = 0;
-        using var stalled = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        while (true)
-        {
-            // A source that stops sending must not hold the install, nor the helper's one install at a time.
-            stalled.CancelAfter(StallTimeout);
-            int read;
-            try { read = await source.ReadAsync(buffer, stalled.Token); }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                throw new IOException($"The package stopped arriving for {StallTimeout.TotalSeconds} seconds.");
-            }
-            if (read == 0)
-                break;
-            await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-            copied += read;
-            progress(OperationProgress.FromDownload((ulong)copied, (ulong)Math.Max(total, 0)));
-        }
-    }
+    public static Task StageAsync(PkgFeedItem item, string destination, Action<string> log,
+        Action<OperationProgress> progress, CancellationToken cancellationToken) =>
+        FeedStaging.StageAsync(item.Location, item.Size, destination, log, progress, cancellationToken);
 
     /// <summary>Refuses a staged file whose hash differs from the one the feed index announces.</summary>
-    internal static void VerifyHash(PkgFeedItem item, string staged)
-    {
-        if (item.Sha256 is not { } expected)
-            return;
-        using var stream = File.OpenRead(staged);
-        string actual = Convert.ToHexStringLower(SHA256.HashData(stream));
-        if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"The downloaded package's SHA-256 is {actual}, but the feed index announces {expected}.");
-    }
+    internal static void VerifyHash(PkgFeedItem item, string staged) => FeedStaging.VerifyHash(item.Sha256, staged);
 
     /// <summary>Refuses a file that is no longer what the feed listed, such as a folder feed's file replaced since.</summary>
     internal static void VerifyIdentity(PkgFeedItem item, PkgMetadata staged)
@@ -281,7 +229,6 @@ internal static class PkgInstaller
     }
 
     internal const string SpctlPath = "/usr/sbin/spctl";
-    private static readonly TimeSpan StallTimeout = TimeSpan.FromMinutes(2);
 
     /// <summary>
     /// Asks Gatekeeper, as macOS does for downloads, whether the package or app is signed by an identified

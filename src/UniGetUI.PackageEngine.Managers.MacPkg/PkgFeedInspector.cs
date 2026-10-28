@@ -1,17 +1,7 @@
+using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
-
-/// <summary>A package a feed publishes, as the Catalog Editor previews it.</summary>
-public sealed record FeedPackage(string Name, string Id, string Version, string File, string Kind,
-    IReadOnlyList<string> Architectures);
-
-/// <summary>A file in a feed that UniGetUI cannot offer, and why.</summary>
-public sealed record FeedProblem(string File, string Reason);
-
-/// <summary>What a feed offers: its packages, the files it skips, and a warning about where it lives.</summary>
-public sealed record FeedInspection(IReadOnlyList<FeedPackage> Packages, IReadOnlyList<FeedProblem> Problems,
-    string? Warning);
 
 /// <summary>
 /// Previews a feed for the administrator writing a catalog: everything it publishes, every file it
@@ -20,12 +10,12 @@ public sealed record FeedInspection(IReadOnlyList<FeedPackage> Packages, IReadOn
 public static class PkgFeedInspector
 {
     /// <summary>Whether a feed location is usable: an https URL, a file URL or an absolute folder path.</summary>
-    public static bool IsValidLocation(string? text) => PkgFeed.TryParseLocation(text, out _);
+    public static bool IsValidLocation(string? text) => FeedLocation.TryParse(text, out _);
 
     /// <summary>Reads the feed fresh. Throws when the feed itself cannot be reached or its index read.</summary>
     public static FeedInspection Inspect(string text)
     {
-        if (!PkgFeed.TryParseLocation(text, out Uri location))
+        if (!FeedLocation.TryParse(text, out Uri location))
             throw new InvalidDataException($"\"{text}\" is not an https URL or an absolute folder path.");
         PkgFeed.ForgetCachedIndexes();
         if (!location.IsFile)

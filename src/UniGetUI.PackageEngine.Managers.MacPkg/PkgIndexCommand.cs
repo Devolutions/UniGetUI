@@ -1,76 +1,51 @@
+using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager;
 
 /// <summary>
-/// <c>unigetui pkg-index &lt;folder&gt;</c>: writes the index.json that serves a folder of .pkg and .dmg files
-/// as a web feed, with each package's identifier, version, app and SHA-256 read from the files themselves.
+/// <c>unigetui pkg-index &lt;folder&gt;</c> on a Mac: indexes the .pkg, .dmg and .zip files of a folder, with
+/// each package's identifier, version, app and SHA-256 read from the files themselves.
 /// </summary>
-public static class PkgIndexCommand
+public sealed class PkgIndexCommand : IFeedIndexer
 {
-    public const string Command = "pkg-index";
+    public const string Command = FeedIndexCommand.Command;
 
-    public static bool IsCommand(string[] args) =>
-        args.Length > 0 && string.Equals(args[0], Command, StringComparison.OrdinalIgnoreCase);
+    public static bool IsCommand(string[] args) => FeedIndexCommand.IsCommand(args);
 
-    public static int Run(string[] args, TextWriter output, TextWriter error)
+    public static int Run(string[] args, TextWriter output, TextWriter error) =>
+        FeedIndexCommand.Run(args, output, error, new PkgIndexCommand());
+
+    public IReadOnlyCollection<string> Extensions => FeedFile.Extensions;
+
+    public (IReadOnlyList<FeedIndexEntry> Entries, IReadOnlyList<FeedProblem> Skipped) Build(string folder)
     {
-        if (args.Length != 1 || args[0] is "-h" or "--help")
-        {
-            output.WriteLine($"Usage: unigetui {Command} <folder>");
-            output.WriteLine("Writes index.json into <folder>, listing every .pkg and .dmg in it and its subfolders,");
-            output.WriteLine("so the folder can be published on a web server as a package feed.");
-            return args.Length == 1 ? 0 : 2;
-        }
-
-        string folder = Path.GetFullPath(args[0]);
-        if (!Directory.Exists(folder))
-        {
-            error.WriteLine($"The folder {folder} does not exist.");
-            return 1;
-        }
-
-        var (index, skipped) = Build(folder);
-        string destination = Path.Combine(folder, PkgFeed.IndexFileName);
-        string temporary = destination + ".tmp";
-        File.WriteAllText(temporary, PkgJson.Serialize(index, PkgFeedJsonContext.Default.PkgFeedIndex) + Environment.NewLine);
-        File.Move(temporary, destination, overwrite: true);
-
-        foreach (var entry in index.Packages)
-            output.WriteLine($"  {entry.File}: {entry.Name} ({entry.Id} {entry.Version})");
-        foreach (string file in skipped)
-            error.WriteLine($"  Skipped {Path.GetRelativePath(folder, file)}: it is not a readable flat package or a disk image with one app.");
-        output.WriteLine($"Wrote {destination} with {index.Packages.Length} package(s).");
-        return skipped.Count == 0 ? 0 : 3;
-    }
-
-    internal static (PkgFeedIndex Index, IReadOnlyList<string> Skipped) Build(string folder)
-    {
-        var entries = new List<PkgFeedIndexEntry>();
-        var skipped = new List<string>();
+        var entries = new List<FeedIndexEntry>();
+        var skipped = new List<FeedProblem>();
         foreach (string file in PkgFeed.EnumeratePackages(folder))
         {
             if (PkgFeed.TryReadFile(file) is not { } metadata)
             {
-                skipped.Add(file);
+                skipped.Add(new FeedProblem(Path.GetRelativePath(folder, file),
+                    "it is not a readable flat package or a disk image with one app."));
                 continue;
             }
             string? icon = PublishIcon(file);
-            entries.Add(new PkgFeedIndexEntry
+            entries.Add(new FeedIndexEntry
             {
                 Id = metadata.Id,
                 Name = metadata.Title ?? Path.GetFileNameWithoutExtension(file),
                 Version = metadata.Version,
-                File = RelativeUrlPath(folder, file),
-                Sha256 = PkgFeed.ComputeSha256(file),
+                File = FeedLocation.RelativeUrlPath(folder, file),
+                Sha256 = FeedLocation.ComputeSha256(file),
                 Size = new FileInfo(file).Length,
                 Architectures = metadata.Architectures.Count > 0 ? [.. metadata.Architectures] : null,
-                Icon = icon is null ? null : RelativeUrlPath(folder, icon),
-                App = PkgFeedIndexApp.From(metadata.App),
+                Icon = icon is null ? null : FeedLocation.RelativeUrlPath(folder, icon),
+                App = PkgIndexApp.From(metadata.App),
                 WrapsPackage = metadata.WrapsPackage ? true : null,
             });
         }
-        return (new PkgFeedIndex { Version = PkgFeedIndex.CurrentVersion, Packages = [.. entries] }, skipped);
+        return (entries, skipped);
     }
 
     // A web feed serves only what is in the folder, so an icon taken from a disk image is saved
@@ -84,7 +59,4 @@ public static class PkgIndexCommand
         File.Copy(icon, sibling, overwrite: false);
         return sibling;
     }
-
-    private static string RelativeUrlPath(string folder, string file) =>
-        Path.GetRelativePath(folder, file).Replace(Path.DirectorySeparatorChar, '/');
 }

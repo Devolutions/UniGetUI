@@ -8,12 +8,12 @@
 
     <StackPanel Spacing="10">
         <TextBlock TextWrapping="Wrap" Opacity="0.85"
-                   Text="{t:Translate Text='Every .pkg, .dmg and .zip file in this folder or web address appears in the catalog. Leave it empty for a catalog without a feed.'}"/>
+                   Text="{x:Static vm:PkgFeedEditorViewModel.FeedDescription}"/>
 
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBox Grid.Column="0"
                      Text="{Binding Location}"
-                     PlaceholderText="https://software.example.com/mac/"
+                     PlaceholderText="{x:Static vm:PkgFeedEditorViewModel.LocationPlaceholder}"
                      automation:AutomationProperties.Name="{t:Translate Package feed location}"/>
             <Button Grid.Column="1"
                     Content="{t:Translate Choose folder...}"
@@ -26,7 +26,7 @@
 
         <CheckBox IsChecked="{Binding AllowUnsignedPackages}">
             <TextBlock TextWrapping="Wrap"
-                       Text="{t:Translate Text='Allow packages that are not signed and notarized (for your own packages; keep the feed where only administrators can change it)'}"/>
+                       Text="{x:Static vm:PkgFeedEditorViewModel.UnsignedDescription}"/>
         </CheckBox>
 
         <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{x:Static vm:PkgFeedEditorViewModel.CanPreview}">

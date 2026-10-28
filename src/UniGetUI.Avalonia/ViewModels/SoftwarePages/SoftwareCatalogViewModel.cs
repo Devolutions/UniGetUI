@@ -229,7 +229,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                     _allPackages.Add(new CatalogTileViewModel(entry, catalog)
                     {
                         Owner = this,
-                        SourceLabel = FindManager(entry)?.Id == PkgManagerId
+                        SourceLabel = FindManager(entry)?.Id is { } managerId && PkgManagerIds.Contains(managerId)
                             && feedNames.TryGetValue(entry.Source, out string? feedName) ? feedName : entry.Source,
                     });
             }
@@ -409,8 +409,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     private static IPackageManager? FindManager(CatalogEntry entry) =>
         PEInterface.Managers.FirstOrDefault(entry.MatchesManager);
 
-    // The macOS Installer packages manager, which serves each catalog's pkgFeed as a source named by the catalog's id.
-    private const string PkgManagerId = "pkg";
+    // The Installer packages manager (macOS .pkg, Windows .exe and .msi), which serves each catalog's pkgFeed as a source named by the catalog's id.
+    private static readonly string[] PkgManagerIds = ["pkg", "installer"];
 
     /// <summary>
     /// Adds every package of a catalog's pkgFeed to that catalog, so that publishing a .pkg in the
@@ -419,7 +419,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     internal static async Task<CatalogDefinition[]> ExpandPkgFeedsAsync(CatalogDefinition[] catalogs)
     {
         if (catalogs.All(c => c.PkgFeed is null)
-            || PEInterface.Managers.FirstOrDefault(m => m.Id == PkgManagerId) is not { } manager
+            || PEInterface.Managers.FirstOrDefault(m => PkgManagerIds.Contains(m.Id)) is not { } manager
             || !manager.IsReady())
             return catalogs;
         // A refresh shows what IT just published, not the feed listing kept for icon lookups.

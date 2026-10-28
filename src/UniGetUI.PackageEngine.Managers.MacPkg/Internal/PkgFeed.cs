@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
-using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 
 namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 
@@ -34,51 +33,14 @@ internal sealed record PkgFeedItem(
 /// </summary>
 internal static class PkgFeed
 {
-    internal const string IndexFileName = "index.json";
-    private const int MaxScanDepth = 3;
-    private const int MaxIndexBytes = 8 * 1024 * 1024;
-    private static readonly TimeSpan IndexTimeout = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan IndexLifetime = TimeSpan.FromMinutes(5);
     private static readonly string[] IconExtensions = [".png", ".jpg", ".jpeg"];
 
     private readonly record struct ParsedFile(long Size, DateTime WriteTimeUtc, PkgMetadata Metadata);
-    private readonly record struct CachedIndex(DateTime FetchedUtc, IReadOnlyList<PkgFeedItem> Items);
 
     private static readonly ConcurrentDictionary<string, ParsedFile> ParsedFiles = new(StringComparer.Ordinal);
-    private static readonly ConcurrentDictionary<Uri, CachedIndex> Indexes = new();
+    private static readonly FeedListing<PkgFeedItem> Listing = new(ScanFolder, ParseIndex, "PkgFeeds");
 
-    /// <summary>
-    /// Turns the location an administrator wrote (an https URL, a file URL or an absolute path)
-    /// into a feed address. Plain http is refused except on loopback, since the index pins hashes.
-    /// </summary>
-    public static bool TryParseLocation(string? text, out Uri location)
-    {
-        location = null!;
-        text = text?.Trim();
-        if (string.IsNullOrEmpty(text))
-            return false;
-        if (Path.IsPathRooted(text) && !text.Contains("://", StringComparison.Ordinal))
-        {
-            location = new Uri(Path.GetFullPath(text));
-            return true;
-        }
-        if (!Uri.TryCreate(text, UriKind.Absolute, out Uri? uri))
-            return false;
-        if (uri.IsFile || uri.Scheme == Uri.UriSchemeHttps || (uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback))
-        {
-            location = uri;
-            return true;
-        }
-        return false;
-    }
-
-    public static void ForgetCachedIndexes()
-    {
-        Indexes.Clear();
-        Folders.Clear();
-    }
-
-    private static readonly ConcurrentDictionary<Uri, IReadOnlyList<PkgFeedItem>> LastKnown = new();
+    public static void ForgetCachedIndexes() => Listing.ForgetCachedIndexes();
 
     /// <summary>
     /// Lists a feed. When it cannot be reached (off the VPN, share not mounted) the last listing is
@@ -86,61 +48,7 @@ internal static class PkgFeed
     /// <paramref name="currentOnly"/> refuses that fallback, for what authorizes an install or checks a feed.
     /// </summary>
     public static IReadOnlyList<PkgFeedItem> List(Uri location, CancellationToken cancellationToken = default,
-        bool currentOnly = false)
-    {
-        try
-        {
-            var items = location.IsFile ? ScanFolderCached(location.LocalPath, cancellationToken) : ReadIndex(location, cancellationToken);
-            LastKnown[location] = items;
-            return items;
-        }
-        catch (Exception ex) when (!currentOnly && (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
-        {
-            if (LastKnown.TryGetValue(location, out var known) || TryReadSavedIndex(location, out known))
-            {
-                Logger.Warn($"The package feed {location} is unreachable ({ex.Message}); using its last known contents.");
-                return known;
-            }
-            throw;
-        }
-    }
-
-    private static string SavedIndexPath(Uri indexUrl) => Path.Combine(CoreData.UniGetUICacheDirectory_Data, "PkgFeeds",
-        Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(indexUrl.AbsoluteUri))) + ".json");
-
-    private static void SaveIndex(Uri indexUrl, byte[] json)
-    {
-        try
-        {
-            string path = SavedIndexPath(indexUrl);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllBytes(path, json);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Logger.Warn($"Could not keep a copy of the package feed index {indexUrl}: {ex.Message}");
-        }
-    }
-
-    private static bool TryReadSavedIndex(Uri location, out IReadOnlyList<PkgFeedItem> items)
-    {
-        items = [];
-        if (location.IsFile)
-            return false;
-        try
-        {
-            Uri indexUrl = IndexUrl(location);
-            string path = SavedIndexPath(indexUrl);
-            if (!File.Exists(path))
-                return false;
-            items = ParseIndex(File.ReadAllBytes(path), indexUrl);
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
-        {
-            return false;
-        }
-    }
+        bool currentOnly = false) => Listing.List(location, cancellationToken, currentOnly);
 
     /// <summary>
     /// The newest package of each identifier that this Mac can run, preferring a native build over
@@ -186,20 +94,6 @@ internal static class PkgFeed
 
     // ── Folder feeds ───────────────────────────────────────────────────────
 
-    // Icon and details lookups list the feed once per package, so a scan is reused briefly instead of
-    // walking a network share again for each; a refresh of the manager's indexes forgets it.
-    private static readonly TimeSpan FolderLifetime = TimeSpan.FromSeconds(30);
-    private static readonly ConcurrentDictionary<string, CachedIndex> Folders = new(StringComparer.Ordinal);
-
-    private static IReadOnlyList<PkgFeedItem> ScanFolderCached(string directory, CancellationToken cancellationToken)
-    {
-        if (Folders.TryGetValue(directory, out var cached) && DateTime.UtcNow - cached.FetchedUtc < FolderLifetime)
-            return cached.Items;
-        var items = ScanFolder(directory, cancellationToken);
-        Folders[directory] = new CachedIndex(DateTime.UtcNow, items);
-        return items;
-    }
-
     // A file read for the first time mounts a disk image or reads a package's table of contents, so
     // several are read at once to keep a cold scan of a large feed within the listing timeout.
     internal static IReadOnlyList<PkgFeedItem> ScanFolder(string directory, CancellationToken cancellationToken)
@@ -214,20 +108,9 @@ internal static class PkgFeed
         return items.OfType<PkgFeedItem>().ToArray();
     }
 
-    internal static IEnumerable<string> EnumeratePackages(string directory)
-    {
-        var options = new EnumerationOptions
-        {
-            RecurseSubdirectories = true,
-            MaxRecursionDepth = MaxScanDepth,
-            IgnoreInaccessible = true,
-            AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
-        };
-        // Bundle-style packages are directories; only flat packages, disk images and archives (files) are read.
-        return Directory.EnumerateFiles(directory, "*", options)
-            .Where(f => FeedFile.Extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
-            .Order(StringComparer.Ordinal);
-    }
+    // Bundle-style packages are directories; only flat packages, disk images and archives (files) are read.
+    internal static IEnumerable<string> EnumeratePackages(string directory) =>
+        FeedLocation.EnumerateFiles(directory, FeedFile.Extensions);
 
     // Listings run in parallel at startup, and a second mount of a disk image that is already
     // attached comes back empty, so each file is read by one listing at a time.
@@ -268,7 +151,7 @@ internal static class PkgFeed
             if (metadata is null)
             {
                 metadata = PkgMetadata.Read(file, File.Exists(icon) ? null : icon, iconFromPayload: false);
-                TryWriteFile(saved, PkgJson.SerializeToUtf8Bytes(metadata, PkgMetadataJsonContext.Default.PkgMetadata));
+                TryWriteFile(saved, FeedJson.SerializeToUtf8Bytes(metadata, PkgMetadataJsonContext.Default.PkgMetadata));
             }
             ParsedFiles[file] = new ParsedFile(info.Length, info.LastWriteTimeUtc, metadata);
             return metadata;
@@ -350,7 +233,7 @@ internal static class PkgFeed
         try
         {
             return File.Exists(saved)
-                ? PkgJson.Deserialize(File.ReadAllBytes(saved), PkgMetadataJsonContext.Default.PkgMetadata)
+                ? FeedJson.Deserialize(File.ReadAllBytes(saved), PkgMetadataJsonContext.Default.PkgMetadata)
                 : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -374,67 +257,20 @@ internal static class PkgFeed
 
     // ── Web feeds ──────────────────────────────────────────────────────────
 
-    internal static Uri IndexUrl(Uri location) =>
-        location.AbsolutePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
-            ? location
-            : new Uri(location.AbsoluteUri.TrimEnd('/') + "/" + IndexFileName);
-
-    private static IReadOnlyList<PkgFeedItem> ReadIndex(Uri location, CancellationToken cancellationToken)
-    {
-        Uri indexUrl = IndexUrl(location);
-        if (Indexes.TryGetValue(indexUrl, out var cached) && DateTime.UtcNow - cached.FetchedUtc < IndexLifetime)
-            return cached.Items;
-
-        // The whole exchange has one deadline: the client's own timeout ends once the headers arrive.
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(IndexTimeout);
-        using var limited = new MemoryStream();
-        try
-        {
-            using var client = new HttpClient(CoreTools.GenericHttpClientParameters);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            using var response = client.GetAsync(indexUrl, HttpCompletionOption.ResponseHeadersRead, deadline.Token)
-                .GetAwaiter().GetResult();
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                throw new FileNotFoundException($"The package feed has no index at {indexUrl}. Run 'unigetui pkg-index' on its folder.");
-            response.EnsureSuccessStatusCode();
-            if (response.Content.Headers.ContentLength > MaxIndexBytes)
-                throw new InvalidDataException($"The package feed index at {indexUrl} is larger than {MaxIndexBytes} bytes.");
-
-            using var body = response.Content.ReadAsStream(deadline.Token);
-            byte[] buffer = new byte[81920];
-            int read;
-            while ((read = body.ReadAsync(buffer, deadline.Token).AsTask().GetAwaiter().GetResult()) > 0)
-            {
-                if (limited.Length + read > MaxIndexBytes)
-                    throw new InvalidDataException($"The package feed index at {indexUrl} is larger than {MaxIndexBytes} bytes.");
-                limited.Write(buffer, 0, read);
-            }
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new IOException($"The package feed index at {indexUrl} did not arrive within {IndexTimeout.TotalSeconds} seconds.");
-        }
-
-        byte[] json = limited.ToArray();
-        var items = ParseIndex(json, indexUrl);
-        Indexes[indexUrl] = new CachedIndex(DateTime.UtcNow, items);
-        SaveIndex(indexUrl, json);
-        return items;
-    }
-
     internal static IReadOnlyList<PkgFeedItem> ParseIndex(byte[] json, Uri indexUrl)
     {
-        var index = PkgJson.Deserialize(json, PkgFeedJsonContext.Default.PkgFeedIndex)
+        var index = FeedJson.Deserialize(json, FeedIndexJsonContext.Default.FeedIndex)
             ?? throw new InvalidDataException("The package feed index is empty.");
-        if (index.Version != PkgFeedIndex.CurrentVersion)
+        if (index.Version != FeedIndex.CurrentVersion)
             throw new InvalidDataException($"Unsupported package feed index version: {index.Version}.");
 
         var items = new List<PkgFeedItem>();
         foreach (var entry in index.Packages ?? [])
         {
+            if (entry is not null && !FeedLocation.HasExtension(entry.File ?? "", FeedFile.Extensions))
+                continue;
             if (entry is null || string.IsNullOrWhiteSpace(entry.Id) || string.IsNullOrWhiteSpace(entry.Version)
-                || !IsSha256(entry.Sha256) || ResolveWithin(indexUrl, entry.File) is not { } file)
+                || !FeedLocation.IsSha256(entry.Sha256) || FeedLocation.ResolveWithin(indexUrl, entry.File) is not { } file)
             {
                 Logger.Warn($"Skipping an invalid entry ({entry?.Id ?? "null"}) in the package feed index {indexUrl}.");
                 continue;
@@ -447,32 +283,10 @@ internal static class PkgFeed
                 entry.Sha256.ToLowerInvariant(),
                 entry.Size,
                 entry.Architectures ?? [],
-                ResolveWithin(indexUrl, entry.Icon),
-                entry.App?.ToInfo(),
+                FeedLocation.ResolveWithin(indexUrl, entry.Icon),
+                PkgIndexApp.ToInfo(entry.App),
                 entry.WrapsPackage is true));
         }
         return items;
-    }
-
-    // Index paths are relative and may not climb out of the feed, so an index cannot point
-    // installs at another host or scheme.
-    internal static Uri? ResolveWithin(Uri indexUrl, string? relative)
-    {
-        if (string.IsNullOrWhiteSpace(relative) || relative.Contains('\\') || relative.StartsWith('/')
-            || relative.Contains("://", StringComparison.Ordinal)
-            || relative.Split('/').Any(segment => segment is ".." or "." or ""))
-            return null;
-        var resolved = new Uri(indexUrl, string.Join('/', relative.Split('/').Select(Uri.EscapeDataString)));
-        string root = indexUrl.AbsoluteUri[..(indexUrl.AbsoluteUri.LastIndexOf('/') + 1)];
-        return resolved.AbsoluteUri.StartsWith(root, StringComparison.Ordinal) ? resolved : null;
-    }
-
-    internal static bool IsSha256(string? value) =>
-        value is { Length: 64 } && value.All(Uri.IsHexDigit);
-
-    internal static string ComputeSha256(string file)
-    {
-        using var stream = File.OpenRead(file);
-        return Convert.ToHexStringLower(SHA256.HashData(stream));
     }
 }

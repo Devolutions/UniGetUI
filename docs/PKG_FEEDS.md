@@ -4,6 +4,9 @@ The software catalog can offer apps that no package manager carries: an administ
 the vendor's `.pkg`, `.dmg` or `.zip` unchanged, and users install and update it from the
 **Software Catalog** page.
 
+Windows `.exe` and `.msi` installers are published the same way, from the same feed if you like:
+see [WINDOWS_INSTALLER_FEEDS.md](WINDOWS_INSTALLER_FEEDS.md).
+
 There is nothing to repackage and no detection rule to write. UniGetUI reads each file's
 identifier, version and app from the file itself, then checks the Mac:
 

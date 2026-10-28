@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
-namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
+namespace UniGetUI.PackageEngine.Managers.InstallerFeeds;
 
 /// <summary>Reads and writes JSON through source-generated metadata only, as NativeAOT requires.</summary>
-internal static class PkgJson
+public static class FeedJson
 {
     public static string Serialize<T>(T value, JsonTypeInfo<T> typeInfo) => JsonSerializer.Serialize(value, typeInfo);
 

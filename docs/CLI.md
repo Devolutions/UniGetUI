@@ -357,7 +357,7 @@ These parameters are accepted by the app executables in addition to the automati
 | `--delete-shortcuts <path> [<path>...]` | Deletes desktop or Start Menu shortcuts, then quits. | Used by UniGetUI to remove shortcuts the current user is not allowed to delete; refuses any path that is not a `.lnk` or `.url` under a desktop or Start Menu folder. |
 | `<bundle-file>` | Loads a valid bundle file into the Package Bundles page. | Supported extensions include `.ubundle`, `.json`, `.yaml`, and `.xml`. |
 | `pkg-helper install-daemon` / `remove-daemon` | Installs (or removes) the root service that lets standard users install catalog packages without an administrator password. | macOS, as root. `pkg-helper serve` is what the service runs. See [PKG_FEEDS.md](PKG_FEEDS.md). |
-| `pkg-index <folder>` | Writes the `index.json` that publishes a folder of macOS `.pkg`, `.dmg` and `.zip` files as a web feed, then quits. | macOS and Linux builds only; `.dmg` files are read on macOS only. Exits 3 when a file in the folder could not be read. See [PKG_FEEDS.md](PKG_FEEDS.md). |
+| `pkg-index <folder>` | Writes the `index.json` that publishes a folder of packages as a web feed, then quits: `.exe` and `.msi` files on Windows, `.pkg`, `.dmg` and `.zip` files elsewhere. Entries another platform wrote are kept while their files are unchanged. | `.dmg` files are read on macOS only. Exits 3 when a file in the folder could not be read. See [PKG_FEEDS.md](PKG_FEEDS.md) and [WINDOWS_INSTALLER_FEEDS.md](WINDOWS_INSTALLER_FEEDS.md). |
 
 ## Other environment variables
 

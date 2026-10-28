@@ -147,9 +147,9 @@ internal static class SoftwareCatalog
     {
         try
         {
-            // A pkgFeed fills its catalog only on macOS, where the Installer packages manager exists.
+            // A pkgFeed fills its catalog only on macOS and Windows, where an Installer packages manager exists.
             return File.Exists(filePath) && Parse(File.ReadAllText(filePath)).Any(c => c.Packages.Length > 0
-                || (OperatingSystem.IsMacOS() && !string.IsNullOrWhiteSpace(c.PkgFeed)));
+                || ((OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()) && !string.IsNullOrWhiteSpace(c.PkgFeed)));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {

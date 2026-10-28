@@ -767,9 +767,9 @@ public sealed class SoftwareCatalogTests : IDisposable
         File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[{"Id":"jq","Name":"jq","Version":"","Source":"Homebrew","ManagerName":"Homebrew"}]}]}""");
         Assert.True(SoftwareCatalog.HasUsableCatalog(file));
 
-        // A package feed fills its catalog at run time, but only on macOS, where feeds are read.
+        // A package feed fills its catalog at run time, but only on macOS and Windows, where feeds are read.
         File.WriteAllText(file, """{"version":1,"catalogs":[{"id":"a","name":"A","packages":[],"pkgFeed":"https://h/mac/"}]}""");
-        Assert.Equal(OperatingSystem.IsMacOS(), SoftwareCatalog.HasUsableCatalog(file));
+        Assert.Equal(OperatingSystem.IsMacOS() || OperatingSystem.IsWindows(), SoftwareCatalog.HasUsableCatalog(file));
     }
 
     [Fact]

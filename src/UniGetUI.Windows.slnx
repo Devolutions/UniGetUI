@@ -224,12 +224,20 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.WinInstaller/UniGetUI.PackageEngine.Managers.WinInstaller.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="UniGetUI.PackageEngine.Managers.WinGet/UniGetUI.PackageEngine.Managers.WinGet.csproj">
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
   </Folder>
   <Folder Name="/UniGetUI.PackageEngine/Managers/Generic/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds/UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="UniGetUI.PackageEngine.Managers.Generic.NuGet/UniGetUI.PackageEngine.Managers.Generic.NuGet.csproj">
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />

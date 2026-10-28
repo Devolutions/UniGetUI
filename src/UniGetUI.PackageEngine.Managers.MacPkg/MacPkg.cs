@@ -5,6 +5,7 @@ using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 using UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
 using UniGetUI.PackageEngine.PackageClasses;
 
@@ -62,7 +63,7 @@ public sealed class MacPkg : PackageManager
             DefaultSource = new ManagerSource(this, "Installer packages", new Uri("file:///")),
         };
 
-        SourcesHelper = new MacPkgSourceHelper(this);
+        SourcesHelper = new InstallerFeedSourceHelper(this);
         DetailsHelper = new MacPkgDetailsHelper(this);
         OperationHelper = new MacPkgOperationHelper(this);
     }
@@ -85,7 +86,7 @@ public sealed class MacPkg : PackageManager
     {
         PkgFeed.ForgetCachedIndexes();
         // A catalog edited since the last listing may name other feeds.
-        ((MacPkgSourceHelper)SourcesHelper).ForgetSources();
+        ((InstallerFeedSourceHelper)SourcesHelper).ForgetSources();
     }
 
     // ── Listing ────────────────────────────────────────────────────────────
@@ -110,8 +111,8 @@ public sealed class MacPkg : PackageManager
     }
 
     /// <summary>The feed package behind a package, at the requested version or else the newest one.</summary>
-    internal PkgFeedSource? FindFeedSource(IPackage package) =>
-        SourcesHelper.GetSources().OfType<PkgFeedSource>().FirstOrDefault(s => s.Name == package.Source.Name);
+    internal InstallerFeedSource? FindFeedSource(IPackage package) =>
+        SourcesHelper.GetSources().OfType<InstallerFeedSource>().FirstOrDefault(s => s.Name == package.Source.Name);
 
     internal PkgFeedItem? FindFeedItem(IPackage package, string? version = null, bool currentOnly = false)
     {

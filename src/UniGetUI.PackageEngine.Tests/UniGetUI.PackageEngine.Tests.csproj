@@ -33,6 +33,7 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Flatpak\UniGetUI.PackageEngine.Managers.Flatpak.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.MacPkg\UniGetUI.PackageEngine.Managers.MacPkg.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds\UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Vcpkg\UniGetUI.PackageEngine.Managers.Vcpkg.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
         <ProjectReference Include="..\UniGetUI.Interface.Enums\UniGetUI.Interface.Enums.csproj" />
@@ -50,6 +51,7 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.PowerShell7\UniGetUI.PackageEngine.Managers.PowerShell7.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Scoop\UniGetUI.PackageEngine.Managers.Scoop.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.WinGet\UniGetUI.PackageEngine.Managers.WinGet.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.WinInstaller\UniGetUI.PackageEngine.Managers.WinInstaller.csproj" />
     </ItemGroup>
 
     <ItemGroup>

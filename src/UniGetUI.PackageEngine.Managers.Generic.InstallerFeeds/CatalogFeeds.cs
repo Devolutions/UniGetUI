@@ -3,25 +3,25 @@ using System.Text.Json.Serialization;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 
-namespace UniGetUI.PackageEngine.Managers.MacPkgManager.Internal;
+namespace UniGetUI.PackageEngine.Managers.InstallerFeeds;
 
 // A feed is identified by its catalog's id, which is unique and survives renames; its name is for display.
-internal readonly record struct PkgFeedDeclaration(string Id, string Name, Uri Location, bool AllowUnsignedPackages = false);
+public readonly record struct FeedDeclaration(string Id, string Name, Uri Location, bool AllowUnsignedPackages = false);
 
 /// <summary>
 /// Reads the feeds that the machine-wide software catalog declares through each catalog's
 /// <c>pkgFeed</c>, so an administrator configures a feed once, in the file they already deploy.
 /// </summary>
-internal static class PkgCatalogFeeds
+public static class CatalogFeeds
 {
-    internal static string? TestCatalogPathOverride { get; set; }
+    public static string? TestCatalogPathOverride { get; set; }
 
     public static string CatalogPath =>
         TestCatalogPathOverride ?? Path.Combine(CoreData.UniGetUIGlobalDirectory, "SoftwareCatalog.json");
 
-    public static IReadOnlyList<PkgFeedDeclaration> Load() => Load(CatalogPath);
+    public static IReadOnlyList<FeedDeclaration> Load() => Load(CatalogPath);
 
-    internal static IReadOnlyList<PkgFeedDeclaration> Load(string path)
+    public static IReadOnlyList<FeedDeclaration> Load(string path)
     {
         try
         {
@@ -36,15 +36,15 @@ internal static class PkgCatalogFeeds
         }
     }
 
-    internal static IReadOnlyList<PkgFeedDeclaration> Parse(byte[] json)
+    public static IReadOnlyList<FeedDeclaration> Parse(byte[] json)
     {
-        var document = PkgJson.Deserialize(json, PkgCatalogJsonContext.Default.PkgCatalogDocument);
-        var feeds = new List<PkgFeedDeclaration>();
+        var document = FeedJson.Deserialize(json, CatalogFeedsJsonContext.Default.CatalogFeedsDocument);
+        var feeds = new List<FeedDeclaration>();
         foreach (var catalog in document?.Catalogs ?? [])
         {
             if (catalog?.PkgFeed is null || string.IsNullOrWhiteSpace(catalog.Id) || string.IsNullOrWhiteSpace(catalog.Name))
                 continue;
-            if (!PkgFeed.TryParseLocation(catalog.PkgFeed, out Uri location))
+            if (!FeedLocation.TryParse(catalog.PkgFeed, out Uri location))
             {
                 Logger.Warn($"Ignoring the package feed of catalog {catalog.Name}: \"{catalog.PkgFeed}\" is not an https URL or an absolute folder path.");
                 continue;
@@ -53,19 +53,19 @@ internal static class PkgCatalogFeeds
             if (feeds.Any(f => string.Equals(f.Id, id, StringComparison.OrdinalIgnoreCase)))
                 Logger.Warn($"Ignoring the package feed of a second catalog with the id {id}.");
             else
-                feeds.Add(new PkgFeedDeclaration(id, catalog.Name.Trim(), location, catalog.AllowUnsignedPackages is true));
+                feeds.Add(new FeedDeclaration(id, catalog.Name.Trim(), location, catalog.AllowUnsignedPackages is true));
         }
         return feeds;
     }
 }
 
-internal sealed class PkgCatalogDocument
+internal sealed class CatalogFeedsDocument
 {
     [JsonPropertyName("catalogs")]
-    public PkgCatalogDefinition?[]? Catalogs { get; init; }
+    public CatalogFeedsDefinition?[]? Catalogs { get; init; }
 }
 
-internal sealed class PkgCatalogDefinition
+internal sealed class CatalogFeedsDefinition
 {
     [JsonPropertyName("id")]
     public string? Id { get; init; }
@@ -80,5 +80,5 @@ internal sealed class PkgCatalogDefinition
     public bool? AllowUnsignedPackages { get; init; }
 }
 
-[JsonSerializable(typeof(PkgCatalogDocument))]
-internal partial class PkgCatalogJsonContext : JsonSerializerContext;
+[JsonSerializable(typeof(CatalogFeedsDocument))]
+internal partial class CatalogFeedsJsonContext : JsonSerializerContext;

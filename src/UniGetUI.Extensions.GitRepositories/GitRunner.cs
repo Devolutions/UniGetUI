@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace UniGetUI.GitRepositories;
+namespace UniGetUI.Extensions.GitRepositories;
 
 /// <summary>What one git command returned: its exit code and the text it wrote to each pipe.</summary>
 public sealed record GitResult(int ExitCode, string StandardOutput, string StandardError)

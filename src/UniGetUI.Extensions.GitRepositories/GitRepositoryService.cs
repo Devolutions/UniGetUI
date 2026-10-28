@@ -1,7 +1,7 @@
 using System.Globalization;
 using UniGetUI.Core.Logging;
 
-namespace UniGetUI.GitRepositories;
+namespace UniGetUI.Extensions.GitRepositories;
 
 /// <summary>
 /// Keeps main clones current and their worktrees tidy. A main clone is only ever fast-forwarded to its

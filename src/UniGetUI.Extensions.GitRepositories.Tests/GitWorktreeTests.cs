@@ -1,4 +1,4 @@
-namespace UniGetUI.GitRepositories.Tests;
+namespace UniGetUI.Extensions.GitRepositories.Tests;
 
 public sealed class GitWorktreeTests : IDisposable
 {

@@ -1,7 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using UniGetUI.Core.Tools;
-using UniGetUI.GitRepositories;
+using UniGetUI.Extensions.GitRepositories;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 

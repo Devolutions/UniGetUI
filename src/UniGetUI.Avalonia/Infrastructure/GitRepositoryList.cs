@@ -1,6 +1,6 @@
 using System.Globalization;
 using UniGetUI.Core.SettingsEngine;
-using UniGetUI.GitRepositories;
+using UniGetUI.Extensions.GitRepositories;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 

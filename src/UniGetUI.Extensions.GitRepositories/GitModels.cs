@@ -1,4 +1,4 @@
-namespace UniGetUI.GitRepositories;
+namespace UniGetUI.Extensions.GitRepositories;
 
 /// <summary>Where a folder sits in git: the root of its working tree, and the main clone it belongs to.</summary>
 /// <param name="Root">The top of the working tree that contains the folder.</param>

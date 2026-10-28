@@ -5,7 +5,7 @@ using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
-using UniGetUI.GitRepositories;
+using UniGetUI.Extensions.GitRepositories;
 using UniGetUI.Interface;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 

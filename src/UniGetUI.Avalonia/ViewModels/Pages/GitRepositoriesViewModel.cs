@@ -11,7 +11,7 @@ using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
-using UniGetUI.GitRepositories;
+using UniGetUI.Extensions.GitRepositories;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 

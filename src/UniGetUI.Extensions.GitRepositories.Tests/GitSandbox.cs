@@ -1,4 +1,4 @@
-namespace UniGetUI.GitRepositories.Tests;
+namespace UniGetUI.Extensions.GitRepositories.Tests;
 
 /// <summary>
 /// A temporary folder of real git repositories: a bare origin and its clones. Git runs with a private

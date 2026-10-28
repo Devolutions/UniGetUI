@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\UniGetUI.GitRepositories\UniGetUI.GitRepositories.csproj" />
+        <ProjectReference Include="..\UniGetUI.Extensions.GitRepositories\UniGetUI.Extensions.GitRepositories.csproj" />
     </ItemGroup>
 
     <ItemGroup>

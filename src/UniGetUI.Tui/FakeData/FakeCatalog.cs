@@ -39,7 +39,8 @@ internal sealed record FakeManagerProfile(
     bool CanSkipIntegrityChecks,
     bool CanDownloadInstaller,
     string DefaultSourceName,
-    string DefaultSourceUrl);
+    string DefaultSourceUrl,
+    bool TypedVersions = false);
 
 /// <summary>
 /// The deterministic data set behind <c>--fake-data</c>. Every name is invented (the publishers are
@@ -58,10 +59,10 @@ internal static class FakeCatalog
             CanSkipIntegrityChecks: true, CanDownloadInstaller: true,
             "winget", "https://fake.unigetui.invalid/winget/cdn"),
         new("Scoop", "Scoop", "Fake stand-in for the Scoop command-line installer", "scoop.cmd",
-            Found: true, SupportsSources: true, SupportsVersions: false, SupportsScopes: true,
+            Found: true, SupportsSources: true, SupportsVersions: true, SupportsScopes: true,
             SupportsArchitectures: true, CanRunAsAdmin: true, CanRunInteractively: false,
             CanSkipIntegrityChecks: true, CanDownloadInstaller: false,
-            "main", "https://fake.unigetui.invalid/scoop/main"),
+            "main", "https://fake.unigetui.invalid/scoop/main", TypedVersions: true),
         new("Chocolatey", "Chocolatey", "Fake stand-in for the Chocolatey package manager", "choco.exe",
             Found: true, SupportsSources: true, SupportsVersions: true, SupportsScopes: false,
             SupportsArchitectures: true, CanRunAsAdmin: true, CanRunInteractively: true,

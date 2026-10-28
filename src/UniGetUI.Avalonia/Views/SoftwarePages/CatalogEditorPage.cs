@@ -326,6 +326,15 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             MinWidth = 280,
         };
         AutomationProperties.SetName(picker, CoreTools.Translate("Version"));
+        bool typed = !package.Manager.Capabilities.CanListVersions;
+        var typedBox = new TextBox
+        {
+            Text = entry.Version,
+            PlaceholderText = latest,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            MinWidth = 280,
+        };
+        AutomationProperties.SetName(typedBox, CoreTools.Translate("Version"));
         var status = new TextBlock { Text = CoreTools.Translate("Loading versions"), TextWrapping = TextWrapping.Wrap };
         var body = new StackPanel { Spacing = 8 };
         body.Children.Add(new TextBlock
@@ -333,8 +342,13 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             Text = CoreTools.Translate("Choose the version of {0} that this catalog installs.", entry.Name),
             TextWrapping = TextWrapping.Wrap,
         });
-        body.Children.Add(picker);
-        body.Children.Add(status);
+        if (typed)
+            body.Children.Add(typedBox);
+        else
+        {
+            body.Children.Add(picker);
+            body.Children.Add(status);
+        }
         var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Pin version"), body,
             CoreTools.Translate("Pin version"), CoreTools.Translate("Cancel"));
 
@@ -357,11 +371,27 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             picker.SelectedItem = entry.Version.Length > 0 ? entry.Version : latest;
             picker.IsEnabled = true;
         }
-        _ = LoadVersionsAsync();
+        if (!typed)
+            _ = LoadVersionsAsync();
         await dialog.ShowDialog(window);
 
-        if (dialog.Result is not true || picker.SelectedItem is not string chosen || !_document.CanEdit) return;
-        string version = chosen == latest ? "" : chosen;
+        if (dialog.Result is not true || !_document.CanEdit) return;
+        string version;
+        if (typed)
+        {
+            version = (typedBox.Text ?? "").Trim();
+            if (version.Length > 0 && !CoreTools.IsValidPackageVersion(version))
+            {
+                window.ShowBanner(CoreTools.Translate("Pin version"),
+                    CoreTools.Translate("\"{0}\" is not a valid version.", version),
+                    MainWindow.RuntimeNotificationLevel.Error);
+                return;
+            }
+        }
+        else if (picker.SelectedItem is string chosen)
+            version = chosen == latest ? "" : chosen;
+        else
+            return;
         int index = catalog.Packages.IndexOf(entry);
         if (version == entry.Version || index < 0) return;
         // Replace the entry rather than mutating it, so the list and the unsaved-changes state update.

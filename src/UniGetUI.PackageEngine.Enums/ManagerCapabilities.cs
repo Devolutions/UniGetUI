@@ -43,6 +43,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool CanListDependencies = false;
         public bool SupportsReleaseNotes = false;
         public bool SupportsCustomVersions = false;
+        public bool CanListVersions = true;
         public bool SupportsCustomArchitectures = false;
         public string[] SupportedCustomArchitectures = [];
         public bool SupportsCustomScopes = false;

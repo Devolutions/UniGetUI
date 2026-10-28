@@ -108,7 +108,7 @@ internal sealed class InstallOptionsDialog : FormDialog
         try
         {
             _ignoreUpdates = await _package!.HasUpdatesIgnoredAsync();
-            if (_manager.Capabilities.SupportsCustomVersions)
+            if (_manager.Capabilities.SupportsCustomVersions && _manager.Capabilities.CanListVersions)
                 _versions = await Task.Run(() => _manager.DetailsHelper.GetVersions(_package));
         }
         catch (Exception ex)
@@ -191,17 +191,24 @@ internal sealed class InstallOptionsDialog : FormDialog
                 Form.AddCheck(CoreTools.Translate("Ignore future updates for this package"), () => _ignoreUpdates, v => _ignoreUpdates = v);
             }
 
-            var versionOptions = new List<TuiOption> { new(CoreTools.Translate("Latest"), "") };
-            if (caps.SupportsPreRelease) versionOptions.Add(new(CoreTools.Translate("PreRelease"), "\u0001pre"));
-            versionOptions.AddRange(_versions.Select(v => new TuiOption(v, v)));
-            Form.AddChoice(CoreTools.Translate("Version to install:"), versionOptions,
-                () => _o.PreRelease ? "\u0001pre" : _o.Version,
-                v => Set(() =>
-                {
-                    _o.PreRelease = v == "\u0001pre";
-                    _o.Version = v == "\u0001pre" ? "" : v;
-                }),
-                () => Unlocked() && _profile == OperationType.Install && (caps.SupportsCustomVersions || caps.SupportsPreRelease));
+            if (caps.SupportsCustomVersions && !caps.CanListVersions)
+                Form.AddText(CoreTools.Translate("Version to install:"), () => _o.Version,
+                    v => Set(() => _o.Version = v.Trim()), CoreTools.Translate("Latest"),
+                    () => Unlocked() && _profile == OperationType.Install);
+            else
+            {
+                var versionOptions = new List<TuiOption> { new(CoreTools.Translate("Latest"), "") };
+                if (caps.SupportsPreRelease) versionOptions.Add(new(CoreTools.Translate("PreRelease"), "\u0001pre"));
+                versionOptions.AddRange(_versions.Select(v => new TuiOption(v, v)));
+                Form.AddChoice(CoreTools.Translate("Version to install:"), versionOptions,
+                    () => _o.PreRelease ? "\u0001pre" : _o.Version,
+                    v => Set(() =>
+                    {
+                        _o.PreRelease = v == "\u0001pre";
+                        _o.Version = v == "\u0001pre" ? "" : v;
+                    }),
+                    () => Unlocked() && _profile == OperationType.Install && (caps.SupportsCustomVersions || caps.SupportsPreRelease));
+            }
         }
 
         Form.AddHeader(CoreTools.Translate("Architecture") + " / " + CoreTools.Translate("Location and Scope"));

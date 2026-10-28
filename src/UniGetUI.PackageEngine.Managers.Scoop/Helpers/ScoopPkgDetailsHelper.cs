@@ -41,18 +41,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 }
             }
 
-            string packageId;
-            // If source is ellipsed, a local path, or a URL manifest, omit source argument
-            if (
-                details.Package.Source.Name.Contains("...")
-                || details.Package.Source.Name.Contains(":\\")
-                || details.Package.Source.Name.StartsWith("http")
-            )
-                packageId = Scoop.RequireSafePackageSpec(details.Package.Id);
-            else
-                packageId = Scoop.RequireSafePackageSpec(
-                    $"{details.Package.Source.Name}/{details.Package.Id}"
-                );
+            string packageId = Scoop.GetPackageSpec(details.Package);
 
             var startInfo = new ProcessStartInfo
             {
@@ -319,9 +308,6 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             return null;
         }
 
-        protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
-        {
-            throw new InvalidOperationException("Scoop does not support custom package versions");
-        }
+        protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package) => [];
     }
 }

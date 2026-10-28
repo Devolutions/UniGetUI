@@ -253,6 +253,167 @@ public sealed class ScoopManagerTests : IDisposable
     }
 
     [Fact]
+    public void InstallParametersAppendRequestedVersionToSpec()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(manager.SourcesHelper.Factory.GetSourceOrDefault("main"))
+            .WithId("jq")
+            .Build();
+
+        var install = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions { Version = "1.7.1" },
+            OperationType.Install
+        );
+        var update = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions { Version = "1.7.1" },
+            OperationType.Update
+        );
+
+        OperationAssert.HasParameters(install, "install", "main/jq@1.7.1");
+        OperationAssert.HasParameters(update, "update", "main/jq");
+    }
+
+    [Fact]
+    public void InstallParametersRefuseVersionsAShellWouldReinterpret()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(manager.SourcesHelper.Factory.GetSourceOrDefault("main"))
+            .WithId("jq")
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            manager.OperationHelper.GetParameters(
+                package,
+                new InstallOptions { Version = "1.7.1;calc" },
+                OperationType.Install
+            )
+        );
+    }
+
+    [Fact]
+    public void PinnedInstallsResolveTheirBucketAndUpdateWithForce()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+        manager.FindBucketManifest = id => id == "jq" ? ("main", "1.8.2") : null;
+
+        var installed = manager.ParseInstalledPackages(PinnedListLines);
+        var updates = manager.ParseAvailableUpdates(EmptyStatusLines, installed, includePinnedInstalls: true);
+
+        Assert.Collection(
+            installed,
+            package =>
+            {
+                PackageAssert.Matches(package, "Jq", "jq", "1.7.1");
+                PackageAssert.BelongsTo(package, manager, manager.SourcesHelper.Factory.GetSourceOrDefault("main"));
+            },
+            package => Assert.Equal(Scoop.GeneratedManifestSource, package.Source.Name)
+        );
+        var update = Assert.Single(updates);
+        PackageAssert.Matches(update, "Jq", "jq", "1.7.1", "1.8.2");
+        OperationAssert.HasParameters(
+            manager.OperationHelper.GetParameters(update, new InstallOptions(), OperationType.Update),
+            "update",
+            "main/jq",
+            "--force"
+        );
+        OperationAssert.HasParameters(
+            manager.OperationHelper.GetParameters(installed[1], new InstallOptions(), OperationType.Uninstall),
+            "uninstall",
+            "orphan"
+        );
+    }
+
+    [Fact]
+    public void PinnedInstallsResolveToTheBucketScoopWouldPick()
+    {
+        string scoopRoot = Path.Combine(_testRoot, "scoop");
+        WriteBucketManifest(scoopRoot, "aaa", nested: false, "jq", "9.9.9");
+        WriteBucketManifest(scoopRoot, "main", nested: true, "jq", "1.8.2");
+        WriteBucketManifest(scoopRoot, "zzz", nested: false, "orphan", "0.2.0");
+        string? previousRoot = Environment.GetEnvironmentVariable("SCOOP");
+        Environment.SetEnvironmentVariable("SCOOP", scoopRoot);
+        try
+        {
+            var manager = CreateManagerWithKnownSources("main", "zzz");
+
+            var installed = manager.ParseInstalledPackages(PinnedListLines);
+            var updates = manager.ParseAvailableUpdates(EmptyStatusLines, installed, includePinnedInstalls: true);
+
+            Assert.Equal(["main", "zzz"], installed.Select(package => package.Source.Name));
+            Assert.Equal(
+                [("jq", "1.8.2"), ("orphan", "0.2.0")],
+                updates.Select(package => (package.Id, package.NewVersionString))
+            );
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SCOOP", previousRoot);
+        }
+    }
+
+    private static void WriteBucketManifest(string scoopRoot, string bucket, bool nested, string id, string version)
+    {
+        string directory = Path.Combine(scoopRoot, "buckets", bucket, nested ? "bucket" : "");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, id + ".json"), $$"""{ "version": "{{version}}" }""");
+    }
+
+    [Fact]
+    public void PinnedInstallsAreNotOfferedAsUpdatesOnOlderScoop()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+        manager.FindBucketManifest = id => id == "jq" ? ("main", "1.8.2") : null;
+
+        var installed = manager.ParseInstalledPackages(PinnedListLines);
+
+        Assert.Empty(manager.ParseAvailableUpdates(EmptyStatusLines, installed));
+    }
+
+    [Fact]
+    public void PinnedInstallsAtOrAboveBucketVersionAreNotOfferedAsUpdates()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+        manager.FindBucketManifest = id => id == "jq" ? ("main", "1.7.1") : null;
+
+        var installed = manager.ParseInstalledPackages(PinnedListLines);
+
+        Assert.Empty(manager.ParseAvailableUpdates(EmptyStatusLines, installed, includePinnedInstalls: true));
+    }
+
+    [Theory]
+    [InlineData("Current Scoop version:\nv0.6.0 - Released at 2026-09-30\n", true)]
+    [InlineData("Current Scoop version:\nv0.10.1 - Released at 2027-01-01\n", true)]
+    [InlineData("Current Scoop version:\nv0.5.3 - Released at 2025-08-11\n", false)]
+    [InlineData("Current Scoop version:\ne6aa3b36 (HEAD -> develop) fix something\n", false)]
+    [InlineData("Unknown", false)]
+    public void PinnedUpdatesRequireScoopWithForcedPinUpgrade(string versionOutput, bool expected)
+    {
+        Assert.Equal(expected, Scoop.UpdatesPinnedInstalls(versionOutput));
+    }
+
+    private static readonly string[] PinnedListLines =
+    [
+        "Installed apps:",
+        "",
+        "Name   Version Source           Updated             Info",
+        "----   ------- ------           -------             ----",
+        "jq     1.7.1   <auto-generated> 2026-10-27 15:35:44 64bit",
+        "orphan 0.1.0   <auto-generated> 2026-10-27 15:35:44 64bit",
+    ];
+
+    private static readonly string[] EmptyStatusLines =
+    [
+        "Name Installed Version Latest Version Missing Dependencies Info",
+        "---- ----------------- -------------- -------------------- ----",
+    ];
+
+    [Fact]
     public void UninstallParametersOmitLocalSourcePrefixAndAppendPurge()
     {
         var manager = new Scoop();

@@ -2044,5 +2044,6 @@
   "UniGetUI stops checking for updates and sending notifications until you open it again.": "UniGetUI stops checking for updates and sending notifications until you open it again.",
   "UniGetUI is still running": "UniGetUI is still running",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.",
-  "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI must keep running in the background when its window is closed for notifications to work"
+  "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI must keep running in the background when its window is closed for notifications to work",
+  "\"{0}\" is not a valid version.": "\"{0}\" is not a valid version."
 }

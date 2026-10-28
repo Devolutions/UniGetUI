@@ -67,6 +67,9 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
             try
             {
                 RequireShellSafeId(package);
+                if (Manager.Capabilities.SupportsCustomVersions && !Manager.Capabilities.CanListVersions)
+                    return [];
+
                 if (Manager.Capabilities.SupportsCustomVersions)
                 {
                     var result = GetInstallableVersions_UnSafe(package);

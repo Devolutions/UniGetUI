@@ -218,6 +218,34 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
     }
 
     [Test]
+    public async Task InstallOptions_TypeAVersion_ThenInstallUsesIt()
+    {
+        await ResetAsync(TuiPageIds.Discover);
+        await EnterPage();
+        await Type("tailspin-jq");
+        await Key(K.Enter);
+        await WaitForTextAsync("tailspin-jq");
+        await Key(K.Down);
+        await Type("o");
+        await WaitUntilAsync(() => TuiModal.Top is InstallOptionsDialog { StateLoaded: true }, "the options to load");
+        await WaitForDialogAsync("installation options");
+        await FocusFieldAsync("Follow the default options");
+        await Key(K.Space);
+        await FocusFieldAsync("Ignore future updates");
+        await Key(K.Down);
+        NAssert.That(await FocusedTextAsync(), Is.EqualTo("textbox:"));
+        await Type("1.6");
+        await Key(K.Enter);
+        NAssert.That(await FocusedTextAsync(), Is.EqualTo("textbox:1.6"));
+        await PressButtonAsync("Save and close");
+        await WaitForNoDialogAsync();
+
+        await Type("i");
+        await WaitForOperationsToFinishAsync();
+        NAssert.That(InstalledVersion("Scoop", "tailspin-jq"), Is.EqualTo("1.6"));
+    }
+
+    [Test]
     public async Task SortAndSourceFilter()
     {
         await ResetAsync(TuiPageIds.Installed);

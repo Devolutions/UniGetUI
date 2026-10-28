@@ -29,11 +29,13 @@ internal sealed class ScoopPkgOperationHelper : BasePkgOperationHelper
             },
         ];
 
-        // If source is ellipsed, a local path, or a URL manifest, omit source argument
-        if (package.Source.Name.Contains("...") || package.Source.Name.Contains(":\\") || package.Source.Name.StartsWith("http"))
-            parameters.Add(Scoop.RequireSafePackageSpec(package.Id));
-        else
-            parameters.Add(Scoop.RequireSafePackageSpec($"{package.Source.Name}/{package.Id}"));
+        string spec = Scoop.GetPackageSpec(package);
+        if (operation is OperationType.Install && options.Version.Length > 0)
+            spec = Scoop.RequireSafePackageSpec($"{spec}@{options.Version}");
+        parameters.Add(spec);
+
+        if (operation is OperationType.Update && ((Scoop)Manager).IsPinnedInstall(package))
+            parameters.Add("--force");
 
         if (
             package.OverridenOptions.Scope == PackageScope.Global

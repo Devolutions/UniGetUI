@@ -317,8 +317,17 @@
                                       ItemsSource="{Binding VersionOptions}"
                                       SelectedItem="{Binding SelectedVersion}"
                                       IsEnabled="{Binding VersionEnabled}"
+                                      IsVisible="{Binding !VersionIsTyped}"
                                       automation:AutomationProperties.LabeledBy="{Binding #VersionLabelBlock}"
                                       HorizontalAlignment="Stretch"/>
+                            <TextBox Grid.Column="1"
+                                     Classes="install-option-input search-field-standalone"
+                                     Text="{Binding TypedVersion}"
+                                     PlaceholderText="{Binding TypedVersionPlaceholder}"
+                                     IsEnabled="{Binding VersionEnabled}"
+                                     IsVisible="{Binding VersionIsTyped}"
+                                     automation:AutomationProperties.LabeledBy="{Binding #VersionLabelBlock}"
+                                     HorizontalAlignment="Stretch"/>
                         </Grid>
 
                         <Border Height="1" Background="{DynamicResource AppBorderBrush}"

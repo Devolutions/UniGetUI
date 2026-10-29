@@ -1,3 +1,4 @@
+using System.Globalization;
 using UniGetUI.Core.Data;
 using UniGetUI.PackageEngine.Enums;
 
@@ -69,6 +70,26 @@ namespace UniGetUI.Core.Language.Tests
 
             engine.LoadLanguage("ua");
             Assert.Equal("uk", engine.Locale);
+        }
+
+        [Theory]
+        [InlineData("en")]
+        [InlineData("es")]
+        [InlineData("uk")]
+        public void TestTranslatingWithParametersInInvariantGlobalizationMode(string language)
+        {
+            Assert.Equal(CultureInfo.InvariantCulture, CultureInfo.CurrentCulture);
+
+            LanguageEngine engine = new();
+            engine.LoadLanguage(language);
+
+            Assert.Equal(
+                "3 packages were found, 1234.5 MB",
+                engine.Translate(
+                    "{count} packages were found, {size} MB",
+                    new Dictionary<string, object?> { { "count", 3 }, { "size", 1234.5 } }
+                )
+            );
         }
 
         [Fact]

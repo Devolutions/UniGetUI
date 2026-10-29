@@ -123,6 +123,10 @@ jobs:
           npm install --global --no-fund --no-audit @github/copilot@1.0.96
           if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
 
+      - name: Remove the repository's skills
+        shell: pwsh
+        run: Remove-Item -Path .agents/skills, .claude/skills, .github/skills -Recurse -Force -ErrorAction SilentlyContinue
+
       # The token only allows Copilot requests and reading this public repository, and it is
       # hidden from the agent's shell. The agent has no GitHub tools and no git credential.
       - name: Run the agent
@@ -142,10 +146,30 @@ jobs:
             --allow-all-tools `
             --allow-all-paths `
             --disable-builtin-mcps `
+            --no-custom-instructions `
             --secret-env-vars COPILOT_GITHUB_TOKEN GITHUB_ENV GITHUB_OUTPUT GITHUB_PATH `
             --share (Join-Path $logDir 'transcript.md') `
             --log-dir $logDir
           if ($LASTEXITCODE -ne 0) { throw "Copilot CLI exited with code $LASTEXITCODE" }
+
+      - name: Check the agent's output
+        shell: pwsh
+        env:
+          LANGUAGE: ${{ matrix.language }}
+        run: |
+          $sourceCount = @((Get-Content -Path (Join-Path $env:BATCH_DIR "$env:LANGUAGE.source.json") -Raw | ConvertFrom-Json -AsHashtable).Keys).Count
+          $translated = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+          foreach ($file in Get-ChildItem -Path $env:BATCH_DIR -Filter "$env:LANGUAGE.translated*.json" -File) {
+            try {
+              foreach ($key in (Get-Content -Path $file.FullName -Raw | ConvertFrom-Json -AsHashtable).Keys) { [void]$translated.Add($key) }
+            }
+            catch {
+              Write-Host "::warning::$($file.Name) is not valid JSON: $($_.Exception.Message)"
+            }
+          }
+          Write-Host "The agent translated $($translated.Count) of $sourceCount strings."
+          if ($translated.Count -eq 0) { throw "The agent produced no translations for $env:LANGUAGE." }
+          if ($translated.Count -lt $sourceCount) { Write-Host "::warning::The agent left $($sourceCount - $translated.Count) of $sourceCount strings untranslated for $env:LANGUAGE." }
 
       - name: Upload the translations
         if: always()
@@ -253,17 +277,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'git push failed' }
 
           $bodyPath = Join-Path $env:RUNNER_TEMP 'pr-body.md'
-          $body = @(
-            "Machine translations of the strings that ``lang_en.json`` has and these languages were missing, produced by the [translation-sync workflow]($env:RUN_URL). Native speakers are welcome to review them."
+          $table = @(Get-Content -Path (Join-Path $env:RUNNER_TEMP 'summary.md') | Where-Object { $_.StartsWith('|') })
+          @(
+            "Machine translations of the strings that ``lang_en.json`` has and these languages were missing, produced by the [translation-sync workflow]($env:RUN_URL)."
             ''
-            (Get-Content -Path (Join-Path $env:RUNNER_TEMP 'summary.md') -Raw)
-            ''
-            'Entries that were rejected or left out stay missing and are offered again in the next run, which starts once this pull request is merged or closed.'
-          ) -join "`n"
-          if ($body.Length -gt 60000) {
-            $body = $body.Substring(0, 60000) + "`n`n*The summary was cut here; the full summary is on [the workflow run]($env:RUN_URL).*"
-          }
-          $body | Set-Content -Path $bodyPath -Encoding utf8NoBOM
+            $table
+          ) -join "`n" | Set-Content -Path $bodyPath -Encoding utf8NoBOM
 
           gh pr create `
             --repo $env:GITHUB_REPOSITORY `

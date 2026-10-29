@@ -2,13 +2,16 @@ using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Avalonia.ViewModels;
@@ -41,8 +44,15 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
         LoadEntries();
     }
 
+    public void Detach()
+    {
+        foreach (var entry in Entries)
+            entry.Detach();
+    }
+
     private void LoadEntries()
     {
+        Detach();
         Entries.Clear();
 
         var db = IgnoredUpdatesDatabase.GetDatabase();
@@ -164,6 +174,8 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
 
     private readonly string _ignoredId;
     private readonly IPackage? _update;
+    private UpdatePackageOperation? _operation;
+    private int _operationFinished;
 
     public IgnoredPackageEntryViewModel(
         string ignoredId, string id, string name,
@@ -173,7 +185,8 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
     {
         _ignoredId = ignoredId;
         _update = update;
-        IsUpdating = update?.Tag is PackageTag.OnQueue or PackageTag.BeingProcessed;
+        if (update is not null && FindRunningUpdate(update) is { } running)
+            Track(running);
         Id = id;
         Name = name;
         Manager = manager;
@@ -206,17 +219,7 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
         try
         {
             var operations = await SoftwareUpdatesPage.LaunchUpdate(
-                [update],
-                keepUpdatesPaused: true,
-                beforeStart: operation => operation.OperationFinished += async (_, _) =>
-                {
-                    await operation.SuccessHandled;
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        IsUpdating = false;
-                        UpdateFinished?.Invoke(this, EventArgs.Empty);
-                    });
-                });
+                [update], keepUpdatesPaused: true, beforeStart: Track);
             if (operations.Count == 0)
                 IsUpdating = false;
         }
@@ -226,6 +229,58 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
             Logger.Error(ex);
             IsUpdating = false;
         }
+    }
+
+    public void Detach()
+    {
+        if (_operation is { } operation)
+            operation.OperationFinished -= OnOperationFinished;
+        _operation = null;
+    }
+
+    private static UpdatePackageOperation? FindRunningUpdate(IPackage update) =>
+        AvaloniaOperationRegistry.Operations
+            .OfType<UpdatePackageOperation>()
+            .LastOrDefault(operation =>
+                operation.Package.Id == update.Id
+                && operation.Package.Manager == update.Manager
+                && operation.Status is OperationStatus.InQueue or OperationStatus.Running);
+
+    private void Track(UpdatePackageOperation operation)
+    {
+        _operation = operation;
+        _operationFinished = 0;
+        IsUpdating = true;
+        operation.OperationFinished += OnOperationFinished;
+        if (operation.Status is OperationStatus.Succeeded or OperationStatus.Failed or OperationStatus.Canceled)
+            OnOperationFinished(operation, EventArgs.Empty);
+    }
+
+    private async void OnOperationFinished(object? sender, EventArgs e)
+    {
+        if (sender is not UpdatePackageOperation operation
+            || Interlocked.Exchange(ref _operationFinished, 1) == 1)
+            return;
+
+        operation.OperationFinished -= OnOperationFinished;
+        try
+        {
+            await operation.SuccessHandled;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(ex);
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!ReferenceEquals(_operation, operation))
+                return;
+
+            _operation = null;
+            IsUpdating = false;
+            UpdateFinished?.Invoke(this, EventArgs.Empty);
+        });
     }
 
     public async Task RemoveAsync()

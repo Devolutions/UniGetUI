@@ -44,4 +44,10 @@ public partial class ManageIgnoredUpdatesWindow : UniGetUI.Avalonia.Views.Dialog
 
     private void ResetNo_Click(object? sender, RoutedEventArgs e) =>
         ResetButton.Flyout?.Hide();
+
+    protected override void OnClosed(EventArgs e)
+    {
+        ((ManageIgnoredUpdatesViewModel)DataContext!).Detach();
+        base.OnClosed(e);
+    }
 }

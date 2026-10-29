@@ -1,8 +1,11 @@
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
-using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.NpmManager;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.Tests;
 
@@ -38,16 +41,28 @@ public class IgnoredPackageEntryViewModelTests
         Assert.Contains(nameof(IgnoredPackageEntryViewModel.CanUpdate), changed);
     }
 
-    [Fact]
-    public void KeepsTheButtonHiddenForAnUpdateAlreadyRunningWhenTheRowIsRebuilt()
+    [Theory]
+    [InlineData(OperationStatus.InQueue, true)]
+    [InlineData(OperationStatus.Running, true)]
+    [InlineData(OperationStatus.Failed, false)]
+    [InlineData(OperationStatus.Succeeded, false)]
+    public void PicksUpAnUpdateStartedBeforeTheRowWasBuilt(OperationStatus status, bool updating)
     {
         var update = Update();
-        update.SetTag(PackageTag.OnQueue);
+        using var operation = new UpdatePackageOperation(update, new InstallOptions()) { Status = status };
+        AvaloniaOperationRegistry.Operations.Add(operation);
+        try
+        {
+            var entry = Entry(update);
 
-        var entry = Entry(update);
-
-        Assert.True(entry.IsUpdating);
-        Assert.False(entry.CanUpdate);
+            Assert.Equal(updating, entry.IsUpdating);
+            Assert.Equal(!updating, entry.CanUpdate);
+            entry.Detach();
+        }
+        finally
+        {
+            AvaloniaOperationRegistry.Operations.Remove(operation);
+        }
     }
 
     [Fact]

@@ -1413,6 +1413,7 @@
   "Installer host": "Installer host",
   "Download size": "Download size",
   "Release date": "Release date",
+  "Columns": "Columns",
   "Show the installer host on package lists": "Show the installer host on package lists",
   "Show the download size on package lists": "Show the download size on package lists",
   "Show the release date on package lists": "Show the release date on package lists",

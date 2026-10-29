@@ -1248,6 +1248,8 @@
                             <Separator/>
                             <MenuItem x:Name="OrderByAscending_Menu"  Header="{t:Translate Ascendant}"   Command="{Binding SetSortAscendingCommand}"/>
                             <MenuItem x:Name="OrderByDescending_Menu" Header="{t:Translate Descendant}"  Command="{Binding SetSortDescendingCommand}"/>
+                            <Separator/>
+                            <MenuItem x:Name="Columns_Menu" Header="{t:Translate Columns}"/>
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>

@@ -71,6 +71,9 @@ public abstract partial class AbstractPackagesPage : UserControl,
         OrderByNewVersion_Menu.IsVisible = ViewModel.RoleIsUpdateLike;
         OrderByDownloadSize_Menu.IsVisible = ViewModel.DownloadSizeColumnVisible;
         OrderByReleaseDate_Menu.IsVisible = ViewModel.ReleaseDateColumnVisible;
+        PopulateColumnsSubmenu();
+        if (OrderByButton.Flyout is MenuFlyout orderByFlyout)
+            orderByFlyout.Opening += (_, _) => PopulateColumnsSubmenu();
 
         // Stamp initial checkmarks, then keep them in sync with sort-property changes
         UpdateSortMenuChecks();
@@ -619,30 +622,40 @@ public abstract partial class AbstractPackagesPage : UserControl,
             return;
 
         e.Handled = true;
-        BuildColumnsMenu().Open(PackageList);
+        var menu = new ContextMenu();
+        foreach (Control item in BuildColumnMenuItems()) menu.Items.Add(item);
+        menu.Open(PackageList);
     }
 
-    private ContextMenu BuildColumnsMenu()
+    private void PopulateColumnsSubmenu()
+    {
+        Columns_Menu.Items.Clear();
+        foreach (Control item in BuildColumnMenuItems()) Columns_Menu.Items.Add(item);
+    }
+
+    private List<Control> BuildColumnMenuItems()
     {
         var vm = ViewModel;
-        var menu = new ContextMenu();
-        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Package Name"), PackagesPageViewModel.NameColumn, vm.NameColumnVisible));
-        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Package ID"), PackagesPageViewModel.IdColumn, vm.IdColumnVisible));
-        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Version"), PackagesPageViewModel.VersionColumn, vm.VersionColumnVisible));
+        var items = new List<Control>
+        {
+            ColumnMenuItem(CoreTools.Translate("Package Name"), PackagesPageViewModel.NameColumn, vm.NameColumnVisible),
+            ColumnMenuItem(CoreTools.Translate("Package ID"), PackagesPageViewModel.IdColumn, vm.IdColumnVisible),
+            ColumnMenuItem(CoreTools.Translate("Version"), PackagesPageViewModel.VersionColumn, vm.VersionColumnVisible),
+        };
         if (vm.RoleIsUpdateLike)
-            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("New version"), PackagesPageViewModel.NewVersionColumn, vm.NewVersionHeaderVisible));
-        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Source"), PackagesPageViewModel.SourceColumn, vm.SourceColumnVisible));
+            items.Add(ColumnMenuItem(CoreTools.Translate("New version"), PackagesPageViewModel.NewVersionColumn, vm.NewVersionHeaderVisible));
+        items.Add(ColumnMenuItem(CoreTools.Translate("Source"), PackagesPageViewModel.SourceColumn, vm.SourceColumnVisible));
         if (vm.OptionalColumnsAvailable)
         {
-            menu.Items.Add(new Separator());
-            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Installer host"), PackagesPageViewModel.InstallerHostColumn, vm.InstallerHostColumnVisible));
-            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Download size"), PackagesPageViewModel.DownloadSizeColumn, vm.DownloadSizeColumnVisible));
-            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Release date"), PackagesPageViewModel.ReleaseDateColumn, vm.ReleaseDateColumnVisible));
+            items.Add(new Separator());
+            items.Add(ColumnMenuItem(CoreTools.Translate("Installer host"), PackagesPageViewModel.InstallerHostColumn, vm.InstallerHostColumnVisible));
+            items.Add(ColumnMenuItem(CoreTools.Translate("Download size"), PackagesPageViewModel.DownloadSizeColumn, vm.DownloadSizeColumnVisible));
+            items.Add(ColumnMenuItem(CoreTools.Translate("Release date"), PackagesPageViewModel.ReleaseDateColumn, vm.ReleaseDateColumnVisible));
         }
 
-        var shown = menu.Items.OfType<MenuItem>().Where(item => item.IsChecked).ToList();
+        var shown = items.OfType<MenuItem>().Where(item => item.IsChecked).ToList();
         if (shown.Count == 1) shown[0].IsEnabled = false;
-        return menu;
+        return items;
     }
 
     private static MenuItem ColumnMenuItem(string label, string column, bool isChecked)

@@ -935,6 +935,9 @@
               Background="{DynamicResource SmokeFillColorDefaultBrush}"
               Margin="{Binding $parent[Window].WindowDecorationMargin}"
               ZIndex="2000"
+              PointerPressed="ModalLayer_PointerPressed"
+              PointerReleased="ModalLayer_PointerReleased"
+              PointerCaptureLost="ModalLayer_PointerCaptureLost"
               automation:AutomationProperties.AccessibilityView="Control">
             <Border x:Name="ModalSurface"
                     Margin="48"

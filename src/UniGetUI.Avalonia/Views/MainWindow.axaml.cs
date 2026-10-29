@@ -179,6 +179,7 @@ public partial class MainWindow : Window
     private readonly List<UniGetUiWebView> _webViewsHiddenForModal = new();
     private IDisposable? _modalTitleSubscription;
     private Control? _focusBeforeModal;
+    private bool _modalBackdropPressed;
 
     public enum RuntimeNotificationLevel
     {
@@ -2201,6 +2202,29 @@ public partial class MainWindow : Window
 
     private void ModalCloseButton_Click(object? sender, RoutedEventArgs e) =>
         (ModalContent.Content as ImmersiveDialog)?.Close();
+
+    private void ModalLayer_PointerPressed(object? sender, PointerPressedEventArgs e) =>
+        _modalBackdropPressed = ReferenceEquals(e.Source, ModalLayer)
+            && e.GetCurrentPoint(ModalLayer).Properties.IsLeftButtonPressed;
+
+    private void ModalLayer_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        bool pressedOnBackdrop = _modalBackdropPressed;
+        _modalBackdropPressed = false;
+        if (!pressedOnBackdrop
+            || e.InitialPressMouseButton != MouseButton.Left
+            || ModalSurface.Bounds.Contains(e.GetPosition(ModalLayer)))
+            return;
+
+        if (ModalContent.Content is ImmersiveDialog dialog)
+        {
+            e.Handled = true;
+            dialog.Close();
+        }
+    }
+
+    private void ModalLayer_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) =>
+        _modalBackdropPressed = false;
 
     private void UpdateModalSurfaceSize()
     {

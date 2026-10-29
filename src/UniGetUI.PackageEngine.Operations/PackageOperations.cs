@@ -1670,6 +1670,16 @@ namespace UniGetUI.PackageEngine.Operations
             UpgradablePackagesLoader.Instance.Remove(Package);
             InstalledPackagesLoader.Instance.Remove(Package);
 
+            bool explicitVersionRequested =
+                !string.IsNullOrWhiteSpace(Options.Version)
+                && Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate;
+            string targetVersion = explicitVersionRequested
+                ? Options.Version
+                : string.IsNullOrWhiteSpace(Package.NewVersionString)
+                    ? Package.VersionString
+                    : Package.NewVersionString;
+            IgnoredUpdatesDatabase.ForgetAvailableUpdate(Package, targetVersion);
+
             if (Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts))
             {
                 DesktopShortcutsDatabase.HandleNewShortcuts(DesktopShortcutsBeforeStart);
@@ -1683,15 +1693,8 @@ namespace UniGetUI.PackageEngine.Operations
                 );
             }
 
-            bool explicitVersionRequested =
-                !string.IsNullOrWhiteSpace(Options.Version)
-                && Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate;
             var installedPackage = await ResolveInstalledPackageSnapshotAsync(
-                explicitVersionRequested
-                    ? Options.Version
-                    : string.IsNullOrWhiteSpace(Package.NewVersionString)
-                        ? Package.VersionString
-                        : Package.NewVersionString,
+                targetVersion,
                 preferFallbackVersionWhenMissing: explicitVersionRequested
             );
             await InstalledPackagesLoader.Instance.AddForeign(installedPackage);
@@ -1702,8 +1705,6 @@ namespace UniGetUI.PackageEngine.Operations
                 && await Package.GetIgnoredUpdatesVersionAsync() != "*"
             )
                 await Package.RemoveFromIgnoredUpdatesAsync();
-
-            IgnoredUpdatesDatabase.ForgetAvailableUpdate(Package, installedPackage.VersionString);
         }
 
         protected override void Initialize()

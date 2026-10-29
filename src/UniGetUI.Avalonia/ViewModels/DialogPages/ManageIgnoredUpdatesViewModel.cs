@@ -185,7 +185,7 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
     {
         _ignoredId = ignoredId;
         _update = update;
-        if (update is not null && FindRunningUpdate(update) is { } running)
+        if (FindRunningUpdate(ignoredId) is { } running)
             Track(running);
         Id = id;
         Name = name;
@@ -238,13 +238,13 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
         _operation = null;
     }
 
-    private static UpdatePackageOperation? FindRunningUpdate(IPackage update) =>
+    private static UpdatePackageOperation? FindRunningUpdate(string ignoredId) =>
         AvaloniaOperationRegistry.Operations
             .OfType<UpdatePackageOperation>()
             .LastOrDefault(operation =>
-                operation.Package.Id == update.Id
-                && operation.Package.Manager == update.Manager
-                && operation.Status is OperationStatus.InQueue or OperationStatus.Running);
+                IgnoredUpdatesDatabase.GetIgnoredIdForPackage(operation.Package) == ignoredId
+                && (operation.Status is OperationStatus.InQueue or OperationStatus.Running
+                    || (operation.Status is OperationStatus.Succeeded && !operation.SuccessHandled.IsCompleted)));
 
     private void Track(UpdatePackageOperation operation)
     {

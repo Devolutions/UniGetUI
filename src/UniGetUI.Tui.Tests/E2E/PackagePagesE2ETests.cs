@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.Tui.Infrastructure;
@@ -186,11 +187,10 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await WaitForDialogAsync("Manage ignored updates");
         await WaitForTextAsync("Fabrikam.Browser", "119.0.0");
         await ChooseAsync("Fabrikam");
-        await ChooseAsync("Update once");
-        await WaitForOperationsToFinishAsync();
+        await UpdateOnceAndWaitAsync("Fabrikam.Browser");
 
         NAssert.That(InstalledVersion("Winget", "Fabrikam.Browser"), Is.EqualTo("119.0.0"));
-        await WaitUntilAsync(() => !UpgradablePackagesLoader.Instance.IgnoredPackages.ContainsKey("Fabrikam.Browser"), "the installed update to be forgotten");
+        NAssert.That(UpgradablePackagesLoader.Instance.IgnoredPackages.ContainsKey("Fabrikam.Browser"), Is.False);
         NAssert.That(IgnoredUpdatesDatabase.GetDatabase().Single(kv => kv.Key.Contains("Fabrikam.Browser")).Value, Is.EqualTo("*"));
         NAssert.That(UpgradablePackagesLoader.Instance.Packages.Any(p => p.Id == "Fabrikam.Browser"), Is.False);
         await Key(K.Escape);
@@ -214,14 +214,25 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await WaitForDialogAsync("Manage ignored updates");
         await WaitForTextAsync("Northwind.Terminal", "1.20.1");
         await ChooseAsync("Northwind");
-        await ChooseAsync("Update once");
-        await WaitForOperationsToFinishAsync();
+        await UpdateOnceAndWaitAsync("Northwind.Terminal");
 
         NAssert.That(InstalledVersion("Winget", "Northwind.Terminal"), Is.EqualTo("1.20.1"));
-        await WaitUntilAsync(() => !UpgradablePackagesLoader.Instance.IgnoredPackages.ContainsKey("Northwind.Terminal"), "the installed update to be forgotten");
+        NAssert.That(UpgradablePackagesLoader.Instance.IgnoredPackages.ContainsKey("Northwind.Terminal"), Is.False);
         NAssert.That(IgnoredUpdatesDatabase.GetDatabase().Single(kv => kv.Key.Contains("Northwind.Terminal")).Value, Does.StartWith("<"));
         await Key(K.Escape);
         await WaitForNoDialogAsync();
+    }
+
+    private async Task UpdateOnceAndWaitAsync(string packageId)
+    {
+        await ChooseAsync("Update once");
+        UpdatePackageOperation? operation = null;
+        await WaitUntilAsync(
+            () => (operation = TuiOperationRegistry.Snapshot().OfType<UpdatePackageOperation>()
+                .FirstOrDefault(o => o.Package.Id == packageId)) is not null,
+            "the update to start");
+        await WaitForOperationsToFinishAsync();
+        await operation!.SuccessHandled;
     }
 
     [Test]

@@ -328,15 +328,15 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 entries.Add(candidate);
             }
 
-            var installed = new Dictionary<string, (string Id, string Version)>();
-            foreach (IPackage package in installedPackages)
-                installed[package.Id.ToLower()] = (package.Id, package.VersionString);
-
-            var scopeMap = BuildInstalledScopeMap(installedPackages);
+            var newestInstalled = SelectNewestInstalled(installedPackages);
+            var scopeMap = BuildInstalledScopeMap(newestInstalled.Values);
             List<Package> packages = [];
 
-            foreach ((string id, string installedVersion) in installed.Values)
+            foreach (IPackage installedPackage in newestInstalled.Values)
             {
+                string id = installedPackage.Id;
+                string installedVersion = installedPackage.VersionString;
+
                 if (!availableById.TryGetValue(id, out List<LocalNuGetPackage>? entries))
                     continue;
 
@@ -493,10 +493,12 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                         continue;
                     }
 
-                    var packageIdVersion = new Dictionary<string, string>();
-                    foreach (var package in pair.Value)
-                        packageIdVersion[package.Id.ToLower()] = package.VersionString;
-                    var packageIdScope = BuildInstalledScopeMap(pair.Value);
+                    var newestInstalled = SelectNewestInstalled(pair.Value);
+                    var packageIdVersion = newestInstalled.ToDictionary(
+                        entry => entry.Key,
+                        entry => entry.Value.VersionString
+                    );
+                    var packageIdScope = BuildInstalledScopeMap(newestInstalled.Values);
 
                     using HttpClient client = new(CoreTools.GenericHttpClientParameters);
                     client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
@@ -658,11 +660,13 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 return null;
             }
 
-            var installed = new Dictionary<string, (string Id, string Version)>();
-            foreach (var package in installedPackages)
-                installed[package.Id.ToLower()] = (package.Id, package.VersionString);
+            var newestInstalled = SelectNewestInstalled(installedPackages);
+            var installed = newestInstalled.ToDictionary(
+                entry => entry.Key,
+                entry => (entry.Value.Id, Version: entry.Value.VersionString)
+            );
 
-            var scopeMap = BuildInstalledScopeMap(installedPackages);
+            var scopeMap = BuildInstalledScopeMap(newestInstalled.Values);
             var candidates = new ConcurrentDictionary<string, string>();
             var failures = new ConcurrentDictionary<string, Exception?>();
 
@@ -742,26 +746,15 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             IReadOnlyList<IPackage> installedPackages
         )
         {
-            var highestInstalledById = new Dictionary<string, string>();
-            foreach (var package in installedPackages)
-            {
-                string key = package.Id.ToLower();
-                if (
-                    !highestInstalledById.TryGetValue(key, out string? highest)
-                    || CompareVersions(package.VersionString, highest) > 0
-                )
-                {
-                    highestInstalledById[key] = package.VersionString;
-                }
-            }
+            var newestInstalled = SelectNewestInstalled(installedPackages);
 
             List<Package> kept = [];
             foreach (var candidate in candidates)
             {
                 if (
-                    !highestInstalledById.TryGetValue(
+                    !newestInstalled.TryGetValue(
                         candidate.Id.ToLower(),
-                        out string? highestInstalled
+                        out IPackage? newestPackage
                     )
                 )
                 {
@@ -769,6 +762,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     continue;
                 }
 
+                string highestInstalled = newestPackage.VersionString;
                 bool isNewer =
                     CompareVersions(highestInstalled, candidate.NewVersionString)
                     is { } comparison
@@ -784,13 +778,40 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         }
 
         /// <summary>
+        /// Picks, for each installed package id (lowercased), the copy its update applies to:
+        /// the highest installed version, the last one enumerated on a tie. Update-PSResource
+        /// installs a new version side by side with the old ones, and Get-InstalledPSResource
+        /// lists them sorted as strings (1.9.0, 1.12.6, 1.10.1), so taking whichever copy came
+        /// last reported a stale installed version that never moved after an update.
+        /// </summary>
+        internal Dictionary<string, IPackage> SelectNewestInstalled(
+            IEnumerable<IPackage> installedPackages
+        )
+        {
+            var newest = new Dictionary<string, IPackage>();
+            foreach (var package in installedPackages)
+            {
+                string key = package.Id.ToLower();
+                if (
+                    !newest.TryGetValue(key, out IPackage? current)
+                    || !IsOlderVersion(package.VersionString, current.VersionString)
+                )
+                {
+                    newest[key] = package;
+                }
+            }
+
+            return newest;
+        }
+
+        /// <summary>
         /// Maps each installed package id (lowercased) to the scope its update should target.
-        /// Mirrors the last-wins keying of the version map so the scope and the installed
-        /// version always come from the same enumerated package (issue #5163). A module
-        /// installed in a single scope updates in that scope; a module installed in both
-        /// resolves to whichever scope is enumerated last (as its version does) — surfacing
-        /// an independent update per scope would require scope-aware package identity, which
-        /// the upgrade loader does not currently support.
+        /// Callers pass the copies chosen by <see cref="SelectNewestInstalled"/>, so the scope
+        /// and the installed version always come from the same enumerated package (issue
+        /// #5163). A module installed in a single scope updates in that scope; a module
+        /// installed in both resolves to the scope holding its newest version — surfacing an
+        /// independent update per scope would require scope-aware package identity, which the
+        /// upgrade loader does not currently support.
         /// </summary>
         internal static Dictionary<string, string?> BuildInstalledScopeMap(
             IEnumerable<IPackage> installedPackages

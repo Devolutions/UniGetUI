@@ -410,6 +410,59 @@ public sealed class PowerShell7ManagerTests
         Assert.Equal(PackageScope.User, installed[^1].OverridenOptions.Scope);
     }
 
+    // Update-PSResource installs side by side and Get-InstalledPSResource lists the versions
+    // sorted as strings, so the last enumerated copy is not the newest. The update must start
+    // from the newest copy, or it keeps reporting the same stale installed version after
+    // every successful update.
+    [Fact]
+    public void SelectNewestInstalled_PicksHighestVersionNotLastEnumerated()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            [
+                "##SCOPE:AllUsers##",
+                "##SCOPE:CurrentUser##",
+                "XKCD\t1.9.0\tPSGallery",
+                "XKCD\t1.8.0\tPSGallery",
+                "XKCD\t1.12.6\tPSGallery",
+                "XKCD\t1.11.0\tPSGallery",
+                "XKCD\t1.10.1\tPSGallery",
+            ], manager);
+
+        var newest = Assert.Single(manager.SelectNewestInstalled(installed));
+        Assert.Equal("xkcd", newest.Key);
+        Assert.Equal("1.12.6", newest.Value.VersionString);
+
+        var xml = "<entry><d:Id>XKCD</d:Id><d:Version>1.12.7</d:Version></entry>";
+        var update = Assert.Single(BaseNuGet.ParseUpdatesResponse(
+            xml,
+            new Dictionary<string, string> { [newest.Key] = newest.Value.VersionString },
+            BaseNuGet.BuildInstalledScopeMap([newest.Value]),
+            installed[0].Source,
+            manager));
+
+        Assert.Equal("1.12.6", update.VersionString);
+        Assert.Equal("1.12.7", update.NewVersionString);
+        Assert.Equal(PackageScope.User, update.OverridenOptions.Scope);
+    }
+
+    [Fact]
+    public void SelectNewestInstalled_ScopeFollowsNewestCopy()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            [
+                "##SCOPE:AllUsers##", "Devolutions.PowerShell\t2025.2.0\tPSGallery",
+                "##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2025.1.0\tPSGallery",
+            ], manager);
+
+        var newest = manager.SelectNewestInstalled(installed);
+        var idScope = BaseNuGet.BuildInstalledScopeMap(newest.Values);
+
+        Assert.Equal("2025.2.0", newest["devolutions.powershell"].VersionString);
+        Assert.Equal(PackageScope.Machine, idScope["devolutions.powershell"]);
+    }
+
     // Regression for https://github.com/Devolutions/UniGetUI/issues/4781:
     // the previous Format-Table-based pipeline truncated long names (e.g.
     // "Microsoft.Graph.Beta.DeviceManagement.Administration" → "Microsoft.Graph.Beta..")

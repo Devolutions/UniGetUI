@@ -1,10 +1,14 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Views.Pages;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Avalonia.ViewModels;
@@ -12,7 +16,7 @@ namespace UniGetUI.Avalonia.ViewModels;
 public partial class ManageIgnoredUpdatesViewModel : ObservableObject
 {
     public string Title { get; } = CoreTools.Translate("Manage ignored updates");
-    public string Description { get; } = CoreTools.Translate("The packages listed here won't be taken in account when checking for updates. Double-click them or click the button on their right to stop ignoring their updates.");
+    public string Description { get; } = CoreTools.Translate("The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.");
     public string ResetLabel { get; } = CoreTools.Translate("Reset list");
     public string ResetConfirm { get; } = CoreTools.Translate("Do you really want to reset the ignored updates list? This action cannot be reverted");
     public string ResetYes { get; } = CoreTools.Translate("Yes");
@@ -67,11 +71,10 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
                 ?? CoreTools.Translate("Unknown");
 
             string newVersion;
-            if (UpgradablePackagesLoader.Instance.IgnoredPackages
-                    .TryGetValue(packageId, out var upgradable)
-                && upgradable.NewVersionString != upgradable.VersionString)
+            IPackage? update = IgnoredUpdatesDatabase.GetAvailableUpdate(ignoredId);
+            if (update is not null)
             {
-                newVersion = currentVersion + " \u27a4 " + upgradable.NewVersionString;
+                newVersion = currentVersion + " \u27a4 " + update.NewVersionString;
             }
             else if (currentVersion != CoreTools.Translate("Unknown"))
             {
@@ -84,8 +87,9 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
 
             var entry = new IgnoredPackageEntryViewModel(
                 ignoredId, packageId, packageName, managerDisplay,
-                managerIconPath, versionDisplay, newVersion);
+                managerIconPath, versionDisplay, newVersion, update);
             entry.Removed += OnEntryRemoved;
+            entry.UpdateFinished += OnEntryUpdateFinished;
             Entries.Add(entry);
         }
 
@@ -98,6 +102,8 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
             Entries.Remove(entry);
         HasEntries = Entries.Count > 0;
     }
+
+    private void OnEntryUpdateFinished(object? sender, EventArgs e) => LoadEntries();
 
     [RelayCommand]
     private async Task ResetAll()
@@ -147,15 +153,26 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
     public string NewVersion { get; }
     public string AutomationName { get; }
     public string RemoveAutomationName { get; }
+    public string UpdateAutomationName { get; }
+    public bool CanUpdate => _update is not null && !IsUpdating;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanUpdate))]
+    private bool _isUpdating;
+
+    public event EventHandler? UpdateFinished;
 
     private readonly string _ignoredId;
+    private readonly IPackage? _update;
 
     public IgnoredPackageEntryViewModel(
         string ignoredId, string id, string name,
         string manager, string managerIconPath,
-        string versionDisplay, string newVersion)
+        string versionDisplay, string newVersion,
+        IPackage? update = null)
     {
         _ignoredId = ignoredId;
+        _update = update;
         Id = id;
         Name = name;
         Manager = manager;
@@ -166,10 +183,46 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
             .Replace("{name}", Name)
             .Replace("{manager}", Manager);
         RemoveAutomationName = CoreTools.Translate("Remove {0} from ignored updates", Name);
+        UpdateAutomationName = CoreTools.Translate("Update {0} once, keeping its updates ignored", Name);
     }
 
     [RelayCommand]
     public async Task Remove() => await RemoveAsync();
+
+    [RelayCommand]
+    public async Task Update()
+    {
+        if (_update is null || IsUpdating)
+            return;
+
+        IsUpdating = true;
+        try
+        {
+            var operations = await SoftwareUpdatesPage.LaunchUpdate([_update], keepUpdatesPaused: true);
+            if (operations.Count == 0)
+            {
+                IsUpdating = false;
+                return;
+            }
+
+            var operation = operations[0];
+            operation.OperationFinished += async (_, _) =>
+            {
+                await operation.SuccessHandled;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    IsUpdating = false;
+                    UpdateFinished?.Invoke(this, EventArgs.Empty);
+                });
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Could not update {Id} from the ignored updates list");
+            Logger.Error(ex);
+            IsUpdating = false;
+        }
+    }
 
     public async Task RemoveAsync()
     {

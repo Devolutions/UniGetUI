@@ -2,6 +2,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.PackageEngine.Classes.Packages.Classes;
 
@@ -100,6 +101,43 @@ public static class IgnoredUpdatesDatabase
     public static string GetIgnoredIdForPackage(IPackage package)
     {
         return $"{package.Manager.Properties.Name.ToLower()}\\{package.Id}";
+    }
+
+    public static IPackage? GetAvailableUpdate(string ignoredId)
+    {
+        if (UpgradablePackagesLoader.Instance is not { } loader)
+            return null;
+
+        int separator = ignoredId.IndexOf('\\');
+        string packageId = separator < 0 ? ignoredId : ignoredId[(separator + 1)..];
+        if (
+            loader.IgnoredPackages.TryGetValue(packageId, out var update)
+            && GetIgnoredIdForPackage(update) == ignoredId
+            && update.NewVersionString != update.VersionString
+        )
+            return update;
+
+        return null;
+    }
+
+    public static void ForgetAvailableUpdate(IPackage updatedPackage, string installedVersion)
+    {
+        if (UpgradablePackagesLoader.Instance is not { } loader)
+            return;
+
+        var cache = loader.IgnoredPackages;
+        if (
+            !cache.TryGetValue(updatedPackage.Id, out var update)
+            || update.Manager != updatedPackage.Manager
+        )
+            return;
+
+        int? comparison = update.Manager.CompareVersions(update.NewVersionString, installedVersion);
+        if (comparison is > 0 || (comparison is null && update.NewVersionString != installedVersion))
+            return;
+
+        if (cache.TryRemove(updatedPackage.Id, out var removed) && !ReferenceEquals(removed, update))
+            cache.TryAdd(updatedPackage.Id, removed);
     }
 
     /// <summary>

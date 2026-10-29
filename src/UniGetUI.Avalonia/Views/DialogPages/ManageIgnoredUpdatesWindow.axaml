@@ -125,6 +125,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*" MaxWidth="90"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
                                 <controls:SvgIcon Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center"
@@ -153,6 +154,17 @@
                                            Text="{Binding Manager}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Manager}"/>
 
                                 <Button Grid.Column="10" Width="32" Height="32" Padding="0" Margin="4,0,0,0"
+                                        Classes="secondary-action"
+                                        VerticalAlignment="Center"
+                                        IsVisible="{Binding CanUpdate}"
+                                        Command="{Binding UpdateCommand}"
+                                        automation:AutomationProperties.Name="{Binding UpdateAutomationName}"
+                                        ToolTip.Tip="{t:Translate Text='Update once'}">
+                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg"
+                                                      Width="16" Height="16"/>
+                                </Button>
+
+                                <Button Grid.Column="11" Width="32" Height="32" Padding="0" Margin="4,0,0,0"
                                         Classes="secondary-action"
                                         VerticalAlignment="Center"
                                         Command="{Binding RemoveCommand}"

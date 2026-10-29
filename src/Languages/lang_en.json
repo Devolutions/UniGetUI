@@ -2188,5 +2188,12 @@
   "UniGetUI is still running": "UniGetUI is still running",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI must keep running in the background when its window is closed for notifications to work",
-  "\"{0}\" is not a valid version.": "\"{0}\" is not a valid version."
+  "\"{0}\" is not a valid version.": "\"{0}\" is not a valid version.",
+  "Update once": "Update once",
+  "Update {0} once, keeping its updates ignored": "Update {0} once, keeping its updates ignored",
+  "Stop ignoring updates": "Stop ignoring updates",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Press Enter on a package to update it once or to stop ignoring its updates.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.",
+  "Updating {0} once. Its updates will stay ignored.": "Updating {0} once. Its updates will stay ignored.",
+  "{0} is already being updated": "{0} is already being updated"
 }

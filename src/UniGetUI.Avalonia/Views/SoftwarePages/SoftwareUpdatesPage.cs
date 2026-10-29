@@ -392,24 +392,33 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     }
 
     // ─── Operation launchers ──────────────────────────────────────────────────
-    private static async Task LaunchUpdate(
+    internal static async Task<IReadOnlyList<UpdatePackageOperation>> LaunchUpdate(
         IEnumerable<IPackage> packages,
         bool? elevated = null,
         bool? interactive = null,
         bool? no_integrity = null,
-        bool background = false)
+        bool background = false,
+        bool keepUpdatesPaused = false)
     {
+        List<UpdatePackageOperation> started = [];
         foreach (var pkg in packages)
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
-            var op = new UpdatePackageOperation(pkg, opts) { IsBackgroundOperation = background };
+            var op = new UpdatePackageOperation(pkg, opts)
+            {
+                IsBackgroundOperation = background,
+                KeepUpdatesPaused = keepUpdatesPaused,
+            };
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
+            started.Add(op);
         }
+
+        return started;
     }
 
     // Every row on this page is checked by default, so one click here could uninstall every package with an update.

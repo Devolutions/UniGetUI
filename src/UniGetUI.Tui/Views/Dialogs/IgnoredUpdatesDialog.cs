@@ -1,6 +1,7 @@
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.Tui.Infrastructure;
 
@@ -8,12 +9,13 @@ namespace UniGetUI.Tui.Views.Dialogs;
 
 /// <summary>
 /// "Manage ignored updates", ported from <c>ManageIgnoredUpdatesViewModel</c>: lists the ignored-updates
-/// database, lets the user stop ignoring one entry (which puts a known update back on the Updates page)
-/// or reset the whole list.
+/// database, lets the user update one entry once while keeping it ignored, stop ignoring one entry (which
+/// puts a known update back on the Updates page) or reset the whole list.
 /// </summary>
 internal static class IgnoredUpdatesDialog
 {
-    public sealed record Entry(string IgnoredId, string PackageId, string Name, string Manager, string Version, string NewVersion);
+    public sealed record Entry(string IgnoredId, string PackageId, string Name, string Manager, string Version, string NewVersion,
+        IPackage? Update = null);
 
     public static IReadOnlyList<Entry> LoadEntries()
     {
@@ -29,14 +31,14 @@ internal static class IgnoredUpdatesDialog
                 : version.StartsWith('<') ? CoreTools.Translate("Paused until {0}", version[1..]) : version;
             string current = InstalledPackagesLoader.Instance.GetPackageForId(packageId)?.VersionString ?? CoreTools.Translate("Unknown");
             string newVersion;
-            if (UpgradablePackagesLoader.Instance.IgnoredPackages.TryGetValue(packageId, out var upgradable)
-                && upgradable.NewVersionString != upgradable.VersionString)
-                newVersion = current + " -> " + upgradable.NewVersionString;
+            IPackage? update = IgnoredUpdatesDatabase.GetAvailableUpdate(ignoredId);
+            if (update is not null)
+                newVersion = current + " -> " + update.NewVersionString;
             else if (current != CoreTools.Translate("Unknown"))
                 newVersion = CoreTools.Translate("Up to date") + $" ({current})";
             else
                 newVersion = CoreTools.Translate("Unknown");
-            list.Add(new Entry(ignoredId, packageId, CoreTools.FormatAsName(packageId), managerDisplay, versionDisplay, newVersion));
+            list.Add(new Entry(ignoredId, packageId, CoreTools.FormatAsName(packageId), managerDisplay, versionDisplay, newVersion, update));
         }
 
         return list;
@@ -73,11 +75,31 @@ internal static class IgnoredUpdatesDialog
 
             int? picked = await TuiPrompts.ChooseAsync(CoreTools.Translate("Manage ignored updates"), choices, 0,
                 CoreTools.Translate("The packages listed here won't be taken in account when checking for updates.")
-                + " " + CoreTools.Translate("Press Enter on a package to stop ignoring its updates."));
+                + " " + CoreTools.Translate("Press Enter on a package to update it once or to stop ignoring its updates."));
             if (picked is not int index) return;
 
             if (index < entries.Count)
             {
+                if (entries[index].Update is { } update)
+                {
+                    int? action = await TuiPrompts.ChooseAsync(entries[index].Name,
+                    [
+                        new TuiChoice(CoreTools.Translate("Update once")),
+                        new TuiChoice(CoreTools.Translate("Stop ignoring updates")),
+                    ]);
+                    if (action is not int actionIndex) continue;
+                    if (actionIndex == 0)
+                    {
+                        if (await TuiPackageActions.UpdateAsync([update], keepUpdatesPaused: true) > 0)
+                            TuiNotifications.Info(CoreTools.Translate("Ignored updates"),
+                                CoreTools.Translate("Updating {0} once. Its updates will stay ignored.", entries[index].Name));
+                        else
+                            TuiNotifications.Warning(CoreTools.Translate("Ignored updates"),
+                                CoreTools.Translate("{0} is already being updated", entries[index].Name));
+                        continue;
+                    }
+                }
+
                 await RemoveAsync(entries[index]);
                 TuiNotifications.Success(CoreTools.Translate("Ignored updates"),
                     CoreTools.Translate("Updates for {0} will no longer be ignored", entries[index].Name));

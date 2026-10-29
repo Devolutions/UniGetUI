@@ -40,7 +40,7 @@ internal static class TuiPackageActions
     }
 
     public static async Task<int> UpdateAsync(IEnumerable<IPackage> packages, bool? elevated = null,
-        bool? interactive = null, bool? skipHash = null)
+        bool? interactive = null, bool? skipHash = null, bool keepUpdatesPaused = false)
     {
         int started = 0;
         foreach (IPackage pkg in packages)
@@ -48,7 +48,7 @@ internal static class TuiPackageActions
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg, elevated: elevated,
                 interactive: interactive, no_integrity: skipHash);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
-            TuiOperationRegistry.Start(new UpdatePackageOperation(pkg, opts));
+            TuiOperationRegistry.Start(new UpdatePackageOperation(pkg, opts) { KeepUpdatesPaused = keepUpdatesPaused });
             started++;
         }
 

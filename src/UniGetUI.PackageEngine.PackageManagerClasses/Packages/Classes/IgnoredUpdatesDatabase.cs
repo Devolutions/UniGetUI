@@ -114,6 +114,7 @@ public static class IgnoredUpdatesDatabase
             loader.IgnoredPackages.TryGetValue(packageId, out var update)
             && GetIgnoredIdForPackage(update) == ignoredId
             && update.NewVersionString != update.VersionString
+            && !update.NewerVersionIsInstalled()
         )
             return update;
 

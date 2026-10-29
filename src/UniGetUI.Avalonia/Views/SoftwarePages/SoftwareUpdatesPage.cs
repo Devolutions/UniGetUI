@@ -398,7 +398,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         bool? interactive = null,
         bool? no_integrity = null,
         bool background = false,
-        bool keepUpdatesPaused = false)
+        bool keepUpdatesPaused = false,
+        Action<UpdatePackageOperation>? beforeStart = null)
     {
         List<UpdatePackageOperation> started = [];
         foreach (var pkg in packages)
@@ -414,6 +415,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
+            beforeStart?.Invoke(op);
             _ = op.MainThread();
             started.Add(op);
         }

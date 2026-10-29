@@ -173,6 +173,7 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
     {
         _ignoredId = ignoredId;
         _update = update;
+        IsUpdating = update?.Tag is PackageTag.OnQueue or PackageTag.BeingProcessed;
         Id = id;
         Name = name;
         Manager = manager;
@@ -195,26 +196,29 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
         if (_update is null || IsUpdating)
             return;
 
+        if (IgnoredUpdatesDatabase.GetAvailableUpdate(_ignoredId) is not { } update)
+        {
+            UpdateFinished?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         IsUpdating = true;
         try
         {
-            var operations = await SoftwareUpdatesPage.LaunchUpdate([_update], keepUpdatesPaused: true);
-            if (operations.Count == 0)
-            {
-                IsUpdating = false;
-                return;
-            }
-
-            var operation = operations[0];
-            operation.OperationFinished += async (_, _) =>
-            {
-                await operation.SuccessHandled;
-                Dispatcher.UIThread.Post(() =>
+            var operations = await SoftwareUpdatesPage.LaunchUpdate(
+                [update],
+                keepUpdatesPaused: true,
+                beforeStart: operation => operation.OperationFinished += async (_, _) =>
                 {
-                    IsUpdating = false;
-                    UpdateFinished?.Invoke(this, EventArgs.Empty);
+                    await operation.SuccessHandled;
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        IsUpdating = false;
+                        UpdateFinished?.Invoke(this, EventArgs.Empty);
+                    });
                 });
-            };
+            if (operations.Count == 0)
+                IsUpdating = false;
         }
         catch (Exception ex)
         {

@@ -80,7 +80,7 @@ internal static class IgnoredUpdatesDialog
 
             if (index < entries.Count)
             {
-                if (entries[index].Update is { } update)
+                if (entries[index].Update is not null)
                 {
                     int? action = await TuiPrompts.ChooseAsync(entries[index].Name,
                     [
@@ -90,7 +90,10 @@ internal static class IgnoredUpdatesDialog
                     if (action is not int actionIndex) continue;
                     if (actionIndex == 0)
                     {
-                        if (await TuiPackageActions.UpdateAsync([update], keepUpdatesPaused: true) > 0)
+                        if (IgnoredUpdatesDatabase.GetAvailableUpdate(entries[index].IgnoredId) is not { } current)
+                            TuiNotifications.Info(CoreTools.Translate("Ignored updates"),
+                                CoreTools.Translate("{0} is already up to date", entries[index].Name));
+                        else if (await TuiPackageActions.UpdateAsync([current], keepUpdatesPaused: true) > 0)
                             TuiNotifications.Info(CoreTools.Translate("Ignored updates"),
                                 CoreTools.Translate("Updating {0} once. Its updates will stay ignored.", entries[index].Name));
                         else

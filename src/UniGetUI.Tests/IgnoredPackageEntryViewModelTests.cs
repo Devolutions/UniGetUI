@@ -1,4 +1,5 @@
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -35,6 +36,18 @@ public class IgnoredPackageEntryViewModelTests
 
         Assert.False(entry.CanUpdate);
         Assert.Contains(nameof(IgnoredPackageEntryViewModel.CanUpdate), changed);
+    }
+
+    [Fact]
+    public void KeepsTheButtonHiddenForAnUpdateAlreadyRunningWhenTheRowIsRebuilt()
+    {
+        var update = Update();
+        update.SetTag(PackageTag.OnQueue);
+
+        var entry = Entry(update);
+
+        Assert.True(entry.IsUpdating);
+        Assert.False(entry.CanUpdate);
     }
 
     [Fact]

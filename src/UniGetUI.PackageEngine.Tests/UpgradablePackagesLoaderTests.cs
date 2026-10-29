@@ -258,6 +258,7 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
     {
         var manager = new PackageManagerBuilder().WithName("Alpha").Build();
         var otherManager = new PackageManagerBuilder().WithName("Beta").Build();
+        _ = new InstalledPackagesLoader([manager, otherManager]);
         var loader = new TestUpgradablePackagesLoader([manager, otherManager]);
         var update = new PackageBuilder()
             .WithManager(manager)
@@ -276,6 +277,7 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
     public void GetAvailableUpdate_IgnoresCachedEntriesWithoutANewVersion()
     {
         var manager = new PackageManagerBuilder().WithName("Alpha").Build();
+        _ = new InstalledPackagesLoader([manager]);
         var loader = new TestUpgradablePackagesLoader([manager]);
         var current = new PackageBuilder()
             .WithManager(manager)
@@ -284,6 +286,26 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
             .WithNewVersion("2.0.0")
             .Build();
         loader.IgnoredPackages[current.Id] = current;
+
+        Assert.Null(IgnoredUpdatesDatabase.GetAvailableUpdate("alpha\\Contoso.Tool"));
+    }
+
+    [Fact]
+    public async Task GetAvailableUpdate_IgnoresUpdatesAlreadyInstalledElsewhere()
+    {
+        var manager = new PackageManagerBuilder().WithName("Alpha").Build();
+        var installedLoader = new InstalledPackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+        var update = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        loader.IgnoredPackages[update.Id] = update;
+        await installedLoader.AddForeign(
+            new PackageBuilder().WithManager(manager).WithId("Contoso.Tool").WithVersion("2.0.0").Build()
+        );
 
         Assert.Null(IgnoredUpdatesDatabase.GetAvailableUpdate("alpha\\Contoso.Tool"));
     }

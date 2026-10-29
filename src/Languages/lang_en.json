@@ -2195,5 +2195,6 @@
   "Press Enter on a package to update it once or to stop ignoring its updates.": "Press Enter on a package to update it once or to stop ignoring its updates.",
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.",
   "Updating {0} once. Its updates will stay ignored.": "Updating {0} once. Its updates will stay ignored.",
-  "{0} is already being updated": "{0} is already being updated"
+  "{0} is already being updated": "{0} is already being updated",
+  "{0} is already up to date": "{0} is already up to date"
 }

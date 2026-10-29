@@ -4,6 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
+using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -81,6 +83,11 @@ public sealed class AgentSkillsSettingsControlTests
             Assert.True(toggle.Focusable);
             Assert.True(toggle.IsEffectivelyVisible);
             service.AssertNoHydrationWrites();
+            var discoveryHelp = Assert.Single(control.GetVisualDescendants().OfType<Expander>(),
+                expander => Equals(expander.Header, "How discovery works"));
+            Assert.False(discoveryHelp.IsExpanded);
+            discoveryHelp.IsExpanded = true;
+            host.Pump();
             foreach (string help in new[]
             {
                 "Off by default. When enabled, searches of at least two characters also send the search text to skills.sh. No sign-in is required.",
@@ -151,7 +158,22 @@ public sealed class AgentSkillsSettingsControlTests
         var sections = Assert.IsType<StackPanel>(control.Content).Children
             .Where(child => child is Expander || child is TextBlock text && text.Classes.Contains("section-heading"))
             .Select(child => child is TextBlock text ? text.Text : AutomationProperties.GetName(child)).ToArray();
-        Assert.Equal(["Sources", "Installation targets", "Notion integration (optional)", "Notifications", "Advanced options"], sections);
+        Assert.Equal(["Sources", "Online discovery", "Installation targets", "Notifications", "Notion integration (optional)"], sections);
+        Assert.Single(control.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Sources");
+        var cards = Assert.IsType<StackPanel>(control.Content).Children.OfType<Border>().ToArray();
+        Assert.Equal(4, cards.Length);
+        Assert.All(cards, card =>
+        {
+            Assert.Equal(cards[0].Bounds.X, card.Bounds.X);
+            Assert.Equal(cards[0].Bounds.Width, card.Bounds.Width);
+            Assert.True(card.Bounds.Width > 0);
+        });
+        var notion = Named<Expander>(control, "NotionExpander");
+        var advanced = Named<Expander>(control, "AdvancedExpander");
+        Assert.Contains(notion, advanced.GetLogicalAncestors());
+        Assert.Contains(advanced, Named<ComboBox>(control, "VersionPolicySelector").GetLogicalAncestors());
+        Assert.False(advanced.IsExpanded);
+        Assert.DoesNotContain(advanced, control.GetVisualDescendants());
         Assert.Empty(control.GetVisualDescendants().OfType<InstallOptionsPanel>());
         Assert.Empty(control.GetVisualDescendants().OfType<CheckboxCard_Dict>());
         Assert.DoesNotContain(control.GetVisualDescendants().OfType<ComboBox>(),
@@ -379,9 +401,36 @@ public sealed class AgentSkillsSettingsControlTests
         if (specific) Assert.False(Named<Button>(control, "InstallNotionButton").IsEnabled);
         host.Space(Named<Button>(control, "EditVersionButton"));
         Assert.True(vm.IsAdvancedExpanded);
+        Assert.True(vm.IsNotionExpanded);
+        Assert.True(Named<Expander>(control, "NotionExpander").IsExpanded);
         Assert.True(Named<Expander>(control, "AdvancedExpander").IsExpanded);
         Assert.True(specific ? Named<TextBox>(control, "VersionInput").IsFocused :
             Named<ComboBox>(control, "VersionPolicySelector").IsFocused);
+    }, CancellationToken.None);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task VersionEditRequest_ExpandsBothCollapsedSectionsAndFocusesEditor(bool specific) => _session.Dispatch(() =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var service = fixture.Service();
+        service.StoredVersion = specific ? "0.23.9" : "";
+        var vm = new AgentSkillsSettingsViewModel(service);
+        var control = new AgentSkillsSettingsControl(vm);
+        Assert.False(vm.IsNotionExpanded);
+        Assert.False(vm.IsAdvancedExpanded);
+        // Exercise the routed edit request before attachment, when both ancestors are collapsed.
+        // Real keyboard activation of the visible edit button is covered separately above.
+        Named<Button>(control, "EditVersionButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        using var host = new AgentSkillsSettingsTestWindow(control);
+        Assert.True(vm.IsNotionExpanded);
+        Assert.True(vm.IsAdvancedExpanded);
+        Assert.True(Named<Expander>(control, "NotionExpander").IsExpanded);
+        Assert.True(Named<Expander>(control, "AdvancedExpander").IsExpanded);
+        Assert.True(specific ? Named<TextBox>(control, "VersionInput").IsFocused :
+            Named<ComboBox>(control, "VersionPolicySelector").IsFocused);
+        service.AssertNoHydrationWrites();
     }, CancellationToken.None);
 
     [Fact]

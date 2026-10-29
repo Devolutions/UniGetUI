@@ -3,14 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
-             xmlns:local="using:UniGetUI.Avalonia.Views.Pages.SettingsPages"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              x:DataType="vm:AgentSkillsSettingsViewModel">
     <UserControl.Styles>
         <Style Selector="TextBlock.section-heading">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="44,24,40,8"/>
+            <Setter Property="Margin" Value="4,24,0,8"/>
         </Style>
         <Style Selector="TextBlock.help">
             <Setter Property="TextWrapping" Value="Wrap"/>
@@ -21,17 +20,16 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Foreground" Value="{DynamicResource StatusErrorForeground}"/>
         </Style>
-        <Style Selector="local|SourceManagerCard ItemsControl TextBlock">
-            <Setter Property="MaxWidth" Value="240"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-        </Style>
     </UserControl.Styles>
-    <StackPanel Spacing="8">
+    <StackPanel Spacing="8" Margin="40,0" MaxWidth="1000" HorizontalAlignment="Stretch">
         <TextBlock Classes="section-heading" Text="{t:Translate Sources}"
                    automation:AutomationProperties.HeadingLevel="2"/>
-        <TextBlock Classes="help" Margin="44,0,44,4"
-                   Text="{t:Translate 'Discover searches your added sources. Optionally include the public skills.sh catalog using the switch below.'}"/>
-        <Border Classes="settings-card" Margin="40,0" Padding="16,12" CornerRadius="8" BorderThickness="1">
+        <Border Classes="settings-card" Padding="16,12" CornerRadius="8" BorderThickness="1">
+            <ContentControl x:Name="SourcesHolder"/>
+        </Border>
+        <TextBlock Classes="section-heading" Text="{t:Translate Online discovery}"
+                   automation:AutomationProperties.HeadingLevel="2"/>
+        <Border Classes="settings-card" Padding="16,12" CornerRadius="8" BorderThickness="1">
             <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Text="{t:Translate Search skills.sh}" VerticalAlignment="Center"
@@ -41,19 +39,23 @@
                                   automation:AutomationProperties.Name="{t:Translate Search skills.sh}"/>
                 </Grid>
                 <TextBlock Classes="help"
-                           Text="{t:Translate 'Off by default. When enabled, searches of at least two characters also send the search text to skills.sh. No sign-in is required.'}"/>
-                <TextBlock Classes="help"
-                           Text="{t:Translate 'Installing a result saves its source so updates keep working when skills.sh discovery is off. Review skills before installing them.'}"/>
+                           Text="{t:Translate 'Include the public skills.sh catalog in Discover. Search text is sent to skills.sh; no sign-in is required. Off by default.'}"/>
+                <Expander Header="{t:Translate How discovery works}" HorizontalAlignment="Stretch">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="help"
+                                   Text="{t:Translate 'Off by default. When enabled, searches of at least two characters also send the search text to skills.sh. No sign-in is required.'}"/>
+                        <TextBlock Classes="help"
+                                   Text="{t:Translate 'Installing a result saves its source so updates keep working when skills.sh discovery is off. Review skills before installing them.'}"/>
+                    </StackPanel>
+                </Expander>
                 <TextBlock x:Name="SkillsShDiscoveryErrorText" Classes="validation-error"
                            Text="{Binding SkillsShDiscoveryError}" IsVisible="{Binding HasSkillsShDiscoveryError}"
                            automation:AutomationProperties.LiveSetting="Assertive"/>
             </StackPanel>
         </Border>
-        <ContentControl x:Name="SourcesHolder"/>
-
         <TextBlock Classes="section-heading" Text="{t:Translate Installation targets}"
                    automation:AutomationProperties.HeadingLevel="2"/>
-        <Border Classes="settings-card" Margin="40,0" Padding="16,12" CornerRadius="8" BorderThickness="1">
+        <Border Classes="settings-card" Padding="16,12" CornerRadius="8" BorderThickness="1">
             <StackPanel Spacing="10">
                 <ComboBox x:Name="TargetModeSelector" ItemsSource="{Binding TargetModes}"
                           SelectedIndex="{Binding TargetMode, Mode=TwoWay}"
@@ -84,7 +86,19 @@
             </StackPanel>
         </Border>
 
-        <Expander x:Name="NotionExpander" Margin="40,16,40,0" HorizontalAlignment="Stretch"
+        <TextBlock Classes="section-heading" Text="{t:Translate Notifications}"
+                   automation:AutomationProperties.HeadingLevel="2"/>
+        <Border Classes="settings-card" Padding="16,12" CornerRadius="8" BorderThickness="1">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{t:Translate Notify me about skill updates}" VerticalAlignment="Center"
+                           TextWrapping="Wrap" Margin="0,0,12,0"/>
+                <ToggleSwitch x:Name="NotificationsToggle" Grid.Column="1"
+                              IsChecked="{Binding NotificationsEnabled, Mode=TwoWay}"
+                              automation:AutomationProperties.Name="{t:Translate Notify me about skill updates}"/>
+            </Grid>
+        </Border>
+
+        <Expander x:Name="NotionExpander" Margin="0,16,0,0" HorizontalAlignment="Stretch"
                   HorizontalContentAlignment="Stretch" IsExpanded="{Binding IsNotionExpanded, Mode=TwoWay}"
                   automation:AutomationProperties.Name="{t:Translate Notion integration (optional)}">
             <Expander.Header>
@@ -119,46 +133,33 @@
                 <Button x:Name="EditVersionButton" Content="{t:Translate Notion CLI version policy}"
                         HorizontalAlignment="Left"
                         automation:AutomationProperties.Name="{t:Translate Notion CLI version policy}"/>
-            </StackPanel>
-        </Expander>
-
-        <TextBlock Classes="section-heading" Text="{t:Translate Notifications}"
-                   automation:AutomationProperties.HeadingLevel="2"/>
-        <Border Classes="settings-card" Margin="40,0" Padding="16,12" CornerRadius="8" BorderThickness="1">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="{t:Translate Notify me about skill updates}" VerticalAlignment="Center"
-                           TextWrapping="Wrap" Margin="0,0,12,0"/>
-                <ToggleSwitch x:Name="NotificationsToggle" Grid.Column="1"
-                              IsChecked="{Binding NotificationsEnabled, Mode=TwoWay}"
-                              automation:AutomationProperties.Name="{t:Translate Notify me about skill updates}"/>
-            </Grid>
-        </Border>
-
-        <Expander x:Name="AdvancedExpander" Margin="40,16,40,0" HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Stretch" IsExpanded="{Binding IsAdvancedExpanded, Mode=TwoWay}"
-                  automation:AutomationProperties.Name="{t:Translate Advanced options}">
-            <Expander.Header>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="{t:Translate Advanced options}" FontWeight="SemiBold"
-                               automation:AutomationProperties.HeadingLevel="2"/>
-                    <TextBlock Classes="help" Text="{Binding VersionSummary}"/>
-                </StackPanel>
-            </Expander.Header>
-            <StackPanel Spacing="10" Margin="16,8,16,16">
-                <TextBlock Text="{t:Translate Notion CLI version policy}" FontWeight="SemiBold"/>
-                <ComboBox x:Name="VersionPolicySelector" ItemsSource="{Binding VersionPolicies}"
-                          SelectedIndex="{Binding VersionPolicy, Mode=TwoWay}"
-                          HorizontalAlignment="Left" MaxWidth="400"
-                          automation:AutomationProperties.Name="{t:Translate Notion CLI version policy}"/>
-                <TextBox x:Name="VersionInput" Text="{Binding VersionText, Mode=TwoWay}"
-                         IsVisible="{Binding SpecificVersion}" PlaceholderText="1.2.3"
-                         HorizontalAlignment="Left" MinWidth="200" MaxWidth="400"
-                         automation:AutomationProperties.Name="{t:Translate Specific Notion CLI version}"/>
-                <TextBlock x:Name="VersionErrorText" Classes="validation-error" Text="{Binding VersionError}"
-                           IsVisible="{Binding HasVersionError}" automation:AutomationProperties.LiveSetting="Assertive"/>
-                <TextBlock Classes="help"
-                           Text="{t:Translate A specific version is used the next time UniGetUI installs the Notion CLI. It also suppresses updates for its WinGet and npm packages until you choose Latest available. It does not replace an already installed CLI.}"/>
-                <TextBlock Classes="help" Text="{t:Translate Valid changes save automatically.}"/>
+                <Expander x:Name="AdvancedExpander" HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Stretch" IsExpanded="{Binding IsAdvancedExpanded, Mode=TwoWay}"
+                          automation:AutomationProperties.Name="{t:Translate Advanced options}">
+                    <Expander.Header>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{t:Translate Advanced options}" FontWeight="SemiBold"
+                                       automation:AutomationProperties.HeadingLevel="3"/>
+                            <TextBlock Classes="help" Text="{Binding VersionSummary}"/>
+                        </StackPanel>
+                    </Expander.Header>
+                    <StackPanel Spacing="10" Margin="16,8,16,16">
+                        <TextBlock Text="{t:Translate Notion CLI version policy}" FontWeight="SemiBold"/>
+                        <ComboBox x:Name="VersionPolicySelector" ItemsSource="{Binding VersionPolicies}"
+                                  SelectedIndex="{Binding VersionPolicy, Mode=TwoWay}"
+                                  HorizontalAlignment="Left" MaxWidth="400"
+                                  automation:AutomationProperties.Name="{t:Translate Notion CLI version policy}"/>
+                        <TextBox x:Name="VersionInput" Text="{Binding VersionText, Mode=TwoWay}"
+                                 IsVisible="{Binding SpecificVersion}" PlaceholderText="1.2.3"
+                                 HorizontalAlignment="Left" MinWidth="200" MaxWidth="400"
+                                 automation:AutomationProperties.Name="{t:Translate Specific Notion CLI version}"/>
+                        <TextBlock x:Name="VersionErrorText" Classes="validation-error" Text="{Binding VersionError}"
+                                   IsVisible="{Binding HasVersionError}" automation:AutomationProperties.LiveSetting="Assertive"/>
+                        <TextBlock Classes="help"
+                                   Text="{t:Translate A specific version is used the next time UniGetUI installs the Notion CLI. It also suppresses updates for its WinGet and npm packages until you choose Latest available. It does not replace an already installed CLI.}"/>
+                        <TextBlock Classes="help" Text="{t:Translate Valid changes save automatically.}"/>
+                    </StackPanel>
+                </Expander>
             </StackPanel>
         </Expander>
     </StackPanel>

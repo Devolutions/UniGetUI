@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Layout;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -14,6 +16,7 @@ internal sealed class AgentSkillsSourcesControl : UserControl
     private readonly StackPanel _rows = new() { Spacing = 8 };
     private readonly TextBox _address = new() { PlaceholderText = CoreTools.Translate("Repository or skills index URL") };
     private readonly TextBlock _status = new() { TextWrapping = global::Avalonia.Media.TextWrapping.Wrap };
+    private readonly TextBlock _empty = new() { Text = CoreTools.Translate("No sources added yet."), TextWrapping = global::Avalonia.Media.TextWrapping.Wrap };
     private readonly Button _add = new() { Content = CoreTools.Translate("Add source") };
     private readonly Button _cancel = new() { Content = CoreTools.Translate("Cancel"), IsVisible = false };
     private CancellationTokenSource? _operation;
@@ -23,20 +26,34 @@ internal sealed class AgentSkillsSourcesControl : UserControl
     {
         _service = service;
         AutomationProperties.SetName(_address, CoreTools.Translate("Repository or skills index URL"));
+        var editor = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 8, HorizontalAlignment = HorizontalAlignment.Stretch };
+        Grid.SetColumn(_add, 1);
+        editor.Children.Add(_address);
+        editor.Children.Add(_add);
         Content = new StackPanel
         {
             Spacing = 8,
-            Margin = new Thickness(0, 8),
             Children =
             {
-                new TextBlock { Text = CoreTools.Translate("Sources"), FontWeight = global::Avalonia.Media.FontWeight.SemiBold },
-                _rows, _address, _add, _cancel, _status,
+                _rows, _empty,
+                new TextBlock { Text = CoreTools.Translate("Add a GitHub repository (owner/repo), git URL, HTTPS skills index, or Notion source."),
+                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap },
+                editor, _cancel, _status,
             },
         };
         _add.Click += async (_, _) => await AddAsync();
         _cancel.Click += (_, _) => _operation?.Cancel();
+        _address.KeyDown += async (_, e) =>
+        {
+            if (e.Key != Key.Enter) return;
+            e.Handled = true;
+            await AddAsync();
+        };
+        AutomationProperties.SetLiveSetting(_status, AutomationLiveSetting.Polite);
         Reload();
     }
+    internal void FocusAddress() => _address.Focus();
+
     private void Reload()
     {
         _rows.Children.Clear();
@@ -50,12 +67,18 @@ internal sealed class AgentSkillsSourcesControl : UserControl
                 try { _service.RemoveSource(source); Reload(); SourcesChanged?.Invoke(this, EventArgs.Empty); }
                 catch (Exception ex) { ShowError(ex); }
             };
-            _rows.Children.Add(new StackPanel
+            var row = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 12 };
+            Grid.SetColumn(remove, 1);
+            row.Children.Add(new TextBlock
             {
-                Spacing = 4,
-                Children = { new TextBlock { Text = source.Name, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap }, remove },
+                Text = source.InstallSource,
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center,
             });
+            row.Children.Add(remove);
+            _rows.Children.Add(row);
         }
+        _empty.IsVisible = _rows.Children.Count == 0;
     }
     private async Task AddAsync()
     {
@@ -63,6 +86,7 @@ internal sealed class AgentSkillsSourcesControl : UserControl
         using var cancel = new CancellationTokenSource();
         _operation = cancel;
         _add.IsEnabled = false;
+        _address.IsEnabled = false;
         _cancel.IsVisible = true;
         try
         {
@@ -70,7 +94,11 @@ internal sealed class AgentSkillsSourcesControl : UserControl
                 ?? throw new ArgumentException(CoreTools.Translate("Enter a valid skill source."));
             if (AgentSkillsDependencies.ForSource(source) is { } dependency)
                 await AvaloniaBootstrapper.PromptForMissingDependencyAsync(dependency);
-            await _service.AddSourceAsync(source.InstallSource, new Progress<string>(line => _status.Text = line), cancel.Token);
+            cancel.Token.ThrowIfCancellationRequested();
+            await _service.AddSourceAsync(source.InstallSource, new Progress<string>(line =>
+            {
+                if (!cancel.IsCancellationRequested && ReferenceEquals(_operation, cancel)) _status.Text = line;
+            }), cancel.Token);
             _address.Text = "";
             _status.Text = CoreTools.Translate("Source added");
             AccessibilityAnnouncementService.Announce(_status.Text);
@@ -79,7 +107,12 @@ internal sealed class AgentSkillsSourcesControl : UserControl
         }
         catch (OperationCanceledException) { _status.Text = CoreTools.Translate("Cancelled"); }
         catch (Exception ex) { ShowError(ex); }
-        finally { _operation = null; _add.IsEnabled = true; _cancel.IsVisible = false; }
+        finally { _operation = null; _add.IsEnabled = true; _address.IsEnabled = true; _cancel.IsVisible = false; }
+    }
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Reload();
     }
     private void ShowError(Exception ex)
     {

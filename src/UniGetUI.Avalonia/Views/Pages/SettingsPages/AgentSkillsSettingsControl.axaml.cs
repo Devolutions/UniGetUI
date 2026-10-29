@@ -65,6 +65,7 @@ public sealed partial class AgentSkillsSettingsControl : UserControl, ISettingsP
 
     private void FocusVersion()
     {
+        _viewModel.IsNotionExpanded = true;
         _viewModel.IsAdvancedExpanded = true;
         Dispatcher.UIThread.Post(() =>
         {

@@ -6,39 +6,157 @@
              xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              x:Class="UniGetUI.Avalonia.Views.Pages.AgentSkillsPage"
              x:DataType="vm:AgentSkillsViewModel">
-    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24" RowSpacing="12">
-        <TextBlock Text="{t:Translate Agent Skills}" FontSize="26" FontWeight="SemiBold"/>
-        <WrapPanel Grid.Row="1">
-            <ComboBox ItemsSource="{Binding Modes}" SelectedIndex="{Binding Mode}" IsEnabled="{Binding !IsBusy}" MinWidth="140" Margin="0,0,8,8"/>
-            <TextBox Text="{Binding Query}" PlaceholderText="{t:Translate Search skills}" MinWidth="240" Margin="0,0,8,8"
-                     automation:AutomationProperties.Name="{t:Translate Search skills}"/>
-            <Button Content="{t:Translate Refresh}" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}" Margin="0,0,8,8"/>
-            <Button Content="{t:Translate Install}" Command="{Binding InstallCommand}" IsEnabled="{Binding CanInstall}" Margin="0,0,8,8"/>
-            <Button Content="{t:Translate Update}" Command="{Binding UpdateCommand}" IsEnabled="{Binding CanUpdate}" Margin="0,0,8,8"/>
-            <Button Content="{t:Translate Uninstall}" Command="{Binding RemoveCommand}" IsEnabled="{Binding CanRemove}" Margin="0,0,8,8"/>
-            <Button Content="{t:Translate Cancel}" Command="{Binding CancelCommand}" IsEnabled="{Binding IsBusy}" Margin="0,0,8,8"/>
-        </WrapPanel>
-        <ListBox Grid.Row="2" ItemsSource="{Binding Skills}" SelectedItem="{Binding SelectedSkill}"
-                 automation:AutomationProperties.Name="{t:Translate Agent Skills}">
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="skills:SkillItem">
-                    <StackPanel Margin="8" Spacing="4">
-                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Id}" Opacity="0.7"/>
-                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding Provenance}" TextWrapping="Wrap" Opacity="0.7"/>
-                        <TextBlock Text="{Binding NewVersion}" Opacity="0.7"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-        <StackPanel Grid.Row="3" Spacing="8">
-            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3"/>
-            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" automation:AutomationProperties.LiveSetting="Polite"/>
-            <ScrollViewer MaxHeight="120">
-                <TextBlock Text="{Binding Output}" TextWrapping="Wrap"/>
+    <UserControl.Styles>
+        <Style Selector="Border.skills-panel">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="ListBox#SkillList ListBoxItem">
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="TabStrip#ModeTabs TabStripItem">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="MinHeight" Value="40"/>
+        </Style>
+    </UserControl.Styles>
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="16,12" RowSpacing="12">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="4">
+                <TextBlock Text="{t:Translate Agent Skills}" FontSize="28" FontWeight="SemiBold"
+                           automation:AutomationProperties.HeadingLevel="1"/>
+                <TextBlock Text="{t:Translate Find and manage skills for your coding agents.}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+            <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                <ToggleButton x:Name="ManageSourcesButton" Content="{t:Translate Manage sources}"
+                              IsChecked="{Binding ShowSources, Mode=TwoWay}" IsEnabled="{Binding !IsBusy}"
+                              Click="ManageSourcesClicked" Margin="0,0,8,0"/>
+                <Button x:Name="SettingsButton" Content="{t:Translate Settings}" Click="OpenSettings"/>
+            </WrapPanel>
+        </Grid>
+        <TabStrip Grid.Row="1" x:Name="ModeTabs" SelectedIndex="{Binding Mode, Mode=TwoWay}"
+                  IsEnabled="{Binding !IsBusy}" SelectionChanged="ModeChanged"
+                  automation:AutomationProperties.Name="{t:Translate Skill views}">
+            <TabStripItem Content="{t:Translate Discover}"/>
+            <TabStripItem Content="{Binding InstalledHeader}"/>
+            <TabStripItem Content="{Binding UpdatesHeader}" ToolTip.Tip="{Binding BackgroundStatus}"
+                          automation:AutomationProperties.HelpText="{Binding BackgroundStatus}"/>
+        </TabStrip>
+        <Panel Grid.Row="2" IsVisible="{Binding !ShowSources}">
+            <WrapPanel x:Name="SearchToolbar" IsVisible="{Binding !NeedsSetup}" ItemSpacing="8" LineSpacing="8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Width="400" MaxWidth="{Binding $parent[UserControl].Bounds.Width}">
+                    <TextBox x:Name="SkillSearch" Text="{Binding Query, Mode=TwoWay}" PlaceholderText="{Binding SearchLabel}"
+                             KeyDown="SearchKeyDown" automation:AutomationProperties.Name="{Binding SearchLabel}"/>
+                    <Button Grid.Column="1" x:Name="SearchButton" Content="{Binding RefreshLabel}" Command="{Binding RefreshCommand}"
+                            IsEnabled="{Binding !IsBusy}"/>
+                </Grid>
+                <ComboBox x:Name="SourceFilter" ItemsSource="{Binding Sources}" SelectedItem="{Binding SourceFilter, Mode=TwoWay}"
+                          MaxWidth="240" MinWidth="130"
+                          automation:AutomationProperties.Name="{t:Translate Filter by source}"/>
+                <ComboBox x:Name="AgentFilter" ItemsSource="{Binding Agents}" SelectedItem="{Binding AgentFilter, Mode=TwoWay}"
+                          IsVisible="{Binding !IsDiscover}" MaxWidth="200" MinWidth="130"
+                          automation:AutomationProperties.Name="{t:Translate Filter by installed agent}"/>
+                <Button Content="{t:Translate Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+            </WrapPanel>
+        </Panel>
+        <Grid Grid.Row="3" x:Name="ResultsLayout" ColumnDefinitions="*,Auto" RowDefinitions="*,Auto"
+              IsVisible="{Binding !ShowSources}"
+              ColumnSpacing="12" RowSpacing="12">
+            <Border x:Name="ResultsPanel" Classes="skills-panel" IsVisible="{Binding !ShowEmpty}">
+                <Panel>
+                    <ListBox x:Name="SkillList" ItemsSource="{Binding Skills}" SelectedItem="{Binding SelectedSkill, Mode=TwoWay}"
+                             Background="Transparent" BorderThickness="0"
+                             automation:AutomationProperties.Name="{t:Translate Agent Skills}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="skills:SkillItem">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MaxLines="2"/>
+                                    <TextBlock Text="{Binding Provenance}" TextWrapping="Wrap" FontSize="12"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3" VerticalAlignment="Top"/>
+                </Panel>
+            </Border>
+            <ScrollViewer IsVisible="{Binding ShowEmpty}" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="EmptyState" HorizontalAlignment="Left" VerticalAlignment="Top"
+                            MaxWidth="560" Margin="0,24,24,24" Spacing="12">
+                    <TextBlock Text="{Binding EmptyTitle}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding EmptyDescription}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <WrapPanel IsVisible="{Binding IsDiscover}" ItemSpacing="8" LineSpacing="8" Margin="0,4,0,0">
+                        <Button x:Name="AddFirstSourceButton" Content="{t:Translate Add source}" Classes="accent" Click="ShowSources"/>
+                        <Button x:Name="DiscoverySettingsButton" Content="{t:Translate Configure skills.sh}"
+                                Click="OpenDiscoverySettings"/>
+                    </WrapPanel>
+                    <Button Content="{t:Translate Discover skills}" IsVisible="{Binding IsInstalled}"
+                            HorizontalAlignment="Left" Classes="accent" Click="OpenDiscover"/>
+                    <Button Content="{t:Translate Retry}" IsVisible="{Binding HasError}"
+                            HorizontalAlignment="Left" Command="{Binding RefreshCommand}"/>
+                </StackPanel>
             </ScrollViewer>
-            <TextBlock Text="{t:Translate Manage sources and installation targets in Settings > Extensions > Agent Skills.}" TextWrapping="Wrap" Opacity="0.7"/>
+            <Border x:Name="DetailsHost" Grid.Column="1" Classes="skills-panel" Padding="16"
+                    Width="340" IsVisible="{Binding HasSelection}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{t:Translate Skill details}" FontSize="18" FontWeight="SemiBold"
+                                   automation:AutomationProperties.HeadingLevel="2"/>
+                        <StackPanel DataContext="{Binding SelectedSkill}" x:DataType="skills:SkillItem" Spacing="8">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Id}" TextWrapping="Wrap" FontSize="12"/>
+                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Provenance}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Source.InstallSource}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding IsUpdates}" Spacing="4">
+                            <TextBlock Text="{t:Translate Available version}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding SelectedSkill.NewVersion}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Button Content="{t:Translate Open source}" Command="{Binding OpenSourceCommand}"
+                                IsEnabled="{Binding CanOpenSource}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding InstallationSummary}" IsVisible="{Binding IsDiscover}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{t:Translate Review the source before installing. Agent compatibility depends on the skill and the selected agent.}"
+                                   IsVisible="{Binding IsDiscover}" TextWrapping="Wrap"/>
+                        <Button x:Name="InstallButton" Content="{t:Translate Install}" Classes="accent"
+                                Command="{Binding InstallCommand}" IsVisible="{Binding IsDiscover}" IsEnabled="{Binding CanInstall}"/>
+                        <Button x:Name="UpdateButton" Content="{t:Translate Update}" Classes="accent"
+                                Command="{Binding UpdateCommand}" IsVisible="{Binding IsUpdates}" IsEnabled="{Binding CanUpdate}"/>
+                        <Button x:Name="RemoveButton" Content="{t:Translate Uninstall}" Command="{Binding RemoveCommand}"
+                                IsVisible="{Binding IsInstalled}" IsEnabled="{Binding CanRemove}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+        <Border Grid.Row="3" x:Name="SourcesPanel" Classes="skills-panel"
+                Background="Transparent" BorderThickness="0" Padding="0,12,0,0"
+                MaxWidth="800" HorizontalAlignment="Left" VerticalAlignment="Top"
+                IsVisible="{Binding ShowSources}" IsEnabled="{Binding !IsBusy}">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="16">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <TextBlock Text="{t:Translate Sources}" FontSize="20" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" automation:AutomationProperties.HeadingLevel="2"/>
+                        <Button Grid.Column="1" x:Name="CloseSourcesButton" Content="{t:Translate Close}" Click="CloseSources"/>
+                    </Grid>
+                    <ContentControl x:Name="SourcesHost"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+        <StackPanel Grid.Row="4" Spacing="8">
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" automation:AutomationProperties.LiveSetting="Polite"/>
+            <Expander Header="{t:Translate Activity}" IsVisible="{Binding HasOutput}" HorizontalAlignment="Stretch">
+                <ScrollViewer MaxHeight="140" HorizontalScrollBarVisibility="Disabled">
+                    <SelectableTextBlock Text="{Binding Output}" TextWrapping="Wrap" Margin="12"/>
+                </ScrollViewer>
+            </Expander>
         </StackPanel>
     </Grid>
 </UserControl>

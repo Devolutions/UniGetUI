@@ -73,7 +73,7 @@ Enable the optional desktop extension under **Settings > Extensions > Agent Skil
 dedicated sidebar page. It is off by default and independent of the bundled CLI. Skills are not
 package managers: `package search/install/update/uninstall`, package bundles and the TUI do not
 include them.
-The optional **Settings > Extensions > Agent Skills > Sources > Search skills.sh** switch also includes
+The optional **Settings > Extensions > Agent Skills > Online discovery > Search skills.sh** switch also includes
 the public skills.sh catalog for searches of at least two characters. It is off by default;
 enabling it sends search text to skills.sh. This applies only to discovery on the Agent Skills
 extension page; the bundled `skills` CLI does not provide a public-catalog `find` command.

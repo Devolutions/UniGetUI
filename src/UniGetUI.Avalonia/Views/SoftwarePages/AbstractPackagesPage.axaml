@@ -737,7 +737,8 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Tag="Name" SortMemberPath="Package.Name"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NameHeaderText}"
-                                                        Width="*">
+                                                        Width="*"
+                                                        IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NameColumnVisible}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
@@ -773,7 +774,8 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Tag="Id" SortMemberPath="Package.Id"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).IdHeaderText}"
-                                                        Width="*">
+                                                        Width="*"
+                                                        IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).IdColumnVisible}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
@@ -788,7 +790,8 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Tag="Version" SortMemberPath="VersionComboString"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).VersionHeaderText}"
-                                                        Width="*">
+                                                        Width="*"
+                                                        IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).VersionColumnVisible}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
@@ -832,7 +835,8 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Tag="Source" SortMemberPath="Package.Source.AsString_DisplayName"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).SourceHeaderText}"
-                                                        Width="*">
+                                                        Width="*"
+                                                        IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).SourceColumnVisible}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
@@ -845,7 +849,7 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn CanUserSort="False"
+                                <DataGridTemplateColumn Tag="InstallerHost" CanUserSort="False"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).InstallerHostHeaderText}"
                                                         Width="*"
                                                         IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).InstallerHostColumnVisible}">
@@ -869,7 +873,7 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn CanUserSort="False"
+                                <DataGridTemplateColumn Tag="DownloadSize" CanUserSort="False"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).DownloadSizeHeaderText}"
                                                         Width="*"
                                                         IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).DownloadSizeColumnVisible}">
@@ -886,7 +890,7 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn CanUserSort="False"
+                                <DataGridTemplateColumn Tag="ReleaseDate" CanUserSort="False"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).ReleaseDateHeaderText}"
                                                         Width="*"
                                                         IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).ReleaseDateColumnVisible}">

@@ -82,6 +82,14 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 UpdateSortMenuChecks();
                 SyncOrderByButtonName();
             }
+            if (args.PropertyName is nameof(PackagesPageViewModel.DownloadSizeColumnVisible))
+                OrderByDownloadSize_Menu.IsVisible = ViewModel.DownloadSizeColumnVisible;
+            if (args.PropertyName is nameof(PackagesPageViewModel.ReleaseDateColumnVisible))
+                OrderByReleaseDate_Menu.IsVisible = ViewModel.ReleaseDateColumnVisible;
+            if (args.PropertyName is nameof(PackagesPageViewModel.InstallerHostColumnVisible)
+                                  or nameof(PackagesPageViewModel.DownloadSizeColumnVisible)
+                                  or nameof(PackagesPageViewModel.ReleaseDateColumnVisible))
+                LoadRealizedRowValues();
             if (args.PropertyName is nameof(PackagesPageViewModel.IsFilterPaneOpen))
             {
                 SyncFiltersButtonName();
@@ -193,6 +201,8 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         // Overlay backdrop dismisses the filter pane when tapped.
         FilterOverlayBackdrop.PointerPressed += (_, _) => ViewModel.IsFilterPaneOpen = false;
+
+        PackageList.AddHandler(ContextRequestedEvent, PackageList_ContextRequested, RoutingStrategies.Tunnel);
 
         // Wire context menu (built by subclass)
         _contextMenu = GenerateContextMenu();
@@ -599,6 +609,62 @@ public abstract partial class AbstractPackagesPage : UserControl,
             else
                 _ = ShowDetailsForPackage(pkg);
             e.Handled = true;
+        }
+    }
+
+    private void PackageList_ContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (e.Source is not Visual source
+            || (source is not DataGridColumnHeader && source.FindAncestorOfType<DataGridColumnHeader>() is null))
+            return;
+
+        e.Handled = true;
+        BuildColumnsMenu().Open(PackageList);
+    }
+
+    private ContextMenu BuildColumnsMenu()
+    {
+        var vm = ViewModel;
+        var menu = new ContextMenu();
+        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Package Name"), PackagesPageViewModel.NameColumn, vm.NameColumnVisible));
+        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Package ID"), PackagesPageViewModel.IdColumn, vm.IdColumnVisible));
+        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Version"), PackagesPageViewModel.VersionColumn, vm.VersionColumnVisible));
+        if (vm.RoleIsUpdateLike)
+            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("New version"), PackagesPageViewModel.NewVersionColumn, vm.NewVersionHeaderVisible));
+        menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Source"), PackagesPageViewModel.SourceColumn, vm.SourceColumnVisible));
+        if (vm.OptionalColumnsAvailable)
+        {
+            menu.Items.Add(new Separator());
+            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Installer host"), PackagesPageViewModel.InstallerHostColumn, vm.InstallerHostColumnVisible));
+            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Download size"), PackagesPageViewModel.DownloadSizeColumn, vm.DownloadSizeColumnVisible));
+            menu.Items.Add(ColumnMenuItem(CoreTools.Translate("Release date"), PackagesPageViewModel.ReleaseDateColumn, vm.ReleaseDateColumnVisible));
+        }
+
+        var shown = menu.Items.OfType<MenuItem>().Where(item => item.IsChecked).ToList();
+        if (shown.Count == 1) shown[0].IsEnabled = false;
+        return menu;
+    }
+
+    private static MenuItem ColumnMenuItem(string label, string column, bool isChecked)
+    {
+        var item = new MenuItem
+        {
+            Header = label,
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = isChecked,
+        };
+        item.Click += (_, _) => PackagesPageViewModel.SetColumnVisible(column, !isChecked);
+        return item;
+    }
+
+    private void LoadRealizedRowValues()
+    {
+        foreach (DataGridRow row in PackageList.GetVisualDescendants().OfType<DataGridRow>())
+        {
+            if (row.DataContext is not PackageWrapper wrapper) continue;
+            wrapper.EnsureInstallerHostLoaded();
+            wrapper.EnsureDownloadSizeLoaded();
+            wrapper.EnsureReleaseDateLoaded();
         }
     }
 

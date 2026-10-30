@@ -55,6 +55,9 @@ internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkills
         CancellationToken cancellationToken
     ) => CreateClient(useGitHubToken: true).GetAvailableSkills(source, false, progress, cancellationToken);
 
+    public SkillPreview PreviewSkill(string source, string skill, CancellationToken cancellationToken) =>
+        CreateClient(useGitHubToken: true).PreviewSkill(source, skill, cancellationToken);
+
     public SkillInstallResult Install(
         string source,
         string skill,

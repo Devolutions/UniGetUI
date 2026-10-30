@@ -9,13 +9,20 @@ namespace UniGetUI.Extensions.AgentSkills;
 
 public enum SkillAction { Install, Update, Remove }
 
+public sealed record SourceAddResult(SkillSourceLocator Source, bool Added);
+
 public sealed record SkillItem(string Id, string Description, SkillSourceLocator? Source,
-    string Version = "latest", string? NewVersion = null, IReadOnlyList<string>? Agents = null)
+    string Version = "latest", string? NewVersion = null, IReadOnlyList<string>? Agents = null,
+    bool IsInstalled = false, bool HasUpdate = false)
 {
     public string Name => CoreTools.FormatAsName(Id);
     public string SourceName => Source?.Name ?? CoreTools.Translate("Local");
     public string Provenance => $"{SourceName} · {Version}"
         + (Agents is { Count: > 0 } ? $" · {string.Join(", ", Agents)}" : "");
+    public string DiscoverStatus => HasUpdate ? CoreTools.Translate("Update available")
+        : IsInstalled ? CoreTools.Translate("Installed") : "";
+    public bool HasDiscoverStatus => IsInstalled || HasUpdate;
+    public bool CanInstallFromDiscover => !IsInstalled && !HasUpdate;
 }
 
 /// <summary>
@@ -114,6 +121,12 @@ public sealed class AgentSkillsService
     }
 
     public IReadOnlyList<AgentInfo> GetSupportedAgents() => _backend.GetAgents();
+    public Task<SkillPreview> PreviewAsync(SkillItem skill, CancellationToken token = default)
+    {
+        var source = GetInstallSource(skill) ?? throw NotAllowed(skill.SourceName);
+        return Task.Run(() => _backend.PreviewSkill(source.InstallSource, skill.Id, token), token);
+    }
+
     public bool HasNotionSources => GetConfiguredSources().Any(source => source.Kind is SkillSourceKind.Notion);
     public Task<NotionStatus> GetNotionStatusAsync() =>
         Task.Run(() => _backend.GetNotionStatus(CancellationToken.None));
@@ -143,8 +156,14 @@ public sealed class AgentSkillsService
         return hash.Length > 7 ? hash[..7] : hash;
     }
 
+    /// <summary>
+    /// Finds skills in the configured sources and, when its discovery is on, on skills.sh. With
+    /// <paramref name="filterSources"/> off, every skill of the configured sources is returned and
+    /// only the skills.sh search uses the query. <paramref name="refreshSources"/> fetches the sources
+    /// again instead of reusing listings from the last hour.
+    /// </summary>
     public IReadOnlyList<SkillItem> Search(string query, IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, bool filterSources = true, bool refreshSources = false)
     {
         Dictionary<(string, string), SkillItem> found = [];
         int generation;
@@ -160,9 +179,9 @@ public sealed class AgentSkillsService
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var skills = _listings.Get(source, progress, cancellationToken);
-                foreach (var skill in skills.Where(skill =>
-                    skill.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                var skills = _listings.Get(source, progress, cancellationToken, refreshSources);
+                foreach (var skill in skills.Where(skill => !filterSources
+                    || skill.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
                     || skill.Description.Contains(query, StringComparison.OrdinalIgnoreCase)
                     || (skill.PluginName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)))
                     found.TryAdd((source.Name, skill.Name), new(skill.Name, skill.Description, source));
@@ -232,7 +251,7 @@ public sealed class AgentSkillsService
     }
 
     public async Task PerformAsync(SkillItem skill, SkillAction action, IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, IReadOnlyList<string>? targetAgents = null)
     {
         await OperationGate.WaitAsync(cancellationToken);
         try
@@ -243,7 +262,7 @@ public sealed class AgentSkillsService
                 {
                     case SkillAction.Install:
                         var source = GetInstallSource(skill) ?? throw NotAllowed(skill.SourceName);
-                        var install = _backend.Install(source.InstallSource, skill.Id, GetTargetAgents(), progress, cancellationToken);
+                        var install = _backend.Install(source.InstallSource, skill.Id, targetAgents ?? GetTargetAgents(), progress, cancellationToken);
                         var installedOutcome = install.Skills.FirstOrDefault(s => s.Name.Equals(skill.Id, StringComparison.OrdinalIgnoreCase));
                         RequireSuccess(installedOutcome?.Status, installedOutcome?.Error, skill.Id);
                         RememberInstalledSource(source);
@@ -298,11 +317,16 @@ public sealed class AgentSkillsService
             throw new SkillsException(CoreTools.Translate("The skill was installed, but its source {0} could not be saved. Add it in Agent Skills settings to receive updates.", source.Name));
     }
 
-    public async Task AddSourceAsync(string address, IProgress<string>? progress = null, CancellationToken token = default)
+    /// <summary>
+    /// Adds a source, reading its skills first so a source that offers none is refused. A source that
+    /// is already added is not read again; the result tells which source the address resolved to and
+    /// whether it was new.
+    /// </summary>
+    public async Task<SourceAddResult> AddSourceAsync(string address, IProgress<string>? progress = null, CancellationToken token = default)
     {
-        var source = SkillSourceLocator.Parse(address) ?? throw new ArgumentException(CoreTools.Translate(
+        var source = SkillSourceLocator.ParseUserInput(address) ?? throw new ArgumentException(CoreTools.Translate(
             "Enter a GitHub repository (owner/repo), a git repository URL, an HTTPS skills index, or a Notion database."));
-        if (GetConfiguredSource(source.Name) is not null) return;
+        if (FindConfiguredSource(source) is { } existing) return new(existing, false);
         try
         {
             var skills = await Task.Run(() => _backend.GetAvailableSkills(source.InstallSource, progress, token), token);
@@ -315,7 +339,13 @@ public sealed class AgentSkillsService
             progress?.Report(CoreTools.Translate("Sign in to Notion in the Agent Skills settings to see the skills of this source."));
         }
         RememberInstalledSource(source);
+        return new(FindConfiguredSource(source) ?? source, true);
     }
+
+    /// <summary>The skills one configured source offers.</summary>
+    public IReadOnlyList<SkillItem> ListSource(SkillSourceLocator source, IProgress<string>? progress = null,
+        CancellationToken token = default) =>
+        _listings.Get(source, progress, token).Select(skill => new SkillItem(skill.Name, skill.Description, source)).ToArray();
 
     public void RemoveSource(SkillSourceLocator source)
     {

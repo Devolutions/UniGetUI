@@ -14,7 +14,7 @@ internal sealed class AgentSkillsSourcesControl : UserControl
 {
     private readonly AgentSkillsService _service;
     private readonly StackPanel _rows = new() { Spacing = 8 };
-    private readonly TextBox _address = new() { PlaceholderText = CoreTools.Translate("Repository or skills index URL") };
+    private readonly TextBox _address = new() { PlaceholderText = CoreTools.Translate("owner/repo, repository URL, or skills index") };
     private readonly TextBlock _status = new() { TextWrapping = global::Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBlock _empty = new() { Text = CoreTools.Translate("No sources added yet."), TextWrapping = global::Avalonia.Media.TextWrapping.Wrap };
     private readonly Button _add = new() { Content = CoreTools.Translate("Add source") };
@@ -90,17 +90,24 @@ internal sealed class AgentSkillsSourcesControl : UserControl
         _cancel.IsVisible = true;
         try
         {
-            var source = SkillSourceLocator.Parse(_address.Text ?? "")
-                ?? throw new ArgumentException(CoreTools.Translate("Enter a valid skill source."));
+            var source = SkillSourceLocator.ParseUserInput(_address.Text ?? "")
+                ?? throw new ArgumentException(CoreTools.Translate(
+                    "Enter a GitHub repository (owner/repo), a git repository URL, an HTTPS skills index, or a Notion database."));
+            if (AgentSkillsService.FindConfiguredSource(source) is { } existing)
+            {
+                _status.Text = CoreTools.Translate("{0} is already one of your sources.", existing.Name);
+                AccessibilityAnnouncementService.Announce(_status.Text);
+                return;
+            }
             if (AgentSkillsDependencies.ForSource(source) is { } dependency)
                 await AvaloniaBootstrapper.PromptForMissingDependencyAsync(dependency);
             cancel.Token.ThrowIfCancellationRequested();
-            await _service.AddSourceAsync(source.InstallSource, new Progress<string>(line =>
+            var added = await _service.AddSourceAsync(source.InstallSource, new Progress<string>(line =>
             {
                 if (!cancel.IsCancellationRequested && ReferenceEquals(_operation, cancel)) _status.Text = line;
             }), cancel.Token);
             _address.Text = "";
-            _status.Text = CoreTools.Translate("Source added");
+            _status.Text = CoreTools.Translate("Added {0}", added.Source.Name);
             AccessibilityAnnouncementService.Announce(_status.Text);
             Reload();
             SourcesChanged?.Invoke(this, EventArgs.Empty);

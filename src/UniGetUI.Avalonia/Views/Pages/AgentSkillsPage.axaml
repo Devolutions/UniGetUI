@@ -34,7 +34,7 @@
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
             <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-                <ToggleButton x:Name="ManageSourcesButton" Content="{t:Translate Manage sources}"
+                <ToggleButton x:Name="ManageSourcesButton" Content="{t:Translate Sources}"
                               IsChecked="{Binding ShowSources, Mode=TwoWay}" IsEnabled="{Binding !IsBusy}"
                               Click="ManageSourcesClicked" Margin="0,0,8,0"/>
                 <Button x:Name="SettingsButton" Content="{t:Translate Settings}" Click="OpenSettings"/>
@@ -48,23 +48,36 @@
             <TabStripItem Content="{Binding UpdatesHeader}" ToolTip.Tip="{Binding BackgroundStatus}"
                           automation:AutomationProperties.HelpText="{Binding BackgroundStatus}"/>
         </TabStrip>
-        <Panel Grid.Row="2" IsVisible="{Binding !ShowSources}">
-            <WrapPanel x:Name="SearchToolbar" IsVisible="{Binding !NeedsSetup}" ItemSpacing="8" LineSpacing="8">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Width="400" MaxWidth="{Binding $parent[UserControl].Bounds.Width}">
-                    <TextBox x:Name="SkillSearch" Text="{Binding Query, Mode=TwoWay}" PlaceholderText="{Binding SearchLabel}"
-                             KeyDown="SearchKeyDown" automation:AutomationProperties.Name="{Binding SearchLabel}"/>
-                    <Button Grid.Column="1" x:Name="SearchButton" Content="{Binding RefreshLabel}" Command="{Binding RefreshCommand}"
-                            IsEnabled="{Binding !IsBusy}"/>
+        <StackPanel Grid.Row="2" Spacing="12" IsVisible="{Binding !ShowSources}">
+            <StackPanel x:Name="AddSourceBar" Spacing="6" IsVisible="{Binding IsDiscover}">
+                <TextBlock Text="{t:Translate Add skills from a repository or website}" FontWeight="SemiBold"/>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBox x:Name="SourceInput" Text="{Binding SourceInput, Mode=TwoWay}" KeyDown="SourceInputKeyDown"
+                             PlaceholderText="{t:Translate Text='owner/repo, a repository or skills index URL, or an npx skills add command'}"
+                             automation:AutomationProperties.Name="{t:Translate Skill source to add}"/>
+                    <Button Grid.Column="1" x:Name="AddSourceButton" Content="{t:Translate Show skills}" Classes="accent"
+                            Command="{Binding AddFromSourceCommand}" IsEnabled="{Binding CanAddSource}"/>
                 </Grid>
+                <TextBlock Text="{Binding SourceInputMessage}" IsVisible="{Binding HasSourceInputMessage}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           automation:AutomationProperties.LiveSetting="Assertive"/>
+            </StackPanel>
+            <WrapPanel x:Name="SearchToolbar" IsVisible="{Binding !NeedsSetup}" ItemSpacing="8" LineSpacing="8">
+                <TextBox x:Name="SkillSearch" Text="{Binding Query, Mode=TwoWay}" PlaceholderText="{Binding SearchLabel}"
+                         Width="280" KeyDown="SearchKeyDown" automation:AutomationProperties.Name="{Binding SearchLabel}"/>
                 <ComboBox x:Name="SourceFilter" ItemsSource="{Binding Sources}" SelectedItem="{Binding SourceFilter, Mode=TwoWay}"
                           MaxWidth="240" MinWidth="130"
                           automation:AutomationProperties.Name="{t:Translate Filter by source}"/>
                 <ComboBox x:Name="AgentFilter" ItemsSource="{Binding Agents}" SelectedItem="{Binding AgentFilter, Mode=TwoWay}"
                           IsVisible="{Binding !IsDiscover}" MaxWidth="200" MinWidth="130"
                           automation:AutomationProperties.Name="{t:Translate Filter by installed agent}"/>
+                <Button x:Name="SearchButton" Content="{Binding RefreshLabel}" Command="{Binding RefreshCommand}"
+                        IsEnabled="{Binding !IsBusy}"/>
+                <Button x:Name="InstallAllButton" Content="{Binding InstallAllLabel}" Command="{Binding InstallAllCommand}"
+                        IsVisible="{Binding ShowInstallAll}" IsEnabled="{Binding CanInstallAll}"/>
                 <Button Content="{t:Translate Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
             </WrapPanel>
-        </Panel>
+        </StackPanel>
         <Grid Grid.Row="3" x:Name="ResultsLayout" ColumnDefinitions="*,Auto" RowDefinitions="*,Auto"
               IsVisible="{Binding !ShowSources}"
               ColumnSpacing="12" RowSpacing="12">
@@ -75,11 +88,23 @@
                              automation:AutomationProperties.Name="{t:Translate Agent Skills}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="skills:SkillItem">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MaxLines="2"/>
-                                    <TextBlock Text="{Binding Provenance}" TextWrapping="Wrap" FontSize="12"/>
-                                </StackPanel>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MaxLines="2"/>
+                                        <TextBlock Text="{Binding Provenance}" TextWrapping="Wrap" FontSize="12"/>
+                                        <TextBlock Text="{Binding DiscoverStatus}" IsVisible="{Binding HasDiscoverStatus}"
+                                                   FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" x:Name="RowInstallButton" Content="{t:Translate Install}"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).InstallSkillCommand}"
+                                            CommandParameter="{Binding}"
+                                            IsVisible="{Binding CanInstallFromDiscover}"
+                                            IsEnabled="{Binding !$parent[ListBox].((vm:AgentSkillsViewModel)DataContext).IsBusy}"
+                                            automation:AutomationProperties.HelpText="{Binding Name}"/>
+                                </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -92,9 +117,8 @@
                     <TextBlock Text="{Binding EmptyTitle}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding EmptyDescription}" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    <WrapPanel IsVisible="{Binding IsDiscover}" ItemSpacing="8" LineSpacing="8" Margin="0,4,0,0">
-                        <Button x:Name="AddFirstSourceButton" Content="{t:Translate Add source}" Classes="accent" Click="ShowSources"/>
-                        <Button x:Name="DiscoverySettingsButton" Content="{t:Translate Configure skills.sh}"
+                    <WrapPanel IsVisible="{Binding NeedsSetup}" ItemSpacing="8" LineSpacing="8" Margin="0,4,0,0">
+                        <Button x:Name="DiscoverySettingsButton" Content="{t:Translate Turn on skills.sh discovery}"
                                 Click="OpenDiscoverySettings"/>
                     </WrapPanel>
                     <Button Content="{t:Translate Discover skills}" IsVisible="{Binding IsInstalled}"
@@ -115,6 +139,9 @@
                             <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Provenance}" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Source.InstallSource}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding DiscoverStatus}" IsVisible="{Binding HasDiscoverStatus}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
                         </StackPanel>
                         <StackPanel IsVisible="{Binding IsUpdates}" Spacing="4">
                             <TextBlock Text="{t:Translate Available version}" FontWeight="SemiBold"/>
@@ -125,6 +152,38 @@
                         <TextBlock Text="{Binding InstallationSummary}" IsVisible="{Binding IsDiscover}" TextWrapping="Wrap"/>
                         <TextBlock Text="{t:Translate Review the source before installing. Agent compatibility depends on the skill and the selected agent.}"
                                    IsVisible="{Binding IsDiscover}" TextWrapping="Wrap"/>
+                        <Button x:Name="PreviewSkillButton" Content="{t:Translate Preview SKILL.md and files}"
+                                Command="{Binding LoadPreviewCommand}" IsVisible="{Binding IsDiscover}"
+                                IsEnabled="{Binding CanLoadPreview}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding PreviewError}" IsVisible="{Binding HasPreviewError}"
+                                   TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                   automation:AutomationProperties.LiveSetting="Assertive"/>
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingPreview}" Height="3"/>
+                        <StackPanel IsVisible="{Binding HasPreview}" Spacing="8">
+                            <TextBlock Text="{t:Translate Source details}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding PreviewLicense}" IsVisible="{Binding HasPreviewLicense}"/>
+                            <TextBlock Text="{Binding PreviewCompatibility}"
+                                       IsVisible="{Binding HasPreviewCompatibility}" TextWrapping="Wrap"/>
+                            <Border Padding="10" CornerRadius="6"
+                                    Background="{DynamicResource WarningBannerBackground}"
+                                    IsVisible="{Binding HasPreviewWarnings}">
+                                <TextBlock Text="{Binding PreviewWarnings}" TextWrapping="Wrap"/>
+                            </Border>
+                            <TextBlock Text="{t:Translate Files}" FontWeight="SemiBold"/>
+                            <ItemsControl ItemsSource="{Binding SkillPreview.Files}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{t:Translate SKILL.md}" FontWeight="SemiBold"/>
+                            <SelectableTextBlock Text="{Binding SkillPreview.Markdown}" TextWrapping="Wrap"
+                                                 MaxHeight="240"/>
+                            <TextBlock Text="{t:Translate Preview truncated for display.}"
+                                       IsVisible="{Binding SkillPreview.IsMarkdownTruncated}"
+                                       FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
                         <Button x:Name="InstallButton" Content="{t:Translate Install}" Classes="accent"
                                 Command="{Binding InstallCommand}" IsVisible="{Binding IsDiscover}" IsEnabled="{Binding CanInstall}"/>
                         <Button x:Name="UpdateButton" Content="{t:Translate Update}" Classes="accent"

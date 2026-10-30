@@ -115,6 +115,30 @@ public sealed record InstalledSkillInfo
 /// <param name="PluginName">Plugin the skill belongs to, if the source groups skills.</param>
 public sealed record AvailableSkill(string Name, string Description, string? PluginName);
 
+/// <summary>Content and safety-relevant metadata shown before installing a skill.</summary>
+public sealed record SkillPreview(
+    string Name,
+    string Markdown,
+    IReadOnlyList<string> Files,
+    string? License,
+    string? Compatibility,
+    IReadOnlyList<string> AllowedTools,
+    bool IsMarkdownTruncated)
+{
+    private static readonly HashSet<string> ExecutableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".exe", ".dll", ".com", ".bat", ".cmd", ".ps1", ".sh", ".bash", ".zsh", ".py", ".js", ".mjs", ".cjs",
+    };
+
+    /// <summary>True when the skill includes files under a scripts directory.</summary>
+    public bool ContainsScripts => Files.Any(path =>
+        path.Split('/').Any(part => part.Equals("scripts", StringComparison.OrdinalIgnoreCase)));
+
+    /// <summary>True when the skill includes files that can be run as programs or scripts.</summary>
+    public bool ContainsExecutables => Files.Any(path =>
+        ExecutableExtensions.Contains(Path.GetExtension(path)));
+}
+
 /// <summary>What to install.</summary>
 public sealed class SkillInstallRequest
 {

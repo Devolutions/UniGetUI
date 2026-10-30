@@ -23,6 +23,12 @@ internal interface ISkillsBackend
         CancellationToken cancellationToken
     );
 
+    SkillPreview PreviewSkill(
+        string source,
+        string skill,
+        CancellationToken cancellationToken
+    );
+
     /// <param name="agents">Agent ids to install for, or null for the detected and universal agents</param>
     SkillInstallResult Install(
         string source,

@@ -151,6 +151,74 @@ public sealed class AgentSkillsLibraryTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(_home, ".claude", "skills", "code-review")));
     }
 
+    [Fact]
+    public void PreviewProvidesContentFilesAndRiskMetadataWithoutInstalling()
+    {
+        var client = CreateLibraryManager();
+        string skillDirectory = Path.Combine(_testRoot, "preview-skill");
+        Directory.CreateDirectory(Path.Combine(skillDirectory, "scripts"));
+        string markdown = """
+            ---
+            name: code-review
+            description: Reviews code
+            license: MIT
+            compatibility: Local repositories
+            allowed-tools:
+              - Bash
+              - Read
+            ---
+
+            # Code review
+
+            Review the pending changes.
+            """;
+        File.WriteAllText(Path.Combine(skillDirectory, "SKILL.md"), markdown);
+        File.WriteAllText(Path.Combine(skillDirectory, "scripts", "setup.ps1"), "Write-Output ready");
+        File.WriteAllBytes(Path.Combine(skillDirectory, "validator.exe"), []);
+        File.WriteAllText(Path.Combine(skillDirectory, "references.md"), "Reference notes");
+
+        var preview = client.PreviewSkill(skillDirectory, "code-review");
+
+        Assert.Equal(markdown, preview.Markdown);
+        Assert.Equal(["references.md", "scripts/setup.ps1", "SKILL.md", "validator.exe"], preview.Files);
+        Assert.Equal("MIT", preview.License);
+        Assert.Equal("Local repositories", preview.Compatibility);
+        Assert.Equal(["Bash", "Read"], preview.AllowedTools);
+        Assert.True(preview.ContainsScripts);
+        Assert.True(preview.ContainsExecutables);
+        Assert.False(preview.IsMarkdownTruncated);
+        Assert.Empty(client.GetInstalledSkills(Devolutions.AgentSkills.SkillScope.Global));
+    }
+
+    [Fact]
+    public void PreviewTruncatesLongMarkdownAndReportsTheLimit()
+    {
+        var client = CreateLibraryManager();
+        string skillDirectory = Path.Combine(_testRoot, "long-preview-skill");
+        Directory.CreateDirectory(skillDirectory);
+        string markdown = $"---\nname: code-review\ndescription: Reviews code\n---\n{new string('x', 200_001)}";
+        File.WriteAllText(Path.Combine(skillDirectory, "SKILL.md"), markdown);
+
+        var preview = client.PreviewSkill(skillDirectory, "code-review");
+
+        Assert.Equal(200_000, preview.Markdown.Length);
+        Assert.True(preview.IsMarkdownTruncated);
+    }
+
+    [Fact]
+    public void PreviewRejectsSkillsThatAreNotInTheSource()
+    {
+        var client = CreateLibraryManager();
+        string skillDirectory = Path.Combine(_testRoot, "preview-source");
+        Directory.CreateDirectory(skillDirectory);
+        File.WriteAllText(Path.Combine(skillDirectory, "SKILL.md"), SkillMarkdown("Reviews code"));
+
+        var error = Assert.Throws<Devolutions.AgentSkills.SkillsException>(
+            () => client.PreviewSkill(skillDirectory, "missing"));
+
+        Assert.Contains("does not contain a skill named 'missing'", error.Message, StringComparison.Ordinal);
+    }
+
     private sealed class Output : IProgress<string>
     {
         public List<string> Lines { get; } = [];
@@ -567,6 +635,12 @@ public sealed class AgentSkillsLibraryTests : IDisposable
             IProgress<string>? progress,
             CancellationToken cancellationToken
         ) => client.GetAvailableSkills(source, false, progress, cancellationToken);
+
+        public Devolutions.AgentSkills.SkillPreview PreviewSkill(
+            string source,
+            string skill,
+            CancellationToken cancellationToken
+        ) => client.PreviewSkill(source, skill, cancellationToken);
 
         public Devolutions.AgentSkills.SkillInstallResult Install(
             string source,

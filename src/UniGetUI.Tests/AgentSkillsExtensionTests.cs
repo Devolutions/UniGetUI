@@ -12,6 +12,7 @@ using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.SettingsEngine;
@@ -91,7 +92,7 @@ public sealed class AgentSkillsExtensionTests
         Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
         AgentSkillsService.TargetAgents = ["codex"];
         var backend = new RecordingBackend();
-        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        var vm = CreateInstallViewModel(backend);
         var page = new AgentSkillsPage(vm);
         using var host = new AgentSkillsSettingsTestWindow(page, 1100);
         vm.Query = "review";
@@ -128,7 +129,7 @@ public sealed class AgentSkillsExtensionTests
         using var fixture = new AgentSkillsSettingsTestFixture();
         Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
         var backend = new RecordingBackend { FailInstall = true };
-        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        var vm = CreateInstallViewModel(backend);
         await vm.RefreshCommand.ExecuteAsync(null);
         vm.SelectedSkill = Assert.Single(vm.Skills);
         List<AccessibilityAnnouncement> announcements = [];
@@ -266,13 +267,16 @@ public sealed class AgentSkillsExtensionTests
         await added.Task.WaitAsync(TimeSpan.FromSeconds(30));
         host.Pump();
         Assert.Equal("https://skills.contoso.com", Assert.Single(AgentSkillsService.GetConfiguredSources()).InstallSource);
+        await AwaitRefreshAsync(vm);
         Assert.Equal(1, backend.AvailableReads);
         Assert.False(vm.NeedsSetup);
-        Assert.Single(page.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Sources");
+        Assert.Single(page.FindControl<Border>("SourcesPanel")!.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Sources");
         Assert.Equal("", input.Text);
         host.Click(Assert.Single(control.GetVisualDescendants().OfType<Button>(), button => Equals(button.Content, "Remove")));
+        await AwaitRefreshAsync(vm);
         Assert.Empty(AgentSkillsService.GetConfiguredSources());
         Assert.True(vm.NeedsSetup);
+        Assert.Empty(vm.Skills);
         Assert.Equal(1, backend.AvailableReads);
         return true;
     }, CancellationToken.None);
@@ -328,6 +332,8 @@ public sealed class AgentSkillsExtensionTests
         vm.Mode = 0;
         var page = new AgentSkillsPage(vm);
         using var host = new AgentSkillsSettingsTestWindow(page, 1100);
+        await AwaitRefreshAsync(vm);
+        Assert.Equal(1, backend.AvailableReads);
         var tabs = page.FindControl<TabStrip>("ModeTabs")!;
         Assert.Equal("Skill views", AutomationProperties.GetName(tabs));
         Assert.Equal(["Discover", "Installed", "Updates"], tabs.Items.Cast<TabStripItem>().Select(item => item.Content));
@@ -336,10 +342,10 @@ public sealed class AgentSkillsExtensionTests
             Assert.True(item.IsEffectivelyVisible);
             Assert.True(item.Bounds.Width > 0);
         });
-        Assert.Equal(0, backend.InstalledReads);
+        Assert.Equal(1, backend.InstalledReads);
         await SelectModeAsync(page, host, vm, 1);
         Assert.Equal("review", Assert.Single(vm.Skills).Id);
-        Assert.Equal(1, backend.InstalledReads);
+        Assert.Equal(2, backend.InstalledReads);
         Assert.Equal("Installed (1)", ((TabStripItem)tabs.Items[1]!).Content);
         await SelectModeAsync(page, host, vm, 2);
         Assert.Equal("2222222", Assert.Single(vm.Skills).NewVersion);
@@ -348,8 +354,8 @@ public sealed class AgentSkillsExtensionTests
         await vm.LoadCurrentModeAsync();
         Assert.Equal(1, backend.CheckCalls);
         await SelectModeAsync(page, host, vm, 0);
-        Assert.Empty(vm.Skills);
-        Assert.Equal(0, backend.AvailableReads);
+        Assert.Equal("review", Assert.Single(vm.Skills).Id);
+        Assert.Equal(1, backend.AvailableReads);
         return true;
     }, CancellationToken.None);
 
@@ -371,6 +377,7 @@ public sealed class AgentSkillsExtensionTests
         var close = page.FindControl<Button>("CloseSourcesButton")!;
         var tabs = page.FindControl<TabStrip>("ModeTabs")!;
         Assert.False(toolbar.IsEffectivelyVisible);
+        Assert.True(page.FindControl<StackPanel>("AddSourceBar")!.IsEffectivelyVisible);
         Assert.True(empty.IsEffectivelyVisible);
         Assert.False(results.IsEffectivelyVisible);
         Assert.False(sources.IsEffectivelyVisible);
@@ -383,12 +390,13 @@ public sealed class AgentSkillsExtensionTests
             Assert.InRange(tab.Bounds.Height, 40, 52);
         });
 
-        host.Click(page.FindControl<Button>("AddFirstSourceButton")!);
+        host.Click(manage);
         host.Pump();
         Assert.True(sources.IsEffectivelyVisible);
         Assert.False(empty.IsEffectivelyVisible);
         Assert.False(results.IsEffectivelyVisible);
         Assert.False(toolbar.IsEffectivelyVisible);
+        Assert.False(page.FindControl<StackPanel>("AddSourceBar")!.IsEffectivelyVisible);
         var sourceHost = page.FindControl<ContentControl>("SourcesHost")!;
         var address = Assert.Single(sourceHost.GetVisualDescendants().OfType<TextBox>());
         Assert.True(address.IsFocused);
@@ -428,7 +436,7 @@ public sealed class AgentSkillsExtensionTests
         Assert.True(empty.IsEffectivelyVisible);
         Assert.False(results.IsEffectivelyVisible);
         Assert.Equal(1, backend.AvailableReads);
-        Assert.Equal(1, backend.InstalledReads);
+        Assert.Equal(2, backend.InstalledReads);
         return true;
     }, CancellationToken.None);
 
@@ -482,32 +490,357 @@ public sealed class AgentSkillsExtensionTests
     }, CancellationToken.None);
 
     [Fact]
-    public Task DiscoverEnterSearchesAndSourceFilterDoesNotReadBackend() => _session.Dispatch(async () =>
+    public Task DiscoverBrowsesSourcesOnOpenAndFiltersLocally() => _session.Dispatch(async () =>
     {
         using var fixture = new AgentSkillsSettingsTestFixture();
         Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills", "other/skills" });
         var backend = new RecordingBackend();
+        backend.Available.Add(new("format", "Formats text", null));
         var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
         var page = new AgentSkillsPage(vm);
         using var host = new AgentSkillsSettingsTestWindow(page, 1100);
-        var input = page.FindControl<TextBox>("SkillSearch")!;
-        host.EnterText(input, "review");
-        Assert.Equal(0, backend.AvailableReads);
-        PressEnter(host, input);
         await AwaitRefreshAsync(vm);
         host.Pump();
         Assert.Equal(2, backend.AvailableReads);
-        Assert.Equal(2, vm.Skills.Count);
+        Assert.Equal(4, vm.Skills.Count);
+        var input = page.FindControl<TextBox>("SkillSearch")!;
+        host.EnterText(input, "FORMAT");
+        Assert.Equal(["format", "format"], vm.Skills.Select(skill => skill.Id));
+        Assert.Equal(2, backend.AvailableReads);
         page.FindControl<ComboBox>("SourceFilter")!.SelectedItem = "other/skills";
         host.Pump();
         Assert.Equal("other/skills", Assert.Single(vm.Skills).SourceName);
         Assert.Equal(2, backend.AvailableReads);
         Assert.False(page.FindControl<ComboBox>("AgentFilter")!.IsVisible);
+        PressEnter(host, input);
+        await AwaitRefreshAsync(vm);
+        Assert.Equal(4, backend.AvailableReads);
         return true;
     }, CancellationToken.None);
 
     [Theory]
-    [InlineData(0, "InstallButton")]
+    [InlineData("npx skills add contoso/skills")]
+    [InlineData("npx -y skills add https://github.com/contoso/skills --global")]
+    [InlineData("github.com/contoso/skills/")]
+    public Task PastedSourceIsAddedAndItsSkillsShownReadyToInstall(string pasted) => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var backend = new RecordingBackend();
+        backend.Available.Add(new("format", "Formats text", null));
+        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        var page = new AgentSkillsPage(vm);
+        using var host = new AgentSkillsSettingsTestWindow(page, 1100);
+        Assert.True(vm.NeedsSetup);
+        Assert.True(page.FindControl<StackPanel>("AddSourceBar")!.IsEffectivelyVisible);
+        var source = page.FindControl<TextBox>("SourceInput")!;
+        host.EnterText(source, pasted);
+        PressEnter(host, source);
+        if (vm.AddFromSourceCommand.ExecutionTask is { } adding) await adding.WaitAsync(TimeSpan.FromSeconds(30));
+        host.Pump();
+        Assert.False(vm.HasError, vm.Status);
+        Assert.Single(AgentSkillsService.GetConfiguredSources());
+        Assert.Equal(["review", "format"], vm.Skills.Select(skill => skill.Id));
+        Assert.Equal("Added contoso/skills. It offers 2 skills.", vm.Status);
+        Assert.Equal("", vm.SourceInput);
+        Assert.False(vm.NeedsSetup);
+        Assert.True(page.FindControl<WrapPanel>("SearchToolbar")!.IsEffectivelyVisible);
+        var installAll = page.FindControl<Button>("InstallAllButton")!;
+        Assert.True(installAll.IsEffectivelyVisible);
+        Assert.Equal("Install all 2", installAll.Content);
+
+        host.EnterText(source, "https://github.com/contoso/skills");
+        await vm.AddFromSourceCommand.ExecuteAsync(null);
+        Assert.Single(AgentSkillsService.GetConfiguredSources());
+        Assert.False(vm.HasError);
+        Assert.Equal("contoso/skills is already one of your sources. It offers 2 skills.", vm.Status);
+        Assert.Equal(1, backend.AvailableReads);
+
+        host.EnterText(source, "this is not a source");
+        await vm.AddFromSourceCommand.ExecuteAsync(null);
+        Assert.True(vm.HasSourceInputMessage);
+        Assert.Contains("owner/repo", vm.SourceInputMessage);
+        Assert.Single(AgentSkillsService.GetConfiguredSources());
+        return true;
+    }, CancellationToken.None);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task InstallAllInstallsEveryShownSkillAndReportsFailures(bool rejectOne) => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        var backend = new RecordingBackend();
+        backend.Available.Add(new("format", "Formats text", null));
+        if (rejectOne) backend.RejectedInstalls.Add("review");
+        var vm = CreateInstallViewModel(backend);
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.True(vm.CanInstallAll);
+        await vm.InstallAllCommand.ExecuteAsync(null);
+        Assert.Equal(rejectOne ? ["format"] : ["review", "format"], backend.InstalledSkillNames);
+        Assert.Equal(rejectOne, vm.HasError);
+        Assert.Contains(rejectOne ? "1 of 2 skills could not be installed" : "Installed 2 skills", vm.Status);
+        Assert.False(vm.IsBusy);
+        return true;
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task SingleSkillInstallHonorsConfirmedTargetSelection() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        AgentSkillsService.TargetAgents = ["codex"];
+        var backend = new RecordingBackend();
+        IReadOnlyList<string>? offeredDefaults = null;
+        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend),
+            selectInstallTargets: (skills, agents, defaults) =>
+            {
+                Assert.Equal(["review"], skills.Select(skill => skill.Id));
+                Assert.Contains(agents, agent => agent.Id == "claude-code");
+                offeredDefaults = defaults;
+                return Task.FromResult<AgentSkillsInstallSelection?>(
+                    new(["claude-code"], RememberAsDefault: false));
+            });
+        await vm.RefreshCommand.ExecuteAsync(null);
+        vm.SelectedSkill = Assert.Single(vm.Skills);
+
+        await vm.InstallCommand.ExecuteAsync(null);
+
+        var install = Assert.Single(backend.InstallCalls);
+        Assert.Equal("review", install.Skill);
+        Assert.Equal(["claude-code"], install.Agents);
+        Assert.Equal(["codex"], offeredDefaults);
+        Assert.Equal(["codex"], AgentSkillsService.TargetAgents);
+        Assert.False(vm.HasError, vm.Status);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task InstallAllHonorsConfirmedTargetSelectionForEverySkill() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        AgentSkillsService.TargetAgents = ["codex"];
+        var backend = new RecordingBackend();
+        backend.Available.Add(new("format", "Formats text", null));
+        IReadOnlyList<string>? offeredDefaults = null;
+        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend),
+            selectInstallTargets: (skills, _, defaults) =>
+            {
+                Assert.Equal(["review", "format"], skills.Select(skill => skill.Id));
+                offeredDefaults = defaults;
+                return Task.FromResult<AgentSkillsInstallSelection?>(
+                    new(["claude-code"], RememberAsDefault: false));
+            });
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        await vm.InstallAllCommand.ExecuteAsync(null);
+
+        Assert.Equal(["review", "format"], backend.InstallCalls.Select(call => call.Skill));
+        Assert.All(backend.InstallCalls, call => Assert.Equal(["claude-code"], call.Agents));
+        Assert.Equal(["codex"], offeredDefaults);
+        Assert.Equal(["codex"], AgentSkillsService.TargetAgents);
+        Assert.False(vm.HasError, vm.Status);
+    }, CancellationToken.None);
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public Task CancelledOrEmptyTargetSelectionDoesNotInstall(bool installAll, bool emptySelection) => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        var backend = new RecordingBackend();
+        backend.Available.Add(new("format", "Formats text", null));
+        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend),
+            selectInstallTargets: (_, _, _) => Task.FromResult<AgentSkillsInstallSelection?>(
+                emptySelection ? new([], RememberAsDefault: false) : null));
+        await vm.RefreshCommand.ExecuteAsync(null);
+        if (!installAll) vm.SelectedSkill = Assert.Single(vm.Skills, skill => skill.Id == "review");
+
+        if (installAll) await vm.InstallAllCommand.ExecuteAsync(null);
+        else await vm.InstallCommand.ExecuteAsync(null);
+
+        Assert.Empty(backend.InstallCalls);
+        Assert.Empty(backend.InstalledSkillNames);
+        Assert.False(vm.IsBusy);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task InstallDialogDefaultsToSavedOrDetectedAndUniversalAgents() => _session.Dispatch(() =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var backend = new RecordingBackend();
+        var skill = new SkillItem("review", "Reviews code", SkillSourceLocator.Parse("contoso/skills"));
+
+        var savedDefaults = new AgentSkillsInstallDialog([skill], backend.AgentCatalogue, ["claude-code"]);
+        Assert.Equal(["claude-code"], savedDefaults.Targets.Where(target => target.IsSelected).Select(target => target.Id));
+
+        var automaticDefaults = new AgentSkillsInstallDialog([skill], backend.AgentCatalogue, null);
+        Assert.Equal(["codex", "shared-agent"],
+            automaticDefaults.Targets.Where(target => target.IsSelected).Select(target => target.Id));
+        Assert.Contains(automaticDefaults.Targets, target => target.Id == "claude-code" && !target.IsSelected);
+        return Task.CompletedTask;
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task PreviewExposesMarkdownFilesAndContentDerivedRiskIndicatorsBeforeInstall() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        var backend = new RecordingBackend
+        {
+            Preview = new SkillPreview(
+                "review",
+                "---\nname: review\n---\nReview source before running commands.",
+                ["SKILL.md", "scripts/setup.ps1", "bin/validator.exe", "references/guide.md"],
+                "MIT",
+                "Works with local repositories",
+                ["Bash", "Read", "Write"],
+                IsMarkdownTruncated: false),
+        };
+        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        await vm.RefreshCommand.ExecuteAsync(null);
+        vm.SelectedSkill = Assert.Single(vm.Skills);
+        var page = new AgentSkillsPage(vm);
+        using var host = new AgentSkillsSettingsTestWindow(page, 1100);
+        host.Pump();
+
+        host.Click(page.FindControl<Button>("PreviewSkillButton")!);
+        if (vm.LoadPreviewCommand.ExecutionTask is { } previewing)
+            await previewing.WaitAsync(TimeSpan.FromSeconds(30));
+        host.Pump();
+
+        var preview = Assert.IsType<SkillPreview>(vm.SkillPreview);
+        Assert.Equal("---\nname: review\n---\nReview source before running commands.", preview.Markdown);
+        Assert.Equal(["SKILL.md", "scripts/setup.ps1", "bin/validator.exe", "references/guide.md"], preview.Files);
+        Assert.Equal(["Bash", "Read", "Write"], preview.AllowedTools);
+        Assert.Equal("MIT", preview.License);
+        Assert.Equal("Works with local repositories", preview.Compatibility);
+        Assert.True(preview.ContainsScripts);
+        Assert.True(preview.ContainsExecutables);
+        Assert.True(vm.HasPreview);
+        Assert.Equal(1, backend.PreviewCalls);
+        Assert.Empty(backend.InstallCalls);
+        var details = page.FindControl<Border>("DetailsHost")!;
+        Assert.Equal(preview.Markdown,
+            Assert.Single(details.GetVisualDescendants().OfType<SelectableTextBlock>()).Text);
+        Assert.Contains(details.GetVisualDescendants().OfType<TextBlock>(),
+            text => text.Text == "scripts/setup.ps1" && text.IsEffectivelyVisible);
+        Assert.Contains(details.GetVisualDescendants().OfType<TextBlock>(),
+            text => text.Text == "bin/validator.exe" && text.IsEffectivelyVisible);
+        Assert.Contains(details.GetVisualDescendants().OfType<TextBlock>(),
+            text => text.Text == vm.PreviewWarnings && text.IsEffectivelyVisible);
+        Assert.Contains("Contains files under scripts/", vm.PreviewWarnings);
+        Assert.Contains("Contains executable or script files.", vm.PreviewWarnings);
+        Assert.Contains("Requests tool access: Bash, Read, Write", vm.PreviewWarnings);
+        Assert.Equal("https://github.com/contoso/skills", backend.LastPreviewSource);
+        Assert.Equal("review", backend.LastPreviewSkill);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task PreviewDoesNotFlagOrdinaryFilesWithoutToolPermissions() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        var backend = new RecordingBackend
+        {
+            Preview = new SkillPreview("review", "Safe instructions.", ["SKILL.md", "references/guide.md"],
+                null, null, [], false),
+        };
+        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        await vm.RefreshCommand.ExecuteAsync(null);
+        vm.SelectedSkill = Assert.Single(vm.Skills);
+
+        await vm.LoadPreviewCommand.ExecuteAsync(null);
+
+        var preview = Assert.IsType<SkillPreview>(vm.SkillPreview);
+        Assert.False(preview.ContainsScripts);
+        Assert.False(preview.ContainsExecutables);
+        Assert.False(vm.HasPreviewWarnings);
+        Assert.Equal("", vm.PreviewWarnings);
+        Assert.Empty(backend.InstallCalls);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task DiscoverRowsShowInstalledAndUpdateAvailableInsteadOfInstall() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        var backend = new RecordingBackend();
+        backend.Installed.Add(backend.Tracked());
+        backend.Installed.Add(backend.Tracked() with { Name = "format", Description = "Formats text" });
+        backend.Available.Add(new("format", "Formats text", null));
+        backend.Available.Add(new("new-skill", "Not installed yet", null));
+        backend.UpdatableSkills = ["format"];
+        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        var page = new AgentSkillsPage(vm);
+        using var host = new AgentSkillsSettingsTestWindow(page, 1100);
+        await AwaitRefreshAsync(vm);
+        await SelectModeAsync(page, host, vm, 2);
+        await SelectModeAsync(page, host, vm, 0);
+
+        var installed = Assert.Single(vm.Skills, skill => skill.Id == "review");
+        var update = Assert.Single(vm.Skills, skill => skill.Id == "format");
+        var fresh = Assert.Single(vm.Skills, skill => skill.Id == "new-skill");
+        Assert.Equal("Installed", installed.DiscoverStatus);
+        Assert.True(installed.IsInstalled);
+        Assert.False(installed.HasUpdate);
+        Assert.False(installed.CanInstallFromDiscover);
+        Assert.Equal("Update available", update.DiscoverStatus);
+        Assert.True(update.IsInstalled);
+        Assert.True(update.HasUpdate);
+        Assert.False(update.CanInstallFromDiscover);
+        Assert.Equal("", fresh.DiscoverStatus);
+        Assert.True(fresh.CanInstallFromDiscover);
+        Assert.Empty(backend.InstallCalls);
+        host.Pump();
+        var list = page.FindControl<ListBox>("SkillList")!;
+        var statusTexts = list.GetVisualDescendants().OfType<TextBlock>().Where(text =>
+            text.IsEffectivelyVisible && (text.Text is "Installed" or "Update available")).Select(text => text.Text);
+        Assert.Equal(["Installed", "Update available"], statusTexts);
+        var rowButtons = list.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.Name == "RowInstallButton").ToArray();
+        Assert.Equal(3, rowButtons.Length);
+        Assert.False(Assert.Single(rowButtons, button =>
+            button.CommandParameter is SkillItem { Id: "review" }).IsEffectivelyVisible);
+        Assert.False(Assert.Single(rowButtons, button =>
+            button.CommandParameter is SkillItem { Id: "format" }).IsEffectivelyVisible);
+        Assert.True(Assert.Single(rowButtons, button =>
+            button.CommandParameter is SkillItem { Id: "new-skill" }).IsEffectivelyVisible);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task EachDiscoverRowInstallsItsOwnSkill() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
+        var backend = new RecordingBackend();
+        backend.Available.Add(new("format", "Formats text", null));
+        var vm = CreateInstallViewModel(backend);
+        var page = new AgentSkillsPage(vm);
+        using var host = new AgentSkillsSettingsTestWindow(page, 1100);
+        await AwaitRefreshAsync(vm);
+        host.Pump();
+        var rows = page.FindControl<ListBox>("SkillList")!.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.Name == "RowInstallButton").ToArray();
+        Assert.Equal(2, rows.Length);
+        Assert.All(rows, row => Assert.True(row.IsEffectivelyVisible && row.IsEnabled));
+        var format = Assert.Single(rows, row => row.CommandParameter is SkillItem { Id: "format" });
+        Assert.Equal("format", AutomationProperties.GetHelpText(format), StringComparer.OrdinalIgnoreCase);
+        host.Click(format);
+        if (vm.InstallSkillCommand.ExecutionTask is { } installing) await installing.WaitAsync(TimeSpan.FromSeconds(30));
+        host.Pump();
+        Assert.Equal(["format"], backend.InstalledSkillNames);
+        Assert.Equal("format", vm.SelectedSkill?.Id);
+        Assert.False(vm.HasError, vm.Status);
+
+        await SelectModeAsync(page, host, vm, 1);
+        Assert.DoesNotContain(page.FindControl<ListBox>("SkillList")!.GetVisualDescendants().OfType<Button>(),
+            button => button.Name == "RowInstallButton" && button.IsEffectivelyVisible);
+        return true;
+    }, CancellationToken.None);
     [InlineData(1, "RemoveButton")]
     [InlineData(2, "UpdateButton")]
     public Task DetailsShowOnlyContextualActionAndExactSource(int mode, string action) => _session.Dispatch(async () =>
@@ -517,7 +850,7 @@ public sealed class AgentSkillsExtensionTests
         AgentSkillsService.TargetAgents = ["codex", "claude-code"];
         var backend = new RecordingBackend();
         backend.Installed.Add(backend.Tracked());
-        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        var vm = CreateInstallViewModel(backend);
         var page = new AgentSkillsPage(vm);
         using var host = new AgentSkillsSettingsTestWindow(page, 1100);
         if (mode == 0) await vm.RefreshCommand.ExecuteAsync(null);
@@ -575,7 +908,7 @@ public sealed class AgentSkillsExtensionTests
         var vm = new AgentSkillsViewModel(new AgentSkillsService(new RecordingBackend()));
         var page = new AgentSkillsPage(vm);
         using var host = new AgentSkillsSettingsTestWindow(page, 1100);
-        Assert.Equal("Install for your user account using automatic agent detection and the shared skills folder.",
+        Assert.Equal("Choose the agents for this install. Detected agents and the shared skills folder are selected by default.",
             vm.InstallationSummary);
         vm.SelectedSkill = new SkillItem("local", "Local skill", SkillSourceLocator.Parse(source ?? ""));
         host.Pump();
@@ -595,17 +928,17 @@ public sealed class AgentSkillsExtensionTests
     }, CancellationToken.None);
 
     [Fact]
-    public Task AutomaticInstallUsesConfiguredSourceWithoutExplicitAgentTargets() => _session.Dispatch(async () =>
+    public Task InstallConfirmationDefaultsToDetectedAndUniversalAgents() => _session.Dispatch(async () =>
     {
         using var fixture = new AgentSkillsSettingsTestFixture();
         Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
         var backend = new RecordingBackend();
-        var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
+        var vm = CreateInstallViewModel(backend);
         await vm.RefreshCommand.ExecuteAsync(null);
         vm.SelectedSkill = Assert.Single(vm.Skills);
         await vm.InstallCommand.ExecuteAsync(null);
         Assert.Equal("https://github.com/contoso/skills", backend.LastInstallSource);
-        Assert.Null(backend.LastTargets);
+        Assert.Equal(["codex", "shared-agent"], backend.LastTargets);
         Assert.Equal("review", backend.LastInstallSkill);
         Assert.Contains("Completed", vm.Status);
         return true;
@@ -620,18 +953,16 @@ public sealed class AgentSkillsExtensionTests
         var vm = new AgentSkillsViewModel(service);
         var page = new AgentSkillsPage(vm);
         using var host = new AgentSkillsSettingsTestWindow(page, 1100);
-        Assert.Equal("Choose where to find skills", vm.EmptyTitle);
-        Assert.Contains("Add a repository or skills index", vm.EmptyDescription);
-        host.Click(page.FindControl<Button>("AddFirstSourceButton")!);
-        Assert.True(vm.ShowSources);
-        Assert.IsType<AgentSkillsSourcesControl>(page.FindControl<ContentControl>("SourcesHost")!.Content);
+        Assert.Equal("Add skills from a repository", vm.EmptyTitle);
+        Assert.Contains("owner/repo", vm.EmptyDescription);
+        Assert.True(page.FindControl<TextBox>("SourceInput")!.IsEffectivelyVisible);
         Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
         vm.RefreshPreferences();
-        Assert.Equal("Find a skill for your agents", vm.EmptyTitle);
+        Assert.Equal("Browse your sources", vm.EmptyTitle);
         vm.Query = "nothing matches";
         await vm.RefreshCommand.ExecuteAsync(null);
         Assert.Equal("No matching skills", vm.EmptyTitle);
-        Assert.Contains("Try another search", vm.EmptyDescription);
+        Assert.Contains("Try a different filter", vm.EmptyDescription);
         await SelectModeAsync(page, host, vm, 1);
         Assert.Equal("No skills installed", vm.EmptyTitle);
         Assert.Contains("Open Discover", vm.EmptyDescription);
@@ -697,9 +1028,10 @@ public sealed class AgentSkillsExtensionTests
         Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
         var backend = new RecordingBackend();
         backend.Installed.Add(backend.Tracked());
+        backend.Available.Add(new("format", "Formats text", null));
         var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
         await vm.RefreshCommand.ExecuteAsync(null);
-        vm.SelectedSkill = Assert.Single(vm.Skills);
+        vm.SelectedSkill = Assert.Single(vm.Skills, skill => skill.Id == "format");
         vm.Status = "Foreground search complete";
         vm.Output = "Foreground activity";
         var selection = vm.SelectedSkill;
@@ -729,7 +1061,8 @@ public sealed class AgentSkillsExtensionTests
         Assert.Equal(fails ? null : (int?)1, vm.UpdateCount);
         Assert.Equal("Foreground search complete", vm.Status);
         Assert.Equal("Foreground activity", vm.Output);
-        Assert.Equal(skills, vm.Skills);
+        Assert.Equal(["review", "format"], vm.Skills.Select(skill => skill.Id));
+        Assert.Equal(!fails, Assert.Single(vm.Skills, skill => skill.Id == "review").HasUpdate);
         Assert.Same(selection, vm.SelectedSkill);
         Assert.False(vm.HasError);
         Assert.False(vm.IsBusy);
@@ -743,7 +1076,6 @@ public sealed class AgentSkillsExtensionTests
     public Task ForegroundCancelsBackgroundAndSerializesUntilGateReleased(bool cancelForeground) => _session.Dispatch(async () =>
     {
         using var fixture = new AgentSkillsSettingsTestFixture();
-        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
         var backend = new RecordingBackend();
         backend.Installed.Add(backend.Tracked());
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -759,6 +1091,7 @@ public sealed class AgentSkillsExtensionTests
         var vm = new AgentSkillsViewModel(new AgentSkillsService(backend));
         var page = new AgentSkillsPage(vm);
         using var host = new AgentSkillsSettingsTestWindow(page, 1100);
+        Settings.SetList(AgentSkillsService.SourcesListKey, new List<string> { "contoso/skills" });
         vm.ShowSources = true;
         host.Pump();
         var background = vm.CheckForUpdatesInBackgroundAsync();
@@ -859,6 +1192,20 @@ public sealed class AgentSkillsExtensionTests
         Assert.False(vm.IsBusy);
     }
 
+    private static AgentSkillsViewModel CreateInstallViewModel(RecordingBackend backend) =>
+        new(new AgentSkillsService(backend), selectInstallTargets: SelectInstallDefaults);
+
+    private static Task<AgentSkillsInstallSelection?> SelectInstallDefaults(IReadOnlyList<SkillItem> skills,
+        IReadOnlyList<AgentInfo> agents, IReadOnlyList<string>? defaults)
+    {
+        IReadOnlyList<string> selected = defaults is { Count: > 0 }
+            ? defaults
+            : agents.Where(agent => agent.IsDetected || agent.IsUniversal)
+                .Select(agent => agent.Id).ToArray();
+        return Task.FromResult<AgentSkillsInstallSelection?>(
+            selected.Count == 0 ? null : new AgentSkillsInstallSelection(selected, RememberAsDefault: false));
+    }
+
     private static void PressEnter(AgentSkillsSettingsTestWindow host, TextBox input)
     {
         Assert.True(input.Focus());
@@ -872,9 +1219,22 @@ public sealed class AgentSkillsExtensionTests
         public string Version => "test";
         public List<InstalledSkillInfo> Installed { get; } = [];
         public List<string> Removed { get; } = [];
+        public IReadOnlyList<AgentInfo> AgentCatalogue { get; } =
+        [
+            new("codex", "Codex", ".codex/skills", @"C:\test\codex\skills", false, true),
+            new("claude-code", "Claude Code", ".claude/skills", @"C:\test\claude\skills", false, false),
+            new("shared-agent", "Shared Agent", ".agents/skills", @"C:\test\shared\skills", true, false),
+        ];
+        public SkillPreview Preview { get; set; } = new(
+            "review", "---\nname: review\n---\nReview code.", ["SKILL.md"], null, null, [], false);
+        public int PreviewCalls { get; private set; }
+        public string? LastPreviewSource { get; private set; }
+        public string? LastPreviewSkill { get; private set; }
+        public HashSet<string>? UpdatableSkills { get; set; }
         public string? LastInstallSource { get; private set; }
         public string? LastInstallSkill { get; private set; }
         public IReadOnlyList<string>? LastTargets { get; private set; }
+        public List<(string Skill, string[]? Agents)> InstallCalls { get; } = [];
         public int UpdateCalls { get; private set; }
         public int InstalledReads { get; private set; }
         public int AvailableReads { get; private set; }
@@ -895,7 +1255,7 @@ public sealed class AgentSkillsExtensionTests
             SourceType = "github",
             Hash = "1111111aaaa",
         };
-        public IReadOnlyList<AgentInfo> GetAgents() => [];
+        public IReadOnlyList<AgentInfo> GetAgents() => AgentCatalogue;
         public IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(CancellationToken cancellationToken)
         {
             InstalledReads++;
@@ -906,29 +1266,46 @@ public sealed class AgentSkillsExtensionTests
         {
             AvailableReads++;
             BeforeList?.Invoke(cancellationToken);
-            return [new("review", "Reviews code", null)];
+            return Available.ToArray();
         }
+        public SkillPreview PreviewSkill(string source, string skill, CancellationToken cancellationToken)
+        {
+            PreviewCalls++;
+            LastPreviewSource = source;
+            LastPreviewSkill = skill;
+            return Preview;
+        }
+        public List<AvailableSkill> Available { get; } = [new("review", "Reviews code", null)];
+        public List<string> InstalledSkillNames { get; } = [];
+        public HashSet<string> RejectedInstalls { get; } = [];
         public SkillInstallResult Install(string source, string skill, IReadOnlyList<string>? agents, IProgress<string>? progress, CancellationToken cancellationToken)
         {
             LastInstallSource = source;
             LastInstallSkill = skill;
             LastTargets = agents;
+            InstallCalls.Add((skill, agents?.ToArray()));
             progress?.Report("Installing review");
-            if (!FailInstall) Installed.Add(Tracked());
-            return new([new() { Name = skill, Status = FailInstall ? SkillOperationStatus.Failed : SkillOperationStatus.Succeeded, Error = FailInstall ? "install rejected" : null }]);
+            bool fail = FailInstall || RejectedInstalls.Contains(skill);
+            if (!fail)
+            {
+                Installed.Add(Tracked() with { Name = skill });
+                InstalledSkillNames.Add(skill);
+            }
+            return new([new() { Name = skill, Status = fail ? SkillOperationStatus.Failed : SkillOperationStatus.Succeeded, Error = fail ? "install rejected" : null }]);
         }
         public SkillUpdateCheckResult CheckForUpdates(IReadOnlyList<string>? skills, IProgress<string>? progress, CancellationToken cancellationToken)
         {
             CheckCalls++;
             BeforeCheck?.Invoke(cancellationToken);
-            return new(Installed.Select(skill => new SkillUpdate
-            {
-                Name = skill.Name,
-                Source = skill.Source!,
-                Scope = SkillScope.Global,
-                CurrentHash = "1111111aaaa",
-                LatestHash = "2222222bbbb",
-            }).ToArray(), []);
+            return new(Installed.Where(skill => UpdatableSkills is null || UpdatableSkills.Contains(skill.Name))
+                .Select(skill => new SkillUpdate
+                {
+                    Name = skill.Name,
+                    Source = skill.Source!,
+                    Scope = SkillScope.Global,
+                    CurrentHash = "1111111aaaa",
+                    LatestHash = "2222222bbbb",
+                }).ToArray(), []);
         }
         public SkillUpdateResult Update(IReadOnlyList<SkillUpdate> updates, IProgress<string>? progress, CancellationToken cancellationToken)
         {

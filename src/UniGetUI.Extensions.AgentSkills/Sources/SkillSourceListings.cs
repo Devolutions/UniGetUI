@@ -9,10 +9,11 @@ internal sealed class SkillSourceListings(ISkillsBackend backend)
     private sealed record Listing(DateTime FetchedAt, IReadOnlyList<AvailableSkill> Skills);
     private readonly ConcurrentDictionary<string, Listing> _listings = new(StringComparer.Ordinal);
 
-    public IReadOnlyList<AvailableSkill> Get(SkillSourceLocator source, IProgress<string>? progress, CancellationToken token)
+    public IReadOnlyList<AvailableSkill> Get(SkillSourceLocator source, IProgress<string>? progress, CancellationToken token,
+        bool refresh = false)
     {
         token.ThrowIfCancellationRequested();
-        if (source.Kind is not SkillSourceKind.Notion && _listings.TryGetValue(source.Name, out var cached)
+        if (!refresh && source.Kind is not SkillSourceKind.Notion && _listings.TryGetValue(source.Name, out var cached)
             && DateTime.UtcNow - cached.FetchedAt < TimeSpan.FromHours(1)) return cached.Skills;
         var skills = backend.GetAvailableSkills(source.InstallSource, progress, token);
         token.ThrowIfCancellationRequested();

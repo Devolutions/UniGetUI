@@ -23,6 +23,8 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
 
     public SkillUpdateCheckResult UpdateCheck { get; set; } = new([], []);
 
+    public SkillPreview Preview { get; set; } = new("test", "", [], null, null, [], false);
+
     public SkillOperationStatus InstallStatus { get; set; } = SkillOperationStatus.Succeeded;
 
     public string? InstallOutcomeName { get; set; }
@@ -65,6 +67,9 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
             ? skills
             : throw new SkillsException("No valid skills found.");
     }
+
+    public SkillPreview PreviewSkill(string source, string skill, CancellationToken cancellationToken) =>
+        Preview with { Name = skill };
 
     /// <summary>Sources whose listing fails, and how.</summary>
     public Dictionary<string, SkillsException> SourceFailures { get; } = new(StringComparer.OrdinalIgnoreCase);

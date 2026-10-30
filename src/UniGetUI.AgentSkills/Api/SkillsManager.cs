@@ -117,6 +117,22 @@ public sealed class SkillsManager
     public Task<IReadOnlyList<AvailableSkill>> GetAvailableSkillsAsync(string source, bool fullDepth = false, IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
         Task.Run(() => GetAvailableSkills(source, fullDepth, progress, cancellationToken), cancellationToken);
 
+    /// <summary>Reads one skill's instructions and file inventory without installing it.</summary>
+    /// <param name="source">A source accepted by <see cref="GetAvailableSkills"/>.</param>
+    /// <param name="skillName">The skill name returned by <see cref="GetAvailableSkills"/>.</param>
+    /// <param name="cancellationToken">Cancels source retrieval.</param>
+    /// <exception cref="SkillsException">The source is unavailable or does not contain the requested skill.</exception>
+    public SkillPreview PreviewSkill(string source, string skillName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(skillName);
+        return Run(log => InstallEngine.Preview(source, skillName, log), null, cancellationToken);
+    }
+
+    /// <inheritdoc cref="PreviewSkill"/>
+    public Task<SkillPreview> PreviewSkillAsync(string source, string skillName, CancellationToken cancellationToken = default) =>
+        Task.Run(() => PreviewSkill(source, skillName, cancellationToken), cancellationToken);
+
     // ─── Install ───
 
     /// <summary>Install skills from a source (<c>skills add -y</c>) and record them in the lock file.</summary>

@@ -18,7 +18,7 @@ public partial class AgentSkillsPage : UserControl
         DataContext = viewModel;
         InitializeComponent();
         var sources = new AgentSkillsSourcesControl(viewModel.Service);
-        sources.SourcesChanged += (_, _) => viewModel.RefreshPreferences();
+        sources.SourcesChanged += async (_, _) => await viewModel.OnSourcesChangedAsync();
         SourcesHost.Content = sources;
         SizeChanged += (_, _) => ArrangeDetails();
     }
@@ -43,10 +43,11 @@ public partial class AgentSkillsPage : UserControl
         if (!_viewModel.IsBusy && _viewModel.IsDiscover) await _viewModel.RefreshCommand.ExecuteAsync(null);
     }
 
-    private void ShowSources(object? sender, RoutedEventArgs e)
+    private async void SourceInputKeyDown(object? sender, KeyEventArgs e)
     {
-        _viewModel.ShowSources = true;
-        FocusSourceEditor();
+        if (e.Key != Key.Enter) return;
+        e.Handled = true;
+        await _viewModel.AddFromSourceCommand.ExecuteAsync(null);
     }
 
     private void ManageSourcesClicked(object? sender, RoutedEventArgs e)

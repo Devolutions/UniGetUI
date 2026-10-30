@@ -3,6 +3,7 @@
 // resolution, installation and lock-file records reuse the CLI's core, so a
 // skill installed here is indistinguishable from `skills add -y`.
 
+using System.Text.Json.Nodes;
 using Devolutions.AgentSkills;
 
 namespace Skills;
@@ -33,6 +34,9 @@ internal sealed class ResolvedSource : IDisposable
 internal static class InstallEngine
 {
     private const string NoSkills = "No valid skills found. Skills require a SKILL.md with name and description.";
+    private const int MaxPreviewMarkdownLength = 200_000;
+    private const int MaxPreviewFiles = 500;
+    private const int MaxPreviewDepth = 20;
 
     private static bool IsWildcard(IReadOnlyCollection<string>? list) => list?.Contains("*") == true;
 
@@ -157,6 +161,97 @@ internal static class InstallEngine
         using var src = Resolve(source, null, fullDepth, log);
         if (src.WellKnownSkills is { } wk) return wk.Select(s => new AvailableSkill(s.InstallName, s.Description, null)).ToList();
         return src.Skills.Select(s => new AvailableSkill(SkillDiscovery.DisplayName(s), s.Description, s.PluginName)).ToList();
+    }
+
+    public static SkillPreview Preview(string source, string skillName, Action<string> log)
+    {
+        using var src = Resolve(source, [skillName], true, log);
+        if (src.WellKnownSkills is { } known)
+        {
+            var skill = known.FirstOrDefault(candidate =>
+                candidate.InstallName.Equals(skillName, StringComparison.OrdinalIgnoreCase)
+                || candidate.Name.Equals(skillName, StringComparison.OrdinalIgnoreCase));
+            if (skill is null) throw PreviewNotFound(skillName);
+            return CreatePreview(skill.InstallName, skill.Content, skill.Files.Select(file => file.Path));
+        }
+
+        var resolved = src.Skills.FirstOrDefault(candidate =>
+            SkillDiscovery.DisplayName(candidate).Equals(skillName, StringComparison.OrdinalIgnoreCase));
+        if (resolved is null) throw PreviewNotFound(skillName);
+        string markdown = resolved.RawContent ?? ReadSkillMarkdown(resolved.Path);
+        IEnumerable<string> files = resolved.Blob is { } blob
+            ? blob.Files.Select(file => file.Path)
+            : EnumeratePreviewFiles(resolved.Path);
+        return CreatePreview(SkillDiscovery.DisplayName(resolved), markdown, files);
+    }
+
+    private static SkillsException PreviewNotFound(string name) =>
+        new($"The source does not contain a skill named '{Sanitize.Metadata(name)}'. Refresh the source and try again.");
+
+    private static string ReadSkillMarkdown(string path)
+    {
+        string file = Path.Combine(path, "SKILL.md");
+        if (!File.Exists(file)) throw new SkillsException("The selected skill's SKILL.md could not be read.");
+        return File.ReadAllText(file);
+    }
+
+    private static IEnumerable<string> EnumeratePreviewFiles(string root)
+    {
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return [];
+        string fullRoot = Path.GetFullPath(root);
+        List<string> files = [];
+        Stack<(string Path, int Depth)> pending = new();
+        pending.Push((fullRoot, 0));
+        while (pending.TryPop(out var current) && files.Count < MaxPreviewFiles)
+        {
+            foreach (string entry in Directory.EnumerateFileSystemEntries(current.Path))
+            {
+                if (files.Count >= MaxPreviewFiles) break;
+                var attributes = File.GetAttributes(entry);
+                if ((attributes & FileAttributes.ReparsePoint) != 0) continue;
+                if ((attributes & FileAttributes.Directory) != 0)
+                {
+                    if (current.Depth < MaxPreviewDepth)
+                        pending.Push((entry, current.Depth + 1));
+                    continue;
+                }
+
+                string relative = Path.GetRelativePath(fullRoot, entry);
+                if (relative == ".." || relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                    continue;
+                files.Add(relative.Replace(Path.DirectorySeparatorChar, '/'));
+            }
+        }
+        files.Sort(StringComparer.OrdinalIgnoreCase);
+        return files;
+    }
+
+    private static SkillPreview CreatePreview(string name, string markdown, IEnumerable<string> files)
+    {
+        JsonObject frontmatter;
+        try { frontmatter = Frontmatter.Parse(markdown).Data; }
+        catch (YamlParseException) { frontmatter = new JsonObject(); }
+
+        static string? ReadString(JsonObject data, string key) =>
+            Json.AsString(Json.Get(data, key)) is { } value && !string.IsNullOrWhiteSpace(value) ? value.Trim() : null;
+
+        string[] allowedTools = Json.AsString(Json.Get(frontmatter, "allowed-tools")) is { } tools
+            ? tools.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : Json.Get(frontmatter, "allowed-tools") is JsonArray toolArray
+                ? toolArray.Select(Json.AsString).Where(tool => !string.IsNullOrWhiteSpace(tool)).Select(tool => tool!).ToArray()
+                : [];
+        string[] fileList = files
+            .Select(path => path.Replace('\\', '/').TrimStart('/'))
+            .Where(path => path.Length > 0 && !path.Split('/').Contains("..", StringComparer.Ordinal))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxPreviewFiles)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        string limitedMarkdown = markdown.Length > MaxPreviewMarkdownLength
+            ? markdown[..MaxPreviewMarkdownLength]
+            : markdown;
+        return new SkillPreview(name, limitedMarkdown, fileList, ReadString(frontmatter, "license"),
+            ReadString(frontmatter, "compatibility"), allowedTools, markdown.Length > limitedMarkdown.Length);
     }
 
     /// <exception cref="ArgumentException">Unknown agent ids.</exception>

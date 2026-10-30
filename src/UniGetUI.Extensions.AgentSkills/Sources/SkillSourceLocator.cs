@@ -148,6 +148,42 @@ public sealed partial record SkillSourceLocator(
     }
 
     /// <summary>
+    /// Parses what a person pasted as a source: anything <see cref="Parse"/> accepts, but also a
+    /// skills CLI command such as <c>npx skills add owner/repo</c>, an address without its https://
+    /// prefix (<c>github.com/owner/repo</c>), and an address wrapped in quotes or followed by a slash.
+    /// </summary>
+    public static SkillSourceLocator? ParseUserInput(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return null;
+
+        string[] tokens = input.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        int add = Array.FindIndex(tokens, token => token.Equals("add", StringComparison.OrdinalIgnoreCase));
+        if (tokens.Length > 1)
+        {
+            if (add < 0 || add == tokens.Length - 1)
+                return null;
+            tokens = tokens[(add + 1)..].Where(token => !token.StartsWith('-')).Take(1).ToArray();
+            if (tokens.Length == 0)
+                return null;
+        }
+
+        string candidate = tokens[0].Trim('"', '\'', '`', '<', '>');
+        if (Parse(candidate) is { } parsed)
+            return parsed;
+
+        candidate = candidate.TrimEnd('/');
+        if (Parse(candidate) is { } trimmed)
+            return trimmed;
+
+        int slash = candidate.IndexOf('/');
+        string host = slash < 0 ? candidate : candidate[..slash];
+        return !candidate.Contains("://", StringComparison.Ordinal) && host.Contains('.')
+            ? Parse($"https://{candidate}")
+            : null;
+    }
+
+    /// <summary>
     /// Whether skills from the given source come from this added source: the same repository, or,
     /// for an index, the same website at or below this index's address. The lock file names an index
     /// after its host only, so the address is what keeps an index on a shared host (a cloud storage

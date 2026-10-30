@@ -203,8 +203,10 @@ public sealed partial class AgentSkillsServiceTests : IDisposable
     {
         var service = CreateService();
         _backend.SourceSkills["https://github.com/contoso/skills"] = [new("deploy", "Deploys", null)];
-        await service.AddSourceAsync("contoso/skills");
-        await service.AddSourceAsync("contoso/skills");
+        Assert.True((await service.AddSourceAsync("contoso/skills")).Added);
+        var again = await service.AddSourceAsync("npx skills add https://github.com/contoso/skills");
+        Assert.False(again.Added);
+        Assert.Equal("contoso/skills", again.Source.Name);
         Assert.Single(AgentSkillsService.GetConfiguredSources());
         await Assert.ThrowsAsync<SkillsException>(() => service.AddSourceAsync("https://empty.contoso.com"));
         await Assert.ThrowsAsync<ArgumentException>(() => service.AddSourceAsync("https://user:pass@example.com"));
@@ -212,6 +214,24 @@ public sealed partial class AgentSkillsServiceTests : IDisposable
         service.RemoveSource(SkillSourceLocator.Parse("contoso/skills")!);
         Assert.Empty(AgentSkillsService.GetConfiguredSources());
     }
+    [Theory]
+    [InlineData("contoso/skills", "https://github.com/contoso/skills")]
+    [InlineData("npx skills add contoso/skills", "https://github.com/contoso/skills")]
+    [InlineData("npx -y skills add contoso/skills --global", "https://github.com/contoso/skills")]
+    [InlineData("pnpm dlx skills add \"https://github.com/contoso/skills\" -g", "https://github.com/contoso/skills")]
+    [InlineData("`contoso/skills`", "https://github.com/contoso/skills")]
+    [InlineData("github.com/contoso/skills/", "https://github.com/contoso/skills")]
+    [InlineData("  https://github.com/contoso/skills/  ", "https://github.com/contoso/skills")]
+    public void PastedInputIsUnderstood(string input, string expected) =>
+        Assert.Equal(expected, SkillSourceLocator.ParseUserInput(input)?.InstallSource);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("npx skills")]
+    [InlineData("npx skills find rust")]
+    [InlineData("this is not a source")]
+    public void UnrecognizedPastedInputIsRejected(string? input) => Assert.Null(SkillSourceLocator.ParseUserInput(input));
     [Fact]
     public async Task MissingNotionCliAllowsSourceToBeSavedForSetup()
     {

@@ -7,13 +7,16 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using Microsoft.Win32;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.PackageOperations;
 using UniGetUI.Shared;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -360,7 +363,10 @@ internal static partial class AvaloniaAutoUpdater
         _ => CoreTools.Translate("Unexpected installer error."),
     };
 
+    private static readonly TimeSpan IdleSampleInterval = TimeSpan.FromSeconds(5);
     private static volatile bool _installRequested;
+    private static readonly HashSet<string> _backgroundInstallTriedVersions = [];
+    private static readonly string[] UniGetUIProcessNames = ["UniGetUI", "uniget", "UniGetUI.Avalonia", "WingetUI"];
     private static string? _pendingInstallerPath;
 
     /// <summary>
@@ -779,67 +785,182 @@ internal static partial class AvaloniaAutoUpdater
             // On first launch in background we wait for user interaction
         }
 
+        bool installingInBackground = false;
         TaskCompletionSource handoff = InstallerHandoffs.Begin();
         try
         {
-            // Wait until user requests install, clicks the toast, or the window is being closed
-            attempt.MarkAwaitingConsent(versionName);
-            Interlocked.Increment(ref _attemptsAwaitingConsent);
-            try
+            bool canInstallInBackground = OperatingSystem.IsWindows();
+            if (canInstallInBackground && BackgroundInstallNeedsElevation())
             {
-                while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
+                if (Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle))
+                    LogUpdateWarn("Auto-updater: installing in the background needs a per-user installation or administrator rights — waiting for the user.");
+                canInstallInBackground = false;
+            }
+            else if (canInstallInBackground && WasBackgroundInstallTried(versionName))
+            {
+                if (Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle))
+                    LogUpdateWarn($"Auto-updater: installing {versionName} in the background was already tried once — waiting for the user.");
+                canInstallInBackground = false;
+            }
+
+            while (true)
+            {
+                // Wait until user requests install, clicks the toast, or the window is being closed
+                attempt.MarkAwaitingConsent(versionName);
+                Interlocked.Increment(ref _attemptsAwaitingConsent);
+                try
                 {
+                    int idleChecks = 0;
+                    DateTime nextIdleSample = DateTime.UtcNow + IdleSampleInterval;
+
+                    while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
+                    {
+                        if (IsChannelObsolete())
+                        {
+                            LogUpdateInfo("Auto-updater: update channel changed while waiting for user — aborting.");
+                            DismissUpdateBanner();
+                            MarkAttemptFinished("aborted - update channel changed while waiting");
+                            return true;
+                        }
+
+                        if (!manualCheck && !attempt.IsManualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
+                        {
+                            LogUpdateWarn("Auto-updater: disabled while waiting for user — aborting.");
+                            DismissUpdateBanner();
+                            MarkAttemptFinished("aborted - auto-update disabled while waiting");
+                            return true;
+                        }
+
+                        if (canInstallInBackground && DateTime.UtcNow >= nextIdleSample)
+                        {
+                            nextIdleSample = DateTime.UtcNow + IdleSampleInterval;
+                            if (!Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle))
+                            {
+                                idleChecks = 0;
+                            }
+                            else
+                            {
+                                bool otherInstanceRunning = AnotherUniGetUIProcessIsRunning();
+                                if (await Dispatcher.UIThread.InvokeAsync(() =>
+                                    {
+                                        if (!IdleSelfUpdateGate.ShouldInstall(SampleIdleState(otherInstanceRunning), ref idleChecks))
+                                            return false;
+                                        if (AbstractOperation.TryHoldNewOperations())
+                                            return true;
+                                        idleChecks = 0;
+                                        return false;
+                                    }))
+                                {
+                                    LogUpdateInfo("Auto-updater: UniGetUI is idle in the background — installing the update without waiting for the user.");
+                                    installingInBackground = true;
+                                    MarkBackgroundInstallTried(versionName);
+                                    break;
+                                }
+                            }
+                        }
+
+                        try
+                        {
+                            await Task.Delay(500, attempt.ConsentCancellationToken);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // Channel changed and superseded this pending-consent attempt.
+                        }
+                    }
+
                     if (IsChannelObsolete())
                     {
-                        LogUpdateInfo("Auto-updater: update channel changed while waiting for user \u2014 aborting.");
+                        LogUpdateInfo("Auto-updater: update channel changed while waiting for user — aborting.");
                         DismissUpdateBanner();
                         MarkAttemptFinished("aborted - update channel changed while waiting");
                         return true;
                     }
-
-                    if (!manualCheck && !attempt.IsManualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
-                    {
-                        LogUpdateWarn("Auto-updater: disabled while waiting for user \u2014 aborting.");
-                        DismissUpdateBanner();
-                        MarkAttemptFinished("aborted - auto-update disabled while waiting");
-                        return true;
-                    }
-
-                    try
-                    {
-                        await Task.Delay(500, attempt.ConsentCancellationToken);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Channel changed and superseded this pending-consent attempt.
-                    }
                 }
-
-                if (IsChannelObsolete())
+                finally
                 {
-                    LogUpdateInfo("Auto-updater: update channel changed while waiting for user \u2014 aborting.");
-                    DismissUpdateBanner();
-                    MarkAttemptFinished("aborted - update channel changed while waiting");
-                    return true;
+                    Interlocked.Decrement(ref _attemptsAwaitingConsent);
+                    attempt.ClearAwaitingConsent();
                 }
-            }
-            finally
-            {
-                Interlocked.Decrement(ref _attemptsAwaitingConsent);
-                attempt.ClearAwaitingConsent();
-            }
 
-            LogUpdateInfo("Installing update \u2014 launching installer.");
-            await LaunchInstallerAsync(installerPath, installerHash, handoff);
-            return true;
+                LogUpdateInfo("Installing update — launching installer.");
+                await LaunchInstallerAsync(installerPath, installerHash, handoff, installingInBackground);
+                if (!installingInBackground)
+                    return true;
+
+                LogUpdateWarn("Auto-updater: the background installation did not replace UniGetUI — waiting for the user.");
+                AbstractOperation.HoldNewOperations = false;
+                installingInBackground = false;
+                canInstallInBackground = false;
+                _installRequested = false;
+                ReleaseLockForAutoupdate_Notification = false;
+                InstallerHandoffs.Complete(handoff);
+                handoff = InstallerHandoffs.Begin();
+            }
         }
         finally
         {
+            if (installingInBackground)
+                AbstractOperation.HoldNewOperations = false;
             InstallerHandoffs.Complete(handoff);
         }
     }
 
-    private static async Task LaunchInstallerAsync(string installerLocation, string installerHash, TaskCompletionSource handoff)
+    private static bool WasBackgroundInstallTried(string versionName)
+    {
+        lock (_backgroundInstallTriedVersions)
+            return _backgroundInstallTriedVersions.Contains(versionName);
+    }
+
+    private static void MarkBackgroundInstallTried(string versionName)
+    {
+        lock (_backgroundInstallTriedVersions)
+            _backgroundInstallTriedVersions.Add(versionName);
+    }
+
+    internal static bool BackgroundInstallNeedsElevation()
+        => OperatingSystem.IsWindows()
+            && AutoUpdaterInstallerArguments.DetectInstallScope(CoreData.UniGetUIExecutableDirectory) is not WindowsInstallScope.CurrentUser
+            && !CoreTools.IsAdministrator();
+
+    private static bool AnotherUniGetUIProcessIsRunning()
+    {
+        using Process current = Process.GetCurrentProcess();
+        foreach (string name in UniGetUIProcessNames)
+        {
+            Process[] processes = Process.GetProcessesByName(name);
+            try
+            {
+                if (processes.Any(p => p.Id != current.Id && p.SessionId == current.SessionId))
+                    return true;
+            }
+            finally
+            {
+                foreach (Process process in processes)
+                    process.Dispose();
+            }
+        }
+
+        return false;
+    }
+
+    private static IdleSelfUpdateSnapshot SampleIdleState(bool otherInstanceRunning)
+    {
+        MainWindow? window = MainWindow.Instance;
+        return new IdleSelfUpdateSnapshot(
+            IsEnabled: Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle)
+                && !Settings.Get(Settings.K.DisableAutoUpdateWingetUI),
+            IsBusy: otherInstanceRunning || QuitAfterAutomaticUpdates.IsBusy(),
+            IsWindowVisible: window is null || (window.IsVisible && window.WindowState != WindowState.Minimized),
+            HasUnsavedWork: window?.HasUnsavedWork ?? false,
+            IsQuitting: window?.IsQuitting ?? false);
+    }
+
+    private static async Task LaunchInstallerAsync(
+        string installerLocation,
+        string installerHash,
+        TaskCompletionSource handoff,
+        bool launchInBackground = false)
     {
         if (OperatingSystem.IsMacOS())
         {
@@ -859,7 +980,8 @@ internal static partial class AvaloniaAutoUpdater
         string installerArguments = AutoUpdaterInstallerArguments.ForWindows(
             CoreData.IsPortable,
             CoreData.UniGetUIExecutableDirectory,
-            installScope);
+            installScope,
+            launchInBackground);
 
         LogUpdateInfo(
             $"Installation scope for {CoreData.UniGetUIExecutableDirectory} resolved as {installScope}.");

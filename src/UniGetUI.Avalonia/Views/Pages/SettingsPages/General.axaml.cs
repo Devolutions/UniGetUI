@@ -50,8 +50,14 @@ public sealed partial class General : UserControl, ISettingsPage
 
         GeneralUpdaterCard.Click += (_, _) =>
             _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
+        bool backgroundInstallNeedsElevation = AvaloniaAutoUpdater.BackgroundInstallNeedsElevation();
+        InstallUpdatesWhenIdleCard.IsVisible = OperatingSystem.IsWindows();
+        if (backgroundInstallNeedsElevation)
+            InstallUpdatesWhenIdleCard.WarningText = CoreTools.Translate("UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.");
+        InstallUpdatesWhenIdleCard.IsEnabled = GeneralUpdaterCard.Checked && !backgroundInstallNeedsElevation;
         GeneralUpdaterCard.StateChanged += (_, _) =>
         {
+            InstallUpdatesWhenIdleCard.IsEnabled = GeneralUpdaterCard.Checked && !backgroundInstallNeedsElevation;
             if (GeneralUpdaterCard.Checked)
             {
                 _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: false);

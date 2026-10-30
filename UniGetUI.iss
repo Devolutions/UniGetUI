@@ -246,6 +246,16 @@ begin
   Result := not (CmdLineParamExists('/NoAutoStart') or IsMSStoreInstall);
 end;
 
+function ShouldLaunchInForegroundAfterInstall: Boolean;
+begin
+  Result := ShouldLaunchAfterInstall and not CmdLineParamExists('/LaunchInBackground');
+end;
+
+function ShouldLaunchInBackgroundAfterInstall: Boolean;
+begin
+  Result := ShouldLaunchAfterInstall and CmdLineParamExists('/LaunchInBackground');
+end;
+
 function ShouldSuppressRunOnStartup: Boolean;
 begin
   Result := CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall or PreserveAutostartDisabled;
@@ -375,7 +385,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: re
 
 [Run]
 ; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File -NonInteractive ""{tmp}\EnsureWinGet.ps1"""; StatusMsg: "Ensuring WinGet is properly installed... (this may take a while)"; WorkingDir: {app}; Check: not CmdLineParamExists('/NoWinGet'); Flags: runhidden
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: runasoriginaluser nowait postinstall; Check: ShouldLaunchAfterInstall;
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: runasoriginaluser nowait postinstall; Check: ShouldLaunchInForegroundAfterInstall;
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--daemon"; Flags: runasoriginaluser nowait postinstall; Check: ShouldLaunchInBackgroundAfterInstall;
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--migrate-wingetui-to-unigetui"; StatusMsg: "{cm:RemovingOldIcons}";
 
 

@@ -1,0 +1,24 @@
+changelog:
+  exclude:
+    labels:
+      - dependencies
+      - github_actions
+    authors:
+      - dependabot
+      - dependabot[bot]
+  categories:
+    - title: New features
+      labels:
+        - new-feature
+    - title: Improvements
+      labels:
+        - enhancement
+    - title: Bug fixes
+      labels:
+        - bug
+    - title: Translations
+      labels:
+        - translations
+    - title: Other changes
+      labels:
+        - "*"

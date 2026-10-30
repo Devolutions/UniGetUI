@@ -1,0 +1,51 @@
+changed-files-labels-limit: 3
+
+winget:
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/UniGetUI.PackageEngine.Managers.WinGet/**
+          - src/WindowsPackageManager.Interop/**
+
+scoop:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.PackageEngine.Managers.Scoop/**
+
+chocolatey:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.PackageEngine.Managers.Chocolatey/**
+
+pip:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.PackageEngine.Managers.Pip/**
+
+npm:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.PackageEngine.Managers.Npm/**
+
+powershell:
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/UniGetUI.PackageEngine.Managers.PowerShell/**
+          - src/UniGetUI.PackageEngine.Managers.PowerShell7/**
+
+cargo:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.PackageEngine.Managers.Cargo/**
+
+dotnet-tool:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.PackageEngine.Managers.Dotnet/**
+
+vcpkg:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.PackageEngine.Managers.Vcpkg/**
+
+translations:
+  - changed-files:
+      - all-globs-to-any-file:
+          - src/Languages/lang_*.json
+          - "!src/Languages/lang_en.json"
+
+appearance:
+  - changed-files:
+      - any-glob-to-any-file: src/UniGetUI.Avalonia/Assets/Styles/**

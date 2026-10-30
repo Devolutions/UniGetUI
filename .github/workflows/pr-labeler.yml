@@ -1,0 +1,62 @@
+name: Pull Request Labeler
+
+on:
+  pull_request_target:
+    types: [opened, reopened, edited, synchronize, ready_for_review]
+
+concurrency:
+  group: pr-labeler-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Label by changed files
+      uses: actions/labeler@v7
+
+    - name: Copy the type label from linked issues
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const typeLabels = ['bug', 'new-feature', 'enhancement'];
+          const { owner, repo } = context.repo;
+          const number = context.payload.pull_request.number;
+
+          const result = await github.graphql(`
+            query($owner: String!, $repo: String!, $number: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $number) {
+                  labels(first: 100) { nodes { name } }
+                  closingIssuesReferences(first: 20) {
+                    nodes { labels(first: 50) { nodes { name } } }
+                  }
+                }
+              }
+            }`, { owner, repo, number });
+
+          const pr = result.repository.pullRequest;
+          if (pr.labels.nodes.some(l => typeLabels.includes(l.name))) {
+            core.info('The pull request already has a type label.');
+            return;
+          }
+
+          const found = new Set(
+            pr.closingIssuesReferences.nodes
+              .flatMap(issue => issue.labels.nodes.map(l => l.name))
+              .filter(name => typeLabels.includes(name)));
+
+          if (found.size !== 1) {
+            core.info(`Linked issues carry ${found.size} distinct type labels; adding none.`);
+            return;
+          }
+
+          const [label] = found;
+          await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [label] });
+          core.info(`Added '${label}' from the linked issues.`);

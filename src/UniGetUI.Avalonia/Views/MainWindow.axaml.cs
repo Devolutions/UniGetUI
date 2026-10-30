@@ -167,7 +167,10 @@ public partial class MainWindow : Window
     // Saved outer size (DIPs) awaiting a native, exact restore in OnOpened on Windows.
     private double _pendingRestoreWidth;
     private double _pendingRestoreHeight;
+    private const double DefaultWindowWidth = 1450;
     private const double DefaultWindowHeight = 900;
+    private WindowPlacementResult? _unsavedPlacement;
+    private bool _hasOpened;
 
     // Last user-chosen height (px) of the operations panel; restored when re-expanded.
     private double _operationsPanelHeight = 240;
@@ -251,6 +254,7 @@ public partial class MainWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        _hasOpened = true;
         if (!OperatingSystem.IsWindows())
             return;
 
@@ -1138,10 +1142,14 @@ public partial class MainWindow : Window
         {
             // Width/Height stay NaN until the window has been laid out, which never happens on a
             // daemon launch the user has not opened yet. Saving then would persist a 0x0 size.
-            if (double.IsNaN(Width) || double.IsNaN(Height))
+            if (!_hasOpened || double.IsNaN(Width) || double.IsNaN(Height))
                 return;
 
             int state = WindowState == WindowState.Maximized ? 1 : 0;
+            if (state == 0 && _unsavedPlacement is { } unsaved
+                && WindowPlacement.IsSamePlacement(unsaved, Position, Width, Height))
+                return;
+
             string geometry = $"v2,{Position.X},{Position.Y},{(int)Width},{(int)Height},{state}";
             Settings.SetValue(Settings.K.WindowGeometry, geometry);
         }
@@ -1210,13 +1218,8 @@ public partial class MainWindow : Window
         var placement = new WindowPlacementResult(new PixelPoint(x, y), width, height);
         if (!WindowPlacement.IsFullyVisible(screens, placement.Position, width, height))
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Logger.Warn("Restored geometry was outside of desktop bounds");
-                return;
-            }
-
             placement = WindowPlacement.FitSaved(screens, placement.Position, width, height, MinWidth, MinHeight);
+            _unsavedPlacement = placement;
             Logger.Warn($"Restored geometry was outside of desktop bounds, fitted it to {placement}");
         }
 
@@ -1225,16 +1228,15 @@ public partial class MainWindow : Window
 
     private void ApplyDefaultGeometry()
     {
-        if (!OperatingSystem.IsWindows())
-            return;
-
         var screens = GetPlacementScreens();
         if (screens.Count == 0)
             return;
 
         int primary = Math.Max(0, screens.FindIndex(screen => screen.IsPrimary));
+        var placement = WindowPlacement.ForDefault(screens[primary], DefaultWindowWidth, DefaultWindowHeight, MinWidth, MinHeight);
+        _unsavedPlacement = placement;
         WindowStartupLocation = WindowStartupLocation.Manual;
-        ApplyPlacement(WindowPlacement.ForDefault(screens[primary], Width, DefaultWindowHeight, MinWidth, MinHeight));
+        ApplyPlacement(placement);
     }
 
     private void ApplyPlacement(WindowPlacementResult placement)

@@ -159,6 +159,78 @@ public class WindowPlacementTests
     }
 
     [Fact]
+    public void Saved_InGapBetweenMonitorsOfDifferentSizes_IsMovedOnScreen()
+    {
+        var left = Screen(0, 0, 1920, 1080, 1.0, primary: true);
+        var right = Screen(1920, 0, 2560, 1440, 1.0);
+        var screens = new[] { left, right };
+
+        Assert.False(WindowPlacement.IsFullyVisible(screens, new PixelPoint(100, 1150), 1200, 250));
+
+        var placement = WindowPlacement.FitSaved(screens, new PixelPoint(100, 1150), 1200, 250, MinWidth, MinHeight);
+
+        Assert.True(WindowPlacement.IsFullyVisible(screens, placement.Position, placement.Width, placement.Height));
+        AssertInside(left.WorkingArea, PixelBounds(placement, 1.0));
+    }
+
+    [Fact]
+    public void Saved_UnderTheTaskbar_IsMovedAboveIt()
+    {
+        var screen = Screen(0, 0, 1920, 1080, 1.0, primary: true);
+
+        var placement = WindowPlacement.FitSaved(new[] { screen }, new PixelPoint(100, 250), 1200, 800, MinWidth, MinHeight);
+
+        Assert.Equal(new WindowPlacementResult(new PixelPoint(100, 232), 1200, 800), placement);
+    }
+
+    [Fact]
+    public void Saved_SpanningTwoMonitorsWithDifferentScaling_IsKeptUnchanged()
+    {
+        var primary = Screen(0, 0, 1920, 1080, 1.0, primary: true);
+        var secondary = Screen(1920, 0, 2560, 1440, 2.0, taskbar: 96);
+
+        var placement = WindowPlacement.FitSaved(new[] { primary, secondary }, new PixelPoint(1500, 100), 1450, 900, MinWidth, MinHeight);
+
+        Assert.Equal(new WindowPlacementResult(new PixelPoint(1500, 100), 1450, 900), placement);
+    }
+
+    [Fact]
+    public void Saved_StartingOnLowDpiMonitor_FitsToTheHighDpiMonitorItMostlyCovers()
+    {
+        var primary = Screen(0, 0, 1920, 1080, 1.0, primary: true);
+        var secondary = Screen(1920, 0, 2560, 1440, 2.0, taskbar: 96);
+
+        var placement = WindowPlacement.FitSaved(new[] { primary, secondary }, new PixelPoint(1800, 100), 3000, 900, MinWidth, MinHeight);
+
+        Assert.Equal(1280, placement.Width);
+        Assert.Equal(672, placement.Height);
+        Assert.Equal(secondary.WorkingArea, PixelBounds(placement, 2.0));
+    }
+
+    [Fact]
+    public void Saved_OnMirroredScreens_StillRequiresFullCoverage()
+    {
+        var screens = new[]
+        {
+            Screen(0, 0, 1920, 1080, 1.0, primary: true),
+            Screen(0, 0, 1920, 1080, 1.0),
+        };
+
+        Assert.True(WindowPlacement.IsFullyVisible(screens, new PixelPoint(100, 100), 1200, 800));
+        Assert.False(WindowPlacement.IsFullyVisible(screens, new PixelPoint(1000, 100), 1200, 800));
+    }
+
+    [Fact]
+    public void SamePlacement_ToleratesSubDipRounding()
+    {
+        var placement = new WindowPlacementResult(new PixelPoint(10, 20), 1229, 648);
+
+        Assert.True(WindowPlacement.IsSamePlacement(placement, new PixelPoint(10, 20), 1228.8, 648.4));
+        Assert.False(WindowPlacement.IsSamePlacement(placement, new PixelPoint(11, 20), 1229, 648));
+        Assert.False(WindowPlacement.IsSamePlacement(placement, new PixelPoint(10, 20), 1300, 648));
+    }
+
+    [Fact]
     public void Saved_WithNoScreens_IsKeptUnchanged()
     {
         var placement = WindowPlacement.FitSaved(Array.Empty<PlacementScreen>(), new PixelPoint(-5000, -5000), 1450, 900, MinWidth, MinHeight);

@@ -53,23 +53,56 @@ internal static class WindowPlacement
         if (screens.Count == 0)
             return true;
 
-        int minX = int.MaxValue, minY = int.MaxValue;
-        int maxX = int.MinValue, maxY = int.MinValue;
+        double hostScaling = HostScaling(screens, position);
+        var inner = new PixelRect(
+            position.X + VisibilityTolerance,
+            position.Y + VisibilityTolerance,
+            Math.Max(1, (int)(width * hostScaling) - 2 * VisibilityTolerance),
+            Math.Max(1, (int)(height * hostScaling) - 2 * VisibilityTolerance));
+        return IsCovered(screens, inner);
+    }
+
+    public static bool IsSamePlacement(WindowPlacementResult placement, PixelPoint position, double width, double height)
+        => placement.Position == position
+            && Math.Abs(placement.Width - width) < 1
+            && Math.Abs(placement.Height - height) < 1;
+
+    private static bool IsCovered(IReadOnlyList<PlacementScreen> screens, PixelRect rect)
+    {
+        var xs = new SortedSet<int> { rect.X, rect.Right };
+        var ys = new SortedSet<int> { rect.Y, rect.Bottom };
         foreach (var screen in screens)
         {
-            var bounds = screen.Bounds;
-            minX = Math.Min(minX, bounds.X);
-            minY = Math.Min(minY, bounds.Y);
-            maxX = Math.Max(maxX, bounds.Right);
-            maxY = Math.Max(maxY, bounds.Bottom);
+            PixelRect area = screen.WorkingArea;
+            if (area.X > rect.X && area.X < rect.Right) xs.Add(area.X);
+            if (area.Right > rect.X && area.Right < rect.Right) xs.Add(area.Right);
+            if (area.Y > rect.Y && area.Y < rect.Bottom) ys.Add(area.Y);
+            if (area.Bottom > rect.Y && area.Bottom < rect.Bottom) ys.Add(area.Bottom);
         }
 
-        double hostScaling = HostScaling(screens, position);
-        int widthPx = (int)(width * hostScaling);
-        int heightPx = (int)(height * hostScaling);
-        int x = position.X, y = position.Y;
-        return !(x + VisibilityTolerance < minX || x + widthPx - VisibilityTolerance > maxX
-            || y + VisibilityTolerance < minY || y + heightPx - VisibilityTolerance > maxY);
+        int[] xEdges = xs.ToArray();
+        int[] yEdges = ys.ToArray();
+        for (int i = 0; i < xEdges.Length - 1; i++)
+        {
+            for (int j = 0; j < yEdges.Length - 1; j++)
+            {
+                var cell = new PixelRect(xEdges[i], yEdges[j], xEdges[i + 1] - xEdges[i], yEdges[j + 1] - yEdges[j]);
+                bool inside = false;
+                foreach (var screen in screens)
+                {
+                    if (screen.WorkingArea.Contains(cell))
+                    {
+                        inside = true;
+                        break;
+                    }
+                }
+
+                if (!inside)
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     private static double HostScaling(IReadOnlyList<PlacementScreen> screens, PixelPoint position)

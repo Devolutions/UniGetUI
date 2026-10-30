@@ -7,6 +7,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager
     {
         private readonly IPackageManager __manager;
         private readonly ConcurrentDictionary<string, IManagerSource> __reference;
+        private readonly ConcurrentDictionary<string, IManagerSource> __placeholders = [];
         private readonly Uri __default_uri = new("https://devolutions.net/unigetui");
 
         public SourceFactory(IPackageManager manager)
@@ -32,9 +33,11 @@ namespace UniGetUI.PackageEngine.Classes.Manager
                 return source;
             }
 
-            ManagerSource new_source = new(__manager, name, __default_uri);
-            __reference.TryAdd(name, new_source);
-            return new_source;
+            IManagerSource new_source = __placeholders.GetOrAdd(
+                name,
+                n => new ManagerSource(__manager, n, __default_uri)
+            );
+            return __reference.GetOrAdd(name, new_source);
         }
 
         /// <summary>
@@ -58,6 +61,15 @@ namespace UniGetUI.PackageEngine.Classes.Manager
                 if (existing_source.Url == __default_uri)
                 {
                     existing_source.ReplaceUrl(source.Url);
+                }
+            }
+
+            // Placeholders handed out before a Reset() are still referenced by packages
+            if (__placeholders.TryRemove(source.Name, out IManagerSource? placeholder))
+            {
+                if (placeholder.Url == __default_uri)
+                {
+                    placeholder.ReplaceUrl(source.Url);
                 }
             }
         }

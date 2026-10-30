@@ -14,7 +14,7 @@
     <releaseNotes>https://devolutions.net/unigetui/release-notes/</releaseNotes>
     <licenseUrl>https://github.com/Devolutions/UniGetUI/blob/HEAD/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <iconUrl>https://cdnweb.devolutions.net/web/common/logos/img-devolutions-unigetui-white.svg</iconUrl>
+    <iconUrl>https://cdnweb.devolutions.net/web/common/logos/img-devolutions-unigetui-app-icon.svg</iconUrl>
   </metadata>
   <files>
     <file src="tools\chocolateyInstall.ps1" target="tools" />

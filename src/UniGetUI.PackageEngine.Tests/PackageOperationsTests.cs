@@ -1079,6 +1079,57 @@ public sealed class PackageOperationsTests
         Assert.Equal(OperationStatus.Canceled, operation.Status);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HeldOperationsDoNotStartUntilTheHoldIsReleased(bool queueEnabled)
+    {
+        using var operation = new CancellationAwareStubOperation(queueEnabled);
+        Task mainThread;
+        AbstractOperation.HoldNewOperations = true;
+        try
+        {
+            mainThread = operation.MainThread();
+            await Task.Delay(300);
+
+            Assert.False(operation.PerformStarted.Task.IsCompleted);
+            Assert.Equal(OperationStatus.InQueue, operation.Status);
+        }
+        finally
+        {
+            AbstractOperation.HoldNewOperations = false;
+        }
+
+        await operation.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.AllowCleanupToComplete.TrySetResult(true);
+        await mainThread;
+    }
+
+    [Fact]
+    public async Task CancelingAHeldOperationEndsItWithoutRunning()
+    {
+        using var operation = new CancellationAwareStubOperation(queueEnabled: true);
+        AbstractOperation.HoldNewOperations = true;
+        try
+        {
+            Task mainThread = operation.MainThread();
+            await Task.Delay(300);
+
+            operation.Cancel();
+            await mainThread.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.False(operation.PerformStarted.Task.IsCompleted);
+            Assert.Equal(OperationStatus.Canceled, operation.Status);
+            Assert.Equal(0, AbstractOperation.QueueLength());
+        }
+        finally
+        {
+            AbstractOperation.HoldNewOperations = false;
+        }
+    }
+
     [Fact]
     public async Task RetryWaitsForCanceledRunCleanupBeforeStartingAgain()
     {

@@ -27,6 +27,12 @@ public abstract partial class AbstractOperation : IDisposable
     /// in response to a user action. They queue behind every user-requested operation.
     /// </summary>
     public bool IsBackgroundOperation { get; set; }
+    private static volatile bool _holdNewOperations;
+    public static bool HoldNewOperations
+    {
+        get => _holdNewOperations;
+        set => _holdNewOperations = value;
+    }
     protected bool QUEUE_ENABLED;
     protected bool FORCE_HOLD_QUEUE;
     private bool IsInnerOperation;
@@ -340,6 +346,18 @@ public abstract partial class AbstractOperation : IDisposable
                 }
             }
             // END QUEUE HANDLER
+
+            while (HoldNewOperations && !IsInnerOperation)
+            {
+                if (runCancellation.IsCancellationRequested)
+                {
+                    RemoveFromQueue(this);
+                    CompleteCanceledRun();
+                    return;
+                }
+
+                await Task.Delay(100);
+            }
 
             IsExecutingOperation = true;
             OperationVeredict result;

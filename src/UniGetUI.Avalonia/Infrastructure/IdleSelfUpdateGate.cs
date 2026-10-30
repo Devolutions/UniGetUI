@@ -5,8 +5,7 @@ public readonly record struct IdleSelfUpdateSnapshot(
     bool IsBusy,
     bool IsWindowVisible,
     bool HasUnsavedWork,
-    bool IsQuitting,
-    bool NeedsElevation);
+    bool IsQuitting);
 
 public static class IdleSelfUpdateGate
 {
@@ -18,8 +17,7 @@ public static class IdleSelfUpdateGate
             || snapshot.IsBusy
             || snapshot.IsWindowVisible
             || snapshot.HasUnsavedWork
-            || snapshot.IsQuitting
-            || snapshot.NeedsElevation)
+            || snapshot.IsQuitting)
         {
             idleChecks = 0;
             return false;

@@ -9,8 +9,7 @@ public class IdleSelfUpdateGateTests
         IsBusy: false,
         IsWindowVisible: false,
         HasUnsavedWork: false,
-        IsQuitting: false,
-        NeedsElevation: false);
+        IsQuitting: false);
 
     private static bool[] Run(params IdleSelfUpdateSnapshot[] samples)
     {
@@ -33,17 +32,15 @@ public class IdleSelfUpdateGateTests
     }
 
     [Theory]
-    [InlineData(false, false, false, false, false)]
-    [InlineData(true, true, false, false, false)]
-    [InlineData(true, false, true, false, false)]
-    [InlineData(true, false, false, true, false)]
-    [InlineData(true, false, false, false, true)]
+    [InlineData(false, false, false, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, false, true, false)]
+    [InlineData(true, false, false, true)]
     public void NeverInstallsWhenASafeguardApplies(
         bool enabled,
         bool windowVisible,
         bool unsavedWork,
-        bool quitting,
-        bool needsElevation)
+        bool quitting)
     {
         IdleSelfUpdateSnapshot blocked = Idle with
         {
@@ -51,7 +48,6 @@ public class IdleSelfUpdateGateTests
             IsWindowVisible = windowVisible,
             HasUnsavedWork = unsavedWork,
             IsQuitting = quitting,
-            NeedsElevation = needsElevation,
         };
 
         Assert.All(Run(blocked, blocked, blocked), Assert.False);

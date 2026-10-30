@@ -1605,6 +1605,222 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal(1, lookups);
     }
 
+    [Fact]
+    public void InstalledVersionHostsStayTrustedAfterItsManifestMovesToAnArchiveHost()
+    {
+        var package = CreatePingetQueryPackage();
+
+        WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
+            package,
+            new WinGetPkgOperationHelper.PendingInstallerTrust("1.2.3", null, null),
+            _ => CreatePingetShowResult(
+                installerUrls:
+                [
+                    "https://download.example.test/tool-1.2.3.msi",
+                    "https://mirror.thirdparty.test/tool-1.2.3-arm64.msi",
+                ]
+            )
+        );
+
+        Assert.True(WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("download.example.test")));
+        Assert.False(WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("mirror.thirdparty.test")));
+        Assert.False(WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("elsewhere.test")));
+
+        var differentlyCased = new PackageBuilder()
+            .WithManager(package.Manager)
+            .WithId("contoso.tool")
+            .WithVersion("1.2.3")
+            .Build();
+        Assert.True(
+            WinGetPkgOperationHelper.InstallerHostsAreTrusted(differentlyCased, Hosts("download.example.test"))
+        );
+    }
+
+    [Fact]
+    public void ConcurrentTrustedInstallerHostRecordsAreAllKept()
+    {
+        var manager = new WinGet();
+        var packages = Enumerable
+            .Range(0, 40)
+            .Select(i => new PackageBuilder().WithManager(manager).WithId($"Contoso.Parallel{i}").WithVersion("1.2.3").Build())
+            .ToList();
+
+        Parallel.ForEach(
+            packages,
+            package => WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
+                package,
+                new WinGetPkgOperationHelper.PendingInstallerTrust("1.2.3", null, null),
+                _ => CreatePingetShowResult(installerUrls: ["https://download.example.test/tool.msi"])
+            )
+        );
+
+        Assert.All(
+            packages,
+            package => Assert.True(
+                WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("download.example.test"))
+            )
+        );
+    }
+
+    [Fact]
+    public void TrustedHostLookupAsksForTheScopeAndArchitectureThatWereInstalled()
+    {
+        var package = CreatePingetQueryPackage();
+        PackageQuery? asked = null;
+
+        WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
+            package,
+            new WinGetPkgOperationHelper.PendingInstallerTrust("1.2.3", PackageScope.Machine, Architecture.x86),
+            query =>
+            {
+                asked = query;
+                return CreatePingetShowResult(installerUrls: ["https://download.example.test/tool-x86.msi"]);
+            }
+        );
+
+        Assert.NotNull(asked);
+        Assert.Equal(PackageScope.Machine, asked.InstallScope);
+        Assert.Equal(Architecture.x86, asked.InstallerArchitecture);
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, "", "2.0.0")]
+    [InlineData(OperationType.Install, "", "2.0.0")]
+    [InlineData(OperationType.Install, "1.5.0", "1.5.0")]
+    public void ASuccessfulOperationTrustsTheVersionScopeAndArchitectureItRan(
+        OperationType operation,
+        string requestedVersion,
+        string expectedVersion
+    )
+    {
+        var (manager, package) = CreateTrustTestPackage($"Contoso.Trusted{operation}{requestedVersion}");
+        var options = new InstallOptions
+        {
+            Version = requestedVersion,
+            InstallationScope = PackageScope.Machine,
+            Architecture = Architecture.x86,
+        };
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, options, operation);
+            manager.OperationHelper.GetResult(package, operation, [], 0);
+        });
+
+        var trust = Assert.Single(recorded);
+        Assert.Equal(expectedVersion, trust.Version);
+        Assert.Equal(PackageScope.Machine, trust.Scope);
+        Assert.Equal(Architecture.x86, trust.Architecture);
+    }
+
+    [Theory]
+    [InlineData(0x8A15010Du)]
+    [InlineData(0x8A15004Fu)]
+    [InlineData(0x8A15010Eu)]
+    [InlineData(0x8A15010Bu)]
+    [InlineData(0x8A150101u)]
+    public void AResultWhereNoInstallerCompletedTrustsNothing(uint returnCode)
+    {
+        var (manager, package) = CreateTrustTestPackage($"Contoso.NoInstall{returnCode:X}");
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, new InstallOptions(), OperationType.Update);
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)returnCode));
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        });
+
+        Assert.Empty(recorded);
+    }
+
+    [Fact]
+    public void ARebootToFinishTheInstallStillTrustsItsHost()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.RebootToFinish");
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, new InstallOptions(), OperationType.Update);
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150109u));
+        });
+
+        Assert.Equal("2.0.0", Assert.Single(recorded).Version);
+    }
+
+    [Fact]
+    public void AnOptionsPreviewDoesNotReplaceTheRunningOperationsTrust()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.Previewed");
+        var running = new InstallOptions
+        {
+            Version = "1.5.0",
+            InstallationScope = PackageScope.Machine,
+            Architecture = Architecture.x86,
+        };
+        var previewed = new InstallOptions
+        {
+            Version = "1.6.0",
+            InstallationScope = PackageScope.User,
+            Architecture = Architecture.x64,
+        };
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, running, OperationType.Install);
+            manager.OperationHelper.GetStandaloneParameters(package, previewed, OperationType.Install);
+            manager.OperationHelper.GetResult(package, OperationType.Install, [], 0);
+        });
+
+        Assert.Equal(
+            new WinGetPkgOperationHelper.PendingInstallerTrust("1.5.0", PackageScope.Machine, Architecture.x86),
+            Assert.Single(recorded)
+        );
+    }
+
+    [Fact]
+    public void ASuccessWithoutLocallyBuiltParametersTrustsNothing()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.Brokered");
+
+        var recorded = RecordTrustedHosts(
+            () => manager.OperationHelper.GetResult(package, OperationType.Update, [], 0)
+        );
+
+        Assert.Empty(recorded);
+    }
+
+    private static (WinGet Manager, IPackage Package) CreateTrustTestPackage(string id)
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId(id)
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        return (manager, package);
+    }
+
+    private static List<WinGetPkgOperationHelper.PendingInstallerTrust> RecordTrustedHosts(Action run)
+    {
+        List<WinGetPkgOperationHelper.PendingInstallerTrust> recorded = [];
+        var original = WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord;
+        WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord = (_, trust) => recorded.Add(trust);
+        try
+        {
+            run();
+        }
+        finally
+        {
+            WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord = original;
+        }
+        return recorded;
+    }
+
+    private static HashSet<string> Hosts(params string[] hosts) =>
+        new(hosts, StringComparer.OrdinalIgnoreCase);
+
     [Theory]
     [InlineData("2.7.11.0", "2.7.11")]
     [InlineData("2.7.11.0.0", "2.7.11")]

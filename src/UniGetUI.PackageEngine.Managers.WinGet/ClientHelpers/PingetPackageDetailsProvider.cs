@@ -718,7 +718,10 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
     internal static IReadOnlySet<string>? TryGetInstallerHostsForVersion(
         IPackage package,
         string version,
-        Func<PackageQuery, ShowResult>? showPackage = null
+        Func<PackageQuery, ShowResult>? showPackage = null,
+        bool selectedInstallerOnly = false,
+        string? scope = null,
+        string? architecture = null
     )
     {
         string? trimmedVersion = TrimTrailingZeroSegments(version);
@@ -727,7 +730,10 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
             version,
             requireExactVersion: true,
             showPackage,
-            logFailures: trimmedVersion is null
+            logFailures: trimmedVersion is null,
+            selectedInstallerOnly,
+            scope,
+            architecture
         );
 
         if (urls is null && trimmedVersion is not null)
@@ -736,7 +742,10 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
                 package,
                 trimmedVersion,
                 requireExactVersion: true,
-                showPackage
+                showPackage,
+                selectedInstallerOnly: selectedInstallerOnly,
+                scope: scope,
+                architecture: architecture
             );
         }
 
@@ -798,12 +807,19 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         string? version,
         bool requireExactVersion,
         Func<PackageQuery, ShowResult>? showPackage,
-        bool logFailures = true
+        bool logFailures = true,
+        bool selectedInstallerOnly = false,
+        string? scope = null,
+        string? architecture = null
     )
     {
         try
         {
-            PackageQuery query = CreateQuery(package, version);
+            PackageQuery query = CreateQuery(package, version) with
+            {
+                InstallScope = scope,
+                InstallerArchitecture = architecture,
+            };
             ShowResult result = (showPackage ?? ShowWithRepository)(query);
 
             // Pinget silently falls back to the latest manifest when the requested version
@@ -826,8 +842,12 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
                 }
             }
 
+            IEnumerable<Installer> installers = selectedInstallerOnly
+                ? result.SelectedInstaller is { } selected ? [selected] : []
+                : result.Manifest.Installers;
+
             List<string> urls = [];
-            foreach (Installer installer in result.Manifest.Installers)
+            foreach (Installer installer in installers)
             {
                 if (string.IsNullOrWhiteSpace(installer.Url))
                     continue;

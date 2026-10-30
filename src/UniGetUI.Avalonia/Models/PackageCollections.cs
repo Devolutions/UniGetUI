@@ -766,6 +766,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
                 // one host, the publisher hasn't moved hosting — adding/removing CDN mirrors
                 // or architectures shouldn't trigger the warning.
                 if (oldHosts.Overlaps(newHosts)) return;
+                if (WinGet.InstallerHostsAreTrusted(Package, newHosts)) return;
 
                 string tooltip = CoreTools.Translate(
                     "Installer host changed since the installed version.\n"

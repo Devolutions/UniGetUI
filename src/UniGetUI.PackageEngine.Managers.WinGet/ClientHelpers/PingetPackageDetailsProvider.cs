@@ -719,7 +719,9 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         IPackage package,
         string version,
         Func<PackageQuery, ShowResult>? showPackage = null,
-        bool selectedInstallerOnly = false
+        bool selectedInstallerOnly = false,
+        string? scope = null,
+        string? architecture = null
     )
     {
         string? trimmedVersion = TrimTrailingZeroSegments(version);
@@ -729,7 +731,9 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
             requireExactVersion: true,
             showPackage,
             logFailures: trimmedVersion is null,
-            selectedInstallerOnly
+            selectedInstallerOnly,
+            scope,
+            architecture
         );
 
         if (urls is null && trimmedVersion is not null)
@@ -739,7 +743,9 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
                 trimmedVersion,
                 requireExactVersion: true,
                 showPackage,
-                selectedInstallerOnly: selectedInstallerOnly
+                selectedInstallerOnly: selectedInstallerOnly,
+                scope: scope,
+                architecture: architecture
             );
         }
 
@@ -802,12 +808,18 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         bool requireExactVersion,
         Func<PackageQuery, ShowResult>? showPackage,
         bool logFailures = true,
-        bool selectedInstallerOnly = false
+        bool selectedInstallerOnly = false,
+        string? scope = null,
+        string? architecture = null
     )
     {
         try
         {
-            PackageQuery query = CreateQuery(package, version);
+            PackageQuery query = CreateQuery(package, version) with
+            {
+                InstallScope = scope,
+                InstallerArchitecture = architecture,
+            };
             ShowResult result = (showPackage ?? ShowWithRepository)(query);
 
             // Pinget silently falls back to the latest manifest when the requested version

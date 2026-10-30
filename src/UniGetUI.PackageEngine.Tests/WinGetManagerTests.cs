@@ -6,7 +6,6 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager;
-using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.WingetManager;
@@ -1613,7 +1612,7 @@ public sealed class WinGetManagerTests : IDisposable
 
         WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
             package,
-            "1.2.3",
+            new WinGetPkgOperationHelper.PendingInstallerTrust("1.2.3", null, null),
             _ => CreatePingetShowResult(
                 installerUrls:
                 [
@@ -1650,7 +1649,7 @@ public sealed class WinGetManagerTests : IDisposable
             packages,
             package => WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
                 package,
-                "1.2.3",
+                new WinGetPkgOperationHelper.PendingInstallerTrust("1.2.3", null, null),
                 _ => CreatePingetShowResult(installerUrls: ["https://download.example.test/tool.msi"])
             )
         );
@@ -1663,41 +1662,130 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    [Fact]
+    public void TrustedHostLookupAsksForTheScopeAndArchitectureThatWereInstalled()
+    {
+        var package = CreatePingetQueryPackage();
+        PackageQuery? asked = null;
+
+        WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
+            package,
+            new WinGetPkgOperationHelper.PendingInstallerTrust("1.2.3", PackageScope.Machine, Architecture.x86),
+            query =>
+            {
+                asked = query;
+                return CreatePingetShowResult(installerUrls: ["https://download.example.test/tool-x86.msi"]);
+            }
+        );
+
+        Assert.NotNull(asked);
+        Assert.Equal(PackageScope.Machine, asked.InstallScope);
+        Assert.Equal(Architecture.x86, asked.InstallerArchitecture);
+    }
+
     [Theory]
     [InlineData(OperationType.Update, "", "2.0.0")]
     [InlineData(OperationType.Install, "", "2.0.0")]
     [InlineData(OperationType.Install, "1.5.0", "1.5.0")]
-    public void ASuccessfulOperationTrustsTheHostsOfTheVersionItInstalled(
+    public void ASuccessfulOperationTrustsTheVersionScopeAndArchitectureItRan(
         OperationType operation,
         string requestedVersion,
         string expectedVersion
     )
     {
+        var (manager, package) = CreateTrustTestPackage($"Contoso.Trusted{operation}{requestedVersion}");
+        var options = new InstallOptions
+        {
+            Version = requestedVersion,
+            InstallationScope = PackageScope.Machine,
+            Architecture = Architecture.x86,
+        };
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, options, operation);
+            manager.OperationHelper.GetResult(package, operation, [], 0);
+        });
+
+        var trust = Assert.Single(recorded);
+        Assert.Equal(expectedVersion, trust.Version);
+        Assert.Equal(PackageScope.Machine, trust.Scope);
+        Assert.Equal(Architecture.x86, trust.Architecture);
+    }
+
+    [Theory]
+    [InlineData(0x8A15010Du)]
+    [InlineData(0x8A15004Fu)]
+    [InlineData(0x8A15010Eu)]
+    [InlineData(0x8A15010Bu)]
+    [InlineData(0x8A150101u)]
+    public void AResultWhereNoInstallerCompletedTrustsNothing(uint returnCode)
+    {
+        var (manager, package) = CreateTrustTestPackage($"Contoso.NoInstall{returnCode:X}");
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, new InstallOptions(), OperationType.Update);
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)returnCode));
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        });
+
+        Assert.Empty(recorded);
+    }
+
+    [Fact]
+    public void ARebootToFinishTheInstallStillTrustsItsHost()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.RebootToFinish");
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, new InstallOptions(), OperationType.Update);
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150109u));
+        });
+
+        Assert.Equal("2.0.0", Assert.Single(recorded).Version);
+    }
+
+    [Fact]
+    public void ASuccessWithoutLocallyBuiltParametersTrustsNothing()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.Brokered");
+
+        var recorded = RecordTrustedHosts(
+            () => manager.OperationHelper.GetResult(package, OperationType.Update, [], 0)
+        );
+
+        Assert.Empty(recorded);
+    }
+
+    private static (WinGet Manager, IPackage Package) CreateTrustTestPackage(string id)
+    {
         var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
         var package = new PackageBuilder()
             .WithManager(manager)
-            .WithId($"Contoso.Trusted{operation}{requestedVersion}")
+            .WithId(id)
             .WithVersion("1.0.0")
             .WithNewVersion("2.0.0")
             .Build();
-        InstallOptionsFactory.SaveForPackage(
-            new InstallOptions { OverridesNextLevelOpts = true, Version = requestedVersion },
-            package
-        );
+        return (manager, package);
+    }
 
-        List<string> recorded = [];
+    private static List<WinGetPkgOperationHelper.PendingInstallerTrust> RecordTrustedHosts(Action run)
+    {
+        List<WinGetPkgOperationHelper.PendingInstallerTrust> recorded = [];
         var original = WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord;
-        WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord = (_, version) => recorded.Add(version);
+        WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord = (_, trust) => recorded.Add(trust);
         try
         {
-            manager.OperationHelper.GetResult(package, operation, [], 0);
+            run();
         }
         finally
         {
             WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord = original;
         }
-
-        Assert.Equal([expectedVersion], recorded);
+        return recorded;
     }
 
     private static HashSet<string> Hosts(params string[] hosts) =>

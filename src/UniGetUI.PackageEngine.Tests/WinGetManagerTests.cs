@@ -6,6 +6,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.WingetManager;
@@ -1604,6 +1605,103 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Null(hosts);
         Assert.Equal(1, lookups);
     }
+
+    [Fact]
+    public void InstalledVersionHostsStayTrustedAfterItsManifestMovesToAnArchiveHost()
+    {
+        var package = CreatePingetQueryPackage();
+
+        WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
+            package,
+            "1.2.3",
+            _ => CreatePingetShowResult(
+                installerUrls:
+                [
+                    "https://download.example.test/tool-1.2.3.msi",
+                    "https://mirror.thirdparty.test/tool-1.2.3-arm64.msi",
+                ]
+            )
+        );
+
+        Assert.True(WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("download.example.test")));
+        Assert.False(WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("mirror.thirdparty.test")));
+        Assert.False(WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("elsewhere.test")));
+
+        var differentlyCased = new PackageBuilder()
+            .WithManager(package.Manager)
+            .WithId("contoso.tool")
+            .WithVersion("1.2.3")
+            .Build();
+        Assert.True(
+            WinGetPkgOperationHelper.InstallerHostsAreTrusted(differentlyCased, Hosts("download.example.test"))
+        );
+    }
+
+    [Fact]
+    public void ConcurrentTrustedInstallerHostRecordsAreAllKept()
+    {
+        var manager = new WinGet();
+        var packages = Enumerable
+            .Range(0, 40)
+            .Select(i => new PackageBuilder().WithManager(manager).WithId($"Contoso.Parallel{i}").WithVersion("1.2.3").Build())
+            .ToList();
+
+        Parallel.ForEach(
+            packages,
+            package => WinGetPkgOperationHelper.RecordTrustedInstallerHosts(
+                package,
+                "1.2.3",
+                _ => CreatePingetShowResult(installerUrls: ["https://download.example.test/tool.msi"])
+            )
+        );
+
+        Assert.All(
+            packages,
+            package => Assert.True(
+                WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, Hosts("download.example.test"))
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, "", "2.0.0")]
+    [InlineData(OperationType.Install, "", "2.0.0")]
+    [InlineData(OperationType.Install, "1.5.0", "1.5.0")]
+    public void ASuccessfulOperationTrustsTheHostsOfTheVersionItInstalled(
+        OperationType operation,
+        string requestedVersion,
+        string expectedVersion
+    )
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId($"Contoso.Trusted{operation}{requestedVersion}")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, Version = requestedVersion },
+            package
+        );
+
+        List<string> recorded = [];
+        var original = WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord;
+        WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord = (_, version) => recorded.Add(version);
+        try
+        {
+            manager.OperationHelper.GetResult(package, operation, [], 0);
+        }
+        finally
+        {
+            WinGetPkgOperationHelper.QueueTrustedInstallerHostsRecord = original;
+        }
+
+        Assert.Equal([expectedVersion], recorded);
+    }
+
+    private static HashSet<string> Hosts(params string[] hosts) =>
+        new(hosts, StringComparer.OrdinalIgnoreCase);
 
     [Theory]
     [InlineData("2.7.11.0", "2.7.11")]

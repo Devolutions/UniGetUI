@@ -718,7 +718,8 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
     internal static IReadOnlySet<string>? TryGetInstallerHostsForVersion(
         IPackage package,
         string version,
-        Func<PackageQuery, ShowResult>? showPackage = null
+        Func<PackageQuery, ShowResult>? showPackage = null,
+        bool selectedInstallerOnly = false
     )
     {
         string? trimmedVersion = TrimTrailingZeroSegments(version);
@@ -727,7 +728,8 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
             version,
             requireExactVersion: true,
             showPackage,
-            logFailures: trimmedVersion is null
+            logFailures: trimmedVersion is null,
+            selectedInstallerOnly
         );
 
         if (urls is null && trimmedVersion is not null)
@@ -736,7 +738,8 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
                 package,
                 trimmedVersion,
                 requireExactVersion: true,
-                showPackage
+                showPackage,
+                selectedInstallerOnly: selectedInstallerOnly
             );
         }
 
@@ -798,7 +801,8 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         string? version,
         bool requireExactVersion,
         Func<PackageQuery, ShowResult>? showPackage,
-        bool logFailures = true
+        bool logFailures = true,
+        bool selectedInstallerOnly = false
     )
     {
         try
@@ -826,8 +830,12 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
                 }
             }
 
+            IEnumerable<Installer> installers = selectedInstallerOnly
+                ? result.SelectedInstaller is { } selected ? [selected] : []
+                : result.Manifest.Installers;
+
             List<string> urls = [];
-            foreach (Installer installer in result.Manifest.Installers)
+            foreach (Installer installer in installers)
             {
                 if (string.IsNullOrWhiteSpace(installer.Url))
                     continue;

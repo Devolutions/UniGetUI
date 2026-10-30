@@ -1,3 +1,4 @@
+using Devolutions.Pinget.Core;
 using Microsoft.Management.Deployment;
 using Microsoft.Win32;
 using UniGetUI.Core.Logging;
@@ -342,7 +343,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         {
             if (operation is OperationType.Update or OperationType.Install)
                 // Pending-restart sticks after reboot; don't count it as a phantom no-op (#5042).
-                MarkUpgradeAsDone(package, countTowardStuckLoop: false);
+                MarkUpgradeAsDone(package, operation, countTowardStuckLoop: false);
             return OperationVeredict.RestartRequired;
         }
 
@@ -400,7 +401,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         { // Application is already installed
             if (operation is OperationType.Update or OperationType.Install)
                 // Only updates feed the stuck-update counter; installs must not (#5158).
-                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update);
+                MarkUpgradeAsDone(package, operation, countTowardStuckLoop: operation is OperationType.Update);
             return OperationVeredict.Success;
         }
 
@@ -408,7 +409,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         { // Operation succeeded
             if (operation is OperationType.Update or OperationType.Install)
                 // Only updates feed the stuck-update counter; installs must not (#5158).
-                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update);
+                MarkUpgradeAsDone(package, operation, countTowardStuckLoop: operation is OperationType.Update);
             return OperationVeredict.Success;
         }
 
@@ -485,7 +486,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             ? v
             : DefaultStuckUpgradeThreshold;
 
-    private static void MarkUpgradeAsDone(IPackage package, bool countTowardStuckLoop = true)
+    private static void MarkUpgradeAsDone(
+        IPackage package,
+        OperationType operation,
+        bool countTowardStuckLoop = true
+    )
     {
         var options = InstallOptionsFactory.LoadApplicable(package);
         string version;
@@ -502,6 +507,74 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         );
         if (countTowardStuckLoop)
             RecordUpgradeAttempt(package.Id, version);
+        QueueTrustedInstallerHostsRecord(
+            package,
+            operation is OperationType.Install && options.Version != "" ? options.Version : version
+        );
+    }
+
+    private static readonly Lock _trustedInstallerHostsLock = new();
+
+    internal static Action<IPackage, string> QueueTrustedInstallerHostsRecord { get; set; } =
+        QueueTrustedInstallerHostsRecordInBackground;
+
+    private static void QueueTrustedInstallerHostsRecordInBackground(IPackage package, string version)
+    {
+        if (!package.Manager.IsReady())
+            return;
+
+        _ = Task.Run(() => RecordTrustedInstallerHosts(package, version, showPackage: null));
+    }
+
+    private static string TrustedInstallerHostsKey(IPackage package) =>
+        package.Id.ToLowerInvariant();
+
+    internal static void RecordTrustedInstallerHosts(
+        IPackage package,
+        string version,
+        Func<PackageQuery, ShowResult>? showPackage
+    )
+    {
+        if (IsUnknownVersion(version) || Settings.Get(Settings.K.DisableInstallerHostChangeWarning))
+            return;
+
+        try
+        {
+            var hosts = PingetPackageDetailsProvider.TryGetInstallerHostsForVersion(
+                package,
+                version,
+                showPackage,
+                selectedInstallerOnly: true
+            );
+            if (hosts is null)
+                return;
+            lock (_trustedInstallerHostsLock)
+            {
+                Settings.SetDictionaryItem<string, string>(
+                    Settings.K.WinGetTrustedInstallerHosts,
+                    TrustedInstallerHostsKey(package),
+                    string.Join(' ', hosts)
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not record the installer hosts of {package.Id} {version}: {ex.Message}");
+        }
+    }
+
+    public static bool InstallerHostsAreTrusted(IPackage package, IReadOnlySet<string> hosts)
+    {
+        string? trusted;
+        lock (_trustedInstallerHostsLock)
+        {
+            trusted = Settings.GetDictionaryItem<string, string>(
+                Settings.K.WinGetTrustedInstallerHosts,
+                TrustedInstallerHostsKey(package)
+            );
+        }
+        return !string.IsNullOrEmpty(trusted)
+            && trusted.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(hosts.Contains);
     }
 
     // Stored as "count\nversion"; count resets when the target version changes.

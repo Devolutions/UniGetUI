@@ -365,7 +365,7 @@ internal static partial class AvaloniaAutoUpdater
 
     private static readonly TimeSpan IdleSampleInterval = TimeSpan.FromSeconds(5);
     private static volatile bool _installRequested;
-    private static string? _backgroundInstallTriedVersion;
+    private static readonly HashSet<string> _backgroundInstallTriedVersions = [];
     private static string? _pendingInstallerPath;
 
     /// <summary>
@@ -800,7 +800,7 @@ internal static partial class AvaloniaAutoUpdater
                         LogUpdateWarn("Auto-updater: installing in the background needs administrator rights for this all-users installation — waiting for the user.");
                     canInstallInBackground = false;
                 }
-                else if (canInstallInBackground && _backgroundInstallTriedVersion == versionName)
+                else if (canInstallInBackground && WasBackgroundInstallTried(versionName))
                 {
                     if (Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle))
                         LogUpdateWarn($"Auto-updater: installing {versionName} in the background was already tried once — waiting for the user.");
@@ -828,22 +828,26 @@ internal static partial class AvaloniaAutoUpdater
                         return true;
                     }
 
-                    if (canInstallInBackground
-                        && Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle)
-                        && DateTime.UtcNow >= nextIdleSample)
+                    if (canInstallInBackground && DateTime.UtcNow >= nextIdleSample)
                     {
                         nextIdleSample = DateTime.UtcNow + IdleSampleInterval;
-                        if (await Dispatcher.UIThread.InvokeAsync(() =>
+                        if (!Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle))
+                        {
+                            idleChecks = 0;
+                        }
+                        else if (await Dispatcher.UIThread.InvokeAsync(() =>
                             {
                                 if (!IdleSelfUpdateGate.ShouldInstall(SampleIdleState(), ref idleChecks))
                                     return false;
-                                AbstractOperation.HoldNewOperations = true;
-                                return true;
+                                if (AbstractOperation.TryHoldNewOperations())
+                                    return true;
+                                idleChecks = 0;
+                                return false;
                             }))
                         {
                             LogUpdateInfo("Auto-updater: UniGetUI is idle in the background — installing the update without waiting for the user.");
                             installingInBackground = true;
-                            _backgroundInstallTriedVersion = versionName;
+                            MarkBackgroundInstallTried(versionName);
                             break;
                         }
                     }
@@ -882,6 +886,18 @@ internal static partial class AvaloniaAutoUpdater
                 AbstractOperation.HoldNewOperations = false;
             InstallerHandoffs.Complete(handoff);
         }
+    }
+
+    private static bool WasBackgroundInstallTried(string versionName)
+    {
+        lock (_backgroundInstallTriedVersions)
+            return _backgroundInstallTriedVersions.Contains(versionName);
+    }
+
+    private static void MarkBackgroundInstallTried(string versionName)
+    {
+        lock (_backgroundInstallTriedVersions)
+            _backgroundInstallTriedVersions.Add(versionName);
     }
 
     internal static bool BackgroundInstallNeedsElevation()

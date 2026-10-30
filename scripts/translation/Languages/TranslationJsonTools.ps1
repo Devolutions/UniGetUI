@@ -74,7 +74,9 @@ function Assert-NoDuplicateJsonKeys {
 function Read-OrderedJsonMap {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Path
+        [string]$Path,
+
+        [switch]$AllowTrailingCommas
     )
 
     if (-not (Test-Path -Path $Path -PathType Leaf)) {
@@ -82,7 +84,7 @@ function Read-OrderedJsonMap {
     }
 
     $content = [System.IO.File]::ReadAllText((Get-FullPath -Path $Path))
-    return Convert-JsonContentToOrderedMap -Content $content -Path $Path -DetectDuplicates
+    return Convert-JsonContentToOrderedMap -Content $content -Path $Path -DetectDuplicates -AllowTrailingCommas:$AllowTrailingCommas
 }
 
 function Read-OrderedJsonMapPermissive {
@@ -108,7 +110,9 @@ function Convert-JsonContentToOrderedMap {
         [Parameter(Mandatory = $true)]
         [string]$Path,
 
-        [switch]$DetectDuplicates
+        [switch]$DetectDuplicates,
+
+        [switch]$AllowTrailingCommas
     )
 
     $result = New-OrderedStringMap
@@ -120,7 +124,9 @@ function Convert-JsonContentToOrderedMap {
         Assert-NoDuplicateJsonKeys -Content $Content -Path $Path
     }
 
-    $document = [System.Text.Json.JsonDocument]::Parse($Content)
+    $documentOptions = [System.Text.Json.JsonDocumentOptions]::new()
+    $documentOptions.AllowTrailingCommas = $AllowTrailingCommas.IsPresent
+    $document = [System.Text.Json.JsonDocument]::Parse($Content, $documentOptions)
     try {
         if ($document.RootElement.ValueKind -eq [System.Text.Json.JsonValueKind]::Null) {
             return $result

@@ -6,6 +6,10 @@ source of truth; every other `src/Languages/lang_<code>.json` file translates it
 workflow already found the English strings this language is missing and wrote them to a
 directory given in the prompt that started you (the batch directory).
 
+These instructions are complete. Do not load skills or follow any other translation workflow
+from the repository: this batch is meant to be translated in this session, however large it
+is, and leaving it untranslated because of its size fails the run.
+
 Your only job is to write translation files into that batch directory. Do not edit any file
 in the repository, do not run git, and do not merge anything yourself: a later step validates
 your files and merges them into the language file.

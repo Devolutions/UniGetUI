@@ -1150,6 +1150,7 @@ public partial class MainWindow : Window
                 && WindowPlacement.IsSamePlacement(unsaved, Position, Width, Height))
                 return;
 
+            _unsavedPlacement = null;
             string geometry = $"v2,{Position.X},{Position.Y},{(int)Width},{(int)Height},{state}";
             Settings.SetValue(Settings.K.WindowGeometry, geometry);
         }

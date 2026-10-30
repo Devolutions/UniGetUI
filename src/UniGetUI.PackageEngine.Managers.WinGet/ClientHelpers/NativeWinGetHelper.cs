@@ -224,10 +224,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                         FilterName.Option = PackageFieldMatchOption.ContainsCaseInsensitive;
                         PackageFilters.Filters.Add(FilterName);
                     }
-                    else
-                    {
-                        PackageFilters.ResultLimit = (uint)SearchLimits.MaxEmptyQueryResultsPerSource;
-                    }
+
+                    // Callers keep at most this many results per manager, so don't
+                    // materialize hundreds of matches (e.g. Firefox locales) only to drop them.
+                    PackageFilters.ResultLimit = (uint)SearchLimits.MaxEmptyQueryResultsPerSource;
 
                     try
                     {
@@ -263,6 +263,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         Task.WhenAll(FindPackageTasks.Values.ToArray()).GetAwaiter().GetResult();
         logger.Log($"All catalogs fetched. Fetching results for query piece {query}");
 
+        // The Name, Id and Moniker searches overlap; skip repeats before touching
+        // DefaultInstallVersion, which costs a COM round trip per package.
+        HashSet<(string, string)> seenPackages = [];
+
         foreach (var CatalogTaskPair in FindPackageTasks)
         {
             try
@@ -278,6 +282,11 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 )
                 {
                     CatalogPackage nativePackage = matchResult.CatalogPackage;
+                    if (!seenPackages.Add((source.Name, nativePackage.Id)))
+                    {
+                        continue;
+                    }
+
                     // Create the Package item and add it to the list
                     logger.Log(
                         $"Found package: {nativePackage.Name}|{nativePackage.Id}|{nativePackage.DefaultInstallVersion.Version} on catalog {source.Name}"

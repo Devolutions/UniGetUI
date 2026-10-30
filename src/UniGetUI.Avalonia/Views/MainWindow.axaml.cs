@@ -274,7 +274,6 @@ public partial class MainWindow : Window
 
         SetupMicaAndAccentBorder();
         UpdateWindowCornerPreference();
-        UpdateCaptionButtonInset();
 
         ActualThemeVariantChanged += (_, _) =>
         {
@@ -1455,29 +1454,6 @@ public partial class MainWindow : Window
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
     }
 
-    private void UpdateCaptionButtonInset()
-    {
-        if (!OperatingSystem.IsWindows() || !WindowButtons.IsVisible)
-            return;
-
-        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
-            return;
-
-        double inset = 0;
-        if (!NativeMethods.IsZoomed(handle))
-        {
-            uint dpi = NativeMethods.GetDpiForWindow(handle);
-            if (dpi == 0) dpi = 96;
-            uint style = (uint)NativeMethods.GetWindowLongPtr(handle, GWL_STYLE).ToInt64();
-            var frame = default(NativeMethods.RECT);
-            if (NativeMethods.AdjustWindowRectExForDpi(ref frame, style, false, 0, dpi))
-                inset = frame.Right / (dpi / 96.0);
-        }
-
-        CaptionCloseButton.Width = 46 + inset;
-        CaptionCloseButton.Padding = new Thickness(0, 0, inset, 0);
-    }
-
     private void ApplyWindowBorderColor(nint handle)
     {
         int color;
@@ -1521,11 +1497,7 @@ public partial class MainWindow : Window
         if ((msg == WM_SHOWWINDOW || (msg == WM_SIZE && (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)))
             && Instance is { } cornerOwner)
         {
-            Dispatcher.UIThread.Post(() =>
-            {
-                cornerOwner.UpdateWindowCornerPreference();
-                cornerOwner.UpdateCaptionButtonInset();
-            });
+            Dispatcher.UIThread.Post(cornerOwner.UpdateWindowCornerPreference);
         }
 
         if (msg == WM_SETTINGCHANGE && Instance is { } trayOwner)

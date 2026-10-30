@@ -1748,6 +1748,36 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void AnOptionsPreviewDoesNotReplaceTheRunningOperationsTrust()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.Previewed");
+        var running = new InstallOptions
+        {
+            Version = "1.5.0",
+            InstallationScope = PackageScope.Machine,
+            Architecture = Architecture.x86,
+        };
+        var previewed = new InstallOptions
+        {
+            Version = "1.6.0",
+            InstallationScope = PackageScope.User,
+            Architecture = Architecture.x64,
+        };
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, running, OperationType.Install);
+            manager.OperationHelper.GetStandaloneParameters(package, previewed, OperationType.Install);
+            manager.OperationHelper.GetResult(package, OperationType.Install, [], 0);
+        });
+
+        Assert.Equal(
+            new WinGetPkgOperationHelper.PendingInstallerTrust("1.5.0", PackageScope.Machine, Architecture.x86),
+            Assert.Single(recorded)
+        );
+    }
+
+    [Fact]
     public void ASuccessWithoutLocallyBuiltParametersTrustsNothing()
     {
         var (manager, package) = CreateTrustTestPackage("Contoso.Brokered");

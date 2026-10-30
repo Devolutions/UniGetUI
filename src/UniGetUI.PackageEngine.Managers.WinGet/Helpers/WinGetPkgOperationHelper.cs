@@ -118,6 +118,13 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         IPackage package,
         InstallOptions options,
         OperationType operation
+    ) => _getOperationParameters(package, options, operation, standalone: false);
+
+    protected override IReadOnlyList<string> _getOperationParameters(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation,
+        bool standalone
     )
     {
         // Pinget 0.4.x does not accept --accept-source-agreements, --disable-interactivity,
@@ -217,14 +224,17 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 parameters.AddRange(["--architecture", architecture]);
             }
 
-            _pendingInstallerTrust.AddOrUpdate(
-                package,
-                new PendingInstallerTrust(
-                    GetRequestedVersion(package, options, operation),
-                    GetEffectiveScope(package, options),
-                    GetEffectiveArchitecture(package, options)
-                )
-            );
+            if (!standalone)
+            {
+                _pendingInstallerTrust.AddOrUpdate(
+                    package,
+                    new PendingInstallerTrust(
+                        GetRequestedVersion(package, options, operation),
+                        GetEffectiveScope(package, options),
+                        GetEffectiveArchitecture(package, options)
+                    )
+                );
+            }
         }
 
         ApplyElevationRequirements(package, options, operation);

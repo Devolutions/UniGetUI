@@ -41,6 +41,7 @@ public static class SettingsSearchIndex
         // ── General ──────────────────────────────────────────────────────────
         new("UniGetUI display language:", ["language", "lang", "locale", "translation", "idioma"], typeof(General), "LanguageSelector"),
         new("Update UniGetUI automatically", ["app update", "auto update", "self update"], typeof(General), "GeneralUpdaterCard"),
+        new("Install UniGetUI updates automatically while it is idle in the background", ["app update", "self update", "silent update", "background"], typeof(General), "InstallUpdatesWhenIdleCard", WindowsOnly: true),
         new("Install prerelease versions of UniGetUI", ["beta", "prerelease", "preview"], typeof(General), "EnableUniGetUIBetaCard"),
         new("Show the release notes after UniGetUI is updated", ["release notes", "changelog"], typeof(General), "ReleaseNotesOnUpdateCard"),
         new("Manage telemetry settings", ["telemetry", "usage data", "analytics"], typeof(General), "GeneralTelemetryCard"),

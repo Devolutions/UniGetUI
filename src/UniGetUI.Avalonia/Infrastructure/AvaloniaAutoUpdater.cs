@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using Avalonia.Threading;
 using Microsoft.Win32;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -360,6 +361,7 @@ internal static partial class AvaloniaAutoUpdater
         _ => CoreTools.Translate("Unexpected installer error."),
     };
 
+    private static readonly TimeSpan IdleSampleInterval = TimeSpan.FromSeconds(5);
     private static volatile bool _installRequested;
     private static string? _pendingInstallerPath;
 
@@ -782,11 +784,19 @@ internal static partial class AvaloniaAutoUpdater
         TaskCompletionSource handoff = InstallerHandoffs.Begin();
         try
         {
+            bool installingInBackground = false;
+
             // Wait until user requests install, clicks the toast, or the window is being closed
             attempt.MarkAwaitingConsent(versionName);
             Interlocked.Increment(ref _attemptsAwaitingConsent);
             try
             {
+                bool needsElevation = OperatingSystem.IsWindows()
+                    && AutoUpdaterInstallerArguments.DetectInstallScope(CoreData.UniGetUIExecutableDirectory) is WindowsInstallScope.AllUsers
+                    && !CoreTools.IsAdministrator();
+                int idleChecks = 0;
+                DateTime nextIdleSample = DateTime.UtcNow + IdleSampleInterval;
+
                 while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
                 {
                     if (IsChannelObsolete())
@@ -803,6 +813,18 @@ internal static partial class AvaloniaAutoUpdater
                         DismissUpdateBanner();
                         MarkAttemptFinished("aborted - auto-update disabled while waiting");
                         return true;
+                    }
+
+                    if (OperatingSystem.IsWindows() && DateTime.UtcNow >= nextIdleSample)
+                    {
+                        nextIdleSample = DateTime.UtcNow + IdleSampleInterval;
+                        if (await Dispatcher.UIThread.InvokeAsync(
+                                () => IdleSelfUpdateGate.ShouldInstall(SampleIdleState(needsElevation), ref idleChecks)))
+                        {
+                            LogUpdateInfo("Auto-updater: UniGetUI is idle in the background — installing the update without waiting for the user.");
+                            installingInBackground = true;
+                            break;
+                        }
                     }
 
                     try
@@ -830,7 +852,7 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             LogUpdateInfo("Installing update \u2014 launching installer.");
-            await LaunchInstallerAsync(installerPath, installerHash, handoff);
+            await LaunchInstallerAsync(installerPath, installerHash, handoff, installingInBackground);
             return true;
         }
         finally
@@ -839,7 +861,24 @@ internal static partial class AvaloniaAutoUpdater
         }
     }
 
-    private static async Task LaunchInstallerAsync(string installerLocation, string installerHash, TaskCompletionSource handoff)
+    private static IdleSelfUpdateSnapshot SampleIdleState(bool needsElevation)
+    {
+        MainWindow? window = MainWindow.Instance;
+        return new IdleSelfUpdateSnapshot(
+            IsEnabled: Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle)
+                && !Settings.Get(Settings.K.DisableAutoUpdateWingetUI),
+            IsBusy: QuitAfterAutomaticUpdates.IsBusy(),
+            IsWindowVisible: window?.IsVisible ?? true,
+            HasUnsavedWork: window?.HasUnsavedWork ?? false,
+            IsQuitting: window?.IsQuitting ?? false,
+            NeedsElevation: needsElevation);
+    }
+
+    private static async Task LaunchInstallerAsync(
+        string installerLocation,
+        string installerHash,
+        TaskCompletionSource handoff,
+        bool launchInBackground = false)
     {
         if (OperatingSystem.IsMacOS())
         {
@@ -859,7 +898,8 @@ internal static partial class AvaloniaAutoUpdater
         string installerArguments = AutoUpdaterInstallerArguments.ForWindows(
             CoreData.IsPortable,
             CoreData.UniGetUIExecutableDirectory,
-            installScope);
+            installScope,
+            launchInBackground);
 
         LogUpdateInfo(
             $"Installation scope for {CoreData.UniGetUIExecutableDirectory} resolved as {installScope}.");

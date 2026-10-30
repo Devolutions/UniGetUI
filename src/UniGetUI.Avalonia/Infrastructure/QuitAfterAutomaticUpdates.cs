@@ -68,7 +68,7 @@ internal static class QuitAfterAutomaticUpdates
             HasUnsavedWork: window.HasUnsavedWork);
     }
 
-    private static bool IsBusy()
+    internal static bool IsBusy()
         => AvaloniaOperationRegistry.HasActiveOperations()
             || AbstractOperation.QueueLength() > 0
             || MaintenanceScheduler.IsAnyTaskRunning

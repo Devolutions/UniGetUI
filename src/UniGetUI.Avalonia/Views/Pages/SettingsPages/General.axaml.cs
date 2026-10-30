@@ -50,8 +50,11 @@ public sealed partial class General : UserControl, ISettingsPage
 
         GeneralUpdaterCard.Click += (_, _) =>
             _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
+        InstallUpdatesWhenIdleCard.IsVisible = OperatingSystem.IsWindows();
+        InstallUpdatesWhenIdleCard.IsEnabled = GeneralUpdaterCard.Checked;
         GeneralUpdaterCard.StateChanged += (_, _) =>
         {
+            InstallUpdatesWhenIdleCard.IsEnabled = GeneralUpdaterCard.Checked;
             if (GeneralUpdaterCard.Checked)
             {
                 _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: false);

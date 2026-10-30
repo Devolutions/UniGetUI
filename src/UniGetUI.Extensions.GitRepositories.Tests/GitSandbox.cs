@@ -87,12 +87,17 @@ internal sealed class GitSandbox : IDisposable
         => Git(repository, "rev-parse", revision);
 
     public bool RefExists(string repository, string reference)
-        => Runner.RunAsync(repository, "rev-parse", "--verify", "--quiet", reference).GetAwaiter().GetResult().Success;
+        => Task.Run(() => Runner.RunAsync(repository, "rev-parse", "--verify", "--quiet", reference))
+            .GetAwaiter().GetResult().Success;
 
     /// <summary>Runs git and fails the test unless it succeeds; returns its trimmed output.</summary>
     public string Git(string workingDirectory, params string[] arguments)
     {
-        GitResult result = Runner.RunAsync(workingDirectory, arguments).GetAwaiter().GetResult();
+        // Explicit bare paths work even when the host enforces safe.bareRepository=explicit.
+        if (File.Exists(Path.Combine(workingDirectory, "HEAD")) && Directory.Exists(Path.Combine(workingDirectory, "objects")))
+            arguments = ["--git-dir", workingDirectory, .. arguments];
+        // Constructors use this synchronous helper on xUnit's bounded synchronization context.
+        GitResult result = Task.Run(() => Runner.RunAsync(workingDirectory, arguments)).GetAwaiter().GetResult();
         Assert.True(result.Success, $"git {string.Join(' ', arguments)} failed: {result.Output}");
         return result.StandardOutput.Trim();
     }

@@ -171,6 +171,13 @@ other hosts; this does not substitute for their native lock-contention tests.
 | `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` requires the Git Repositories extension to be turned on in Settings, under Extensions; no restart is needed. |
 | `app quit` | None | None | Gracefully shuts down the selected session, including headless daemons. |
 
+The **Git Repositories** page fetches the remote even when the main clone is on a feature
+branch, but only fast-forwards a clean clone checked out on its configured default branch.
+It never switches branches automatically. A recognized transient fetch failure is retried
+once after a short delay. If refreshing still fails, remote information is marked as
+potentially out of date; use **Retry** to check again or **Error details** for the full,
+copyable Git output. No Git lock files are removed automatically.
+
 ### Operations
 
 | Command | Required options | Optional options | Notes |

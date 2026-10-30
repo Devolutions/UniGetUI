@@ -42,6 +42,7 @@ public enum GitRepositoryState
 /// <param name="DefaultBranch">The remote's default branch: its HEAD, else main, else master.</param>
 /// <param name="Remote">The remote that branch comes from.</param>
 /// <param name="TrackingRef">The remote branch compared against and fast-forwarded to, such as origin/main.</param>
+/// <param name="RemoteRefreshFailed">The fetch failed, so remote-tracking information may be stale.</param>
 public sealed record GitRepositoryStatus(
     string Path,
     GitRepositoryState State,
@@ -52,7 +53,8 @@ public sealed record GitRepositoryStatus(
     int Ahead = 0,
     int Behind = 0,
     bool HasLocalChanges = false,
-    string? Error = null)
+    string? Error = null,
+    bool RemoteRefreshFailed = false)
 {
     public bool CanUpdate => State == GitRepositoryState.Behind;
 }

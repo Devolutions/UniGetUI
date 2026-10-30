@@ -191,8 +191,10 @@
                                             Classes.warning="{Binding IsWarning}"
                                             Classes.error="{Binding IsError}"
                                             IsVisible="{Binding IsIdle}"
-                                            ToolTip.Tip="{Binding StateDetail}"
                                             automation:AutomationProperties.HelpText="{Binding StateDetail}">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="{Binding StateDetail}" MaxWidth="420" TextWrapping="Wrap"/>
+                                        </ToolTip.Tip>
                                         <TextBlock Text="{Binding StateText}" FontSize="12"
                                                    TextTrimming="CharacterEllipsis" MaxWidth="260"/>
                                     </Border>
@@ -202,8 +204,11 @@
                                             IsVisible="{Binding CanUpdate}"
                                             Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).UpdateCommand}"
                                             CommandParameter="{Binding}"/>
-                                    <Button Content="{t:Translate Check}" IsEnabled="{Binding IsIdle}"
+                                    <Button Content="{Binding CheckText}" IsEnabled="{Binding IsIdle}"
                                             Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).CheckCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Content="{t:Translate Error details}" IsVisible="{Binding HasErrorDetails}"
+                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).ShowErrorDetailsCommand}"
                                             CommandParameter="{Binding}"/>
                                     <Button Padding="8,4" automation:AutomationProperties.Name="{t:Translate More options}"
                                             ToolTip.Tip="{t:Translate More options}">

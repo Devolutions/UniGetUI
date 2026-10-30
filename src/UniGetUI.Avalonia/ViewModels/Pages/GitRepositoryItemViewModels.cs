@@ -39,6 +39,7 @@ internal static class GitStatusText
             status.CurrentBranch ?? "", status.DefaultBranch ?? ""),
         GitRepositoryState.DetachedHead => CoreTools.Translate("No branch checked out"),
         GitRepositoryState.NoUpstream => CoreTools.Translate("No remote branch to follow"),
+        GitRepositoryState.Error when status.RemoteRefreshFailed => CoreTools.Translate("Could not refresh from remote"),
         _ => CoreTools.Translate("Could not be checked"),
     };
 
@@ -67,7 +68,7 @@ internal static class GitStatusText
             "Only a clone checked out on {0} is updated.", status.DefaultBranch ?? ""),
         GitRepositoryState.NoUpstream => CoreTools.Translate(
             "It has no remote, or its remote has no main or master branch. You can choose the branch to follow."),
-        _ => status.Error ?? "",
+        _ => GitError.Summarize(status.Error ?? ""),
     };
 }
 
@@ -86,7 +87,8 @@ public partial class GitRepositoryItemViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateText), nameof(StateDetail), nameof(BranchText), nameof(CanUpdate),
-        nameof(IsOk), nameof(IsUpdate), nameof(IsWarning), nameof(IsError), nameof(IsUnknown))]
+        nameof(IsOk), nameof(IsUpdate), nameof(IsWarning), nameof(IsError), nameof(IsUnknown),
+        nameof(DetailText), nameof(CheckText), nameof(HasErrorDetails))]
     private GitRepositoryStatus? _status;
 
     [ObservableProperty]
@@ -115,6 +117,8 @@ public partial class GitRepositoryItemViewModel : ViewModelBase
     public bool IsUnknown => GitStatusText.Kind(Status) == GitBadgeKind.Unknown;
     public bool CanUpdate => Status?.CanUpdate == true && !IsBusy;
     public bool IsIdle => !IsBusy;
+    public bool HasErrorDetails => !string.IsNullOrWhiteSpace(Status?.Error);
+    public string CheckText => IsError ? CoreTools.Translate("Retry") : CoreTools.Translate("Check");
 
     public string BranchText
     {
@@ -139,7 +143,12 @@ public partial class GitRepositoryItemViewModel : ViewModelBase
     };
 
     /// <summary>The line under the branch: its worktrees and when it was last checked, whichever are known.</summary>
-    public string DetailText => string.Join(" · ", new[] { WorktreeCountText, LastCheckedText }.Where(text => text.Length > 0));
+    public string DetailText => string.Join(" · ", new[]
+    {
+        WorktreeCountText,
+        LastCheckedText,
+        Status?.RemoteRefreshFailed == true ? CoreTools.Translate("Remote information may be out of date") : "",
+    }.Where(text => text.Length > 0));
 }
 
 public sealed partial class GitWorktreeItemViewModel : ObservableObject

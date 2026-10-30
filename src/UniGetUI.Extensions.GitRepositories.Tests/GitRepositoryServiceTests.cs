@@ -280,4 +280,162 @@ public sealed class GitRepositoryServiceTests : IDisposable
         Assert.Equal(GitRepositoryState.Error, status.State);
         Assert.False(string.IsNullOrWhiteSpace(status.Error));
     }
+
+    [Theory]
+    [InlineData("ref-race")]
+    [InlineData("ref-lock")]
+    [InlineData("connection-reset")]
+    [InlineData("http-unavailable")]
+    public async Task Check_RetriesATransientFetchOnceWithoutUpdatingLocalWork(string scenario)
+    {
+        _sandbox.CreateOrigin();
+        string clone = _sandbox.Clone("clone");
+        _sandbox.PushFromElsewhere();
+        string head = _sandbox.Head(clone);
+        string error = scenario switch
+        {
+            "ref-race" => "error: cannot lock ref 'refs/remotes/origin/main': is at abc but expected def",
+            "ref-lock" => "error: cannot lock ref 'refs/remotes/origin/main': Unable to create 'main.lock': File exists.",
+            "connection-reset" => "fatal: unable to access remote: Recv failure: Connection reset by peer",
+            _ => "fatal: unable to access remote: The requested URL returned error: 503",
+        };
+        int fetches = 0;
+        var service = new GitRepositoryService((root, args, timeout, token) =>
+        {
+            if (args[0] == "fetch" && ++fetches == 1)
+                return Task.FromResult(new GitResult(1, "", error));
+            return _sandbox.Runner.RunAsync(root, args, timeout, token);
+        });
+
+        GitRepositoryStatus status = await service.CheckAsync(clone);
+
+        Assert.Equal(2, fetches);
+        Assert.Equal(GitRepositoryState.Behind, status.State);
+        Assert.Equal(1, status.Behind);
+        Assert.False(status.RemoteRefreshFailed);
+        Assert.Null(status.Error);
+        Assert.Equal(head, _sandbox.Head(clone));
+        Assert.Equal(_sandbox.Head(_sandbox.Origin, "main"), _sandbox.Head(clone, "origin/main"));
+    }
+
+    [Theory]
+    [InlineData(true, 2)]
+    [InlineData(false, 1)]
+    public async Task Check_PreservesFailureDetailsAndBranchWithoutUnboundedRetries(bool transient, int expectedFetches)
+    {
+        _sandbox.CreateOrigin(branch: "master");
+        string clone = _sandbox.Clone("clone");
+        _sandbox.Git(clone, "switch", "--quiet", "-c", "ai/feature");
+        _sandbox.Commit(clone, "local.txt", "local work");
+        string head = _sandbox.Head(clone);
+        string error = transient ? "fatal: early EOF" : "fatal: Authentication failed";
+        string output = "From https://example.com/repo\n - [deleted] (none) -> origin/old\n" + error;
+        int fetches = 0;
+        var service = new GitRepositoryService((root, args, timeout, token) =>
+        {
+            if (args[0] != "fetch") return _sandbox.Runner.RunAsync(root, args, timeout, token);
+            fetches++;
+            return Task.FromResult(new GitResult(1, "", output));
+        });
+
+        GitUpdateResult result = await service.UpdateAsync(clone);
+
+        Assert.Equal(expectedFetches, fetches);
+        Assert.Equal(GitUpdateOutcome.Failed, result.Outcome);
+        Assert.Equal(GitRepositoryState.Error, result.Status.State);
+        Assert.True(result.Status.RemoteRefreshFailed);
+        Assert.False(result.Status.CanUpdate);
+        Assert.Equal("ai/feature", result.Status.CurrentBranch);
+        Assert.Equal("master", result.Status.DefaultBranch);
+        Assert.Equal(output, result.Status.Error);
+        Assert.Equal(error, GitError.Summarize(result.Output));
+        Assert.Equal(head, _sandbox.Head(clone));
+        Assert.Equal("local work", File.ReadAllText(Path.Combine(clone, "local.txt")));
+    }
+
+    [Fact]
+    public async Task Check_AfterRetryStillRefusesAFeatureBranch()
+    {
+        _sandbox.CreateOrigin(branch: "master");
+        string clone = _sandbox.Clone("clone");
+        _sandbox.Git(clone, "switch", "--quiet", "-c", "ai/feature");
+        int fetches = 0;
+        var service = new GitRepositoryService((root, args, timeout, token) =>
+        {
+            if (args[0] == "fetch" && ++fetches == 1)
+                return Task.FromResult(new GitResult(1, "", "fatal: early EOF"));
+            return _sandbox.Runner.RunAsync(root, args, timeout, token);
+        });
+
+        GitUpdateResult result = await service.UpdateAsync(clone);
+
+        Assert.Equal(2, fetches);
+        Assert.Equal(GitUpdateOutcome.Refused, result.Outcome);
+        Assert.Equal(GitRepositoryState.NotOnDefaultBranch, result.Status.State);
+        Assert.Equal("ai/feature", result.Status.CurrentBranch);
+        Assert.Equal("master", result.Status.DefaultBranch);
+        Assert.False(result.Status.RemoteRefreshFailed);
+        Assert.Equal("ai/feature", _sandbox.Git(clone, "branch", "--show-current"));
+    }
+
+    [Fact]
+    public async Task Check_CancellationStopsTheRetry()
+    {
+        _sandbox.CreateOrigin();
+        string clone = _sandbox.Clone("clone");
+        using var cancellation = new CancellationTokenSource();
+        int fetches = 0;
+        var service = new GitRepositoryService((root, args, timeout, token) =>
+        {
+            if (args[0] != "fetch") return _sandbox.Runner.RunAsync(root, args, timeout, token);
+            fetches++;
+            cancellation.Cancel();
+            return Task.FromResult(new GitResult(1, "", "fatal: early EOF"));
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.CheckAsync(clone, cancellationToken: cancellation.Token));
+        Assert.Equal(1, fetches);
+    }
+
+    [Fact]
+    public async Task Check_ReportsTheFinalRetryFailure()
+    {
+        _sandbox.CreateOrigin();
+        string clone = _sandbox.Clone("clone");
+        int fetches = 0;
+        var service = new GitRepositoryService((root, args, timeout, token) =>
+        {
+            if (args[0] != "fetch") return _sandbox.Runner.RunAsync(root, args, timeout, token);
+            return Task.FromResult(new GitResult(1, "", ++fetches == 1
+                ? "fatal: early EOF" : "fatal: Authentication failed"));
+        });
+
+        GitRepositoryStatus status = await service.CheckAsync(clone);
+
+        Assert.Equal(2, fetches);
+        Assert.Equal(GitRepositoryState.Error, status.State);
+        Assert.Equal("fatal: Authentication failed", status.Error);
+    }
+
+    [Fact]
+    public async Task Check_DoesNotRetryATimedOutFetch()
+    {
+        _sandbox.CreateOrigin();
+        string clone = _sandbox.Clone("clone");
+        int fetches = 0;
+        var service = new GitRepositoryService((root, args, timeout, token) =>
+        {
+            if (args[0] != "fetch") return _sandbox.Runner.RunAsync(root, args, timeout, token);
+            fetches++;
+            throw new GitException("git fetch did not finish within its time limit.");
+        });
+
+        GitRepositoryStatus status = await service.CheckAsync(clone);
+
+        Assert.Equal(1, fetches);
+        Assert.Equal(GitRepositoryState.Error, status.State);
+        Assert.True(status.RemoteRefreshFailed);
+        Assert.Equal("git fetch did not finish within its time limit.", status.Error);
+    }
 }

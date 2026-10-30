@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -384,6 +385,7 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 
     private void ReportUpdates(IReadOnlyList<GitUpdateResult> results)
     {
+        if (results.Count == 0) return;
         int updated = results.Count(result => result.Outcome == GitUpdateOutcome.Updated);
         int failed = results.Count(result => result.Outcome == GitUpdateOutcome.Failed);
         int skipped = results.Count(result => result.Outcome == GitUpdateOutcome.Refused);
@@ -392,7 +394,7 @@ public partial class GitRepositoriesViewModel : ViewModelBase
                 CoreTools.Translate("{0} repositories could not be updated", failed),
                 string.Join(Environment.NewLine, results
                     .Where(result => result.Outcome == GitUpdateOutcome.Failed)
-                    .Select(result => $"{Path.GetFileName(result.Status.Path)}: {FirstLine(result.Output)}")),
+                    .Select(result => $"{Path.GetFileName(result.Status.Path)}: {GitError.Summarize(result.Output)}")),
                 InfoBarSeverity.Error);
         else if (updated > 0 || skipped > 0)
             ShowNotice(
@@ -403,12 +405,18 @@ public partial class GitRepositoriesViewModel : ViewModelBase
             ShowNotice(CoreTools.Translate("Every repository is up to date"), "", InfoBarSeverity.Success);
     }
 
-    private static string FirstLine(string text)
-        => text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "";
-
     private async Task InspectItemAsync(GitRepositoryItemViewModel item)
     {
-        item.Status = await _git.InspectAsync(item.Path, item.BranchOverride);
+        GitRepositoryStatus status = await _git.InspectAsync(item.Path, item.BranchOverride);
+        // A local inspection cannot establish whether a previously failed remote refresh recovered.
+        item.Status = item.Status is { RemoteRefreshFailed: true } failed
+            ? status with
+            {
+                State = GitRepositoryState.Error,
+                Error = status.Error ?? failed.Error,
+                RemoteRefreshFailed = true,
+            }
+            : status;
         await CountWorktreesAsync(item);
     }
 
@@ -423,10 +431,50 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 
     private async Task<GitUpdateResult?> UpdateItemAsync(GitRepositoryItemViewModel item, bool fetch)
     {
-        GitUpdateResult result = await _git.UpdateAsync(item.Path, fetch, item.BranchOverride);
+        GitUpdateResult result = await _git.UpdateAsync(item.Path,
+            fetch || item.Status?.State == GitRepositoryState.Error, item.BranchOverride);
         item.Status = result.Status;
         item.LastChecked = DateTime.Now;
         return result;
+    }
+
+    [RelayCommand]
+    private async Task ShowErrorDetails(GitRepositoryItemViewModel? item)
+    {
+        if (item?.Status?.Error is not { Length: > 0 } output || MainWindow.Instance is not { } owner)
+            return;
+
+        var dialog = CreateErrorDetailsDialog(output, owner);
+        await dialog.ShowDialog(owner);
+        if (dialog.Result == true)
+            await RunAsync([item], CheckItemAsync);
+    }
+
+    internal static ImmersiveConfirmationDialog CreateErrorDetailsDialog(string output, TopLevel owner)
+    {
+        var copy = new Button { Content = CoreTools.Translate("Copy"), IsEnabled = owner.Clipboard is not null };
+        copy.Click += async (_, _) =>
+        {
+            if (owner.Clipboard is { } clipboard)
+                await clipboard.SetTextAsync(output);
+        };
+        var body = new StackPanel
+        {
+            Spacing = 12,
+            MaxWidth = 640,
+            Children =
+            {
+                new TextBlock { Text = GitError.Summarize(output), TextWrapping = TextWrapping.Wrap, FontWeight = FontWeight.SemiBold },
+                new ScrollViewer
+                {
+                    MaxHeight = 320,
+                    Content = new SelectableTextBlock { Text = output, TextWrapping = TextWrapping.Wrap },
+                },
+                copy,
+            },
+        };
+        return new ImmersiveConfirmationDialog(
+            CoreTools.Translate("Error details"), body, CoreTools.Translate("Retry"), CoreTools.Translate("Close"));
     }
 
     private async Task CountWorktreesAsync(GitRepositoryItemViewModel item)
@@ -448,6 +496,9 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         List<GitRepositoryItemViewModel> targets = [.. items.Where(item => !item.IsBusy)];
         if (targets.Count == 0) return;
 
+        // Reserve queued clones too, so another check/update cannot fetch them concurrently.
+        foreach (GitRepositoryItemViewModel item in targets)
+            item.IsBusy = true;
         using var gate = new SemaphoreSlim(MaxParallelChecks);
         IsBusy = true;
         try
@@ -455,7 +506,6 @@ public partial class GitRepositoriesViewModel : ViewModelBase
             await Task.WhenAll(targets.Select(async item =>
             {
                 await gate.WaitAsync();
-                item.IsBusy = true;
                 try
                 {
                     await action(item);
@@ -464,7 +514,8 @@ public partial class GitRepositoriesViewModel : ViewModelBase
                 {
                     Logger.Error($"Git repository {item.Path} failed");
                     Logger.Error(ex);
-                    item.Status = new GitRepositoryStatus(item.Path, GitRepositoryState.Error, Error: ex.Message);
+                    GitRepositoryStatus previous = item.Status ?? new GitRepositoryStatus(item.Path, GitRepositoryState.Error);
+                    item.Status = previous with { State = GitRepositoryState.Error, Error = ex.Message };
                 }
                 finally
                 {

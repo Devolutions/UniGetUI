@@ -8,21 +8,29 @@ namespace UniGetUI.Extensions.GitRepositories;
 /// remote default branch, and only while it is checked out on that branch with no changed tracked files:
 /// anything that would need a merge, a rebase or touching local work is reported and left alone.
 /// </summary>
-public sealed class GitRepositoryService(GitRunner? runner = null)
+public sealed class GitRepositoryService
 {
     public static readonly TimeSpan FetchTimeout = TimeSpan.FromMinutes(5);
 
     private static readonly StringComparison PathComparison =
         OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
-    private readonly GitRunner _git = runner ?? new GitRunner();
+    private readonly Func<string, IReadOnlyList<string>, TimeSpan?, CancellationToken, Task<GitResult>> _run;
+
+    public GitRepositoryService(GitRunner? runner = null) : this((runner ?? new GitRunner()).RunAsync) { }
+
+    internal GitRepositoryService(
+        Func<string, IReadOnlyList<string>, TimeSpan?, CancellationToken, Task<GitResult>> run)
+    {
+        _run = run;
+    }
 
     /// <summary>The installed git's version line, or null when git cannot be run.</summary>
     public async Task<string?> GetGitVersionAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            GitResult result = await _git.RunAsync(Path.GetTempPath(), ["--version"], null, cancellationToken);
+            GitResult result = await _run(Path.GetTempPath(), ["--version"], null, cancellationToken);
             return result.Success ? result.StandardOutput.Trim() : null;
         }
         catch (GitException ex)
@@ -116,17 +124,28 @@ public sealed class GitRepositoryService(GitRunner? runner = null)
         GitResult fetch;
         try
         {
-            fetch = await _git.RunAsync(status.Path, ["fetch", "--prune", status.Remote], FetchTimeout, cancellationToken);
+            fetch = await _run(status.Path, ["fetch", "--prune", status.Remote], FetchTimeout, cancellationToken);
+            if (!fetch.Success && GitError.IsTransientFetchFailure(fetch.StandardError))
+            {
+                Logger.Warn($"Transient fetch failure in {status.Path}; retrying once: {fetch.Output}");
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                fetch = await _run(status.Path, ["fetch", "--prune", status.Remote], FetchTimeout, cancellationToken);
+            }
         }
         catch (GitException ex)
         {
             Logger.Warn($"Could not fetch {status.Path}: {ex.Message}");
-            return status with { State = GitRepositoryState.Error, Error = ex.Message };
+            return status with { State = GitRepositoryState.Error, Error = ex.Message, RemoteRefreshFailed = true };
         }
         if (!fetch.Success)
         {
             Logger.Warn($"Could not fetch {status.Path}: {fetch.Output}");
-            return status with { State = GitRepositoryState.Error, Error = fetch.Output };
+            return status with
+            {
+                State = GitRepositoryState.Error,
+                Error = string.IsNullOrWhiteSpace(fetch.Output) ? $"git fetch exited with code {fetch.ExitCode}." : fetch.Output,
+                RemoteRefreshFailed = true,
+            };
         }
         return await InspectAsync(status.Path, defaultBranch, cancellationToken);
     }
@@ -561,7 +580,7 @@ public sealed class GitRepositoryService(GitRunner? runner = null)
 
     private Task<GitResult> RunAsync(string workingDirectory, IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
-        => _git.RunAsync(workingDirectory, arguments, null, cancellationToken);
+        => _run(workingDirectory, arguments, null, cancellationToken);
 
     private static string[] SplitLines(string text)
         => text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

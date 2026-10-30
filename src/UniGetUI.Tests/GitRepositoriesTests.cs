@@ -1,4 +1,8 @@
+using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
+using Avalonia.Media;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -208,6 +212,75 @@ public sealed class GitRepositoriesTests : IDisposable
     }
 
     [Fact]
+    public void FailedRefreshShowsABoundedSummaryAndMarksRemoteInformationStale()
+    {
+        string output = "From https://example.com/repo\n"
+            + string.Concat(Enumerable.Repeat(" - [deleted] (none) -> origin/old\n", 300))
+            + "fatal: Authentication failed\n";
+        var item = new GitRepositoryItemViewModel("C:/repo", null)
+        {
+            Status = new GitRepositoryStatus("C:/repo", GitRepositoryState.Error,
+                "ai/feature", "master", "origin", "origin/master", Error: output, RemoteRefreshFailed: true),
+        };
+
+        Assert.Equal("Could not refresh from remote", item.StateText);
+        Assert.Equal("fatal: Authentication failed", item.StateDetail);
+        Assert.Equal(output, item.Status.Error);
+        Assert.Equal("ai/feature → master", item.BranchText);
+        Assert.Contains("Remote information may be out of date", item.DetailText);
+        Assert.Equal("Retry", item.CheckText);
+        Assert.True(item.HasErrorDetails);
+        Assert.False(item.CanUpdate);
+
+        item.Status = item.Status with
+        {
+            State = GitRepositoryState.NotOnDefaultBranch,
+            Error = null,
+            RemoteRefreshFailed = false,
+        };
+        Assert.Equal("On ai/feature instead of master", item.StateText);
+        Assert.Equal("Check", item.CheckText);
+        Assert.False(item.HasErrorDetails);
+        Assert.DoesNotContain("out of date", item.DetailText);
+        Assert.False(item.CanUpdate);
+    }
+
+    [Fact]
+    public Task ErrorDetailsAreScrollableAndCopyTheCompleteOutput() => _session.Dispatch(async () =>
+    {
+        string output = string.Concat(Enumerable.Repeat(" - [deleted] (none) -> origin/old\n", 300))
+            + "fatal: Authentication failed";
+        var owner = new Window();
+        try
+        {
+            var dialog = GitRepositoriesViewModel.CreateErrorDetailsDialog(output, owner);
+            ContentControl? presenter = dialog.FindControl<ContentControl>("BodyPresenter");
+            Assert.NotNull(presenter);
+            var body = Assert.IsType<StackPanel>(presenter.Content);
+            var summary = Assert.IsType<TextBlock>(body.Children[0]);
+            Assert.Equal("fatal: Authentication failed", summary.Text);
+            var scroll = Assert.IsType<ScrollViewer>(body.Children[1]);
+            Assert.Equal(320, scroll.MaxHeight);
+            var text = Assert.IsType<SelectableTextBlock>(scroll.Content);
+            Assert.Equal(output, text.Text);
+            Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
+            var copy = Assert.IsType<Button>(body.Children[2]);
+            Assert.True(copy.IsEnabled);
+
+            copy.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            Assert.NotNull(owner.Clipboard);
+            Assert.Equal(output, await owner.Clipboard.TryGetTextAsync());
+            Assert.Equal("Retry", dialog.FindControl<Button>("PrimaryButton")?.Content);
+            Assert.Equal("Close", dialog.FindControl<Button>("SecondaryButton")?.Content);
+        }
+        finally
+        {
+            owner.Close();
+        }
+    }, CancellationToken.None);
+
+    [Fact]
     public void ScanningAFolderFindsMainClonesButNotWorktreesOrHiddenFolders()
     {
         string root = Path.Combine(_testRoot, "dev");
@@ -313,6 +386,57 @@ public sealed class GitRepositoriesTests : IDisposable
         Assert.Equal(0, vm.BehindCount);
         Assert.Equal(GitRepositoryState.UpToDate, vm.Repositories[0].Status?.State);
         Assert.False(vm.IsBusy);
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task FailedRefreshBlocksUpdatesUntilARefreshSucceeds() => _session.Dispatch(async () =>
+    {
+        string origin = Path.Combine(_testRoot, "origin.git");
+        await Git(_testRoot, "init", "--quiet", "--bare", origin);
+        string other = Path.Combine(_testRoot, "other");
+        await Git(_testRoot, "clone", "--quiet", origin, other);
+        await Commit(other, "first");
+        await Git(other, "push", "--quiet", "-u", "origin", "main");
+        string clone = Path.Combine(_testRoot, "clone");
+        await Git(_testRoot, "clone", "--quiet", origin, clone);
+        await Commit(other, "second");
+        await Git(other, "push", "--quiet");
+        GitRepositoryList.Add(clone);
+        var vm = new GitRepositoriesViewModel(new GitRepositoryService(_git));
+        GitRepositoryItemViewModel item = Assert.Single(vm.Repositories);
+        await vm.CheckAllAsync();
+        Assert.True(item.CanUpdate);
+        string head = (await _git.RunAsync(clone, "rev-parse", "HEAD")).StandardOutput;
+
+        await Git(clone, "remote", "set-url", "origin", Path.Combine(_testRoot, "gone.git"));
+        vm.AutoUpdate = true;
+        await vm.CheckAllAsync();
+
+        Assert.NotNull(item.Status);
+        Assert.True(item.Status.RemoteRefreshFailed);
+        Assert.True(item.IsError);
+        Assert.False(item.CanUpdate);
+        Assert.Equal("main", item.Status.CurrentBranch);
+        Assert.Equal(0, vm.BehindCount);
+        await vm.InitializeAsync();
+        Assert.True(item.Status.RemoteRefreshFailed);
+        Assert.False(item.CanUpdate);
+        // Even a direct command invocation must refresh, not trust cached tracking refs.
+        await vm.UpdateCommand.ExecuteAsync(item);
+        Assert.Equal(head, (await _git.RunAsync(clone, "rev-parse", "HEAD")).StandardOutput);
+        Assert.True(item.IsError);
+        Assert.Contains("gone.git", item.Status.Error);
+
+        await Git(clone, "remote", "set-url", "origin", origin);
+        await vm.CheckCommand.ExecuteAsync(item);
+        Assert.Equal(GitRepositoryState.UpToDate, item.Status.State);
+        Assert.False(item.Status.RemoteRefreshFailed);
+        Assert.False(item.HasErrorDetails);
+        Assert.Equal("Check", item.CheckText);
+        Assert.DoesNotContain("out of date", item.DetailText);
+        Assert.Equal((await _git.RunAsync(other, "rev-parse", "HEAD")).StandardOutput,
+            (await _git.RunAsync(clone, "rev-parse", "HEAD")).StandardOutput);
+        vm.Stop();
     }, CancellationToken.None);
 
     [Fact]

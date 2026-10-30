@@ -912,7 +912,7 @@
   "Check for updates": "Check for updates",
   "Install prerelease versions of UniGetUI": "Install prerelease versions of UniGetUI",
   "Install UniGetUI updates automatically while it is idle in the background": "Install UniGetUI updates automatically while it is idle in the background",
-  "UniGetUI is installed for all users, so it can only install its updates in the background while running as administrator.": "UniGetUI is installed for all users, so it can only install its updates in the background while running as administrator.",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.",
   "Manage telemetry settings": "Manage telemetry settings",
   "Manage": "Manage",
   "Import settings from a local file": "Import settings from a local file",

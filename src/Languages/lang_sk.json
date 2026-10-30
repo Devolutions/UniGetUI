@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI je stále spustené",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI zostane spustené na pozadí a bude kontrolovať aktualizácie, ale bez ikony v oblasti oznámení. Ak ho chcete znova otvoriť, spustite UniGetUI. Ak ho chcete ukončiť, v navigačnej ponuke vyberte Viac > Ukončiť UniGetUI. Toto nastavenie môžete zmeniť v časti Nastavenia > Predvoľby používateľského rozhrania.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Aby fungovali oznámenia, UniGetUI musí po zatvorení okna zostať spustené na pozadí.",
-  "\"{0}\" is not a valid version.": "„{0}“ nie je platná verzia."
+  "\"{0}\" is not a valid version.": "„{0}“ nie je platná verzia.",
+  "Columns": "Stĺpce",
+  "Update once": "Aktualizovať raz",
+  "Update {0} once, keeping its updates ignored": "Aktualizovať {0} raz a naďalej ignorovať jeho aktualizácie",
+  "Stop ignoring updates": "Prestať ignorovať aktualizácie",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Stlačením klávesu Enter na balíku ho raz aktualizujete alebo prestanete ignorovať jeho aktualizácie.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Balíky uvedené tu sa pri kontrole aktualizácií nebudú zohľadňovať. Kliknutím na tlačidlo aktualizácie napravo ich raz aktualizujete alebo kliknutím na tlačidlo odstránenia prestanete ignorovať ich aktualizácie.",
+  "Updating {0} once. Its updates will stay ignored.": "Prebieha jednorazová aktualizácia {0}. Jeho aktualizácie zostanú ignorované.",
+  "{0} is already being updated": "{0} sa už aktualizuje",
+  "{0} is already up to date": "{0} je už aktuálny"
 }

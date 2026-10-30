@@ -2194,5 +2194,14 @@
   "UniGetUI is still running": "UniGetUI 仍在執行",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI 會在背景持續執行並檢查更新，但不會顯示系統匣圖示。若要重新開啟，請再次啟動 UniGetUI。若要結束，請在導覽選單中選取「更多」>「結束 UniGetUI」。您可以在「設定」>「使用者介面偏好設定」中變更此項目。",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "若要使用通知，關閉視窗後 UniGetUI 必須繼續在背景執行",
-  "\"{0}\" is not a valid version.": "\"{0}\" 不是有效的版本。"
+  "\"{0}\" is not a valid version.": "\"{0}\" 不是有效的版本。",
+  "Columns": "欄",
+  "Update once": "更新一次",
+  "Update {0} once, keeping its updates ignored": "更新 {0} 一次，並繼續忽略其更新",
+  "Stop ignoring updates": "停止忽略更新",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "在套件上按 Enter 可更新一次，或停止忽略其更新。",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "檢查更新時不會將此處列出的套件納入考量。按一下右側的更新按鈕即可更新一次，或按一下刪除按鈕以停止忽略其更新。",
+  "Updating {0} once. Its updates will stay ignored.": "正在更新 {0} 一次。其後續更新仍會被忽略。",
+  "{0} is already being updated": "{0} 正在更新",
+  "{0} is already up to date": "{0} 已是最新版本"
 }

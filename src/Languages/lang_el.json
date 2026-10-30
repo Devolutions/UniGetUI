@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "Το UniGetUI εξακολουθεί να εκτελείται",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "Το UniGetUI συνεχίζει να εκτελείται στο παρασκήνιο και να ελέγχει για ενημερώσεις, χωρίς εικονίδιο στην περιοχή ειδοποιήσεων. Για να το ανοίξετε ξανά, εκκινήστε το UniGetUI. Για έξοδο, επιλέξτε Περισσότερα > Έξοδος από το UniGetUI στο μενού πλοήγησης. Μπορείτε να το αλλάξετε στις Ρυθμίσεις > Προτιμήσεις περιβάλλοντος χρήστη.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Το UniGetUI πρέπει να συνεχίσει να εκτελείται στο παρασκήνιο όταν κλείνει το παράθυρό του, ώστε να λειτουργούν οι ειδοποιήσεις",
-  "\"{0}\" is not a valid version.": "Το \"{0}\" δεν είναι έγκυρη έκδοση."
+  "\"{0}\" is not a valid version.": "Το \"{0}\" δεν είναι έγκυρη έκδοση.",
+  "Columns": "Στήλες",
+  "Update once": "Ενημέρωση μία φορά",
+  "Update {0} once, keeping its updates ignored": "Ενημέρωση του {0} μία φορά, χωρίς να σταματήσετε να αγνοείτε τις ενημερώσεις του",
+  "Stop ignoring updates": "Διακοπή αγνόησης ενημερώσεων",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Πατήστε Enter σε ένα πακέτο για να το ενημερώσετε μία φορά ή να σταματήσετε να αγνοείτε τις ενημερώσεις του.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Τα πακέτα που εμφανίζονται εδώ δεν λαμβάνονται υπόψη κατά τον έλεγχο για ενημερώσεις. Κάντε κλικ στο κουμπί ενημέρωσης στα δεξιά τους για να τα ενημερώσετε μία φορά ή στο κουμπί διαγραφής για να σταματήσετε να αγνοείτε τις ενημερώσεις τους.",
+  "Updating {0} once. Its updates will stay ignored.": "Γίνεται ενημέρωση του {0} μία φορά. Οι ενημερώσεις του θα εξακολουθήσουν να αγνοούνται.",
+  "{0} is already being updated": "Το {0} ενημερώνεται ήδη",
+  "{0} is already up to date": "Το {0} είναι ήδη ενημερωμένο"
 }

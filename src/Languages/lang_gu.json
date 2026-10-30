@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI હજી ચાલી રહ્યું છે",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "સિસ્ટમ ટ્રે આઇકન વિના UniGetUI પૃષ્ઠભૂમિમાં ચાલુ રહી અપડેટ્સ તપાસે છે. તેને ફરી ખોલવા UniGetUI ફરી શરૂ કરો. બહાર નીકળવા નેવિગેશન મેનૂમાં વધુ > UniGetUI બંધ કરો વાપરો. તમે આ સેટિંગ્સ > વપરાશકર્તા ઇન્ટરફેસ પસંદગીઓમાં બદલી શકો છો.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "સૂચનાઓ કાર્યરત રહે તે માટે વિન્ડો બંધ હોય ત્યારે UniGetUI પૃષ્ઠભૂમિમાં ચાલુ રહેવું જરૂરી છે",
-  "\"{0}\" is not a valid version.": "\"{0}\" માન્ય આવૃત્તિ નથી."
+  "\"{0}\" is not a valid version.": "\"{0}\" માન્ય આવૃત્તિ નથી.",
+  "Columns": "કૉલમ",
+  "Update once": "એકવાર અપડેટ કરો",
+  "Update {0} once, keeping its updates ignored": "{0} ને એકવાર અપડેટ કરો, તેના અપડેટ્સ અવગણેલા જ રાખો",
+  "Stop ignoring updates": "અપડેટ્સ અવગણવાનું બંધ કરો",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "પેકેજને એકવાર અપડેટ કરવા અથવા તેના અપડેટ્સ અવગણવાનું બંધ કરવા માટે તેના પર Enter દબાવો.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "અહીં સૂચિબદ્ધ પેકેજોને અપડેટ્સ તપાસતી વખતે ધ્યાનમાં લેવામાં આવશે નહીં. તેમને એકવાર અપડેટ કરવા માટે તેમની જમણી બાજુનું અપડેટ બટન ક્લિક કરો, અથવા તેમના અપડેટ્સ અવગણવાનું બંધ કરવા માટે કાઢી નાખો બટન ક્લિક કરો.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} ને એકવાર અપડેટ કરી રહ્યા છીએ. તેના અપડેટ્સ અવગણેલા જ રહેશે.",
+  "{0} is already being updated": "{0} પહેલેથી અપડેટ થઈ રહ્યું છે",
+  "{0} is already up to date": "{0} પહેલેથી અદ્યતન છે"
 }

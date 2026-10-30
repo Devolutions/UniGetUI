@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI është ende në ekzekutim",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI vazhdon të ekzekutohet në sfond dhe të kontrollojë për përditësime, pa ikonë në zonën e njoftimeve. Për ta rihapur, nise UniGetUI sërish. Për të dalë, përdor Më shumë > Dil nga UniGetUI në menynë e navigimit. Mund ta ndryshosh këtë te Cilësimet > Preferencat e ndërfaqes së përdoruesit.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI duhet të vazhdojë të ekzekutohet në sfond kur mbyllet dritarja që njoftimet të funksionojnë",
-  "\"{0}\" is not a valid version.": "\"{0}\" nuk është version i vlefshëm."
+  "\"{0}\" is not a valid version.": "\"{0}\" nuk është version i vlefshëm.",
+  "Columns": "Kolonat",
+  "Update once": "Përditëso një herë",
+  "Update {0} once, keeping its updates ignored": "Përditëso {0} një herë; përditësimet e tij do të vazhdojnë të shpërfillen",
+  "Stop ignoring updates": "Ndalo shpërfilljen e përditësimeve",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Shtyp Enter mbi një paketë për ta përditësuar një herë ose për të ndaluar shpërfilljen e përditësimeve të saj.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Paketat e listuara këtu do të shpërfillen gjatë kontrollit për përditësime. Kliko butonin e përditësimit në të djathtë për t'i përditësuar një herë, ose butonin e fshirjes për të ndaluar shpërfilljen e përditësimeve të tyre.",
+  "Updating {0} once. Its updates will stay ignored.": "Po përditësohet {0} një herë. Përditësimet e tij do të vazhdojnë të shpërfillen.",
+  "{0} is already being updated": "{0} po përditësohet tashmë",
+  "{0} is already up to date": "{0} është tashmë i përditësuar"
 }

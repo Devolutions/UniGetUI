@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "„UniGetUI“ vis dar veikia",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "„UniGetUI“ toliau veikia fone ir tikrina, ar yra naujinimų, tačiau sistemos dėkle piktogramos nerodo. Norėdami vėl atidaryti, paleiskite „UniGetUI“ iš naujo. Norėdami išeiti, naršymo meniu pasirinkite „Daugiau“ > „Išeiti iš UniGetUI“. Tai galite pakeisti skiltyje „Nustatymai“ > „Sąsajos nuostatos“.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Kad veiktų pranešimai, uždarius langą „UniGetUI“ turi likti veikti fone",
-  "\"{0}\" is not a valid version.": "„{0}“ nėra tinkama versija."
+  "\"{0}\" is not a valid version.": "„{0}“ nėra tinkama versija.",
+  "Columns": "Stulpeliai",
+  "Update once": "Atnaujinti vieną kartą",
+  "Update {0} once, keeping its updates ignored": "Vieną kartą atnaujinti {0}, toliau ignoruojant jo naujinimus",
+  "Stop ignoring updates": "Nebeignoruoti naujinimų",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Pasirinkę paketą paspauskite Enter, kad jį vieną kartą atnaujintumėte arba nustotumėte ignoruoti jo naujinimus.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Čia pateikti paketai nebus įtraukiami tikrinant, ar yra naujinimų. Spustelėkite dešinėje esantį naujinimo mygtuką, kad paketą atnaujintumėte vieną kartą, arba ištrynimo mygtuką, kad nebeignoruotumėte jo naujinimų.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} atnaujinamas vieną kartą. Jo naujinimai ir toliau bus ignoruojami.",
+  "{0} is already being updated": "{0} jau atnaujinamas",
+  "{0} is already up to date": "{0} jau atnaujintas"
 }

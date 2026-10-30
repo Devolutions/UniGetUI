@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI töötab endiselt",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI töötab taustal edasi ja kontrollib uuendusi, kuid süsteemisalve ikooni ei kuvata. Selle uuesti avamiseks käivita UniGetUI uuesti. Väljumiseks vali navigeerimismenüüs Veel > Sule UniGetUI. Seda saad muuta jaotises Sätted > Kasutajaliidese eelistused.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Teavituste toimimiseks peab UniGetUI akna sulgemisel taustal edasi töötama",
-  "\"{0}\" is not a valid version.": "„{0}“ ei ole kehtiv versioon."
+  "\"{0}\" is not a valid version.": "„{0}“ ei ole kehtiv versioon.",
+  "Columns": "Veerud",
+  "Update once": "Uuenda üks kord",
+  "Update {0} once, keeping its updates ignored": "Uuenda {0} üks kord, jättes selle uuendused endiselt ignoreerituks",
+  "Stop ignoring updates": "Lõpeta uuenduste ignoreerimine",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Vajuta paketil Enterit, et seda üks kord uuendada või selle uuenduste ignoreerimine lõpetada.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Siin loetletud pakette ei arvestata uuenduste kontrollimisel. Klõpsa paketi paremal asuvat uuendamisnuppu, et seda üks kord uuendada, või kustutamisnuppu, et selle uuenduste ignoreerimine lõpetada.",
+  "Updating {0} once. Its updates will stay ignored.": "Uuendan {0} üks kord. Selle uuendused jäävad ignoreerituks.",
+  "{0} is already being updated": "Paketti {0} uuendatakse juba",
+  "{0} is already up to date": "Pakett {0} on juba ajakohane"
 }

@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI усё яшчэ працуе",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI працягвае працаваць у фонавым рэжыме і правяраць абнаўленні без значка ў сістэмным трэі. Каб зноў адкрыць праграму, запусціце UniGetUI яшчэ раз. Каб выйсці, выберыце «Іншае» > «Закрыць UniGetUI» у меню навігацыі. Гэта можна змяніць у раздзеле «Налады» > «Параметры інтэрфейсу».",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Каб апавяшчэнні працавалі, UniGetUI павінен працягваць працаваць у фонавым рэжыме пасля закрыцця акна",
-  "\"{0}\" is not a valid version.": "\"{0}\" — несапраўдная версія."
+  "\"{0}\" is not a valid version.": "\"{0}\" — несапраўдная версія.",
+  "Columns": "Слупкі",
+  "Update once": "Абнавіць адзін раз",
+  "Update {0} once, keeping its updates ignored": "Абнавіць {0} адзін раз, працягваючы ігнараваць яго абнаўленні",
+  "Stop ignoring updates": "Спыніць ігнараванне абнаўленняў",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Націсніце Enter на пакеце, каб абнавіць яго адзін раз або спыніць ігнараванне яго абнаўленняў.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Пакеты, пералічаныя тут, не будуць улічвацца пры праверцы абнаўленняў. Націсніце кнопку абнаўлення справа, каб абнавіць іх адзін раз, або кнопку выдалення, каб перастаць ігнараваць іх абнаўленні.",
+  "Updating {0} once. Its updates will stay ignored.": "Абнаўляем {0} адзін раз. Яго абнаўленні застануцца ігнараванымі.",
+  "{0} is already being updated": "{0} ужо абнаўляецца",
+  "{0} is already up to date": "{0} ужо актуальны"
 }

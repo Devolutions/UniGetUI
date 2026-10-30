@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI இன்னும் இயங்குகிறது",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "கணினி தட்டு ஐகான் இல்லாமலேயே UniGetUI பின்னணியில் இயங்கி புதுப்பிப்புகளைச் சரிபார்க்கும். அதை மீண்டும் திறக்க UniGetUI-ஐ மறுபடியும் தொடங்கவும். வெளியேற, வழிசெலுத்தல் மெனுவில் மேலும் > UniGetUI-ஐ விட்டு வெளியேறு என்பதைப் பயன்படுத்தவும். அமைப்புகள் > பயனர் இடைமுக விருப்பத்தேர்வுகளில் இதை மாற்றலாம்.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "அறிவிப்புகள் செயல்பட, சாளரத்தை மூடிய பின்னரும் UniGetUI பின்னணியில் இயங்கிக்கொண்டிருக்க வேண்டும்",
-  "\"{0}\" is not a valid version.": "\"{0}\" செல்லுபடியாகும் பதிப்பு அல்ல."
+  "\"{0}\" is not a valid version.": "\"{0}\" செல்லுபடியாகும் பதிப்பு அல்ல.",
+  "Columns": "நெடுவரிசைகள்",
+  "Update once": "ஒருமுறை புதுப்பி",
+  "Update {0} once, keeping its updates ignored": "{0}-ஐ ஒருமுறை புதுப்பி; அதன் புதுப்பிப்புகள் தொடர்ந்து புறக்கணிக்கப்படும்",
+  "Stop ignoring updates": "புதுப்பிப்புகளைப் புறக்கணிப்பதை நிறுத்து",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "ஒரு தொகுப்பை ஒருமுறை புதுப்பிக்க அல்லது அதன் புதுப்பிப்புகளைப் புறக்கணிப்பதை நிறுத்த Enter ஐ அழுத்தவும்.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "புதுப்பிப்புகளைச் சரிபார்க்கும்போது இங்கே பட்டியலிடப்பட்டுள்ள தொகுப்புகள் கணக்கில் எடுத்துக்கொள்ளப்படாது. அவற்றை ஒருமுறை புதுப்பிக்க வலப்புறமுள்ள புதுப்பிப்பு பொத்தானைக் கிளிக் செய்யவும்; அல்லது புதுப்பிப்புகளைப் புறக்கணிப்பதை நிறுத்த நீக்கு பொத்தானைக் கிளிக் செய்யவும்.",
+  "Updating {0} once. Its updates will stay ignored.": "{0}-ஐ ஒருமுறை புதுப்பிக்கிறது. அதன் புதுப்பிப்புகள் தொடர்ந்து புறக்கணிக்கப்படும்.",
+  "{0} is already being updated": "{0} ஏற்கனவே புதுப்பிக்கப்பட்டு வருகிறது",
+  "{0} is already up to date": "{0} ஏற்கனவே சமீபத்திய பதிப்பில் உள்ளது"
 }

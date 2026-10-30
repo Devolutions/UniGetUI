@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI තවමත් ක්‍රියාත්මකයි",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "පද්ධති තැටි නිරූපකයක් නොමැතිව UniGetUI පසුබිමේ ක්‍රියාත්මක වෙමින් යාවත්කාලීන පරීක්ෂා කරයි. එය නැවත විවෘත කිරීමට UniGetUI නැවත ආරම්භ කරන්න. පිටවීමට සංචාලන මෙනුවේ More > Quit UniGetUI භාවිතා කරන්න. මෙය Settings > User interface preferences තුළ වෙනස් කළ හැක.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "දැනුම්දීම් ක්‍රියාත්මක වීමට කවුළුව වැසූ විට UniGetUI පසුබිමේ දිගටම ක්‍රියාත්මක විය යුතුය",
-  "\"{0}\" is not a valid version.": "\"{0}\" වලංගු සංස්කරණයක් නොවේ."
+  "\"{0}\" is not a valid version.": "\"{0}\" වලංගු සංස්කරණයක් නොවේ.",
+  "Columns": "තීරු",
+  "Update once": "එක් වරක් යාවත්කාලීන කරන්න",
+  "Update {0} once, keeping its updates ignored": "{0} එක් වරක් යාවත්කාලීන කරන්න; එහි යාවත්කාලීන නොසලකා හැරීම දිගටම කරගෙන යන්න",
+  "Stop ignoring updates": "යාවත්කාලීන නොසලකා හැරීම නවත්වන්න",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "පැකේජයක් මත Enter ඔබා එය එක් වරක් යාවත්කාලීන කරන්න, නැතහොත් එහි යාවත්කාලීන නොසලකා හැරීම නවත්වන්න.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "මෙහි ලැයිස්තුගත පැකේජ යාවත්කාලීන පරීක්ෂා කිරීමේදී සැලකිල්ලට නොගැනේ. ඒවා එක් වරක් යාවත්කාලීන කිරීමට දකුණු පස ඇති යාවත්කාලීන බොත්තම ක්ලික් කරන්න, නැතහොත් ඒවායේ යාවත්කාලීන නොසලකා හැරීම නැවැත්වීමට මැකීමේ බොත්තම ක්ලික් කරන්න.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} එක් වරක් යාවත්කාලීන කරමින්. එහි යාවත්කාලීන නොසලකා හරිනු ඇත.",
+  "{0} is already being updated": "{0} දැනටමත් යාවත්කාලීන වෙමින් පවතී",
+  "{0} is already up to date": "{0} දැනටමත් යාවත්කාලීනයි"
 }

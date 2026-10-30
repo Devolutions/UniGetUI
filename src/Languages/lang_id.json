@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI masih berjalan",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI tetap berjalan di latar belakang dan memeriksa pembaruan tanpa ikon baki sistem. Untuk membukanya kembali, jalankan UniGetUI lagi. Untuk keluar, gunakan Lainnya > Keluar dari UniGetUI di menu navigasi. Anda dapat mengubahnya di Pengaturan > Preferensi antarmuka pengguna.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI harus tetap berjalan di latar belakang saat jendelanya ditutup agar notifikasi berfungsi",
-  "\"{0}\" is not a valid version.": "\"{0}\" bukan versi yang valid."
+  "\"{0}\" is not a valid version.": "\"{0}\" bukan versi yang valid.",
+  "Columns": "Kolom",
+  "Update once": "Perbarui sekali",
+  "Update {0} once, keeping its updates ignored": "Perbarui {0} sekali, dengan tetap mengabaikan pembaruannya",
+  "Stop ignoring updates": "Berhenti mengabaikan pembaruan",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Tekan Enter pada paket untuk memperbaruinya sekali atau berhenti mengabaikan pembaruannya.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Paket yang tercantum di sini tidak akan diperhitungkan saat memeriksa pembaruan. Klik tombol perbarui di sebelah kanannya untuk memperbarui paket sekali, atau tombol hapus untuk berhenti mengabaikan pembaruannya.",
+  "Updating {0} once. Its updates will stay ignored.": "Memperbarui {0} sekali. Pembaruannya akan tetap diabaikan.",
+  "{0} is already being updated": "{0} sedang dalam proses pembaruan",
+  "{0} is already up to date": "{0} sudah menggunakan versi terbaru"
 }

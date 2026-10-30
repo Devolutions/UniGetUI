@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI nadal działa",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI nadal działa w tle i sprawdza aktualizacje, ale bez ikony w obszarze powiadomień. Aby ponownie je otworzyć, uruchom UniGetUI ponownie. Aby zakończyć działanie, wybierz Więcej > Zamknij UniGetUI w menu nawigacyjnym. Możesz to zmienić w Ustawienia > Preferencje interfejsu użytkownika.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Aby powiadomienia działały, UniGetUI musi pozostać uruchomione w tle po zamknięciu okna",
-  "\"{0}\" is not a valid version.": "\"{0}\" nie jest prawidłową wersją."
+  "\"{0}\" is not a valid version.": "\"{0}\" nie jest prawidłową wersją.",
+  "Columns": "Kolumny",
+  "Update once": "Aktualizuj jednorazowo",
+  "Update {0} once, keeping its updates ignored": "Aktualizuj {0} jednorazowo, nadal ignorując jego aktualizacje",
+  "Stop ignoring updates": "Przestań ignorować aktualizacje",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Naciśnij Enter na pakiecie, aby zaktualizować go jednorazowo lub przestać ignorować jego aktualizacje.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pakiety wymienione tutaj nie będą uwzględniane podczas sprawdzania dostępności aktualizacji. Kliknij przycisk aktualizacji po prawej stronie, aby zaktualizować pakiet jednorazowo, lub przycisk usuwania, aby przestać ignorować jego aktualizacje.",
+  "Updating {0} once. Its updates will stay ignored.": "Aktualizowanie {0} jednorazowo. Jego aktualizacje nadal będą ignorowane.",
+  "{0} is already being updated": "{0} jest już aktualizowany",
+  "{0} is already up to date": "{0} jest już aktualny"
 }

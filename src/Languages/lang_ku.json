@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI هێشتا کار دەکات",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI بەبێ ئایکۆنی ناوچەی سیستەم لە پاشبنەما کار دەکات و بۆ نوێکردنەوەکان دەپشکنێت. بۆ کردنەوەیەوەی، UniGetUI دووبارە بخەرە کار. بۆ دەرچوون، لە لیستی ڕێنیشاندەر «زیاتر > دەرچوون لە UniGetUI» بەکاربهێنە. دەتوانیت ئەمە لە ڕێکخستنەکان > هەڵبژاردەکانی ڕووکاری بەکارهێنەر بگۆڕیت.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "بۆ کارکردنی ئاگادارکردنەوەکان، پێویستە UniGetUI کاتێک پەنجەرەکەی دادەخرێت لە پاشبنەما بەکار بمێنێت",
-  "\"{0}\" is not a valid version.": "\"{0}\" وەشانێکی دروست نییە."
+  "\"{0}\" is not a valid version.": "\"{0}\" وەشانێکی دروست نییە.",
+  "Columns": "ستوونەکان",
+  "Update once": "یەک جار نوێی بکەرەوە",
+  "Update {0} once, keeping its updates ignored": "{0} یەک جار نوێ بکەرەوە و نوێکردنەوەکانی بەردەوام پشتگوێ بخە",
+  "Stop ignoring updates": "پشتگوێخستنی نوێکردنەوەکان بوەستێنە",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "لەسەر پاکێجێک Enter دابگرە بۆ ئەوەی یەک جار نوێی بکەیتەوە یان پشتگوێخستنی نوێکردنەوەکانی بوەستێنیت.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "ئەو پاکێجانەی لێرە لیست کراون لە کاتی پشکنینی نوێکردنەوەدا لەبەرچاو ناگیرێن. کلیک لە دوگمەی نوێکردنەوەی لای ڕاستیان بکە بۆ ئەوەی یەک جار نوێیان بکەیتەوە، یان لە دوگمەی سڕینەوە بکە بۆ وەستاندنی پشتگوێخستنی نوێکردنەوەکانیان.",
+  "Updating {0} once. Its updates will stay ignored.": "نوێکردنەوەی {0} بۆ یەک جار دەکرێت. نوێکردنەوەکانی بەردەوام پشتگوێ دەخرێن.",
+  "{0} is already being updated": "پێشتر خەریکی نوێکردنەوەی {0}ین",
+  "{0} is already up to date": "{0} پێشتر نوێترین وەشانە"
 }

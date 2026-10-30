@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI все още работи",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI продължава да работи във фонов режим и да проверява за актуализации, без икона в системната област. За да го отворите отново, стартирайте UniGetUI повторно. За да излезете, използвайте „Още“ > „Изход от UniGetUI“ в навигационното меню. Можете да промените това в „Настройки“ > „Предпочитания за потребителския интерфейс“.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "За да работят известията, UniGetUI трябва да продължи да работи във фонов режим при затваряне на прозореца",
-  "\"{0}\" is not a valid version.": "„{0}“ не е валидна версия."
+  "\"{0}\" is not a valid version.": "„{0}“ не е валидна версия.",
+  "Columns": "Колони",
+  "Update once": "Актуализиране еднократно",
+  "Update {0} once, keeping its updates ignored": "Актуализиране на {0} еднократно, като актуализациите му остават игнорирани",
+  "Stop ignoring updates": "Спиране на игнорирането на актуализациите",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Натиснете Enter върху пакет, за да го актуализирате еднократно или да спрете да игнорирате актуализациите му.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Пакетите, изброени тук, няма да бъдат взети предвид при проверката за актуализации. Щракнете върху бутона за актуализиране отдясно, за да ги актуализирате еднократно, или върху бутона за изтриване, за да спрете да игнорирате актуализациите им.",
+  "Updating {0} once. Its updates will stay ignored.": "Актуализиране на {0} еднократно. Актуализациите му ще останат игнорирани.",
+  "{0} is already being updated": "{0} вече се актуализира",
+  "{0} is already up to date": "{0} вече е актуален"
 }

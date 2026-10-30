@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI עדיין פועל",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI ממשיך לפעול ברקע ולבדוק עדכונים, ללא סמל במגש המערכת. כדי לפתוח אותו מחדש, הפעל שוב את UniGetUI. כדי לצאת, השתמש באפשרות More > Quit UniGetUI שבתפריט הניווט. ניתן לשנות זאת בהגדרות > העדפות ממשק המשתמש.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "כדי שההודעות יפעלו, UniGetUI חייב להמשיך לפעול ברקע לאחר סגירת החלון",
-  "\"{0}\" is not a valid version.": "\"{0}\" אינה גרסה תקינה."
+  "\"{0}\" is not a valid version.": "\"{0}\" אינה גרסה תקינה.",
+  "Columns": "עמודות",
+  "Update once": "עדכן פעם אחת",
+  "Update {0} once, keeping its updates ignored": "עדכן את {0} פעם אחת, תוך המשך התעלמות מהעדכונים שלו",
+  "Stop ignoring updates": "הפסק להתעלם מעדכונים",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "הקש Enter על חבילה כדי לעדכן אותה פעם אחת או להפסיק להתעלם מהעדכונים שלה.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "החבילות המפורטות כאן לא יילקחו בחשבון בעת בדיקת עדכונים. לחץ על כפתור העדכון מימין כדי לעדכן אותן פעם אחת, או על כפתור המחיקה כדי להפסיק להתעלם מהעדכונים שלהן.",
+  "Updating {0} once. Its updates will stay ignored.": "מעדכן את {0} פעם אחת. נמשיך להתעלם מהעדכונים שלה.",
+  "{0} is already being updated": "{0} כבר מתעדכן",
+  "{0} is already up to date": "{0} כבר מעודכן"
 }

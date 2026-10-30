@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "Az UniGetUI továbbra is fut",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "Az UniGetUI a háttérben tovább fut, és frissítéseket keres a tálcaikon nélkül. Az újbóli megnyitáshoz indítsa el ismét az UniGetUI-t. A kilépéshez válassza a Továbbiak > Kilépés az UniGetUI-ból lehetőséget a navigációs menüben. Ezt a Beállítások > Felhasználói felület beállításai alatt módosíthatja.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Az értesítések működéséhez az UniGetUI-nak az ablak bezárása után is a háttérben kell futnia",
-  "\"{0}\" is not a valid version.": "A(z) „{0}” nem érvényes verzió."
+  "\"{0}\" is not a valid version.": "A(z) „{0}” nem érvényes verzió.",
+  "Columns": "Oszlopok",
+  "Update once": "Egyszeri frissítés",
+  "Update {0} once, keeping its updates ignored": "{0} frissítése egyszer, a további frissítések figyelmen kívül hagyásával",
+  "Stop ignoring updates": "Frissítések figyelmen kívül hagyásának megszüntetése",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Nyomja meg az Enter billentyűt egy csomagon az egyszeri frissítéséhez vagy a frissítései figyelmen kívül hagyásának megszüntetéséhez.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Az itt felsorolt csomagokat a rendszer nem veszi figyelembe a frissítések keresésekor. Kattintson a jobb oldali frissítés gombra az egyszeri frissítésükhöz, vagy a törlés gombra a frissítéseik figyelmen kívül hagyásának megszüntetéséhez.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} egyszeri frissítése folyamatban. A frissítései továbbra is figyelmen kívül maradnak.",
+  "{0} is already being updated": "{0} frissítése már folyamatban van",
+  "{0} is already up to date": "{0} már naprakész"
 }

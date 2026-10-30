@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI on yhä käynnissä",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI jatkaa toimintaansa taustalla ja tarkistaa päivityksiä ilman ilmaisinalueen kuvaketta. Avaa se uudelleen käynnistämällä UniGetUI. Lopeta valitsemalla siirtymisvalikosta Lisää > Lopeta UniGetUI. Voit muuttaa tätä kohdassa Asetukset > Käyttöliittymän asetukset.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI:n on jatkettava toimintaa taustalla ikkunan sulkemisen jälkeen, jotta ilmoitukset toimivat",
-  "\"{0}\" is not a valid version.": "\"{0}\" ei ole kelvollinen versio."
+  "\"{0}\" is not a valid version.": "\"{0}\" ei ole kelvollinen versio.",
+  "Columns": "Sarakkeet",
+  "Update once": "Päivitä kerran",
+  "Update {0} once, keeping its updates ignored": "Päivitä {0} kerran ja pidä sen päivitykset ohitettuina",
+  "Stop ignoring updates": "Lopeta päivitysten ohittaminen",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Paina paketin kohdalla Enter-näppäintä päivittääksesi sen kerran tai lopettaaksesi sen päivitysten ohittamisen.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Tässä lueteltuja paketteja ei oteta huomioon päivityksiä tarkistettaessa. Napsauta niiden oikealla puolella olevaa päivityspainiketta päivittääksesi ne kerran tai poistopainiketta lopettaaksesi niiden päivitysten huomioimisen.",
+  "Updating {0} once. Its updates will stay ignored.": "Päivitetään {0} kerran. Sen päivitykset pysyvät ohitettuina.",
+  "{0} is already being updated": "{0} on jo päivitettävänä",
+  "{0} is already up to date": "{0} on jo ajan tasalla"
 }

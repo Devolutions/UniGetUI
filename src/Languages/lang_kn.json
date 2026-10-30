@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI ಇನ್ನೂ ಚಾಲನೆಯಲ್ಲಿದೆ",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "ಸಿಸ್ಟಮ್ ಟ್ರೇ ಐಕಾನ್ ಇಲ್ಲದಿದ್ದರೂ UniGetUI ಹಿನ್ನೆಲೆಯಲ್ಲೇ ಚಾಲನೆಯಲ್ಲಿದ್ದು ನವೀಕರಣಗಳನ್ನು ಪರಿಶೀಲಿಸುತ್ತದೆ. ಮತ್ತೆ ತೆರೆಯಲು UniGetUI ಅನ್ನು ಮತ್ತೊಮ್ಮೆ ಪ್ರಾರಂಭಿಸಿ. ನಿರ್ಗಮಿಸಲು, ನ್ಯಾವಿಗೇಶನ್ ಮೆನುವಿನ ಇನ್ನಷ್ಟು > UniGetUI ತ್ಯಜಿಸಿ ಬಳಸಿ. ಇದನ್ನು ಸೆಟ್ಟಿಂಗ್‌ಗಳು > ಬಳಕೆದಾರ ಇಂಟರ್ಫೇಸ್ ಆದ್ಯತೆಗಳಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "ಅಧಿಸೂಚನೆಗಳು ಕೆಲಸ ಮಾಡಲು, ವಿಂಡೋ ಮುಚ್ಚಿದಾಗಲೂ UniGetUI ಹಿನ್ನೆಲೆಯಲ್ಲೇ ಚಾಲನೆಯಲ್ಲಿರಬೇಕು",
-  "\"{0}\" is not a valid version.": "\"{0}\" ಮಾನ್ಯ ಆವೃತ್ತಿಯಲ್ಲ."
+  "\"{0}\" is not a valid version.": "\"{0}\" ಮಾನ್ಯ ಆವೃತ್ತಿಯಲ್ಲ.",
+  "Columns": "ಕಾಲಮ್‌ಗಳು",
+  "Update once": "ಒಮ್ಮೆ ನವೀಕರಿಸಿ",
+  "Update {0} once, keeping its updates ignored": "{0} ಅನ್ನು ಒಮ್ಮೆ ನವೀಕರಿಸಿ; ಅದರ updates ಅನ್ನು ನಿರ್ಲಕ್ಷಿಸುವುದನ್ನು ಮುಂದುವರಿಸಿ",
+  "Stop ignoring updates": "updates ನಿರ್ಲಕ್ಷಿಸುವುದನ್ನು ನಿಲ್ಲಿಸಿ",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "ಪ್ಯಾಕೇಜ್ ಅನ್ನು ಒಮ್ಮೆ ನವೀಕರಿಸಲು ಅಥವಾ ಅದರ updates ಅನ್ನು ನಿರ್ಲಕ್ಷಿಸುವುದನ್ನು ನಿಲ್ಲಿಸಲು ಅದರ ಮೇಲೆ Enter ಒತ್ತಿ.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "ಇಲ್ಲಿ ಪಟ್ಟಿ ಮಾಡಲಾದ ಪ್ಯಾಕೇಜ್‌ಗಳನ್ನು updates ಪರಿಶೀಲಿಸುವಾಗ ಗಣನೆಗೆ ತೆಗೆದುಕೊಳ್ಳಲಾಗುವುದಿಲ್ಲ. ಅವುಗಳನ್ನು ಒಮ್ಮೆ ನವೀಕರಿಸಲು ಅವುಗಳ ಬಲಭಾಗದಲ್ಲಿರುವ update ಬಟನ್ ಕ್ಲಿಕ್ ಮಾಡಿ, ಅಥವಾ ಅವುಗಳ updates ಅನ್ನು ನಿರ್ಲಕ್ಷಿಸುವುದನ್ನು ನಿಲ್ಲಿಸಲು delete ಬಟನ್ ಕ್ಲಿಕ್ ಮಾಡಿ.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} ಅನ್ನು ಒಮ್ಮೆ ನವೀಕರಿಸಲಾಗುತ್ತಿದೆ. ಅದರ updates ನಿರ್ಲಕ್ಷಿಸಲ್ಪಟ್ಟೇ ಇರುತ್ತವೆ.",
+  "{0} is already being updated": "{0} ಈಗಾಗಲೇ ನವೀಕರಿಸಲಾಗುತ್ತಿದೆ",
+  "{0} is already up to date": "{0} ಈಗಾಗಲೇ ಇತ್ತೀಚಿನ ಆವೃತ್ತಿಯಲ್ಲಿದೆ"
 }

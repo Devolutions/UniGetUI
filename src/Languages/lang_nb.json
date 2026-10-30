@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI kjører fortsatt",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI fortsetter å kjøre i bakgrunnen og se etter oppdateringer uten et ikon i systemstatusfeltet. Start UniGetUI på nytt for å åpne appen igjen. Avslutt appen med Mer > Avslutt UniGetUI i navigasjonsmenyen. Du kan endre dette under Innstillinger > Innstillinger for brukergrensesnitt.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI må fortsette å kjøre i bakgrunnen når vinduet lukkes, for at varsler skal fungere",
-  "\"{0}\" is not a valid version.": "«{0}» er ikke en gyldig versjon."
+  "\"{0}\" is not a valid version.": "«{0}» er ikke en gyldig versjon.",
+  "Columns": "Kolonner",
+  "Update once": "Oppdater én gang",
+  "Update {0} once, keeping its updates ignored": "Oppdater {0} én gang, og fortsett å ignorere oppdateringene",
+  "Stop ignoring updates": "Slutt å ignorere oppdateringer",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Trykk Enter på en pakke for å oppdatere den én gang eller slutte å ignorere oppdateringene for den.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pakkene som vises her, tas ikke med når det søkes etter oppdateringer. Klikk på oppdateringsknappen til høyre for å oppdatere dem én gang, eller på sletteknappen for å slutte å ignorere oppdateringene deres.",
+  "Updating {0} once. Its updates will stay ignored.": "Oppdaterer {0} én gang. Oppdateringene vil fortsatt bli ignorert.",
+  "{0} is already being updated": "{0} oppdateres allerede",
+  "{0} is already up to date": "{0} er allerede oppdatert"
 }

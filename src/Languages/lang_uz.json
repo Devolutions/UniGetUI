@@ -2188,5 +2188,14 @@
     "UniGetUI is still running": "UniGetUI hali ham ishlamoqda",
     "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI tizim paneli belgisisiz fonda ishlash va yangilanishlarni tekshirishda davom etadi. Qayta ochish uchun UniGetUI’ni yana ishga tushiring. Chiqish uchun navigatsiya menyusida More > Quit UniGetUI ni tanlang. Buni Sozlamalar > Interfeys afzalliklari bo‘limida o‘zgartirishingiz mumkin.",
     "UniGetUI must keep running in the background when its window is closed for notifications to work": "Bildirishnomalar ishlashi uchun oyna yopilganda UniGetUI fonda ishlashda davom etishi kerak",
-    "\"{0}\" is not a valid version.": "“{0}” yaroqli versiya emas."
+    "\"{0}\" is not a valid version.": "“{0}” yaroqli versiya emas.",
+    "Columns": "Ustunlar",
+    "Update once": "Bir marta yangilash",
+    "Update {0} once, keeping its updates ignored": "{0} ni bir marta yangilash, yangilanishlarini e’tiborsiz qoldirishda davom etish",
+    "Stop ignoring updates": "Yangilanishlarni e’tiborsiz qoldirishni to‘xtatish",
+    "Press Enter on a package to update it once or to stop ignoring its updates.": "Paketni bir marta yangilash yoki uning yangilanishlarini e’tiborsiz qoldirishni to‘xtatish uchun Enter tugmasini bosing.",
+    "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Bu yerda ko‘rsatilgan paketlar yangilanishlarni tekshirishda hisobga olinmaydi. Ularni bir marta yangilash uchun o‘ng tomonidagi yangilash tugmasini bosing yoki yangilanishlarini e’tiborsiz qoldirishni to‘xtatish uchun o‘chirish tugmasini bosing.",
+    "Updating {0} once. Its updates will stay ignored.": "{0} bir marta yangilanmoqda. Uning yangilanishlari e’tiborsiz qoldirilishda davom etadi.",
+    "{0} is already being updated": "{0} allaqachon yangilanmoqda",
+    "{0} is already up to date": "{0} allaqachon yangilangan"
 }

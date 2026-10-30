@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI अद्यापि चलति",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "system tray चिह्नं विना UniGetUI पृष्ठभूमौ चलति, अद्यतनानि च परीक्षते। पुनः उद्घाटयितुं UniGetUI पुनः आरभताम्। निर्गन्तुं सञ्चरण-मेनु मध्ये More > Quit UniGetUI उपयुज्यताम्। Settings > User interface preferences मध्ये एतत् परिवर्तयितुं शक्नोषि।",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "सूचनाः कार्यं कुर्युः इति गवाक्षं पिहिते UniGetUI पृष्ठभूमौ चलन्तं स्थापनीयम्",
-  "\"{0}\" is not a valid version.": "\"{0}\" मान्यं संस्करणं नास्ति।"
+  "\"{0}\" is not a valid version.": "\"{0}\" मान्यं संस्करणं नास्ति।",
+  "Columns": "स्तम्भाः",
+  "Update once": "एकवारम् अद्यतनयतु",
+  "Update {0} once, keeping its updates ignored": "{0} एकवारम् अद्यतनयतु, तस्य अद्यतनानि उपेक्षितानि एव स्थापयतु",
+  "Stop ignoring updates": "अद्यतनानाम् उपेक्षणं त्यजतु",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "कस्यचित् package इत्यस्य एकवारम् अद्यतनाय अथवा तस्य अद्यतनानाम् उपेक्षणं त्यक्तुं Enter नुदतु।",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "अत्र सूचितानि packages अद्यतन-परीक्षणे न गणयिष्यन्ते। तानि एकवारम् अद्यतनयितुं तेषां दक्षिणे स्थितं update-बटनं नुदतु, अथवा तेषाम् अद्यतनानाम् उपेक्षणं त्यक्तुं delete-बटनं नुदतु।",
+  "Updating {0} once. Its updates will stay ignored.": "{0} एकवारम् अद्यतन्यते। तस्य अद्यतनानि उपेक्षितानि एव भविष्यन्ति।",
+  "{0} is already being updated": "{0} इदानीमेव अद्यतन्यते",
+  "{0} is already up to date": "{0} इदानीमेव अद्यतनम् अस्ति"
 }

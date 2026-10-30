@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "لا يزال UniGetUI قيد التشغيل",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "يظل UniGetUI قيد التشغيل في الخلفية ويتحقق من التحديثات دون أيقونة في علبة النظام. لإعادة فتحه، شغّله مجددًا. للخروج، استخدم «المزيد» > «إنهاء UniGetUI» في قائمة التنقل. يمكنك تغيير ذلك ضمن الإعدادات > تفضيلات واجهة المستخدم.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "يجب أن يظل UniGetUI قيد التشغيل في الخلفية عند إغلاق نافذته حتى تعمل الإشعارات",
-  "\"{0}\" is not a valid version.": "\"{0}\" ليس إصدارًا صالحًا."
+  "\"{0}\" is not a valid version.": "\"{0}\" ليس إصدارًا صالحًا.",
+  "Columns": "الأعمدة",
+  "Update once": "تحديث مرة واحدة",
+  "Update {0} once, keeping its updates ignored": "تحديث {0} مرة واحدة مع استمرار تجاهل تحديثاته",
+  "Stop ignoring updates": "إيقاف تجاهل التحديثات",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "اضغط Enter على حزمة لتحديثها مرة واحدة أو لإيقاف تجاهل تحديثاتها.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "لن تؤخذ الحزم المدرجة هنا في الاعتبار عند التحقق من وجود تحديثات. انقر زر التحديث على يمينها لتحديثها مرة واحدة، أو زر الحذف لإيقاف تجاهل تحديثاتها.",
+  "Updating {0} once. Its updates will stay ignored.": "جارٍ تحديث {0} مرة واحدة. ستظل تحديثاته متجاهلة.",
+  "{0} is already being updated": "جارٍ تحديث {0} بالفعل",
+  "{0} is already up to date": "{0} محدّث بالفعل"
 }

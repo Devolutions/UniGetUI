@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI はまだ実行中です",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI はシステムトレイアイコンを表示せずにバックグラウンドで実行を続け、更新を確認します。再び開くには UniGetUI をもう一度起動してください。終了するには、ナビゲーションメニューの「その他」>「UniGetUI を終了」を使用してください。この設定は「設定」>「ユーザーインターフェイスの設定」で変更できます。",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "通知を機能させるには、ウィンドウを閉じた後も UniGetUI をバックグラウンドで実行し続ける必要があります",
-  "\"{0}\" is not a valid version.": "\"{0}\" は有効なバージョンではありません。"
+  "\"{0}\" is not a valid version.": "\"{0}\" は有効なバージョンではありません。",
+  "Columns": "列",
+  "Update once": "一度だけ更新",
+  "Update {0} once, keeping its updates ignored": "{0}を一度だけ更新（アップデート対象から除外したまま）",
+  "Stop ignoring updates": "アップデート対象からの除外を解除",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "パッケージで Enter キーを押すと、一度だけ更新するか、アップデート対象からの除外を解除できます。",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "ここに表示されているパッケージは、アップデートの確認対象から除外されます。右側の更新ボタンをクリックすると一度だけ更新でき、削除ボタンをクリックするとアップデート対象からの除外を解除できます。",
+  "Updating {0} once. Its updates will stay ignored.": "{0}を一度だけ更新しています。今後もアップデート対象から除外されたままになります。",
+  "{0} is already being updated": "{0}はすでに更新中です",
+  "{0} is already up to date": "{0}はすでに最新の状態です"
 }

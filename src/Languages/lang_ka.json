@@ -2193,5 +2193,14 @@
   "UniGetUI stops checking for updates and sending notifications until you open it again.": "UniGetUI განახლებების შემოწმებასა და შეტყობინებების გაგზავნას შეწყვეტს, სანამ ხელახლა არ გახსნით.",
   "UniGetUI is still running": "UniGetUI კვლავ გაშვებულია",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI ფონურად მუშაობას და განახლებების შემოწმებას გააგრძელებს, სისტემური არის ხატულის გარეშე. ხელახლა გასახსნელად გაუშვით UniGetUI თავიდან. გასასვლელად ნავიგაციის მენიუში აირჩიეთ More > Quit UniGetUI. ამის შეცვლა შეგიძლიათ აქ: Settings > User interface preferences.",
-  "UniGetUI must keep running in the background when its window is closed for notifications to work": "შეტყობინებების მისაღებად ფანჯრის დახურვის შემდეგ UniGetUI ფონურად უნდა მუშაობდეს"
+  "UniGetUI must keep running in the background when its window is closed for notifications to work": "შეტყობინებების მისაღებად ფანჯრის დახურვის შემდეგ UniGetUI ფონურად უნდა მუშაობდეს",
+  "Columns": "სვეტები",
+  "Update once": "ერთხელ განახლება",
+  "Update {0} once, keeping its updates ignored": "ერთხელ განაახლეთ {0}; მისი განახლებები კვლავ უგულებელყოფილი დარჩება",
+  "Stop ignoring updates": "შეწყვიტეთ განახლებების უგულებელყოფა",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "პაკეტზე Enter-ის დაჭერით შეგიძლიათ ერთხელ განაახლოთ ან მისი განახლებების უგულებელყოფა შეწყვიტოთ.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "აქ ჩამოთვლილი პაკეტები განახლებების შემოწმებისას არ იქნება გათვალისწინებული. ერთხელ გასაახლებლად დააჭირეთ მათ მარჯვნივ განთავსებულ განახლების ღილაკს, ან განახლებების უგულებელყოფის შესაწყვეტად — წაშლის ღილაკს.",
+  "Updating {0} once. Its updates will stay ignored.": "მიმდინარეობს {0}-ის ერთჯერადი განახლება. მისი განახლებები კვლავ უგულებელყოფილი დარჩება.",
+  "{0} is already being updated": "{0}-ის განახლება უკვე მიმდინარეობს",
+  "{0} is already up to date": "{0} უკვე განახლებულია"
 }

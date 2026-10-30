@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI continua en execució",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI continua executant-se en segon pla i cercant actualitzacions, sense cap icona a la safata del sistema. Per tornar-lo a obrir, inicieu UniGetUI de nou. Per sortir, feu servir Més > Surt de UniGetUI al menú de navegació. Podeu canviar-ho a Configuració > Preferències de la interfície d'usuari.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI ha de continuar executant-se en segon pla quan es tanca la finestra perquè les notificacions funcionin",
-  "\"{0}\" is not a valid version.": "\"{0}\" no és una versió vàlida."
+  "\"{0}\" is not a valid version.": "\"{0}\" no és una versió vàlida.",
+  "Columns": "Columnes",
+  "Update once": "Actualitza una vegada",
+  "Update {0} once, keeping its updates ignored": "Actualitza {0} una vegada i mantén-ne ignorades les actualitzacions",
+  "Stop ignoring updates": "Deixeu d'ignorar les actualitzacions",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Premeu Enter sobre un paquet per actualitzar-lo una vegada o deixar d'ignorar-ne les actualitzacions.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Els paquets que es mostren aquí no es tindran en compte en cercar actualitzacions. Feu clic al botó d'actualització de la dreta per actualitzar-los una vegada, o al botó de supressió per deixar d'ignorar-ne les actualitzacions.",
+  "Updating {0} once. Its updates will stay ignored.": "S'està actualitzant {0} una vegada. Les seves actualitzacions continuaran ignorades.",
+  "{0} is already being updated": "{0} ja s'està actualitzant",
+  "{0} is already up to date": "{0} ja està actualitzat"
 }

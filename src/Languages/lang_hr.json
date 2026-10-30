@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI je i dalje pokrenut",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI nastavlja raditi u pozadini i provjeravati ažuriranja, bez ikone u paleti sustava. Da biste ga ponovno otvorili, pokrenite UniGetUI opet. Da biste izašli, upotrijebite Više > Zatvori UniGetUI u navigacijskom izborniku. To možete promijeniti u Postavke > Postavke korisničkog sučelja.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI mora nastaviti raditi u pozadini nakon zatvaranja prozora da bi obavijesti funkcionirale",
-  "\"{0}\" is not a valid version.": "\"{0}\" nije valjana verzija."
+  "\"{0}\" is not a valid version.": "\"{0}\" nije valjana verzija.",
+  "Columns": "Stupci",
+  "Update once": "Ažuriraj jednom",
+  "Update {0} once, keeping its updates ignored": "Ažuriraj {0} jednom i nastavi zanemarivati njegova ažuriranja.",
+  "Stop ignoring updates": "Prestani ignorirati ažuriranja",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Pritisnite Enter na paketu da biste ga jednom ažurirali ili prestali zanemarivati njegova ažuriranja.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Paketi navedeni ovdje neće se uzimati u obzir pri provjeri ažuriranja. Kliknite gumb za ažuriranje s njihove desne strane da biste ih jednom ažurirali ili gumb za brisanje da biste prestali zanemarivati njihova ažuriranja.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} se jednokratno ažurira. Njegova će ažuriranja i dalje biti zanemarena.",
+  "{0} is already being updated": "{0} se već ažurira",
+  "{0} is already up to date": "{0} je već ažuran"
 }

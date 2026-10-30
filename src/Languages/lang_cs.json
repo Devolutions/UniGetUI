@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI je stále spuštěný",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI zůstane spuštěný na pozadí a bude kontrolovat aktualizace, ale bez ikony v oznamovací oblasti. Chcete-li ho znovu otevřít, spusťte UniGetUI znovu. Ukončíte ho v navigační nabídce pomocí Další > Ukončit UniGetUI. Toto nastavení můžete změnit v Nastavení > Předvolby uživatelského rozhraní.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Aby oznámení fungovala, musí UniGetUI po zavření okna zůstat spuštěný na pozadí",
-  "\"{0}\" is not a valid version.": "„{0}“ není platná verze."
+  "\"{0}\" is not a valid version.": "„{0}“ není platná verze.",
+  "Columns": "Sloupce",
+  "Update once": "Aktualizovat jednou",
+  "Update {0} once, keeping its updates ignored": "Jednorázově aktualizovat {0} a nadále ignorovat jeho aktualizace",
+  "Stop ignoring updates": "Přestat ignorovat aktualizace",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Stisknutím klávesy Enter u balíčku jej jednou aktualizujete nebo přestanete ignorovat jeho aktualizace.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Uvedené balíčky nebudou při kontrole aktualizací brány v úvahu. Kliknutím na tlačítko aktualizace vpravo je jednou aktualizujete, nebo kliknutím na tlačítko odstranění přestanete ignorovat jejich aktualizace.",
+  "Updating {0} once. Its updates will stay ignored.": "Jednorázově se aktualizuje {0}. Jeho další aktualizace zůstanou ignorovány.",
+  "{0} is already being updated": "{0} se již aktualizuje",
+  "{0} is already up to date": "{0} je již aktuální"
 }

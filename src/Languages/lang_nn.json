@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI køyrer framleis",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI held fram med å køyre i bakgrunnen og sjå etter oppdateringar, utan eit ikon i systemstatusfeltet. Start UniGetUI på nytt for å opne det att. Bruk Meir > Avslutt UniGetUI i navigasjonsmenyen for å avslutte. Du kan endre dette under Innstillingar > Innstillingar for brukargrensesnitt.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI må halde fram med å køyre i bakgrunnen når vindauget vert lukka, for at varsel skal fungere",
-  "\"{0}\" is not a valid version.": "«{0}» er ikkje ein gyldig versjon."
+  "\"{0}\" is not a valid version.": "«{0}» er ikkje ein gyldig versjon.",
+  "Columns": "Kolonnar",
+  "Update once": "Oppdater éin gong",
+  "Update {0} once, keeping its updates ignored": "Oppdater {0} éin gong, medan oppdateringane framleis blir ignorerte",
+  "Stop ignoring updates": "Slutt å ignorere oppdateringar",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Trykk Enter på ein pakke for å oppdatera han éin gong eller for å slutte å ignorere oppdateringane hans.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pakkane som er lista her, blir ikkje tekne omsyn til når det blir sjekka etter oppdateringar. Klikk på oppdateringsknappen til høgre for å oppdatera dei éin gong, eller på slettknappen for å slutte å ignorere oppdateringane deira.",
+  "Updating {0} once. Its updates will stay ignored.": "Oppdaterer {0} éin gong. Oppdateringane for pakken vil framleis bli ignorerte.",
+  "{0} is already being updated": "{0} blir allereie oppdatert",
+  "{0} is already up to date": "{0} er allereie oppdatert"
 }

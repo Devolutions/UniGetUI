@@ -2189,5 +2189,14 @@
   "UniGetUI is still running": "UniGetUI가 계속 실행 중입니다",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "시스템 트레이 아이콘 없이 UniGetUI가 백그라운드에서 계속 실행되며 업데이트를 확인합니다. 다시 열려면 UniGetUI를 다시 실행하세요. 종료하려면 탐색 메뉴에서 더 보기 > UniGetUI 종료를 사용하세요. 설정 > 사용자 인터페이스 기본 설정에서 변경할 수 있습니다.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "알림을 사용하려면 창을 닫아도 UniGetUI가 백그라운드에서 계속 실행되어야 합니다",
-  "\"{0}\" is not a valid version.": "\"{0}\"은(는) 올바른 버전이 아닙니다."
+  "\"{0}\" is not a valid version.": "\"{0}\"은(는) 올바른 버전이 아닙니다.",
+  "Columns": "열",
+  "Update once": "한 번 업데이트",
+  "Update {0} once, keeping its updates ignored": "{0}을(를) 한 번 업데이트 (업데이트 무시 상태 유지)",
+  "Stop ignoring updates": "업데이트 무시 해제",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "패키지에서 Enter 키를 누르면 한 번 업데이트하거나 해당 패키지의 업데이트 무시를 해제할 수 있습니다.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "여기에 나열된 패키지는 업데이트 확인 시 제외됩니다. 오른쪽의 업데이트 버튼을 클릭하면 한 번 업데이트하고, 삭제 버튼을 클릭하면 해당 패키지의 업데이트 무시를 해제합니다.",
+  "Updating {0} once. Its updates will stay ignored.": "{0}을(를) 한 번 업데이트하는 중입니다. 해당 패키지의 업데이트는 계속 무시됩니다.",
+  "{0} is already being updated": "{0}은(는) 이미 업데이트 중입니다",
+  "{0} is already up to date": "{0}은(는) 이미 최신 상태입니다"
 }

@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "O UniGetUI continua em execução",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "O UniGetUI continua em execução em segundo plano e a procurar atualizações, sem apresentar um ícone na área de notificação. Para voltar a abri-lo, inicie o UniGetUI novamente. Para sair, utilize Mais > Sair do UniGetUI no menu de navegação. Pode alterar esta opção em Definições > Preferências da interface do utilizador.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Para que as notificações funcionem, o UniGetUI tem de continuar em execução em segundo plano quando a janela é fechada",
-  "\"{0}\" is not a valid version.": "\"{0}\" não é uma versão válida."
+  "\"{0}\" is not a valid version.": "\"{0}\" não é uma versão válida.",
+  "Columns": "Colunas",
+  "Update once": "Atualizar uma vez",
+  "Update {0} once, keeping its updates ignored": "Atualizar {0} uma vez, mantendo as respetivas atualizações ignoradas",
+  "Stop ignoring updates": "Deixar de ignorar atualizações",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Prima Enter num pacote para o atualizar uma vez ou deixar de ignorar as respetivas atualizações.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Os pacotes aqui listados não serão considerados ao procurar atualizações. Clique no botão de atualização à direita para os atualizar uma vez, ou no botão de eliminação para deixar de ignorar as respetivas atualizações.",
+  "Updating {0} once. Its updates will stay ignored.": "A atualizar {0} uma vez. As respetivas atualizações continuarão ignoradas.",
+  "{0} is already being updated": "{0} já está a ser atualizado",
+  "{0} is already up to date": "{0} já está atualizado"
 }

@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI все еще работает",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI продолжит работать в фоновом режиме и проверять наличие обновлений без значка в области уведомлений. Чтобы снова открыть приложение, запустите UniGetUI повторно. Чтобы выйти, выберите «Дополнительно» > «Выйти из UniGetUI» в меню навигации. Это поведение можно изменить в разделе «Настройки» > «Параметры интерфейса пользователя».",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Для работы уведомлений UniGetUI должен оставаться запущенным в фоновом режиме после закрытия окна",
-  "\"{0}\" is not a valid version.": "\"{0}\" не является допустимой версией."
+  "\"{0}\" is not a valid version.": "\"{0}\" не является допустимой версией.",
+  "Columns": "Столбцы",
+  "Update once": "Обновить один раз",
+  "Update {0} once, keeping its updates ignored": "Однократно обновить {0}, продолжая игнорировать его обновления",
+  "Stop ignoring updates": "Перестать игнорировать обновления",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Нажмите Enter на пакете, чтобы однократно обновить его или перестать игнорировать его обновления.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Пакеты, перечисленные здесь, не будут учитываться при проверке обновлений. Нажмите кнопку обновления справа от пакета, чтобы однократно обновить его, или кнопку удаления, чтобы перестать игнорировать его обновления.",
+  "Updating {0} once. Its updates will stay ignored.": "Обновляем {0} один раз. Его обновления останутся игнорируемыми.",
+  "{0} is already being updated": "{0} уже обновляется",
+  "{0} is already up to date": "{0} уже обновлен до последней версии"
 }

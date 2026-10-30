@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI est toujours en cours d'exécution",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI continue de s'exécuter en arrière-plan et de rechercher des mises à jour, sans icône dans la zone de notification. Pour le rouvrir, lancez UniGetUI à nouveau. Pour quitter, utilisez Plus > Quitter UniGetUI dans le menu de navigation. Vous pouvez modifier ce paramètre dans Paramètres > Préférences de l'interface utilisateur.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI doit continuer à s'exécuter en arrière-plan lorsque sa fenêtre est fermée pour que les notifications fonctionnent",
-  "\"{0}\" is not a valid version.": "\"{0}\" n'est pas une version valide."
+  "\"{0}\" is not a valid version.": "\"{0}\" n'est pas une version valide.",
+  "Columns": "Colonnes",
+  "Update once": "Mettre à jour une fois",
+  "Update {0} once, keeping its updates ignored": "Mettre à jour {0} une fois, tout en continuant d'ignorer ses mises à jour",
+  "Stop ignoring updates": "Ne plus ignorer les mises à jour",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Appuyez sur Entrée sur un paquet pour le mettre à jour une fois ou ne plus ignorer ses mises à jour.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Les paquets répertoriés ici ne seront pas pris en compte lors de la recherche de mises à jour. Cliquez sur le bouton de mise à jour à leur droite pour les mettre à jour une fois, ou sur le bouton de suppression pour ne plus ignorer leurs mises à jour.",
+  "Updating {0} once. Its updates will stay ignored.": "Mise à jour de {0} une fois. Ses mises à jour resteront ignorées.",
+  "{0} is already being updated": "{0} est déjà en cours de mise à jour",
+  "{0} is already up to date": "{0} est déjà à jour"
 }

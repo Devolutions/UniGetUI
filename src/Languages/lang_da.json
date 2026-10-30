@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI kører stadig",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI fortsætter med at køre i baggrunden og søge efter opdateringer uden et ikon i systembakken. Start UniGetUI igen for at åbne appen på ny. Afslut via Mere > Afslut UniGetUI i navigationsmenuen. Du kan ændre dette under Indstillinger > Brugerfladens indstillinger.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI skal fortsætte med at køre i baggrunden, når vinduet lukkes, for at meddelelser kan fungere",
-  "\"{0}\" is not a valid version.": "\"{0}\" er ikke en gyldig version."
+  "\"{0}\" is not a valid version.": "\"{0}\" er ikke en gyldig version.",
+  "Columns": "Kolonner",
+  "Update once": "Opdater én gang",
+  "Update {0} once, keeping its updates ignored": "Opdater {0} én gang, og fortsæt med at ignorere opdateringer til den",
+  "Stop ignoring updates": "Stop med at ignorere opdateringer",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Tryk på Enter på en pakke for at opdatere den én gang eller holde op med at ignorere dens opdateringer.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pakkerne på denne liste medregnes ikke, når der søges efter opdateringer. Klik på opdateringsknappen til højre for at opdatere dem én gang, eller på sletteknappen for at holde op med at ignorere deres opdateringer.",
+  "Updating {0} once. Its updates will stay ignored.": "Opdaterer {0} én gang. Dens opdateringer vil fortsat blive ignoreret.",
+  "{0} is already being updated": "{0} er allerede ved at blive opdateret",
+  "{0} is already up to date": "{0} er allerede opdateret"
 }

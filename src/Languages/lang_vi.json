@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI vẫn đang chạy",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI tiếp tục chạy nền và kiểm tra cập nhật mà không có biểu tượng khay hệ thống. Để mở lại, hãy khởi chạy UniGetUI lần nữa. Để thoát, chọn Khác > Thoát UniGetUI trong menu điều hướng. Bạn có thể thay đổi tùy chọn này trong Cài đặt > Tùy chọn giao diện người dùng.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI phải tiếp tục chạy nền khi đóng cửa sổ để thông báo hoạt động",
-  "\"{0}\" is not a valid version.": "\"{0}\" không phải là phiên bản hợp lệ."
+  "\"{0}\" is not a valid version.": "\"{0}\" không phải là phiên bản hợp lệ.",
+  "Columns": "Cột",
+  "Update once": "Cập nhật một lần",
+  "Update {0} once, keeping its updates ignored": "Cập nhật {0} một lần, vẫn bỏ qua các bản cập nhật của gói này",
+  "Stop ignoring updates": "Ngừng bỏ qua các bản cập nhật",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Nhấn Enter trên một gói để cập nhật gói đó một lần hoặc ngừng bỏ qua các bản cập nhật của gói.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Các gói được liệt kê ở đây sẽ không được tính đến khi kiểm tra cập nhật. Nhấp vào nút cập nhật bên phải để cập nhật chúng một lần hoặc nút xóa để ngừng bỏ qua các bản cập nhật của chúng.",
+  "Updating {0} once. Its updates will stay ignored.": "Đang cập nhật {0} một lần. Các bản cập nhật của gói này sẽ tiếp tục bị bỏ qua.",
+  "{0} is already being updated": "{0} đang được cập nhật",
+  "{0} is already up to date": "{0} đã được cập nhật"
 }

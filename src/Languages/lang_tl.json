@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "Tumatakbo pa rin ang UniGetUI",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "Patuloy na tatakbo sa background ang UniGetUI at susuri ng mga update kahit walang icon sa system tray. Para buksan itong muli, ilunsad ulit ang UniGetUI. Para lumabas, gamitin ang Higit pa > Isara ang UniGetUI sa menu ng nabigasyon. Mababago mo ito sa Mga Setting > Mga kagustuhan sa user interface.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Dapat patuloy na tumakbo sa background ang UniGetUI kapag isinara ang window nito para gumana ang mga notification",
-  "\"{0}\" is not a valid version.": "Hindi wastong bersyon ang \"{0}\"."
+  "\"{0}\" is not a valid version.": "Hindi wastong bersyon ang \"{0}\".",
+  "Columns": "Mga column",
+  "Update once": "I-update nang isang beses",
+  "Update {0} once, keeping its updates ignored": "I-update ang {0} nang isang beses at patuloy na balewalain ang mga update nito",
+  "Stop ignoring updates": "Huwag nang balewalain ang mga update",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Pindutin ang Enter sa isang package para i-update ito nang isang beses o para huwag nang balewalain ang mga update nito.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Hindi isasama sa pagsusuri ng mga update ang mga package na nakalista rito. I-click ang button na update sa kanan ng mga ito para i-update nang isang beses, o ang button na delete para huwag nang balewalain ang mga update ng mga ito.",
+  "Updating {0} once. Its updates will stay ignored.": "Isang beses ina-update ang {0}. Patuloy na babalewalain ang mga update nito.",
+  "{0} is already being updated": "Ina-update na ang {0}",
+  "{0} is already up to date": "Napapanahon na ang {0}."
 }

@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI rulează în continuare",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI continuă să ruleze în fundal și să verifice actualizările, fără o pictogramă în zona de notificare. Pentru a-l redeschide, pornește UniGetUI din nou. Pentru a ieși, folosește Mai multe > Închide UniGetUI din meniul de navigare. Poți schimba această setare în Setări > Preferințe interfață utilizator.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Pentru ca notificările să funcționeze, UniGetUI trebuie să continue să ruleze în fundal când fereastra este închisă",
-  "\"{0}\" is not a valid version.": "„{0}” nu este o versiune validă."
+  "\"{0}\" is not a valid version.": "„{0}” nu este o versiune validă.",
+  "Columns": "Coloane",
+  "Update once": "Actualizează o dată",
+  "Update {0} once, keeping its updates ignored": "Actualizează {0} o singură dată, păstrând actualizările ignorate",
+  "Stop ignoring updates": "Nu mai ignora actualizările",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Apasă Enter pe un pachet pentru a-l actualiza o dată sau pentru a nu-i mai ignora actualizările.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pachetele enumerate aici nu vor fi luate în considerare la verificarea actualizărilor. Fă clic pe butonul de actualizare din dreapta lor pentru a le actualiza o dată sau pe butonul de ștergere pentru a nu le mai ignora actualizările.",
+  "Updating {0} once. Its updates will stay ignored.": "Se actualizează {0} o singură dată. Actualizările sale vor rămâne ignorate.",
+  "{0} is already being updated": "{0} se actualizează deja",
+  "{0} is already up to date": "{0} este deja actualizat"
 }

@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI همچنان در حال اجراست",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI بدون نماد ناحیه اعلان سیستم در پس‌زمینه اجرا می‌ماند و به‌روزرسانی‌ها را بررسی می‌کند. برای بازگشایی آن، UniGetUI را دوباره اجرا کنید. برای خروج، در منوی ناوبری از بیشتر > خروج از UniGetUI استفاده کنید. می‌توانید این مورد را در تنظیمات > ترجیحات رابط کاربری تغییر دهید.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "برای کارکرد اعلان‌ها، هنگام بستن پنجره UniGetUI باید در پس‌زمینه در حال اجرا بماند",
-  "\"{0}\" is not a valid version.": "«{0}» نسخه معتبری نیست."
+  "\"{0}\" is not a valid version.": "«{0}» نسخه معتبری نیست.",
+  "Columns": "ستون‌ها",
+  "Update once": "یک‌بار به‌روزرسانی",
+  "Update {0} once, keeping its updates ignored": "{0} را یک‌بار به‌روزرسانی کنید و به نادیده گرفتن به‌روزرسانی‌های آن ادامه دهید",
+  "Stop ignoring updates": "نادیده گرفتن به‌روزرسانی‌ها را متوقف کنید",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "برای به‌روزرسانی یک‌باره بسته یا متوقف کردن نادیده گرفتن به‌روزرسانی‌های آن، روی بسته Enter را فشار دهید.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "بسته‌های فهرست‌شده در اینجا هنگام بررسی به‌روزرسانی‌ها در نظر گرفته نمی‌شوند. برای به‌روزرسانی یک‌باره آن‌ها، دکمه به‌روزرسانی سمت راستشان را بزنید؛ یا برای متوقف کردن نادیده گرفتن به‌روزرسانی‌هایشان، دکمه حذف را بزنید.",
+  "Updating {0} once. Its updates will stay ignored.": "در حال به‌روزرسانی یک‌باره {0}. به‌روزرسانی‌های آن همچنان نادیده گرفته خواهند شد.",
+  "{0} is already being updated": "{0} در حال حاضر در حال به‌روزرسانی است",
+  "{0} is already up to date": "{0} در حال حاضر به‌روز است"
 }

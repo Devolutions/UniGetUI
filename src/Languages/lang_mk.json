@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI сè уште работи",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI продолжува да работи во заднина и да проверува за ажурирања, без икона во системската лента. За повторно да го отворите, стартувајте го UniGetUI. За излез, користете Повеќе > Излези од UniGetUI во менито за навигација. Ова може да го промените во Поставки > Поставки за корисничкиот интерфејс.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI мора да продолжи да работи во заднина кога прозорецот е затворен за да функционираат известувањата",
-  "\"{0}\" is not a valid version.": "„{0}“ не е валидна верзија."
+  "\"{0}\" is not a valid version.": "„{0}“ не е валидна верзија.",
+  "Columns": "Колони",
+  "Update once": "Ажурирај еднаш",
+  "Update {0} once, keeping its updates ignored": "Ажурирај го {0} еднаш, а неговите ажурирања остави ги игнорирани",
+  "Stop ignoring updates": "Престани да ги игнорираш ажурирањата",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Притиснете Enter на пакет за да го ажурирате еднаш или да престанете да ги игнорирате неговите ажурирања.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Пакетите наведени овде нема да се земаат предвид при проверка за ажурирања. Кликнете на копчето за ажурирање десно за да ги ажурирате еднаш или на копчето за бришење за да престанете да ги игнорирате нивните ажурирања.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} се ажурира еднаш. Неговите ажурирања ќе останат игнорирани.",
+  "{0} is already being updated": "{0} веќе се ажурира",
+  "{0} is already up to date": "{0} е веќе ажуриран"
 }

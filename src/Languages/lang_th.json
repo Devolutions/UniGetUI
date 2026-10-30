@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI ยังคงทำงานอยู่",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI จะทำงานในเบื้องหลังและตรวจสอบการอัปเดตต่อไปโดยไม่มีไอคอนในถาดระบบ หากต้องการเปิดอีกครั้ง ให้เรียกใช้ UniGetUI อีกครั้ง หากต้องการออก ให้เลือกเพิ่มเติม > ออกจาก UniGetUI ในเมนูนำทาง คุณเปลี่ยนค่านี้ได้ในการตั้งค่า > การกำหนดลักษณะอินเทอร์เฟซผู้ใช้",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI ต้องทำงานในเบื้องหลังต่อไปเมื่อปิดหน้าต่าง เพื่อให้การแจ้งเตือนทำงานได้",
-  "\"{0}\" is not a valid version.": "\"{0}\" ไม่ใช่เวอร์ชันที่ถูกต้อง"
+  "\"{0}\" is not a valid version.": "\"{0}\" ไม่ใช่เวอร์ชันที่ถูกต้อง",
+  "Columns": "คอลัมน์",
+  "Update once": "อัปเดตครั้งเดียว",
+  "Update {0} once, keeping its updates ignored": "อัปเดต {0} ครั้งเดียว โดยยังคงละเว้นการอัปเดตของแพ็กเกจนี้",
+  "Stop ignoring updates": "หยุดละเว้นการอัปเดต",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "กด Enter บนแพ็กเกจเพื่ออัปเดตเพียงครั้งเดียวหรือหยุดละเว้นการอัปเดตของแพ็กเกจนั้น",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "แพ็กเกจที่แสดงที่นี่จะไม่ถูกนำมาพิจารณาเมื่อตรวจสอบการอัปเดต คลิกปุ่มอัปเดตทางด้านขวาเพื่ออัปเดตแพ็กเกจเหล่านี้ครั้งเดียว หรือคลิกปุ่มลบเพื่อหยุดละเว้นการอัปเดต",
+  "Updating {0} once. Its updates will stay ignored.": "กำลังอัปเดต {0} ครั้งเดียว โดยยังคงละเว้นการอัปเดตของแพ็กเกจนี้",
+  "{0} is already being updated": "{0} กำลังอัปเดตอยู่แล้ว",
+  "{0} is already up to date": "{0} เป็นเวอร์ชันล่าสุดอยู่แล้ว"
 }

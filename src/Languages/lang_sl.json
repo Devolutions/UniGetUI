@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI se še vedno izvaja",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI še naprej deluje v ozadju in preverja posodobitve, vendar brez ikone v sistemski vrstici. Če ga želite znova odpreti, ga zaženite znova. Za izhod v navigacijskem meniju izberite Več > Zapri UniGetUI. To nastavitev lahko spremenite v Nastavitve > Nastavitve uporabniškega vmesnika.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "Za delovanje obvestil mora UniGetUI po zaprtju okna še naprej delovati v ozadju",
-  "\"{0}\" is not a valid version.": "\"{0}\" ni veljavna različica."
+  "\"{0}\" is not a valid version.": "\"{0}\" ni veljavna različica.",
+  "Columns": "Stolpci",
+  "Update once": "Posodobi enkrat",
+  "Update {0} once, keeping its updates ignored": "Posodobi {0} enkrat, njegove posodobitve pa še naprej prezri",
+  "Stop ignoring updates": "Ne prezri več posodobitev",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Pritisnite Enter na paketu, da ga enkrat posodobite ali znova omogočite njegove posodobitve.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Paketi na tem seznamu ne bodo upoštevani pri preverjanju posodobitev. Kliknite gumb za posodobitev na desni, da jih enkrat posodobite, ali gumb za izbris, da jih odstranite s seznama prezrtih posodobitev.",
+  "Updating {0} once. Its updates will stay ignored.": "Paket {0} se enkratno posodablja. Njegove posodobitve bodo še naprej prezrte.",
+  "{0} is already being updated": "{0} se že posodablja",
+  "{0} is already up to date": "{0} je že posodobljen"
 }

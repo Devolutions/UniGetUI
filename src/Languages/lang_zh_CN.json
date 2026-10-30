@@ -2224,5 +2224,14 @@
   "UniGetUI is still running": "UniGetUI 仍在运行",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI 会在后台继续运行并检查更新，但不显示系统托盘图标。要重新打开它，请再次启动 UniGetUI。要退出，请在导航菜单中选择“更多”>“退出 UniGetUI”。您可以在“设置”>“用户界面首选项”中更改此设置。",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "要使用通知，关闭窗口后 UniGetUI 必须继续在后台运行",
-  "\"{0}\" is not a valid version.": "“{0}”不是有效版本。"
+  "\"{0}\" is not a valid version.": "“{0}”不是有效版本。",
+  "Columns": "列",
+  "Update once": "仅更新一次",
+  "Update {0} once, keeping its updates ignored": "仅更新 {0} 一次，继续忽略其更新",
+  "Stop ignoring updates": "停止忽略更新",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "在软件包上按 Enter 键，可仅更新一次或停止忽略其更新。",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "检查更新时不会考虑此处列出的软件包。点击其右侧的更新按钮可仅更新一次，点击删除按钮可停止忽略其更新。",
+  "Updating {0} once. Its updates will stay ignored.": "正在仅更新 {0} 一次。其后续更新仍会被忽略。",
+  "{0} is already being updated": "{0} 正在更新",
+  "{0} is already up to date": "{0} 已是最新版本"
 }

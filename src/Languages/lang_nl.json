@@ -2193,5 +2193,14 @@
   "UniGetUI is still running": "UniGetUI is nog actief",
   "UniGetUI keeps running in the background and checking for updates, without a system tray icon. To reopen it, launch UniGetUI again. To exit, use More > Quit UniGetUI in the navigation menu. You can change this in Settings > User interface preferences.": "UniGetUI blijft op de achtergrond actief en controleert op updates, zonder pictogram in het systeemvak. Start UniGetUI opnieuw om het te openen. Gebruik Meer > UniGetUI afsluiten in het navigatiemenu om af te sluiten. Je kunt dit wijzigen via Instellingen > Voorkeuren voor de gebruikersinterface.",
   "UniGetUI must keep running in the background when its window is closed for notifications to work": "UniGetUI moet op de achtergrond actief blijven wanneer het venster wordt gesloten, zodat meldingen werken",
-  "\"{0}\" is not a valid version.": "\"{0}\" is geen geldige versie."
+  "\"{0}\" is not a valid version.": "\"{0}\" is geen geldige versie.",
+  "Columns": "Kolommen",
+  "Update once": "Eenmalig bijwerken",
+  "Update {0} once, keeping its updates ignored": "Werk {0} eenmalig bij en blijf updates negeren",
+  "Stop ignoring updates": "Updates niet langer negeren",
+  "Press Enter on a package to update it once or to stop ignoring its updates.": "Druk op Enter bij een pakket om het eenmalig bij te werken of om de updates ervan niet langer te negeren.",
+  "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "De hier vermelde pakketten worden niet meegenomen bij het controleren op updates. Klik op de updateknop rechts ervan om ze eenmalig bij te werken, of op de verwijderknop om de updates ervan niet langer te negeren.",
+  "Updating {0} once. Its updates will stay ignored.": "{0} wordt eenmalig bijgewerkt. Updates blijven genegeerd.",
+  "{0} is already being updated": "{0} wordt al bijgewerkt",
+  "{0} is already up to date": "{0} is al up-to-date"
 }

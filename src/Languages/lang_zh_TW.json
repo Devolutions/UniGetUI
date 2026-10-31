@@ -2203,5 +2203,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "檢查更新時不會將此處列出的套件納入考量。按一下右側的更新按鈕即可更新一次，或按一下刪除按鈕以停止忽略其更新。",
   "Updating {0} once. Its updates will stay ignored.": "正在更新 {0} 一次。其後續更新仍會被忽略。",
   "{0} is already being updated": "{0} 正在更新",
-  "{0} is already up to date": "{0} 已是最新版本"
+  "{0} is already up to date": "{0} 已是最新版本",
+  "Could not refresh from remote": "無法從遠端重新整理",
+  "Remote information may be out of date": "遠端資訊可能已過時",
+  "Error details": "錯誤詳細資料"
 }

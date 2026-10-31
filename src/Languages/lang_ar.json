@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "لن تؤخذ الحزم المدرجة هنا في الاعتبار عند التحقق من وجود تحديثات. انقر زر التحديث على يمينها لتحديثها مرة واحدة، أو زر الحذف لإيقاف تجاهل تحديثاتها.",
   "Updating {0} once. Its updates will stay ignored.": "جارٍ تحديث {0} مرة واحدة. ستظل تحديثاته متجاهلة.",
   "{0} is already being updated": "جارٍ تحديث {0} بالفعل",
-  "{0} is already up to date": "{0} محدّث بالفعل"
+  "{0} is already up to date": "{0} محدّث بالفعل",
+  "Could not refresh from remote": "تعذّر التحديث من المصدر البعيد",
+  "Remote information may be out of date": "قد تكون معلومات المصدر البعيد قديمة",
+  "Error details": "تفاصيل الخطأ"
 }

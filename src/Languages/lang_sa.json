@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "अत्र सूचितानि packages अद्यतन-परीक्षणे न गणयिष्यन्ते। तानि एकवारम् अद्यतनयितुं तेषां दक्षिणे स्थितं update-बटनं नुदतु, अथवा तेषाम् अद्यतनानाम् उपेक्षणं त्यक्तुं delete-बटनं नुदतु।",
   "Updating {0} once. Its updates will stay ignored.": "{0} एकवारम् अद्यतन्यते। तस्य अद्यतनानि उपेक्षितानि एव भविष्यन्ति।",
   "{0} is already being updated": "{0} इदानीमेव अद्यतन्यते",
-  "{0} is already up to date": "{0} इदानीमेव अद्यतनम् अस्ति"
+  "{0} is already up to date": "{0} इदानीमेव अद्यतनम् अस्ति",
+  "Could not refresh from remote": "दूरस्थस्रोततः पुनः ताजीकर्तुं न शक्यम्",
+  "Remote information may be out of date": "दूरस्थसूचना पुरातनी भवितुम् अर्हति",
+  "Error details": "दोषविवरणम्"
 }

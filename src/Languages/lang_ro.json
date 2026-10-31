@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pachetele enumerate aici nu vor fi luate în considerare la verificarea actualizărilor. Fă clic pe butonul de actualizare din dreapta lor pentru a le actualiza o dată sau pe butonul de ștergere pentru a nu le mai ignora actualizările.",
   "Updating {0} once. Its updates will stay ignored.": "Se actualizează {0} o singură dată. Actualizările sale vor rămâne ignorate.",
   "{0} is already being updated": "{0} se actualizează deja",
-  "{0} is already up to date": "{0} este deja actualizat"
+  "{0} is already up to date": "{0} este deja actualizat",
+  "Could not refresh from remote": "Nu s-a putut reîmprospăta de la distanță",
+  "Remote information may be out of date": "Este posibil ca informațiile de la distanță să fie învechite",
+  "Error details": "Detalii despre eroare"
 }

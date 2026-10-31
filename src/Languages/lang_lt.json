@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Čia pateikti paketai nebus įtraukiami tikrinant, ar yra naujinimų. Spustelėkite dešinėje esantį naujinimo mygtuką, kad paketą atnaujintumėte vieną kartą, arba ištrynimo mygtuką, kad nebeignoruotumėte jo naujinimų.",
   "Updating {0} once. Its updates will stay ignored.": "{0} atnaujinamas vieną kartą. Jo naujinimai ir toliau bus ignoruojami.",
   "{0} is already being updated": "{0} jau atnaujinamas",
-  "{0} is already up to date": "{0} jau atnaujintas"
+  "{0} is already up to date": "{0} jau atnaujintas",
+  "Could not refresh from remote": "Nepavyko atnaujinti nuotolinio šaltinio",
+  "Remote information may be out of date": "Nuotolinė informacija gali būti pasenusi",
+  "Error details": "Išsami klaidos informacija"
 }

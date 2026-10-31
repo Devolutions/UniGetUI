@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pakkane som er lista her, blir ikkje tekne omsyn til når det blir sjekka etter oppdateringar. Klikk på oppdateringsknappen til høgre for å oppdatera dei éin gong, eller på slettknappen for å slutte å ignorere oppdateringane deira.",
   "Updating {0} once. Its updates will stay ignored.": "Oppdaterer {0} éin gong. Oppdateringane for pakken vil framleis bli ignorerte.",
   "{0} is already being updated": "{0} blir allereie oppdatert",
-  "{0} is already up to date": "{0} er allereie oppdatert"
+  "{0} is already up to date": "{0} er allereie oppdatert",
+  "Could not refresh from remote": "Klarte ikkje å oppdatere frå fjernkjelda",
+  "Remote information may be out of date": "Informasjonen frå fjernkjelda kan vere utdatert",
+  "Error details": "Feildetaljar"
 }

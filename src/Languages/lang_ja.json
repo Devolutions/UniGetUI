@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "ここに表示されているパッケージは、アップデートの確認対象から除外されます。右側の更新ボタンをクリックすると一度だけ更新でき、削除ボタンをクリックするとアップデート対象からの除外を解除できます。",
   "Updating {0} once. Its updates will stay ignored.": "{0}を一度だけ更新しています。今後もアップデート対象から除外されたままになります。",
   "{0} is already being updated": "{0}はすでに更新中です",
-  "{0} is already up to date": "{0}はすでに最新の状態です"
+  "{0} is already up to date": "{0}はすでに最新の状態です",
+  "Could not refresh from remote": "リモートから更新できませんでした",
+  "Remote information may be out of date": "リモートの情報が古くなっている可能性があります",
+  "Error details": "エラーの詳細"
 }

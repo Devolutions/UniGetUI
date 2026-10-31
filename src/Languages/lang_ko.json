@@ -2198,5 +2198,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "여기에 나열된 패키지는 업데이트 확인 시 제외됩니다. 오른쪽의 업데이트 버튼을 클릭하면 한 번 업데이트하고, 삭제 버튼을 클릭하면 해당 패키지의 업데이트 무시를 해제합니다.",
   "Updating {0} once. Its updates will stay ignored.": "{0}을(를) 한 번 업데이트하는 중입니다. 해당 패키지의 업데이트는 계속 무시됩니다.",
   "{0} is already being updated": "{0}은(는) 이미 업데이트 중입니다",
-  "{0} is already up to date": "{0}은(는) 이미 최신 상태입니다"
+  "{0} is already up to date": "{0}은(는) 이미 최신 상태입니다",
+  "Could not refresh from remote": "원격에서 새로 고칠 수 없습니다",
+  "Remote information may be out of date": "원격 정보가 최신이 아닐 수 있습니다",
+  "Error details": "오류 세부 정보"
 }

@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Пакеты, пералічаныя тут, не будуць улічвацца пры праверцы абнаўленняў. Націсніце кнопку абнаўлення справа, каб абнавіць іх адзін раз, або кнопку выдалення, каб перастаць ігнараваць іх абнаўленні.",
   "Updating {0} once. Its updates will stay ignored.": "Абнаўляем {0} адзін раз. Яго абнаўленні застануцца ігнараванымі.",
   "{0} is already being updated": "{0} ужо абнаўляецца",
-  "{0} is already up to date": "{0} ужо актуальны"
+  "{0} is already up to date": "{0} ужо актуальны",
+  "Could not refresh from remote": "Не ўдалося абнавіць даныя з аддаленага рэсурсу",
+  "Remote information may be out of date": "Інфармацыя з аддаленага рэсурсу можа быць састарэлай",
+  "Error details": "Падрабязнасці памылкі"
 }

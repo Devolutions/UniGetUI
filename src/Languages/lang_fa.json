@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "بسته‌های فهرست‌شده در اینجا هنگام بررسی به‌روزرسانی‌ها در نظر گرفته نمی‌شوند. برای به‌روزرسانی یک‌باره آن‌ها، دکمه به‌روزرسانی سمت راستشان را بزنید؛ یا برای متوقف کردن نادیده گرفتن به‌روزرسانی‌هایشان، دکمه حذف را بزنید.",
   "Updating {0} once. Its updates will stay ignored.": "در حال به‌روزرسانی یک‌باره {0}. به‌روزرسانی‌های آن همچنان نادیده گرفته خواهند شد.",
   "{0} is already being updated": "{0} در حال حاضر در حال به‌روزرسانی است",
-  "{0} is already up to date": "{0} در حال حاضر به‌روز است"
+  "{0} is already up to date": "{0} در حال حاضر به‌روز است",
+  "Could not refresh from remote": "تازه‌سازی از راه دور ممکن نشد",
+  "Remote information may be out of date": "ممکن است اطلاعات راه دور به‌روز نباشد",
+  "Error details": "جزئیات خطا"
 }

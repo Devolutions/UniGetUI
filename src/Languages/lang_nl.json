@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "De hier vermelde pakketten worden niet meegenomen bij het controleren op updates. Klik op de updateknop rechts ervan om ze eenmalig bij te werken, of op de verwijderknop om de updates ervan niet langer te negeren.",
   "Updating {0} once. Its updates will stay ignored.": "{0} wordt eenmalig bijgewerkt. Updates blijven genegeerd.",
   "{0} is already being updated": "{0} wordt al bijgewerkt",
-  "{0} is already up to date": "{0} is al up-to-date"
+  "{0} is already up to date": "{0} is al up-to-date",
+  "Could not refresh from remote": "Vernieuwen vanaf de externe bron is mislukt",
+  "Remote information may be out of date": "De informatie van de externe bron is mogelijk verouderd",
+  "Error details": "Foutdetails"
 }

@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "აქ ჩამოთვლილი პაკეტები განახლებების შემოწმებისას არ იქნება გათვალისწინებული. ერთხელ გასაახლებლად დააჭირეთ მათ მარჯვნივ განთავსებულ განახლების ღილაკს, ან განახლებების უგულებელყოფის შესაწყვეტად — წაშლის ღილაკს.",
   "Updating {0} once. Its updates will stay ignored.": "მიმდინარეობს {0}-ის ერთჯერადი განახლება. მისი განახლებები კვლავ უგულებელყოფილი დარჩება.",
   "{0} is already being updated": "{0}-ის განახლება უკვე მიმდინარეობს",
-  "{0} is already up to date": "{0} უკვე განახლებულია"
+  "{0} is already up to date": "{0} უკვე განახლებულია",
+  "Could not refresh from remote": "დისტანციური წყაროდან მონაცემების განახლება ვერ მოხერხდა",
+  "Remote information may be out of date": "დისტანციური წყაროს ინფორმაცია შესაძლოა მოძველებული იყოს",
+  "Error details": "შეცდომის დეტალები"
 }

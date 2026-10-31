@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "החבילות המפורטות כאן לא יילקחו בחשבון בעת בדיקת עדכונים. לחץ על כפתור העדכון מימין כדי לעדכן אותן פעם אחת, או על כפתור המחיקה כדי להפסיק להתעלם מהעדכונים שלהן.",
   "Updating {0} once. Its updates will stay ignored.": "מעדכן את {0} פעם אחת. נמשיך להתעלם מהעדכונים שלה.",
   "{0} is already being updated": "{0} כבר מתעדכן",
-  "{0} is already up to date": "{0} כבר מעודכן"
+  "{0} is already up to date": "{0} כבר מעודכן",
+  "Could not refresh from remote": "לא ניתן היה לרענן מהמאגר המרוחק",
+  "Remote information may be out of date": "ייתכן שהמידע מהמאגר המרוחק אינו מעודכן",
+  "Error details": "פרטי השגיאה"
 }

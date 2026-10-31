@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "La ĉi tie listigitaj pakaĵoj ne estos konsiderataj dum kontrolado de ĝisdatigoj. Alklaku la ĝisdatigan butonon dekstre por ĝisdatigi ilin unufoje, aŭ la forigan butonon por ĉesi ignori iliajn ĝisdatigojn.",
   "Updating {0} once. Its updates will stay ignored.": "Ĝisdatigante {0} unufoje. Ĝiaj ĝisdatigoj restos ignorataj.",
   "{0} is already being updated": "{0} jam estas ĝisdatigata",
-  "{0} is already up to date": "{0} jam estas ĝisdata"
+  "{0} is already up to date": "{0} jam estas ĝisdata",
+  "Could not refresh from remote": "Ne eblis refreŝigi el fora fonto",
+  "Remote information may be out of date": "La informoj de fora fonto eble estas malaktualaj",
+  "Error details": "Detaloj pri eraro"
 }

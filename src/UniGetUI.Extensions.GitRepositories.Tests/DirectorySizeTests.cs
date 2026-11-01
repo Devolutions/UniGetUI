@@ -32,12 +32,52 @@ public sealed class DirectorySizeTests : IDisposable
     }
 
     [Fact]
-    public void Measure_IsNullForAMissingFolder_AndHonoursCancellation()
+    public void Measure_IsNullForAMissingFolder_AndHonoursCancellationBeforeAFlatFolder()
     {
         Assert.Null(DirectorySize.Measure(Path.Combine(_root, "missing")));
 
-        Write(Path.Combine("sub", "a.txt"), 1);
+        Write("a.txt", 1);
         Assert.Throws<OperationCanceledException>(() => DirectorySize.Measure(_root, null, new CancellationToken(true)));
+        Assert.Throws<OperationCanceledException>(() =>
+            DirectorySize.Measure(Path.Combine(_root, "missing"), null, new CancellationToken(true)));
+    }
+
+    [Fact]
+    public void Measure_DoesNotFollowLinkedDirectories()
+    {
+        Write("a.txt", 100);
+        string outside = _root + "-outside";
+        string link = Path.Combine(_root, "linked");
+        Directory.CreateDirectory(outside);
+        File.WriteAllBytes(Path.Combine(outside, "b.txt"), new byte[5_000]);
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    ArgumentList = { "/c", "mklink", "/J", link, outside },
+                });
+                Assert.NotNull(process);
+                string output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+                process.WaitForExit();
+                Assert.True(process.ExitCode == 0, output);
+            }
+            else
+                Directory.CreateSymbolicLink(link, outside);
+
+            Assert.Equal(100, DirectorySize.Measure(_root));
+        }
+        finally
+        {
+            if (Directory.Exists(link)) Directory.Delete(link);
+            Directory.Delete(outside, recursive: true);
+        }
     }
 
     private void Write(string relativePath, int length)

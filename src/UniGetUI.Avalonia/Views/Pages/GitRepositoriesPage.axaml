@@ -180,7 +180,7 @@
                                                    TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <TextBlock Text="{Binding DetailText}" FontSize="11" Opacity="0.6"
-                                               TextTrimming="CharacterEllipsis"/>
+                                               TextWrapping="Wrap" ToolTip.Tip="{Binding DetailText}"/>
                                 </StackPanel>
                                 <Panel Grid.Column="2" VerticalAlignment="Center" MinWidth="170">
                                     <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"

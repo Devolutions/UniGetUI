@@ -30,21 +30,28 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 
     /// <summary>How long a measured size is shown before an automatic check measures it again.</summary>
     private static readonly TimeSpan SizeLifetime = TimeSpan.FromMinutes(30);
+    private static readonly StringComparer SizePathComparer =
+        OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+
+    private sealed record SizeMeasurement(
+        string Path, CancellationTokenSource Cancellation, Task<(long? Bytes, DateTime MeasuredAt)> Completion);
 
     private readonly GitRepositoryService _git;
+    private readonly Func<string, IEnumerable<string>?, CancellationToken, long?> _measureDirectory;
     private readonly DispatcherTimer _checkTimer = new();
     private readonly SemaphoreSlim _sizeGate = new(MaxParallelMeasurements);
     private readonly CancellationTokenSource _sizeCancellation = new();
-    private readonly Dictionary<string, (Task<long?> Size, DateTime StartedAt)> _sizes =
-        new(OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SizeMeasurement> _sizes = new(SizePathComparer);
     private CancellationTokenSource? _detailsLoad;
     private bool _initialized;
 
     public GitRepositoriesViewModel() : this(new GitRepositoryService()) { }
 
-    internal GitRepositoriesViewModel(GitRepositoryService git)
+    internal GitRepositoriesViewModel(GitRepositoryService git,
+        Func<string, IEnumerable<string>?, CancellationToken, long?>? measureDirectory = null)
     {
         _git = git;
+        _measureDirectory = measureDirectory ?? DirectorySize.Measure;
         foreach (string path in GitRepositoryList.Load())
             Repositories.Add(new GitRepositoryItemViewModel(path, GitRepositoryList.GetBranch(path)));
         Repositories.CollectionChanged += (_, _) =>
@@ -152,6 +159,14 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         _checkTimer.Stop();
         _detailsLoad?.Cancel();
         _sizeCancellation.Cancel();
+        SizeMeasurement[] measurements;
+        lock (_sizes)
+        {
+            measurements = [.. _sizes.Values];
+            _sizes.Clear();
+        }
+        foreach (SizeMeasurement measurement in measurements)
+            CancelSize(measurement);
     }
 
     /// <summary>Picks up the check interval and auto-update choices made on its page under Settings &gt; Extensions.</summary>
@@ -310,6 +325,7 @@ public partial class GitRepositoriesViewModel : ViewModelBase
     private void RemoveFromList(GitRepositoryItemViewModel? item)
     {
         if (item is null) return;
+        InvalidateSize(item, item.SizeWorktreePaths);
         GitRepositoryList.Remove(item.Path);
         Repositories.Remove(item);
         if (ReferenceEquals(SelectedRepository, item))
@@ -428,19 +444,16 @@ public partial class GitRepositoriesViewModel : ViewModelBase
                 RemoteRefreshFailed = true,
             }
             : status;
-        if (await CountWorktreesAsync(item) is { } worktrees)
-            _ = MeasureRepositoryAsync(item, worktrees);
+        await CountWorktreesAsync(item);
     }
 
     private async Task CheckItemAsync(GitRepositoryItemViewModel item)
     {
         item.Status = await _git.CheckAsync(item.Path, item.BranchOverride);
         item.LastChecked = DateTime.Now;
-        IReadOnlyList<string>? worktrees = await CountWorktreesAsync(item);
+        await CountWorktreesAsync(item);
         if (AutoUpdate && item.Status.CanUpdate)
             await UpdateItemAsync(item, fetch: false);
-        if (worktrees is not null)
-            _ = MeasureRepositoryAsync(item, worktrees);
     }
 
     private async Task<GitUpdateResult?> UpdateItemAsync(GitRepositoryItemViewModel item, bool fetch)
@@ -452,9 +465,7 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         if (result.Outcome == GitUpdateOutcome.Updated)
         {
             // A fast-forward brings in new objects and files.
-            ForgetSize(item.Path);
-            item.SizeMeasuredAt = null;
-            _ = MeasureRepositoryAsync(item);
+            InvalidateSize(item);
         }
         return result;
     }
@@ -498,19 +509,18 @@ public partial class GitRepositoriesViewModel : ViewModelBase
             CoreTools.Translate("Error details"), body, CoreTools.Translate("Retry"), CoreTools.Translate("Close"));
     }
 
-    /// <summary>Counts a clone's linked worktrees and returns their folders, or null when git cannot list them.</summary>
-    private async Task<IReadOnlyList<string>?> CountWorktreesAsync(GitRepositoryItemViewModel item)
+    /// <summary>Counts a clone's linked worktrees and remembers their folders.</summary>
+    private async Task CountWorktreesAsync(GitRepositoryItemViewModel item)
     {
         try
         {
             IReadOnlyList<string> worktrees = await _git.ListLinkedWorktreePathsAsync(item.Path);
             item.WorktreeCount = worktrees.Count;
-            return worktrees;
+            UpdateSizeWorktrees(item, worktrees);
         }
         catch (GitException)
         {
             item.WorktreeCount = null;
-            return null;
         }
     }
 
@@ -519,26 +529,48 @@ public partial class GitRepositoriesViewModel : ViewModelBase
     // minutes. It is never awaited by a check, an update or a list: it runs on the thread pool behind
     // its own gate, and the sizes show up whenever they are ready.
 
-    /// <summary>Measures a clone and its worktrees for the line under its branch, unless that was done recently.</summary>
-    /// <param name="worktrees">Its linked worktrees, when already listed.</param>
-    private async Task MeasureRepositoryAsync(GitRepositoryItemViewModel item, IReadOnlyList<string>? worktrees = null)
+    /// <summary>Measures a clone and its worktrees for the line under its branch.</summary>
+    private async Task MeasureRepositoryAsync(GitRepositoryItemViewModel item)
     {
-        if (_stopped || item.IsMeasuringSize
-            || (item.SizeMeasuredAt is { } measuredAt && DateTime.Now - measuredAt < SizeLifetime))
+        if (_stopped || !Repositories.Contains(item) || item.IsBusy || item.IsMeasuringSize
+            || (ReferenceEquals(SelectedRepository, item) && IsLoadingDetails))
             return;
 
         item.IsMeasuringSize = true;
+        int generation = item.SizeGeneration;
         try
         {
             CancellationToken cancellationToken = _sizeCancellation.Token;
-            worktrees ??= await Task.Run(() => _git.ListLinkedWorktreePathsAsync(item.Path, cancellationToken), cancellationToken);
+            IReadOnlyList<string> worktrees = item.SizeWorktreePaths ?? await Task.Run(
+                () => _git.ListLinkedWorktreePathsAsync(item.Path, cancellationToken), cancellationToken);
+            if (generation != item.SizeGeneration) return;
+            UpdateSizeWorktrees(item, worktrees);
+            generation = item.SizeGeneration;
+
             long? clone = await MeasureAsync(item.Path, worktrees, cancellationToken);
-            long linked = 0;
-            foreach (string worktree in worktrees)
-                linked += await MeasureAsync(worktree, worktrees, cancellationToken) ?? 0;
+            if (generation != item.SizeGeneration) return;
             item.CloneSize = clone;
+            item.WorktreesSize = null;
+            if (clone is null)
+            {
+                Logger.Warn($"Could not measure the size of {item.Path}: the folder is unavailable.");
+                return;
+            }
+
+            long? linked = 0;
+            foreach (string worktree in worktrees)
+            {
+                long? size = await MeasureAsync(worktree, worktrees, cancellationToken);
+                if (generation != item.SizeGeneration) return;
+                if (size is null)
+                {
+                    Logger.Warn($"Could not measure the size of {worktree}: the folder is unavailable.");
+                    linked = null;
+                }
+                else if (linked is { } total)
+                    linked = checked(total + size.Value);
+            }
             item.WorktreesSize = worktrees.Count > 0 ? linked : null;
-            item.SizeMeasuredAt = DateTime.Now;
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -548,37 +580,45 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         finally
         {
             item.IsMeasuringSize = false;
+            if (generation != item.SizeGeneration)
+                _ = MeasureRepositoryAsync(item);
         }
     }
 
     /// <summary>The size of one folder, shared with any measurement of it already running or recently done.</summary>
     /// <param name="excluded">Worktree folders left out, should one be nested in another.</param>
-    private Task<long?> MeasureAsync(string path, IReadOnlyList<string> excluded, CancellationToken cancellationToken)
+    private async Task<long?> MeasureAsync(string path, IReadOnlyList<string> excluded, CancellationToken cancellationToken)
     {
         string key = GitRepositoryService.NormalizePath(path);
-        Task<long?> measurement;
+        Task<(long? Bytes, DateTime MeasuredAt)> measurement;
+        SizeMeasurement? obsolete = null;
         lock (_sizes)
         {
             if (!_sizes.TryGetValue(key, out var known)
-                || known.Size.IsFaulted || known.Size.IsCanceled
-                || (known.Size.IsCompleted && DateTime.Now - known.StartedAt >= SizeLifetime))
+                || known.Completion.IsFaulted || known.Completion.IsCanceled
+                || (known.Completion.IsCompletedSuccessfully
+                    && (known.Completion.Result.Bytes is null || DateTime.UtcNow - known.Completion.Result.MeasuredAt >= SizeLifetime)))
             {
-                known = (MeasureOffTheUIThreadAsync(path, excluded), DateTime.Now);
+                obsolete = known;
+                var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_sizeCancellation.Token);
+                known = new SizeMeasurement(path, cancellation, MeasureOffTheUIThreadAsync(path, excluded, cancellation.Token));
                 _sizes[key] = known;
             }
-            measurement = known.Size;
+            measurement = known.Completion;
         }
-        return measurement.WaitAsync(cancellationToken);
+        if (obsolete is not null) CancelSize(obsolete);
+        return (await measurement.WaitAsync(cancellationToken)).Bytes;
     }
 
-    private async Task<long?> MeasureOffTheUIThreadAsync(string path, IReadOnlyList<string> excluded)
+    private async Task<(long? Bytes, DateTime MeasuredAt)> MeasureOffTheUIThreadAsync(
+        string path, IReadOnlyList<string> excluded, CancellationToken cancellationToken)
     {
-        CancellationToken cancellationToken = _sizeCancellation.Token;
         await _sizeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await Task.Run(() => DirectorySize.Measure(path, excluded, cancellationToken), cancellationToken)
+            long? bytes = await Task.Run(() => _measureDirectory(path, excluded, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
+            return (bytes, DateTime.UtcNow);
         }
         finally
         {
@@ -588,7 +628,42 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 
     private void ForgetSize(string path)
     {
-        lock (_sizes) _sizes.Remove(GitRepositoryService.NormalizePath(path));
+        SizeMeasurement? measurement;
+        lock (_sizes) _sizes.Remove(GitRepositoryService.NormalizePath(path), out measurement);
+        if (measurement is not null) CancelSize(measurement);
+    }
+
+    private static void CancelSize(SizeMeasurement measurement)
+    {
+        measurement.Cancellation.Cancel();
+        _ = measurement.Completion.ContinueWith(task =>
+        {
+            if (task.Exception is { } ex)
+                Logger.Warn($"Could not measure the size of {measurement.Path}: {ex.GetBaseException().Message}");
+            measurement.Cancellation.Dispose();
+        }, CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
+    private void InvalidateSize(GitRepositoryItemViewModel repository, IEnumerable<string>? worktrees = null)
+    {
+        repository.SizeGeneration++;
+        repository.CloneSize = null;
+        repository.WorktreesSize = null;
+        ForgetSize(repository.Path);
+        if (worktrees is not null)
+            foreach (string worktree in worktrees)
+                ForgetSize(worktree);
+    }
+
+    private void UpdateSizeWorktrees(GitRepositoryItemViewModel repository, IEnumerable<string> worktrees)
+    {
+        string[] paths = [.. worktrees.Select(GitRepositoryService.NormalizePath)
+            .Distinct(SizePathComparer).Order(SizePathComparer)];
+        IReadOnlyList<string> previous = repository.SizeWorktreePaths ?? [];
+        if (repository.SizeWorktreePaths is null || !previous.SequenceEqual(paths, SizePathComparer))
+            InvalidateSize(repository, previous.Concat(paths));
+        repository.SizeWorktreePaths = paths;
     }
 
     /// <summary>
@@ -598,25 +673,30 @@ public partial class GitRepositoriesViewModel : ViewModelBase
     private async Task MeasureWorktreesAsync(GitRepositoryItemViewModel repository,
         IReadOnlyList<GitWorktreeItemViewModel> items, Task statusChecks, CancellationToken cancellationToken)
     {
+        int generation = repository.SizeGeneration;
         try
         {
-            try { await statusChecks; }
-            catch (Exception) { }
+            await statusChecks;
+            if (generation != repository.SizeGeneration || repository.IsBusy) return;
 
             string[] linked = [.. items.Where(item => !item.IsMain).Select(item => item.Path)];
             await Task.WhenAll(items.Where(item => !item.IsPrunable).Select(async item =>
             {
                 long? size = await MeasureAsync(item.Path, linked, cancellationToken);
-                if (!cancellationToken.IsCancellationRequested)
+                if (!cancellationToken.IsCancellationRequested && generation == repository.SizeGeneration)
+                {
                     item.Size = size;
+                    if (size is null)
+                        Logger.Warn($"Could not measure the size of {item.Path}: the folder is unavailable.");
+                }
             }));
-            if (cancellationToken.IsCancellationRequested || repository.IsMeasuringSize) return;
+            if (cancellationToken.IsCancellationRequested || generation != repository.SizeGeneration
+                || repository.IsMeasuringSize) return;
 
             repository.CloneSize = items.FirstOrDefault(item => item.IsMain)?.Size;
-            repository.WorktreesSize = linked.Length > 0
-                ? items.Where(item => !item.IsMain).Sum(item => item.Size ?? 0)
+            repository.WorktreesSize = linked.Length > 0 && items.Where(item => !item.IsMain).All(item => item.Size is not null)
+                ? items.Where(item => !item.IsMain).Sum(item => item.Size!.Value)
                 : null;
-            repository.SizeMeasuredAt = DateTime.Now;
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -668,6 +748,9 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 
         if (SelectedRepository is { } selected && targets.Contains(selected))
             await LoadDetailsAsync();
+
+        foreach (GitRepositoryItemViewModel item in targets)
+            _ = MeasureRepositoryAsync(item);
     }
 
     private void UpdateBehindCount() => BehindCount = Repositories.Count(item => item.Status?.CanUpdate == true);
@@ -675,11 +758,18 @@ public partial class GitRepositoriesViewModel : ViewModelBase
     // ─── Worktrees and branches of the selected clone ───────────────────────
 
     [RelayCommand]
-    private Task RefreshDetails()
+    private async Task RefreshDetails()
     {
-        foreach (GitWorktreeItemViewModel worktree in Worktrees)
-            ForgetSize(worktree.Path);
-        return LoadDetailsAsync();
+        GitRepositoryItemViewModel? repository = SelectedRepository;
+        if (repository is not null)
+        {
+            InvalidateSize(repository, repository.SizeWorktreePaths);
+            repository.SizeWorktreePaths = null;
+        }
+
+        await LoadDetailsAsync();
+        if (repository is not null)
+            _ = MeasureRepositoryAsync(repository);
     }
 
     /// <summary>Loads what the panel under the clones shows, dropping whatever an earlier load was doing.</summary>
@@ -709,7 +799,10 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         finally
         {
             if (ReferenceEquals(_detailsLoad, load))
+            {
                 IsLoadingDetails = false;
+                _ = MeasureRepositoryAsync(repository);
+            }
         }
     }
 
@@ -735,6 +828,7 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         foreach (GitWorktreeItemViewModel item in items)
             Worktrees.Add(item);
         repository.WorktreeCount = worktrees.Count(worktree => !worktree.IsMain);
+        UpdateSizeWorktrees(repository, worktrees.Where(worktree => !worktree.IsMain).Select(worktree => worktree.Path));
 
         // Running every git status at once only makes them compete for the disk.
         using var gate = new SemaphoreSlim(8);
@@ -773,6 +867,8 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         GitOperationResult result = await _git.PruneWorktreesAsync(repository.Path);
         if (!result.Success)
             ShowNotice(CoreTools.Translate("Could not prune the worktrees of {0}", repository.Name), result.Output, InfoBarSeverity.Error);
+        else
+            InvalidateSize(repository, repository.SizeWorktreePaths);
         await LoadDetailsAsync();
     }
 
@@ -832,7 +928,7 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         if (!result.Success)
             ShowNotice(CoreTools.Translate("Could not remove the worktree {0}", worktree.Name), result.Output, InfoBarSeverity.Error);
         else
-            ForgetSize(worktree.Path);
+            InvalidateSize(repository, repository.SizeWorktreePaths);
         await LoadDetailsAsync();
     }
 

@@ -152,10 +152,9 @@ public partial class GitRepositoryItemViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(SizeText), nameof(DetailText))]
     private long? _worktreesSize;
 
-    /// <summary>When the sizes were last measured, so automatic checks do not walk the whole tree every time.</summary>
-    internal DateTime? SizeMeasuredAt { get; set; }
-
     internal bool IsMeasuringSize { get; set; }
+    internal int SizeGeneration { get; set; }
+    internal IReadOnlyList<string>? SizeWorktreePaths { get; set; }
 
     public string SizeText => (CloneSize, WorktreesSize) switch
     {

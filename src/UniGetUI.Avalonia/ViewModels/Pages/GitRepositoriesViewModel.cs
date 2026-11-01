@@ -25,8 +25,18 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 {
     private const int MaxParallelChecks = 4;
 
+    /// <summary>Walking a tree is disk-bound, so only a couple at a time, behind everything git does.</summary>
+    private const int MaxParallelMeasurements = 2;
+
+    /// <summary>How long a measured size is shown before an automatic check measures it again.</summary>
+    private static readonly TimeSpan SizeLifetime = TimeSpan.FromMinutes(30);
+
     private readonly GitRepositoryService _git;
     private readonly DispatcherTimer _checkTimer = new();
+    private readonly SemaphoreSlim _sizeGate = new(MaxParallelMeasurements);
+    private readonly CancellationTokenSource _sizeCancellation = new();
+    private readonly Dictionary<string, (Task<long?> Size, DateTime StartedAt)> _sizes =
+        new(OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _detailsLoad;
     private bool _initialized;
 
@@ -141,6 +151,7 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         _stopped = true;
         _checkTimer.Stop();
         _detailsLoad?.Cancel();
+        _sizeCancellation.Cancel();
     }
 
     /// <summary>Picks up the check interval and auto-update choices made on its page under Settings &gt; Extensions.</summary>
@@ -417,16 +428,19 @@ public partial class GitRepositoriesViewModel : ViewModelBase
                 RemoteRefreshFailed = true,
             }
             : status;
-        await CountWorktreesAsync(item);
+        if (await CountWorktreesAsync(item) is { } worktrees)
+            _ = MeasureRepositoryAsync(item, worktrees);
     }
 
     private async Task CheckItemAsync(GitRepositoryItemViewModel item)
     {
         item.Status = await _git.CheckAsync(item.Path, item.BranchOverride);
         item.LastChecked = DateTime.Now;
-        await CountWorktreesAsync(item);
+        IReadOnlyList<string>? worktrees = await CountWorktreesAsync(item);
         if (AutoUpdate && item.Status.CanUpdate)
             await UpdateItemAsync(item, fetch: false);
+        if (worktrees is not null)
+            _ = MeasureRepositoryAsync(item, worktrees);
     }
 
     private async Task<GitUpdateResult?> UpdateItemAsync(GitRepositoryItemViewModel item, bool fetch)
@@ -435,6 +449,13 @@ public partial class GitRepositoriesViewModel : ViewModelBase
             fetch || item.Status?.State == GitRepositoryState.Error, item.BranchOverride);
         item.Status = result.Status;
         item.LastChecked = DateTime.Now;
+        if (result.Outcome == GitUpdateOutcome.Updated)
+        {
+            // A fast-forward brings in new objects and files.
+            ForgetSize(item.Path);
+            item.SizeMeasuredAt = null;
+            _ = MeasureRepositoryAsync(item);
+        }
         return result;
     }
 
@@ -477,15 +498,130 @@ public partial class GitRepositoriesViewModel : ViewModelBase
             CoreTools.Translate("Error details"), body, CoreTools.Translate("Retry"), CoreTools.Translate("Close"));
     }
 
-    private async Task CountWorktreesAsync(GitRepositoryItemViewModel item)
+    /// <summary>Counts a clone's linked worktrees and returns their folders, or null when git cannot list them.</summary>
+    private async Task<IReadOnlyList<string>?> CountWorktreesAsync(GitRepositoryItemViewModel item)
     {
         try
         {
-            item.WorktreeCount = await _git.CountLinkedWorktreesAsync(item.Path);
+            IReadOnlyList<string> worktrees = await _git.ListLinkedWorktreePathsAsync(item.Path);
+            item.WorktreeCount = worktrees.Count;
+            return worktrees;
         }
         catch (GitException)
         {
             item.WorktreeCount = null;
+            return null;
+        }
+    }
+
+    // ─── Sizes on disk ───────────────────────────────────────────────────────
+    // Measuring walks every file of a clone and its worktrees, build output included, which can take
+    // minutes. It is never awaited by a check, an update or a list: it runs on the thread pool behind
+    // its own gate, and the sizes show up whenever they are ready.
+
+    /// <summary>Measures a clone and its worktrees for the line under its branch, unless that was done recently.</summary>
+    /// <param name="worktrees">Its linked worktrees, when already listed.</param>
+    private async Task MeasureRepositoryAsync(GitRepositoryItemViewModel item, IReadOnlyList<string>? worktrees = null)
+    {
+        if (_stopped || item.IsMeasuringSize
+            || (item.SizeMeasuredAt is { } measuredAt && DateTime.Now - measuredAt < SizeLifetime))
+            return;
+
+        item.IsMeasuringSize = true;
+        try
+        {
+            CancellationToken cancellationToken = _sizeCancellation.Token;
+            worktrees ??= await Task.Run(() => _git.ListLinkedWorktreePathsAsync(item.Path, cancellationToken), cancellationToken);
+            long? clone = await MeasureAsync(item.Path, worktrees, cancellationToken);
+            long linked = 0;
+            foreach (string worktree in worktrees)
+                linked += await MeasureAsync(worktree, worktrees, cancellationToken) ?? 0;
+            item.CloneSize = clone;
+            item.WorktreesSize = worktrees.Count > 0 ? linked : null;
+            item.SizeMeasuredAt = DateTime.Now;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not measure the size of {item.Path}: {ex.Message}");
+        }
+        finally
+        {
+            item.IsMeasuringSize = false;
+        }
+    }
+
+    /// <summary>The size of one folder, shared with any measurement of it already running or recently done.</summary>
+    /// <param name="excluded">Worktree folders left out, should one be nested in another.</param>
+    private Task<long?> MeasureAsync(string path, IReadOnlyList<string> excluded, CancellationToken cancellationToken)
+    {
+        string key = GitRepositoryService.NormalizePath(path);
+        Task<long?> measurement;
+        lock (_sizes)
+        {
+            if (!_sizes.TryGetValue(key, out var known)
+                || known.Size.IsFaulted || known.Size.IsCanceled
+                || (known.Size.IsCompleted && DateTime.Now - known.StartedAt >= SizeLifetime))
+            {
+                known = (MeasureOffTheUIThreadAsync(path, excluded), DateTime.Now);
+                _sizes[key] = known;
+            }
+            measurement = known.Size;
+        }
+        return measurement.WaitAsync(cancellationToken);
+    }
+
+    private async Task<long?> MeasureOffTheUIThreadAsync(string path, IReadOnlyList<string> excluded)
+    {
+        CancellationToken cancellationToken = _sizeCancellation.Token;
+        await _sizeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await Task.Run(() => DirectorySize.Measure(path, excluded, cancellationToken), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _sizeGate.Release();
+        }
+    }
+
+    private void ForgetSize(string path)
+    {
+        lock (_sizes) _sizes.Remove(GitRepositoryService.NormalizePath(path));
+    }
+
+    /// <summary>
+    /// Measures the listed worktrees once their git status has run, so the disk goes to what decides
+    /// whether a worktree is safe to remove first, then refreshes the clone's totals with what was found.
+    /// </summary>
+    private async Task MeasureWorktreesAsync(GitRepositoryItemViewModel repository,
+        IReadOnlyList<GitWorktreeItemViewModel> items, Task statusChecks, CancellationToken cancellationToken)
+    {
+        try
+        {
+            try { await statusChecks; }
+            catch (Exception) { }
+
+            string[] linked = [.. items.Where(item => !item.IsMain).Select(item => item.Path)];
+            await Task.WhenAll(items.Where(item => !item.IsPrunable).Select(async item =>
+            {
+                long? size = await MeasureAsync(item.Path, linked, cancellationToken);
+                if (!cancellationToken.IsCancellationRequested)
+                    item.Size = size;
+            }));
+            if (cancellationToken.IsCancellationRequested || repository.IsMeasuringSize) return;
+
+            repository.CloneSize = items.FirstOrDefault(item => item.IsMain)?.Size;
+            repository.WorktreesSize = linked.Length > 0
+                ? items.Where(item => !item.IsMain).Sum(item => item.Size ?? 0)
+                : null;
+            repository.SizeMeasuredAt = DateTime.Now;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not measure the worktrees of {repository.Path}: {ex.Message}");
         }
     }
 
@@ -539,7 +675,12 @@ public partial class GitRepositoriesViewModel : ViewModelBase
     // ─── Worktrees and branches of the selected clone ───────────────────────
 
     [RelayCommand]
-    private Task RefreshDetails() => LoadDetailsAsync();
+    private Task RefreshDetails()
+    {
+        foreach (GitWorktreeItemViewModel worktree in Worktrees)
+            ForgetSize(worktree.Path);
+        return LoadDetailsAsync();
+    }
 
     /// <summary>Loads what the panel under the clones shows, dropping whatever an earlier load was doing.</summary>
     internal async Task LoadDetailsAsync()
@@ -597,12 +738,15 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 
         // Running every git status at once only makes them compete for the disk.
         using var gate = new SemaphoreSlim(8);
-        await Task.WhenAll(items.Select(async item =>
+        Task statusChecks = Task.WhenAll(items.Select(async item =>
         {
             await gate.WaitAsync(cancellationToken);
             try { await CheckLocalChangesAsync(item, cancellationToken); }
             finally { gate.Release(); }
         }));
+        // Sizes follow on their own: the list is not loading any longer while they are measured.
+        _ = MeasureWorktreesAsync(repository, items, statusChecks, cancellationToken);
+        await statusChecks;
     }
 
     private async Task CheckLocalChangesAsync(GitWorktreeItemViewModel item, CancellationToken cancellationToken)
@@ -687,6 +831,8 @@ public partial class GitRepositoriesViewModel : ViewModelBase
             repository.Path, worktree.Path, force, removeBranch, repository.BranchOverride);
         if (!result.Success)
             ShowNotice(CoreTools.Translate("Could not remove the worktree {0}", worktree.Name), result.Output, InfoBarSeverity.Error);
+        else
+            ForgetSize(worktree.Path);
         await LoadDetailsAsync();
     }
 

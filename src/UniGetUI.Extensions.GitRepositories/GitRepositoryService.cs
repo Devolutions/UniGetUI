@@ -307,11 +307,16 @@ public sealed class GitRepositoryService
 
     /// <summary>Counts a clone's linked worktrees, without describing each one.</summary>
     public async Task<int> CountLinkedWorktreesAsync(string path, CancellationToken cancellationToken = default)
+        => (await ListLinkedWorktreePathsAsync(path, cancellationToken)).Count;
+
+    /// <summary>The folders of a clone's linked worktrees, without reading their branches or changes.</summary>
+    public async Task<IReadOnlyList<string>> ListLinkedWorktreePathsAsync(string path,
+        CancellationToken cancellationToken = default)
     {
         GitRepositoryLocation location = await LocateAsync(path, cancellationToken)
             ?? throw new GitException($"{path} is not a git working tree.");
         IReadOnlyList<GitWorktree> worktrees = await ReadWorktreesAsync(location.MainClonePath, cancellationToken);
-        return worktrees.Count(worktree => !worktree.IsMain);
+        return [.. worktrees.Where(worktree => !worktree.IsMain).Select(worktree => worktree.Path)];
     }
 
     /// <summary>

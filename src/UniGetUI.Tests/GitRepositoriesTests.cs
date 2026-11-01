@@ -207,6 +207,14 @@ public sealed class GitRepositoriesTests : IDisposable
 
         item.LastChecked = new DateTime(2026, 10, 28, 9, 41, 0);
         Assert.StartsWith("17 worktrees · Checked at ", item.DetailText);
+
+        item.CloneSize = 2L * 1024 * 1024;
+        Assert.StartsWith("17 worktrees · 2.0 MB on disk · Checked at ", item.DetailText);
+        item.WorktreesSize = 3L * 1024 * 1024 * 1024;
+        Assert.StartsWith("17 worktrees · 2.0 MB on disk, 3.0 GB in worktrees · Checked at ", item.DetailText);
+        item.CloneSize = null;
+        item.WorktreesSize = null;
+
         item.WorktreeCount = 0;
         Assert.StartsWith("Checked at ", item.DetailText);
     }
@@ -326,6 +334,15 @@ public sealed class GitRepositoriesTests : IDisposable
         Assert.True(vm.Notice.IsOpen);
         Assert.Equal(InfoBarSeverity.Informational, vm.Notice.Severity);
         Assert.True(GitRepositoryService.SamePath(clone, Assert.Single(GitRepositoryList.Load())));
+
+        // Sizes are measured in the background, after the list is shown.
+        for (int i = 0; i < 200 && (vm.Worktrees.Any(worktree => !worktree.HasSize) || item.WorktreesSize is null); i++)
+            await Task.Delay(50);
+        Assert.All(vm.Worktrees, worktree => Assert.True(worktree.Size > 0));
+        Assert.Equal(vm.Worktrees.Single(worktree => worktree.IsMain).Size, item.CloneSize);
+        Assert.Equal(vm.Worktrees.Single(worktree => !worktree.IsMain).Size, item.WorktreesSize);
+        Assert.Contains("on disk", item.DetailText);
+        vm.Stop();
     }, CancellationToken.None);
 
     [Fact]

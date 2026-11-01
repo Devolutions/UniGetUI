@@ -142,10 +142,34 @@ public partial class GitRepositoryItemViewModel : ViewModelBase
         int count => CoreTools.Translate("{0} worktrees", count),
     };
 
-    /// <summary>The line under the branch: its worktrees and when it was last checked, whichever are known.</summary>
+    /// <summary>The bytes the main clone takes, its .git folder included; null until measured.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SizeText), nameof(DetailText))]
+    private long? _cloneSize;
+
+    /// <summary>The bytes its linked worktrees take together; null until measured, or when it has none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SizeText), nameof(DetailText))]
+    private long? _worktreesSize;
+
+    /// <summary>When the sizes were last measured, so automatic checks do not walk the whole tree every time.</summary>
+    internal DateTime? SizeMeasuredAt { get; set; }
+
+    internal bool IsMeasuringSize { get; set; }
+
+    public string SizeText => (CloneSize, WorktreesSize) switch
+    {
+        (null, _) => "",
+        (long clone, null or 0) => CoreTools.Translate("{0} on disk", CoreTools.FormatAsSize(clone)),
+        (long clone, long worktrees) => CoreTools.Translate("{0} on disk, {1} in worktrees",
+            CoreTools.FormatAsSize(clone), CoreTools.FormatAsSize(worktrees)),
+    };
+
+    /// <summary>The line under the branch: its worktrees, its size and when it was last checked, whichever are known.</summary>
     public string DetailText => string.Join(" · ", new[]
     {
         WorktreeCountText,
+        SizeText,
         LastCheckedText,
         Status?.RemoteRefreshFailed == true ? CoreTools.Translate("Remote information may be out of date") : "",
     }.Where(text => text.Length > 0));
@@ -188,6 +212,14 @@ public sealed partial class GitWorktreeItemViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasLocalChanges), nameof(IsCheckingChanges), nameof(IsSafeToRemove))]
     private bool? _localChanges;
+
+    /// <summary>The bytes its folder takes; null until measured, which happens after everything else is shown.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SizeText), nameof(HasSize))]
+    private long? _size;
+
+    public string SizeText => Size is { } bytes ? CoreTools.Translate("{0} on disk", CoreTools.FormatAsSize(bytes)) : "";
+    public bool HasSize => Size is not null;
 
     public bool HasLocalChanges => LocalChanges == true;
     public bool IsCheckingChanges => LocalChanges is null;

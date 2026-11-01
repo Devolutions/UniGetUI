@@ -171,6 +171,8 @@
   "Checked at {0}": "Checked at {0}",
   "1 worktree": "1 worktree",
   "{0} worktrees": "{0} worktrees",
+  "{0} on disk": "{0} on disk",
+  "{0} on disk, {1} in worktrees": "{0} on disk, {1} in worktrees",
   "detached at {0}": "detached at {0}",
   "Last commit {0}": "Last commit {0}",
   "1 commit not on the default branch": "1 commit not on the default branch",

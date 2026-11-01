@@ -412,6 +412,8 @@
                                                 </Border>
                                                 <TextBlock Text="{Binding LastCommitText}" FontSize="11" Opacity="0.6"
                                                            VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding SizeText}" FontSize="11" Opacity="0.6"
+                                                           VerticalAlignment="Center" IsVisible="{Binding HasSize}"/>
                                             </WrapPanel>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">

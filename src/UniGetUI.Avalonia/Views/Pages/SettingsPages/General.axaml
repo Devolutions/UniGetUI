@@ -35,6 +35,12 @@
                                          ButtonAlwaysOn="True"
                                          CornerRadius="8,8,0,0"/>
 
+            <settings:CheckboxCard x:Name="InstallUpdatesWhenIdleCard"
+                                   SettingName="InstallUniGetUIUpdatesWhenIdle"
+                                   Text="{t:Translate Install UniGetUI updates automatically while it is idle in the background}"
+                                   CornerRadius="0"
+                                   BorderThickness="1,0,1,1"/>
+
             <settings:CheckboxCard x:Name="EnableUniGetUIBetaCard"
                                    SettingName="EnableUniGetUIBeta"
                                    Text="{t:Translate Install prerelease versions of UniGetUI}"

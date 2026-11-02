@@ -1079,6 +1079,166 @@ public sealed class PackageOperationsTests
         Assert.Equal(OperationStatus.Canceled, operation.Status);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HeldOperationsDoNotStartUntilTheHoldIsReleased(bool queueEnabled)
+    {
+        using var operation = new CancellationAwareStubOperation(queueEnabled);
+        Task mainThread;
+        AbstractOperation.HoldNewOperations = true;
+        try
+        {
+            mainThread = operation.MainThread();
+            await Task.Delay(300);
+
+            Assert.False(operation.PerformStarted.Task.IsCompleted);
+            Assert.Equal(OperationStatus.InQueue, operation.Status);
+        }
+        finally
+        {
+            AbstractOperation.HoldNewOperations = false;
+        }
+
+        await operation.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.AllowCleanupToComplete.TrySetResult(true);
+        await mainThread;
+    }
+
+    [Fact]
+    public async Task TheHoldIsRefusedWhileAnOperationIsExecuting()
+    {
+        using var operation = new CancellationAwareStubOperation();
+        Task mainThread = operation.MainThread();
+        await operation.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.False(AbstractOperation.TryHoldNewOperations());
+
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.AllowCleanupToComplete.TrySetResult(true);
+        await mainThread;
+
+        Assert.True(AbstractOperation.TryHoldNewOperations());
+        AbstractOperation.HoldNewOperations = false;
+    }
+
+    [Fact]
+    public void AdmittedWorkAndTheHoldExcludeEachOther()
+    {
+        Assert.True(AbstractOperation.TryBeginWork());
+        try
+        {
+            Assert.False(AbstractOperation.TryHoldNewOperations());
+        }
+        finally
+        {
+            AbstractOperation.EndWork();
+        }
+
+        Assert.True(AbstractOperation.TryHoldNewOperations());
+        try
+        {
+            Assert.False(AbstractOperation.TryBeginWork());
+        }
+        finally
+        {
+            AbstractOperation.HoldNewOperations = false;
+        }
+    }
+
+    [Fact]
+    public async Task ARetryWaitsWhileNewOperationsAreHeld()
+    {
+        using var operation = new RetryAwareStubOperation();
+        Task firstRun = operation.MainThread();
+        await operation.FirstRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+
+        AbstractOperation.HoldNewOperations = true;
+        try
+        {
+            operation.AllowCleanupToComplete.TrySetResult(true);
+            await firstRun;
+            await Task.Delay(300);
+
+            Assert.False(operation.SecondRunStarted.Task.IsCompleted);
+        }
+        finally
+        {
+            AbstractOperation.HoldNewOperations = false;
+        }
+
+        await operation.SecondRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await WaitForAsync(() => operation.Status is OperationStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task NoWorkIsAdmittedOnceTheHoldIsTaken()
+    {
+        int overlaps = 0;
+        using var stop = new CancellationTokenSource();
+        Task[] workers = Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                if (!AbstractOperation.TryBeginWork())
+                    continue;
+                Thread.SpinWait(200);
+                if (AbstractOperation.HoldNewOperations)
+                    Interlocked.Increment(ref overlaps);
+                AbstractOperation.EndWork();
+            }
+        })).ToArray();
+
+        try
+        {
+            for (int i = 0; i < 2000; i++)
+            {
+                if (!AbstractOperation.TryHoldNewOperations())
+                    continue;
+                Thread.SpinWait(200);
+                AbstractOperation.HoldNewOperations = false;
+            }
+        }
+        finally
+        {
+            stop.Cancel();
+            await Task.WhenAll(workers);
+            AbstractOperation.HoldNewOperations = false;
+        }
+
+        Assert.Equal(0, overlaps);
+    }
+
+    [Fact]
+    public async Task CancelingAHeldOperationEndsItWithoutRunning()
+    {
+        using var operation = new CancellationAwareStubOperation(queueEnabled: true);
+        AbstractOperation.HoldNewOperations = true;
+        try
+        {
+            Task mainThread = operation.MainThread();
+            await Task.Delay(300);
+
+            operation.Cancel();
+            await mainThread.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.False(operation.PerformStarted.Task.IsCompleted);
+            Assert.Equal(OperationStatus.Canceled, operation.Status);
+            Assert.Equal(0, AbstractOperation.QueueLength());
+        }
+        finally
+        {
+            AbstractOperation.HoldNewOperations = false;
+        }
+    }
+
     [Fact]
     public async Task RetryWaitsForCanceledRunCleanupBeforeStartingAgain()
     {

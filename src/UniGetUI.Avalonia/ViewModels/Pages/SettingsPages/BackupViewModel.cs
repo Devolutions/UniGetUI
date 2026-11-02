@@ -14,6 +14,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageOperations;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
@@ -147,7 +148,15 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
         Interlocked.Increment(ref _activeBackups);
         try
         {
-            return await backup();
+            await AbstractOperation.BeginWorkAsync();
+            try
+            {
+                return await backup();
+            }
+            finally
+            {
+                AbstractOperation.EndWork();
+            }
         }
         finally
         {

@@ -27,6 +27,58 @@ public abstract partial class AbstractOperation : IDisposable
     /// in response to a user action. They queue behind every user-requested operation.
     /// </summary>
     public bool IsBackgroundOperation { get; set; }
+    private static readonly object AdmissionLock = new();
+    private static bool _holdNewOperations;
+    private static int _admittedWork;
+    public static bool HoldNewOperations
+    {
+        get
+        {
+            lock (AdmissionLock)
+                return _holdNewOperations;
+        }
+        set
+        {
+            lock (AdmissionLock)
+                _holdNewOperations = value;
+        }
+    }
+
+    public static bool TryHoldNewOperations()
+    {
+        lock (AdmissionLock)
+        {
+            if (_admittedWork > 0 || QueueLength() > 0)
+                return false;
+
+            _holdNewOperations = true;
+            return true;
+        }
+    }
+
+    public static bool TryBeginWork()
+    {
+        lock (AdmissionLock)
+        {
+            if (_holdNewOperations)
+                return false;
+
+            _admittedWork++;
+            return true;
+        }
+    }
+
+    public static async Task BeginWorkAsync()
+    {
+        while (!TryBeginWork())
+            await Task.Delay(100);
+    }
+
+    public static void EndWork()
+    {
+        lock (AdmissionLock)
+            _admittedWork--;
+    }
     protected bool QUEUE_ENABLED;
     protected bool FORCE_HOLD_QUEUE;
     private bool IsInnerOperation;
@@ -341,6 +393,18 @@ public abstract partial class AbstractOperation : IDisposable
             }
             // END QUEUE HANDLER
 
+            while (!IsInnerOperation && !TryBeginWork())
+            {
+                if (runCancellation.IsCancellationRequested)
+                {
+                    RemoveFromQueue(this);
+                    CompleteCanceledRun();
+                    return;
+                }
+
+                await Task.Delay(100);
+            }
+
             IsExecutingOperation = true;
             OperationVeredict result;
             try
@@ -350,6 +414,8 @@ public abstract partial class AbstractOperation : IDisposable
             finally
             {
                 IsExecutingOperation = false;
+                if (!IsInnerOperation)
+                    EndWork();
             }
             RemoveFromQueue(this);
 

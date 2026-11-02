@@ -26,7 +26,8 @@ internal static class AutoUpdaterInstallerArguments
     internal static string ForWindows(
         bool isPortable,
         string installationDirectory,
-        WindowsInstallScope installScope)
+        WindowsInstallScope installScope,
+        bool launchInBackground = false)
     {
         string arguments = CommonWindowsArguments + installScope switch
         {
@@ -34,6 +35,11 @@ internal static class AutoUpdaterInstallerArguments
             WindowsInstallScope.CurrentUser => " /CURRENTUSER",
             _ => "",
         };
+
+        if (launchInBackground)
+        {
+            arguments += " /LaunchInBackground";
+        }
 
         if (!isPortable || string.IsNullOrWhiteSpace(installationDirectory))
         {

@@ -237,6 +237,8 @@ internal sealed class SettingsPage : UserControl, ITuiPage
                 TuiNotifications.Info(CoreTools.Translate("Language"), CoreTools.Translate("Restart UniGetUI to fully apply changes"));
             });
         Check("Update UniGetUI automatically" + _desktopOnly, Settings.K.DisableAutoUpdateWingetUI, inverted: true);
+        if (OperatingSystem.IsWindows())
+            Check("Install UniGetUI updates automatically while it is idle in the background" + _desktopOnly, Settings.K.InstallUniGetUIUpdatesWhenIdle);
         Check("Install prerelease versions of UniGetUI" + _desktopOnly, Settings.K.EnableUniGetUIBeta);
         Check("Show the release notes after UniGetUI is updated" + _desktopOnly, Settings.K.DisableReleaseNotesOnUpdate, inverted: true);
         Check("Share anonymous usage data" + _desktopOnly, Settings.K.DisableTelemetry, inverted: true);

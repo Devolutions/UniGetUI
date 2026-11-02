@@ -22,6 +22,23 @@ public sealed class AutoUpdaterTests
         Assert.Contains("/SILENT", arguments);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InstallerArguments_AskForABackgroundRelaunchOnlyWhenRequested(bool launchInBackground)
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            true,
+            @"E:\Portable Apps\UniGetUI",
+            WindowsInstallScope.CurrentUser,
+            launchInBackground
+        );
+
+        Assert.Equal(launchInBackground, arguments.Contains("/LaunchInBackground"));
+        Assert.Contains("/CURRENTUSER", arguments);
+        Assert.Contains(@"/TASKS=""portableinstall""", arguments);
+    }
+
     [Fact]
     public void InstallerArguments_PinAPortableInstallToItsOwnDirectory()
     {

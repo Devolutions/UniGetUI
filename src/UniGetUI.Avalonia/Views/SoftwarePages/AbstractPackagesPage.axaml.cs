@@ -168,7 +168,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         AttachedToVisualTree += (_, _) =>
         {
             ViewModel.LoadColumnLayout();
-            ApplyColumnSizing();
+            if (!ViewModel.ColumnsFitToWindow) ApplyColumnSizing();
         };
         PackageListColumnLayout.WidthsSaved += () =>
         {

@@ -23,6 +23,8 @@ public static class PackageListColumnLayout
         }
         else
         {
+            if (grid.Columns.FirstOrDefault(c => c.Tag is not string) is { } selector)
+                selector.DisplayIndex = 0;
             grid.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
             grid.FrozenColumnCount = 1;
         }

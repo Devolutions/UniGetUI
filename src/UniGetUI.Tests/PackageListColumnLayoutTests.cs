@@ -121,6 +121,22 @@ public sealed class PackageListColumnLayoutTests : IDisposable
     }, CancellationToken.None);
 
     [Fact]
+    public Task FixedWidthsFreezeTheCheckboxColumnEvenAfterAColumnWasMovedInFrontOfIt() => _session.Dispatch(() =>
+    {
+        var (window, grid) = Show(1000);
+        Column(grid, "Version").DisplayIndex = 0;
+        Dispatcher.UIThread.RunJobs();
+        Assert.NotEqual(0, grid.Columns[0].DisplayIndex);
+
+        PackageListColumnLayout.Apply(grid, fitToWindow: false);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(0, grid.Columns[0].DisplayIndex);
+        Assert.Equal(1, grid.FrozenColumnCount);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
     public Task SavedWidthsAreRestoredOnANewGridAndClampedToTheMinimum() => _session.Dispatch(() =>
     {
         CoreSettings.SetDictionary(CoreSettings.K.PackageListColumnWidths, new Dictionary<string, int> { ["Name"] = 321, ["Id"] = 10 });

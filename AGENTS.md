@@ -92,9 +92,21 @@ retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path 
 
 ### Which feed is which
 
-- **.NET Tool** — `https://api.nuget.org/v3/index.json`. Safe to repoint because the manager
-  does not support custom sources and never passes the source URL to the `dotnet` CLI. Also
-  filters search on `packageType=DotnetTool`.
+- **.NET Tool** — the enabled sources of the user's NuGet configuration, read (not edited) by
+  `DotNetSourceHelper` from `dotnet nuget list source --format Detailed` run in the user profile
+  with `DOTNET_CLI_UI_LANGUAGE=en`, so `disabledPackageSources` and the whole config hierarchy
+  apply as they do for `dotnet tool install`. Output it cannot read, or a failed command, falls
+  back to nuget.org. The files from `dotnet nuget config paths` supply `packageSourceMapping`
+  (searches and updates skip a feed the mapping does not allow for that id) and basic
+  `packageSourceCredentials` (clear text, or DPAPI-encrypted with the `NuGet` entropy on
+  Windows), which `NuGetFeedCredentials` sends only to the origin of the source they belong to.
+  The snapshot is kept until a config file's write time changes, or for ten minutes. Updates are
+  checked on every enabled feed and the newest wins; the feed at nuget.org's URL is always
+  `DefaultSource`, whatever its key. `dotnet tool list` names no feed, so installed tools sit
+  under nuget.org when it is enabled, else the first feed, and `InstalledPackagesKeepTheirSource`
+  is false so loaders match them to updates and search results from any feed by id. Search
+  filters on `packageType=DotnetTool` on V3 feeds and local folders; V2 feeds have no such
+  filter and may list libraries. Icons and installer downloads do not carry credentials.
 - **PowerShell / PowerShell 7** — sources are enumerated from `Get-PSRepository` (or
   `Get-PSResourceRepository` on PowerShell 7), so the URL is CLI-owned identity
   (`PowerShellSourceHelper` compares it literally to choose `Register-PSRepository -Default`)

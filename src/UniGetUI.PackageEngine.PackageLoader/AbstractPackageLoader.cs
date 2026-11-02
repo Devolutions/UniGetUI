@@ -424,9 +424,22 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return null;
             }
 
-            PackageReference.TryGetValue(HashPackage(package), out IPackage? eq);
-            return eq;
+            if (PackageReference.TryGetValue(HashPackage(package), out IPackage? eq))
+                return eq;
+
+            if (package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
+                return null;
+
+            return Packages.FirstOrDefault(candidate =>
+                IsSamePackageFromAnySource(candidate, package)
+                && (!ALLOW_MULTIPLE_PACKAGE_VERSIONS || candidate.VersionString == package.VersionString)
+            );
         }
+
+        private static bool IsSamePackageFromAnySource(IPackage candidate, IPackage package) =>
+            !package.Manager.Capabilities.InstalledPackagesKeepTheirSource
+            && candidate.Manager.Name == package.Manager.Name
+            && string.Equals(candidate.Id, package.Id, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Gets ALL of the equivalent packages on this loader.
@@ -441,7 +454,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return [];
             }
 
-            return Packages.Where(p => p.IsEquivalentTo(package)).ToArray();
+            return Packages
+                .Where(p => p.IsEquivalentTo(package) || IsSamePackageFromAnySource(p, package))
+                .ToArray();
         }
 
         public IPackage? GetPackageForId(string id, string? sourceName = null)

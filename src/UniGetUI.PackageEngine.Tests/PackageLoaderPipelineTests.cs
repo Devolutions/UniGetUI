@@ -1,3 +1,4 @@
+using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
@@ -59,6 +60,41 @@ public sealed class PackageLoaderPipelineTests
             ["1.0.0", "2.0.0"],
             loader.GetEquivalentPackages(packageV1).Select(package => package.VersionString).Order()
         );
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task EquivalenceIgnoresTheSourceOnlyWhenInstalledPackagesDoNotKeepIt(
+        bool installedPackagesKeepTheirSource,
+        bool expectMatch
+    )
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.InstalledPackagesKeepTheirSource = installedPackagesKeepTheirSource;
+                return capabilities;
+            })
+            .Build();
+        var loader = new TestPackageLoader([manager], allowMultiplePackageVersions: false);
+        var fromFirstFeed = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(new ManagerSource(manager, "first", new Uri("https://first.example.test/")))
+            .WithId("dotnetsay")
+            .WithVersion("1.0.0")
+            .Build();
+        var fromSecondFeed = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(new ManagerSource(manager, "second", new Uri("https://second.example.test/")))
+            .WithId("DotNetSay")
+            .WithVersion("2.0.0")
+            .Build();
+
+        await loader.AddForeign(fromFirstFeed);
+
+        Assert.Equal(expectMatch, loader.GetEquivalentPackage(fromSecondFeed) is not null);
+        Assert.Equal(expectMatch ? 1 : 0, loader.GetEquivalentPackages(fromSecondFeed).Count);
     }
 
     [Fact]

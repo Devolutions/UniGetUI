@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.Managers.Generic.NuGet;
 using UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.PowerShellManager
@@ -613,6 +614,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             using HttpClient client = new(CoreTools.GenericHttpClientParameters);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
             using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+            NuGetFeedCredentials.ApplyTo(request);
             using HttpResponseMessage response = client.Send(request);
             if (!response.IsSuccessStatusCode)
             {

@@ -49,6 +49,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                NuGetFeedCredentials.ApplyTo(request);
                 using HttpResponseMessage response = client.Send(request);
 
                 if (!response.IsSuccessStatusCode)

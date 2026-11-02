@@ -66,6 +66,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private readonly TEL_InstallReferral _referral;
     private InstallOptionsViewModel? _installVm;
     private InstallOptions? _installOpts;
+    private string? _installOptsSnapshot;
     private readonly DispatcherTimer _screenshotGestureTimer;
     private readonly TranslateTransform _screenshotStripTranslate = new();
     private Vector _screenshotGestureIntent;
@@ -158,8 +159,27 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        if (IsEmbedded)
-            Activate();
+        if (!IsEmbedded) return;
+        InstallOptionsFactory.OptionsSaved += OnInstallOptionsSaved;
+        Activate();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        InstallOptionsFactory.OptionsSaved -= OnInstallOptionsSaved;
+    }
+
+    private void OnInstallOptionsSaved(object? sender, EventArgs e) =>
+        Dispatcher.UIThread.Post(() => _ = ReloadInstallOptionsIfChangedAsync());
+
+    private async Task ReloadInstallOptionsIfChangedAsync()
+    {
+        if (_installOpts is null) return;
+        var saved = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
+        if (saved.AsJsonString() == _installOptsSnapshot) return;
+        ShowInstallOptions(saved);
+        await _vm.RefreshDetailsAsync();
     }
 
     private void Activate()
@@ -188,9 +208,13 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         TitleText.FontSize = 24;
     }
 
-    private async Task InitInstallOptionsAsync()
+    private async Task InitInstallOptionsAsync() =>
+        ShowInstallOptions(await InstallOptionsFactory.LoadForPackageAsync(_vm.Package));
+
+    private void ShowInstallOptions(InstallOptions options)
     {
-        _installOpts = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
+        _installOpts = options;
+        _installOptsSnapshot = options.AsJsonString();
         _installVm = new InstallOptionsViewModel(_vm.Package, _vm.OperationRole, _installOpts);
         _installVm.CloseRequested += (_, _) =>
         {
@@ -211,6 +235,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         if (_installVm is null || _installOpts is null) return;
         _installVm.ApplyChanges();
+        _installOptsSnapshot = _installOpts.AsJsonString();
         await InstallOptionsFactory.SaveForPackageAsync(_installOpts, _vm.Package);
     }
 

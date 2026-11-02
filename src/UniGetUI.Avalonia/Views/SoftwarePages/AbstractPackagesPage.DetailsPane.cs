@@ -80,8 +80,11 @@ public abstract partial class AbstractPackagesPage : IDetailsPaneHost
         };
         PackageList.SelectionChanged += (_, _) => ScheduleDetailsPaneRefresh();
         ViewModel.FilteredPackages.SelectionStateChanged += (_, _) => ScheduleDetailsPaneRefresh();
-        GridViewItems.AddHandler(PointerPressedEvent, OnCardPointerPressed, RoutingStrategies.Tunnel);
-        IconsViewItems.AddHandler(PointerPressedEvent, OnCardPointerPressed, RoutingStrategies.Tunnel);
+        foreach (var cards in new Control[] { GridViewItems, IconsViewItems })
+        {
+            cards.AddHandler(PointerPressedEvent, OnCardInteraction, RoutingStrategies.Tunnel);
+            cards.AddHandler(GotFocusEvent, OnCardInteraction);
+        }
 
         DetailsSplitter.DragCompleted += (_, _) =>
         {
@@ -94,9 +97,9 @@ public abstract partial class AbstractPackagesPage : IDetailsPaneHost
         UpdateDetailsPaneLayout();
     }
 
-    private void OnCardPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void OnCardInteraction(object? sender, RoutedEventArgs e)
     {
-        if (_isDetailsPaneShown && e.Source is StyledElement { DataContext: PackageWrapper wrapper })
+        if (e.Source is StyledElement { DataContext: PackageWrapper wrapper } && !ReferenceEquals(PackageList.SelectedItem, wrapper))
             PackageList.SelectedItem = wrapper;
     }
 

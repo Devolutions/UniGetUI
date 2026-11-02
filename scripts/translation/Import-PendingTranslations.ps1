@@ -43,7 +43,7 @@ foreach ($item in $plan) {
 
     foreach ($translatedPatchFile in $translatedPatchFiles) {
         try {
-            $translatedPatch = Read-OrderedJsonMap -Path $translatedPatchFile.FullName
+            $translatedPatch = Read-OrderedJsonMap -Path $translatedPatchFile.FullName -AllowTrailingCommas
         }
         catch {
             $translatedPatch = New-OrderedStringMap

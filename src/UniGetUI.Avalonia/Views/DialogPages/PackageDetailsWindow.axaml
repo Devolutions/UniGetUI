@@ -12,7 +12,6 @@
         MinWidth="720"
         MaxHeight="800"
         MinHeight="480"
-        Background="{DynamicResource AppDialogBackground}"
         Title="{t:Translate Package details}">
 
     <dialogs:ImmersiveDialog.Resources>

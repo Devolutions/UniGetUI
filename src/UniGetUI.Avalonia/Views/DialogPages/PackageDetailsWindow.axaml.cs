@@ -96,6 +96,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
         if (embedded)
             ApplyEmbeddedLayout();
+        else
+            Bind(BackgroundProperty, this.GetResourceObservable("AppDialogBackground"));
 
         ScreenshotStrip.RenderTransform = _screenshotStripTranslate;
         _screenshotGestureTimer = new DispatcherTimer
@@ -199,7 +201,6 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         MinHeight = 0;
         MaxWidth = double.PositiveInfinity;
         MaxHeight = double.PositiveInfinity;
-        Background = Brushes.Transparent;
         MainGrid.Margin = new Thickness(16, 12, 16, 16);
         TitleIconBorder.Width = TitleIconBorder.Height = 64;
         TitleIconBorder.CornerRadius = new CornerRadius(12);

@@ -163,6 +163,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         base.OnAttachedToVisualTree(e);
         if (!IsEmbedded) return;
         InstallOptionsFactory.OptionsSaved += OnInstallOptionsSaved;
+        if (_activated)
+            _ = ReloadInstallOptionsIfChangedAsync();
         Activate();
     }
 

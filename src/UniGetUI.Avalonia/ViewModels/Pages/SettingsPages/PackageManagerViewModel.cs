@@ -3,10 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
@@ -36,6 +38,15 @@ public partial class PackageManagerViewModel : ViewModelBase
     [ObservableProperty] private bool _versionTextVisible;
     [ObservableProperty] private bool _showVersionVisible;
     public string ShowVersionLabel { get; } = CoreTools.Translate("Expand version");
+    [ObservableProperty] private bool _setupGuideVisible;
+    [ObservableProperty] private bool _installCommandVisible;
+    public string SetupGuideLabel => CoreTools.Translate("How to set up {0}", Manager.DisplayName);
+    public string InstallCommandLabel { get; } = CoreTools.Translate("Install it with this command:");
+    public string OpenInTerminalLabel { get; } = CoreTools.Translate("Open in a terminal");
+    public string? InstallCommand { get; }
+    public IReadOnlyList<string> CandidateExecutables { get; private set; }
+
+    private const string DocsBaseUrl = "https://github.com/Devolutions/UniGetUI/blob/main/docs/";
 
     // ── Path label ────────────────────────────────────────────────────────────
     [ObservableProperty] private string _pathLabelText = "";
@@ -50,6 +61,8 @@ public partial class PackageManagerViewModel : ViewModelBase
     public PackageManagerViewModel(IPackageManager manager)
     {
         Manager = manager;
+        InstallCommand = manager.Properties.InstallCommands.ForCurrentPlatform();
+        CandidateExecutables = manager.FindCandidateExecutableFiles();
         RefreshState();
         IsCustomVcpkgRootSet = CoreSettings.Get(CoreSettings.K.CustomVcpkgRoot);
         VcpkgRootPath = IsCustomVcpkgRootSet
@@ -63,7 +76,11 @@ public partial class PackageManagerViewModel : ViewModelBase
     {
         IsLoading = true;
         RefreshState();
-        await Task.Run(Manager.Initialize);
+        CandidateExecutables = await Task.Run(() =>
+        {
+            Manager.Initialize();
+            return Manager.FindCandidateExecutableFiles();
+        });
         IsLoading = false;
         RefreshState(showVersion: true);
         (MainWindow.Instance?.DataContext as MainWindowViewModel)?.ReloadPagesWithoutReadyManager();
@@ -71,6 +88,16 @@ public partial class PackageManagerViewModel : ViewModelBase
 
     [RelayCommand]
     public void ShowVersion() => RefreshState(showVersion: true);
+
+    [RelayCommand]
+    private void OpenSetupGuide() => CoreTools.Launch(GetSetupGuideUrl(Manager.Properties));
+
+    [RelayCommand]
+    private Task OpenInstallCommandInTerminal() =>
+        InstallCommand is null ? Task.CompletedTask : ManualInstallHelper.LaunchManualAsync(InstallCommand);
+
+    internal static string GetSetupGuideUrl(ManagerProperties properties) =>
+        DocsBaseUrl + (properties.SetupGuide.Length > 0 ? properties.SetupGuide : "PACKAGE_MANAGERS.md");
 
     public void OnExecutableSelected(string path)
     {
@@ -138,6 +165,17 @@ public partial class PackageManagerViewModel : ViewModelBase
         }
 
         StatusMessageVisible = !string.IsNullOrEmpty(StatusMessage);
+        (SetupGuideVisible, InstallCommandVisible) = GetSetupHelpVisibility(
+            IsLoading, Manager.IsReady(), Manager.IsEnabled(), Manager.Status.Found,
+            CandidateExecutables.Count > 0, InstallCommand is not null);
+    }
+
+    internal static (bool Guide, bool InstallCommand) GetSetupHelpVisibility(
+        bool loading, bool ready, bool enabled, bool statusFound, bool hasCandidates, bool hasInstallCommand)
+    {
+        bool guide = !loading && !ready;
+        bool executableFound = enabled ? statusFound : hasCandidates;
+        return (guide, guide && hasInstallCommand && !executableFound);
     }
 
     // ── Scoop commands ────────────────────────────────────────────────────────

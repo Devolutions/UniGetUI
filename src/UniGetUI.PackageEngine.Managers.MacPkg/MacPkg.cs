@@ -49,6 +49,7 @@ public sealed class MacPkg : PackageManager
         {
             Id = ManagerId,
             Name = "Pkg",
+            SetupGuide = "PKG_FEEDS.md",
             DisplayName = "Installer packages",
             Description = CoreTools.Translate(
                 "Apps (.pkg and .dmg) that your organization publishes in its software catalog."

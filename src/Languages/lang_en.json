@@ -2211,5 +2211,8 @@
   "Make the window wider to show package details here": "Make the window wider to show package details here",
   "Details panel": "Details panel",
   "Show details panel": "Show details panel",
-  "Hide details panel": "Hide details panel"
+  "Hide details panel": "Hide details panel",
+  "How to set up {0}": "How to set up {0}",
+  "Install it with this command:": "Install it with this command:",
+  "Open in a terminal": "Open in a terminal"
 }

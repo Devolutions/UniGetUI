@@ -119,6 +119,8 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             {
                 Id = "chocolatey",
                 Name = "Chocolatey",
+                SetupGuide = "PACKAGE_MANAGERS.md#chocolatey",
+                InstallCommands = new(Windows: "winget install --exact --id Chocolatey.Chocolatey"),
                 Description = CoreTools.Translate(
                     "The classical package manager for windows. You'll find everything there. <br>Contains: <b>General Software</b>"
                 ),

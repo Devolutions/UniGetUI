@@ -96,7 +96,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             Padding = new Thickness(10, 4, 8, 5),
         };
         AutomationProperties.SetName(execCombo, CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"));
-        foreach (var path in manager.FindCandidateExecutableFiles())
+        foreach (var path in ViewModel.CandidateExecutables)
             AddExecutablePathItem(execCombo, path);
 
         string savedPath = CoreSettings.GetDictionaryItem<string, string>(CoreSettings.K.ManagerPaths, manager.Name) ?? "";

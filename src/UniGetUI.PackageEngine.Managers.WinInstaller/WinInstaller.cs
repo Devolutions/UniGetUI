@@ -45,6 +45,7 @@ public sealed class WinInstaller : PackageManager
         {
             Id = ManagerId,
             Name = "Installer",
+            SetupGuide = "WINDOWS_INSTALLER_FEEDS.md",
             DisplayName = "Installer packages",
             Description = CoreTools.Translate(
                 "Apps (.exe and .msi) that your organization publishes in its software catalog."

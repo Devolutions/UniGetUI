@@ -33,6 +33,7 @@ public class Apt : PackageManager
         {
             Id = "apt",
             Name = "Apt",
+            SetupGuide = "PACKAGE_MANAGERS.md#apt",
             Description = CoreTools.Translate(
                 "The default package manager for Debian/Ubuntu-based Linux distributions.<br>Contains: <b>Debian/Ubuntu packages</b>"
             ),

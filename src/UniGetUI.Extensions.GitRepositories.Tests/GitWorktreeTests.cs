@@ -23,6 +23,7 @@ public sealed class GitWorktreeTests : IDisposable
 
         Assert.Equal(4, worktrees.Count);
         Assert.Equal(3, await Service.CountLinkedWorktreesAsync(clone));
+        Assert.Equal(new[] { fresh, feature, dirty }.Order(), (await Service.ListLinkedWorktreePathsAsync(clone)).Order());
         Assert.True(worktrees[0].IsMain);
         Assert.Equal(clone, worktrees[0].Path);
         Assert.Equal("main", worktrees[0].Branch);

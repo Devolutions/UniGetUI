@@ -152,6 +152,33 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void NativeWinGetHelperSearchesEmptyQueryThroughCatalogDefaultSelector()
+    {
+        var request = Assert.Single(NativeWinGetHelper.GetSearchRequests(""));
+
+        Assert.Equal(Microsoft.Management.Deployment.PackageMatchField.CatalogDefault, request.Field);
+        Assert.True(request.IsSelector);
+        Assert.Equal((uint)SearchLimits.MaxEmptyQueryResultsPerSource, request.ResultLimit);
+    }
+
+    [Fact]
+    public void NativeWinGetHelperSearchesQueryByNameIdAndMonikerFilters()
+    {
+        var requests = NativeWinGetHelper.GetSearchRequests("contoso");
+
+        Assert.Equal(
+            [
+                Microsoft.Management.Deployment.PackageMatchField.Name,
+                Microsoft.Management.Deployment.PackageMatchField.Id,
+                Microsoft.Management.Deployment.PackageMatchField.Moniker,
+            ],
+            requests.Select(request => request.Field)
+        );
+        Assert.All(requests, request => Assert.False(request.IsSelector));
+        Assert.All(requests, request => Assert.Null(request.ResultLimit));
+    }
+
+    [Fact]
     public void NativeWinGetCollectionCopiesWithoutEnumeratingWinRtCollections()
     {
         IReadOnlyList<string> nativeCollection = new EnumeratorThrowingReadOnlyList<string>(

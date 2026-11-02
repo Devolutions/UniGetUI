@@ -183,12 +183,28 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         Logger.Info($"WinGet activation mode selected: {ActivationMode} | Source: {ActivationSource}");
     }
 
+    internal readonly record struct NativeSearchRequest(
+        PackageMatchField Field,
+        bool IsSelector,
+        uint? ResultLimit
+    );
+
+    internal static IReadOnlyList<NativeSearchRequest> GetSearchRequests(string query) =>
+        query.Length == 0
+            ? [new(PackageMatchField.CatalogDefault, true, (uint)SearchLimits.MaxEmptyQueryResultsPerSource)]
+            :
+            [
+                new(PackageMatchField.Name, false, null),
+                new(PackageMatchField.Id, false, null),
+                new(PackageMatchField.Moniker, false, null),
+            ];
+
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
         List<Package> packages = [];
         INativeTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.FindPackages);
         Dictionary<
-            (PackageCatalogReference, PackageMatchField?),
+            (PackageCatalogReference, PackageMatchField),
             Task<FindPackagesResult>
         > FindPackageTasks = [];
 
@@ -207,26 +223,28 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             ConnectResult result = CatalogReference.Connect();
             if (result.Status == ConnectResultStatus.Ok)
             {
-                PackageMatchField?[] filterTypes = query.Length == 0
-                    ? [null]
-                    : [PackageMatchField.Name, PackageMatchField.Id, PackageMatchField.Moniker];
-                foreach (PackageMatchField? filter_type in filterTypes)
+                foreach (NativeSearchRequest request in GetSearchRequests(query))
                 {
                     FindPackagesOptions PackageFilters = Factory.CreateFindPackagesOptions();
 
-                    if (filter_type is { } field)
+                    logger.Log("Generating filters...");
+                    // Name filter
+                    PackageMatchFilter FilterName = Factory.CreatePackageMatchFilter();
+                    FilterName.Field = request.Field;
+                    FilterName.Value = query;
+                    FilterName.Option = PackageFieldMatchOption.ContainsCaseInsensitive;
+                    if (request.IsSelector)
                     {
-                        logger.Log("Generating filters...");
-                        // Name filter
-                        PackageMatchFilter FilterName = Factory.CreatePackageMatchFilter();
-                        FilterName.Field = field;
-                        FilterName.Value = query;
-                        FilterName.Option = PackageFieldMatchOption.ContainsCaseInsensitive;
-                        PackageFilters.Filters.Add(FilterName);
+                        PackageFilters.Selectors.Add(FilterName);
                     }
                     else
                     {
-                        PackageFilters.ResultLimit = (uint)SearchLimits.MaxEmptyQueryResultsPerSource;
+                        PackageFilters.Filters.Add(FilterName);
+                    }
+
+                    if (request.ResultLimit is { } limit)
+                    {
+                        PackageFilters.ResultLimit = limit;
                     }
 
                     try
@@ -238,7 +256,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                         task.Start();
 
                         // Add task to list
-                        FindPackageTasks.Add((CatalogReference, filter_type), task);
+                        FindPackageTasks.Add((CatalogReference, request.Field), task);
                     }
                     catch (Exception e)
                     {

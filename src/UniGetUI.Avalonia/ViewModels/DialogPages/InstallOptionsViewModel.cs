@@ -80,6 +80,15 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string TabPrePostLine1 { get; } = CoreTools.Translate("Pre-install");
     public string TabPrePostLine2 { get; } = CoreTools.Translate("Post-install");
 
+    // Combined accessible names for the tab headers: screen readers announce the
+    // whole tab title, and the second line often carries essential information
+    // (for example "Pre-install — Post-install").
+    public string TabGeneralName { get; } = $"{CoreTools.Translate("General")} — {CoreTools.Translate("Version")}";
+    public string TabLocationName { get; } = $"{CoreTools.Translate("Architecture")} — {CoreTools.Translate("Location and Scope")}";
+    public string TabCLIName { get; } = $"{CoreTools.Translate("Command-line")} — {CoreTools.Translate("Arguments")}";
+    public string TabCloseAppsName { get; } = $"{CoreTools.Translate("Close apps")} — {CoreTools.Translate("before installing")}";
+    public string TabPrePostName { get; } = $"{CoreTools.Translate("Pre-install")} — {CoreTools.Translate("Post-install")}";
+
     // Close-apps tab labels
     public string KillProcessesDescriptionLabel { get; } = CoreTools.Translate(
         "Select the processes that should be closed before this package is installed, updated or uninstalled.");

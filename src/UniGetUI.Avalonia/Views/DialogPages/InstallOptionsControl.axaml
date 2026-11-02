@@ -266,7 +266,7 @@
                         LayoutUpdated="InstallOptionsTabs_LayoutUpdated">
 
             <!-- Tab 0: General -->
-            <TabItem>
+            <TabItem automation:AutomationProperties.Name="{Binding TabGeneralName}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/settings.svg"
@@ -356,7 +356,7 @@
             </TabItem>
 
             <!-- Tab 1: Architecture, Scope & Location -->
-            <TabItem>
+            <TabItem automation:AutomationProperties.Name="{Binding TabLocationName}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
@@ -452,7 +452,7 @@
             </TabItem>
 
             <!-- Tab 2: Custom CLI arguments -->
-            <TabItem>
+            <TabItem automation:AutomationProperties.Name="{Binding TabCLIName}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/console.svg"
@@ -546,7 +546,7 @@
             </TabItem>
 
             <!-- Tab 3: Close apps before installing -->
-            <TabItem>
+            <TabItem automation:AutomationProperties.Name="{Binding TabCloseAppsName}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
@@ -602,7 +602,7 @@
             </TabItem>
 
             <!-- Tab 4: Pre/Post commands -->
-            <TabItem>
+            <TabItem automation:AutomationProperties.Name="{Binding TabPrePostName}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/clipboard_list.svg"

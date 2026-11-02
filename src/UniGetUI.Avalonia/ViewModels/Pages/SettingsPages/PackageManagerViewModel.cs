@@ -43,8 +43,9 @@ public partial class PackageManagerViewModel : ViewModelBase
     public string SetupGuideLabel => CoreTools.Translate("How to set up {0}", Manager.DisplayName);
     public string InstallCommandLabel { get; } = CoreTools.Translate("Install it with this command:");
     public string OpenInTerminalLabel { get; } = CoreTools.Translate("Open in a terminal");
-    public string? InstallCommand { get; }
-    public IReadOnlyList<string> CandidateExecutables { get; private set; }
+    [ObservableProperty] private string? _installCommand;
+    public IReadOnlyList<string> CandidateExecutables { get; private set; } = [];
+    private bool _executableFoundWhileDisabled;
 
     private const string DocsBaseUrl = "https://github.com/Devolutions/UniGetUI/blob/main/docs/";
 
@@ -61,8 +62,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     public PackageManagerViewModel(IPackageManager manager)
     {
         Manager = manager;
-        InstallCommand = manager.Properties.InstallCommands.ForCurrentPlatform();
-        CandidateExecutables = manager.FindCandidateExecutableFiles();
+        ApplyProbe(ProbeExecutables());
         RefreshState();
         IsCustomVcpkgRootSet = CoreSettings.Get(CoreSettings.K.CustomVcpkgRoot);
         VcpkgRootPath = IsCustomVcpkgRootSet
@@ -76,11 +76,11 @@ public partial class PackageManagerViewModel : ViewModelBase
     {
         IsLoading = true;
         RefreshState();
-        CandidateExecutables = await Task.Run(() =>
+        ApplyProbe(await Task.Run(() =>
         {
             Manager.Initialize();
-            return Manager.FindCandidateExecutableFiles();
-        });
+            return ProbeExecutables();
+        }));
         IsLoading = false;
         RefreshState(showVersion: true);
         (MainWindow.Instance?.DataContext as MainWindowViewModel)?.ReloadPagesWithoutReadyManager();
@@ -95,6 +95,26 @@ public partial class PackageManagerViewModel : ViewModelBase
     [RelayCommand]
     private Task OpenInstallCommandInTerminal() =>
         InstallCommand is null ? Task.CompletedTask : ManualInstallHelper.LaunchManualAsync(InstallCommand);
+
+    private (IReadOnlyList<string> Candidates, bool FoundWhileDisabled, string? Command) ProbeExecutables() =>
+        (Manager.FindCandidateExecutableFiles(),
+         !Manager.IsEnabled() && Manager.HasExecutable(),
+         RunnableCommand(Manager.Properties.InstallCommands.ForCurrentPlatform(), program => CoreTools.Which(program).Item1));
+
+    private void ApplyProbe((IReadOnlyList<string> Candidates, bool FoundWhileDisabled, string? Command) probe)
+    {
+        CandidateExecutables = probe.Candidates;
+        _executableFoundWhileDisabled = probe.FoundWhileDisabled;
+        InstallCommand = probe.Command;
+    }
+
+    internal static string? RunnableCommand(string? command, Func<string, bool> programExists)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+            return null;
+        string program = command.Split(' ', 2)[0];
+        return programExists(program) ? command : null;
+    }
 
     internal static string GetSetupGuideUrl(ManagerProperties properties) =>
         DocsBaseUrl + (properties.SetupGuide.Length > 0 ? properties.SetupGuide : "PACKAGE_MANAGERS.md");
@@ -167,14 +187,14 @@ public partial class PackageManagerViewModel : ViewModelBase
         StatusMessageVisible = !string.IsNullOrEmpty(StatusMessage);
         (SetupGuideVisible, InstallCommandVisible) = GetSetupHelpVisibility(
             IsLoading, Manager.IsReady(), Manager.IsEnabled(), Manager.Status.Found,
-            CandidateExecutables.Count > 0, InstallCommand is not null);
+            _executableFoundWhileDisabled, InstallCommand is not null);
     }
 
     internal static (bool Guide, bool InstallCommand) GetSetupHelpVisibility(
-        bool loading, bool ready, bool enabled, bool statusFound, bool hasCandidates, bool hasInstallCommand)
+        bool loading, bool ready, bool enabled, bool statusFound, bool foundWhileDisabled, bool hasInstallCommand)
     {
         bool guide = !loading && !ready;
-        bool executableFound = enabled ? statusFound : hasCandidates;
+        bool executableFound = enabled ? statusFound : foundWhileDisabled;
         return (guide, guide && hasInstallCommand && !executableFound);
     }
 

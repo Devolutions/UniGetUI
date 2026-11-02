@@ -954,6 +954,11 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             return Paths;
         }
 
+        public override bool HasExecutable() =>
+            (!OperatingSystem.IsWindows()
+                && (CoreTools.WhichMultiple("pip3").Count > 0 || CoreTools.WhichMultiple("pip").Count > 0))
+            || base.HasExecutable();
+
         protected override void _loadManagerExecutableFile(
             out bool found,
             out string path,

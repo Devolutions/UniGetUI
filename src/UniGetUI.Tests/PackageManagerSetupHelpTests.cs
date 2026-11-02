@@ -9,49 +9,70 @@ public class PackageManagerSetupHelpTests
     public void AReadyManagerShowsNoSetupHelp()
     {
         Assert.Equal((false, false), PackageManagerViewModel.GetSetupHelpVisibility(
-            loading: false, ready: true, enabled: true, statusFound: true, hasCandidates: true, hasInstallCommand: true));
+            loading: false, ready: true, enabled: true, statusFound: true, foundWhileDisabled: true, hasInstallCommand: true));
     }
 
     [Fact]
     public void NothingIsShownWhileTheManagerReloads()
     {
         Assert.Equal((false, false), PackageManagerViewModel.GetSetupHelpVisibility(
-            loading: true, ready: false, enabled: true, statusFound: false, hasCandidates: false, hasInstallCommand: true));
+            loading: true, ready: false, enabled: true, statusFound: false, foundWhileDisabled: false, hasInstallCommand: true));
     }
 
     [Fact]
     public void AnEnabledManagerThatIsNotFoundShowsTheGuideAndTheCommand()
     {
         Assert.Equal((true, true), PackageManagerViewModel.GetSetupHelpVisibility(
-            loading: false, ready: false, enabled: true, statusFound: false, hasCandidates: false, hasInstallCommand: true));
+            loading: false, ready: false, enabled: true, statusFound: false, foundWhileDisabled: false, hasInstallCommand: true));
     }
 
     [Fact]
     public void AManagerThatIsFoundButCannotStartShowsTheGuideButNoInstallCommand()
     {
         Assert.Equal((true, false), PackageManagerViewModel.GetSetupHelpVisibility(
-            loading: false, ready: false, enabled: true, statusFound: true, hasCandidates: true, hasInstallCommand: true));
+            loading: false, ready: false, enabled: true, statusFound: true, foundWhileDisabled: true, hasInstallCommand: true));
     }
 
     [Fact]
     public void ADisabledManagerWithNoExecutableShowsTheGuideAndTheCommand()
     {
         Assert.Equal((true, true), PackageManagerViewModel.GetSetupHelpVisibility(
-            loading: false, ready: false, enabled: false, statusFound: false, hasCandidates: false, hasInstallCommand: true));
+            loading: false, ready: false, enabled: false, statusFound: false, foundWhileDisabled: false, hasInstallCommand: true));
     }
 
     [Fact]
-    public void ADisabledManagerWithAnExecutableStillShowsTheGuide()
+    public void ADisabledManagerWhoseExecutableIsPresentShowsTheGuideButNoInstallCommand()
     {
         Assert.Equal((true, false), PackageManagerViewModel.GetSetupHelpVisibility(
-            loading: false, ready: false, enabled: false, statusFound: false, hasCandidates: true, hasInstallCommand: true));
+            loading: false, ready: false, enabled: false, statusFound: false, foundWhileDisabled: true, hasInstallCommand: true));
     }
 
     [Fact]
     public void AManagerWithoutAOneLineInstallShowsOnlyTheGuide()
     {
         Assert.Equal((true, false), PackageManagerViewModel.GetSetupHelpVisibility(
-            loading: false, ready: false, enabled: true, statusFound: false, hasCandidates: false, hasInstallCommand: false));
+            loading: false, ready: false, enabled: true, statusFound: false, foundWhileDisabled: false, hasInstallCommand: false));
+    }
+
+    [Theory]
+    [InlineData("winget install --exact --id Rustlang.Rustup", "winget")]
+    [InlineData("brew install node", "brew")]
+    [InlineData("/bin/bash -c \"$(curl -fsSL https://example.test/install.sh)\"", "/bin/bash")]
+    public void ACommandIsOfferedOnlyWhenItsProgramIsFound(string command, string program)
+    {
+        List<string> asked = [];
+        Assert.Equal(command, PackageManagerViewModel.RunnableCommand(command, p => { asked.Add(p); return true; }));
+        Assert.Equal([program], asked);
+        Assert.Null(PackageManagerViewModel.RunnableCommand(command, _ => false));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void NoCommandIsOfferedWhenTheManagerDeclaresNone(string? command)
+    {
+        Assert.Null(PackageManagerViewModel.RunnableCommand(command, _ => true));
     }
 
     [Fact]

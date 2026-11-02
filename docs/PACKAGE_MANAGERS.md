@@ -30,6 +30,11 @@ macOS, the first terminal emulator UniGetUI finds on Linux).
   a manager.
 - **Extra folders.** For some managers UniGetUI also searches fixed folders that are often missing
   from `PATH`; each section below lists them.
+- **Install commands.** The Windows commands below use WinGet, and most macOS ones use Homebrew.
+  UniGetUI can run without the system WinGet (it falls back to its bundled Pinget), so `winget`
+  may be missing even though UniGetUI works; see [WinGet](#winget) to get it back, or use the
+  direct download linked beside each command. Without Homebrew, see [Homebrew](#homebrew) or the same
+  links. The status card only offers a command when it can find the program that runs it.
 - **Picking the executable yourself.** Each manager's page lists the executables it found. Choosing
   another one, or browsing to a file, is disabled by default for security reasons. To allow it,
   turn on **Allow changing the paths for package manager executables** under **Settings >
@@ -101,6 +106,8 @@ UniGetUI no longer ships a copy of Chocolatey; install it once:
 winget install --exact --id Chocolatey.Chocolatey
 ```
 
+Without WinGet, follow <https://chocolatey.org/install>.
+
 UniGetUI looks for `C:\ProgramData\chocolatey\bin\choco.exe` first, then `choco.exe` on `PATH`.
 
 Check: `choco --version`
@@ -121,8 +128,10 @@ Check: run `$PSVersionTable.PSVersion` in a Windows PowerShell window.
 
 Install PowerShell 7:
 
-- **Windows:** `winget install --exact --id Microsoft.PowerShell`
-- **macOS:** `brew install powershell`
+- **Windows:** `winget install --exact --id Microsoft.PowerShell`, or follow
+  <https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows>
+- **macOS:** `brew install powershell`, or follow
+  <https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-macos>
 - **Linux:** follow Microsoft's instructions for your distribution:
   <https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-linux>
 
@@ -136,8 +145,8 @@ Check: `pwsh -NoProfile -Version`
 Install Python, which includes pip:
 
 - **Windows:** `winget install --exact --id Python.Python.3.14` (this installer adds Python to
-  `PATH`)
-- **macOS:** `brew install python`
+  `PATH`), or download it from <https://www.python.org/downloads/windows/>
+- **macOS:** `brew install python`, or download it from <https://www.python.org/downloads/macos/>
 - **Linux:** use your distribution's packages, for example `python3-pip` on Ubuntu.
 
 On Windows, UniGetUI runs `python -m pip` with the first `python` it finds on `PATH`. If typing
@@ -157,6 +166,7 @@ Install Node.js, which includes npm:
 
 - **Windows:** `winget install --exact --id OpenJS.NodeJS.LTS`
 - **macOS:** `brew install node`
+- **Windows or macOS without WinGet or Homebrew:** download it from <https://nodejs.org/en/download>
 - **Linux:** use your distribution's packages, or [nvm](https://github.com/nvm-sh/nvm).
 
 On Windows, UniGetUI finds `npm.cmd` on `PATH` and runs npm through Windows PowerShell.
@@ -172,7 +182,7 @@ Check: `npm --version`
 
 - **Windows:** `winget install --exact --id Oven-sh.Bun`
 - **macOS:** `brew install oven-sh/bun/bun`
-- **Linux:** follow <https://bun.sh/docs/installation>
+- **Linux, or without WinGet or Homebrew:** follow <https://bun.sh/docs/installation>
 
 UniGetUI finds `bun` on `PATH` (on Windows, `bun.exe`, or the `bun.cmd` wrapper). It searches no
 other folder, so the folder Bun is installed in must be on `PATH`.
@@ -185,6 +195,8 @@ Check: `bun --version`
 
 - **Windows:** `winget install --exact --id Microsoft.DotNet.SDK.10`
 - **macOS:** `brew install --cask dotnet-sdk`
+- **Windows or macOS without WinGet or Homebrew:** download the SDK from
+  <https://dotnet.microsoft.com/download>
 - **Linux:** follow <https://learn.microsoft.com/dotnet/core/install/linux>
 
 UniGetUI finds `dotnet` on `PATH`, and treats .NET Tool as missing when `dotnet tool -h` exits with
@@ -197,7 +209,7 @@ Check: `dotnet tool list --global`
 Install Rust through rustup:
 
 - **Windows:** `winget install --exact --id Rustlang.Rustup`
-- **macOS and Linux:** follow <https://rustup.rs>
+- **macOS, Linux, or Windows without WinGet:** follow <https://rustup.rs>
 
 No Cargo extensions are needed. Older versions of UniGetUI also required `cargo-update` and
 `cargo-binstall`; current versions search, install and update crates without them.

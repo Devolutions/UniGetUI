@@ -1,4 +1,7 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
@@ -54,11 +57,28 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         _measureDirectory = measureDirectory ?? DirectorySize.Measure;
         foreach (string path in GitRepositoryList.Load())
             Repositories.Add(new GitRepositoryItemViewModel(path, GitRepositoryList.GetBranch(path)));
-        Repositories.CollectionChanged += (_, _) =>
+        foreach (GitRepositoryItemViewModel item in Repositories)
+            TrackRepository(item);
+        Repositories.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasRepositories));
             OnPropertyChanged(nameof(IsEmpty));
             UpdateBehindCount();
+            if (e.Action != NotifyCollectionChangedAction.Move && e.NewItems is not null)
+            {
+                foreach (GitRepositoryItemViewModel item in e.NewItems)
+                    TrackRepository(item);
+                ScheduleRepositorySort();
+            }
+        };
+        Worktrees.CollectionChanged += (_, e) =>
+        {
+            if (e.Action != NotifyCollectionChangedAction.Move && e.NewItems is not null)
+            {
+                foreach (GitWorktreeItemViewModel item in e.NewItems)
+                    TrackWorktree(item);
+                ScheduleWorktreeSort();
+            }
         };
 
         _checkIntervalIndex = Math.Max(0, Array.IndexOf(GitRepositoryList.CheckIntervals, GitRepositoryList.CheckIntervalMinutes));
@@ -133,7 +153,11 @@ public partial class GitRepositoriesViewModel : ViewModelBase
 
     partial void OnAutoUpdateChanged(bool value) => GitRepositoryList.AutoUpdate = value;
 
-    partial void OnSelectedRepositoryChanged(GitRepositoryItemViewModel? value) => _ = LoadDetailsAsync();
+    partial void OnSelectedRepositoryChanged(GitRepositoryItemViewModel? value)
+    {
+        // Sorting moves the selected row, which the list may report as a deselection: it is restored after.
+        if (!_reordering) _ = LoadDetailsAsync();
+    }
 
     partial void OnDetailsViewIndexChanged(int value)
     {
@@ -521,6 +545,173 @@ public partial class GitRepositoriesViewModel : ViewModelBase
         catch (GitException)
         {
             item.WorktreeCount = null;
+        }
+    }
+
+    // ─── Sorting ─────────────────────────────────────────────────────────────
+    // Sizes arrive long after the lists are shown, so a list sorted by size is sorted again as they do.
+    // Unmeasured sizes go last whichever way the list is sorted; equal ones keep the order they were listed in.
+
+    private readonly ConditionalWeakTable<object, object> _listedOrder = new();
+    private long _nextListedOrder;
+    private bool _reordering, _repositorySortPending, _worktreeSortPending;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RepositoryNameHeader), nameof(RepositorySizeHeader))]
+    private GitListSort _repositorySort;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WorktreeNameHeader), nameof(WorktreeSizeHeader))]
+    private GitListSort _worktreeSort;
+
+    public string RepositoryNameHeader => NameHeader(RepositorySort);
+    public string RepositorySizeHeader => SizeHeader(RepositorySort);
+    public string WorktreeNameHeader => NameHeader(WorktreeSort);
+    public string WorktreeSizeHeader => SizeHeader(WorktreeSort);
+
+    private static string NameHeader(GitListSort sort) => sort switch
+    {
+        GitListSort.NameAscending => CoreTools.Translate("Name") + " ▲",
+        GitListSort.NameDescending => CoreTools.Translate("Name") + " ▼",
+        _ => CoreTools.Translate("Name"),
+    };
+
+    private static string SizeHeader(GitListSort sort) => sort switch
+    {
+        GitListSort.SizeAscending => CoreTools.Translate("Size") + " ▲",
+        GitListSort.SizeDescending => CoreTools.Translate("Size") + " ▼",
+        _ => CoreTools.Translate("Size"),
+    };
+
+    /// <summary>A–Z, then Z–A, then the order they were listed in.</summary>
+    private static GitListSort NextNameSort(GitListSort sort) => sort switch
+    {
+        GitListSort.NameAscending => GitListSort.NameDescending,
+        GitListSort.NameDescending => GitListSort.Default,
+        _ => GitListSort.NameAscending,
+    };
+
+    /// <summary>Largest first, then smallest first, then the order they were listed in.</summary>
+    private static GitListSort NextSizeSort(GitListSort sort) => sort switch
+    {
+        GitListSort.SizeDescending => GitListSort.SizeAscending,
+        GitListSort.SizeAscending => GitListSort.Default,
+        _ => GitListSort.SizeDescending,
+    };
+
+    [RelayCommand]
+    private void SortRepositoriesByName() => RepositorySort = NextNameSort(RepositorySort);
+
+    [RelayCommand]
+    private void SortRepositoriesBySize() => RepositorySort = NextSizeSort(RepositorySort);
+
+    [RelayCommand]
+    private void SortWorktreesByName() => WorktreeSort = NextNameSort(WorktreeSort);
+
+    [RelayCommand]
+    private void SortWorktreesBySize() => WorktreeSort = NextSizeSort(WorktreeSort);
+
+    partial void OnRepositorySortChanged(GitListSort value) => SortRepositories();
+    partial void OnWorktreeSortChanged(GitListSort value) => SortWorktrees();
+
+    private void TrackRepository(GitRepositoryItemViewModel item)
+    {
+        if (_listedOrder.TryGetValue(item, out _)) return;
+        _listedOrder.Add(item, _nextListedOrder++);
+        item.PropertyChanged += OnRepositoryPropertyChanged;
+    }
+
+    private void TrackWorktree(GitWorktreeItemViewModel item)
+    {
+        if (_listedOrder.TryGetValue(item, out _)) return;
+        _listedOrder.Add(item, _nextListedOrder++);
+        item.PropertyChanged += OnWorktreePropertyChanged;
+    }
+
+    private void OnRepositoryPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GitRepositoryItemViewModel.TotalSize)
+            && RepositorySort is GitListSort.SizeAscending or GitListSort.SizeDescending)
+            ScheduleRepositorySort();
+    }
+
+    private void OnWorktreePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GitWorktreeItemViewModel.Size)
+            && WorktreeSort is GitListSort.SizeAscending or GitListSort.SizeDescending)
+            ScheduleWorktreeSort();
+    }
+
+    // A collection cannot be reordered from its own change notification, and sizes come in bursts: one pass later.
+    private void ScheduleRepositorySort()
+    {
+        if (_reordering || _repositorySortPending) return;
+        _repositorySortPending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _repositorySortPending = false;
+            SortRepositories();
+        });
+    }
+
+    private void ScheduleWorktreeSort()
+    {
+        if (_reordering || _worktreeSortPending) return;
+        _worktreeSortPending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _worktreeSortPending = false;
+            SortWorktrees();
+        });
+    }
+
+    internal void SortRepositories() =>
+        Reorder(Repositories, RepositorySort, item => item.Name, item => item.TotalSize);
+
+    internal void SortWorktrees() =>
+        Reorder(Worktrees, WorktreeSort, item => item.Name, item => item.Size);
+
+    private void Reorder<T>(ObservableCollection<T> items, GitListSort sort,
+        Func<T, string> name, Func<T, long?> size) where T : class
+    {
+        long Listed(T item) => _listedOrder.TryGetValue(item, out object? order) ? (long)order : long.MaxValue;
+        int Compare(T a, T b)
+        {
+            int result = sort switch
+            {
+                GitListSort.NameAscending => StringComparer.CurrentCultureIgnoreCase.Compare(name(a), name(b)),
+                GitListSort.NameDescending => StringComparer.CurrentCultureIgnoreCase.Compare(name(b), name(a)),
+                GitListSort.SizeAscending or GitListSort.SizeDescending => (size(a), size(b)) switch
+                {
+                    (null, null) => 0,
+                    (null, _) => 1,
+                    (_, null) => -1,
+                    ({ } x, { } y) => sort == GitListSort.SizeAscending ? x.CompareTo(y) : y.CompareTo(x),
+                },
+                _ => 0,
+            };
+            return result != 0 ? result : Listed(a).CompareTo(Listed(b));
+        }
+
+        List<T> sorted = [.. items];
+        sorted.Sort(Compare);
+        if (sorted.SequenceEqual(items)) return;
+
+        GitRepositoryItemViewModel? selected = SelectedRepository;
+        _reordering = true;
+        try
+        {
+            for (int index = 0; index < sorted.Count; index++)
+            {
+                int from = items.IndexOf(sorted[index]);
+                if (from != index) items.Move(from, index);
+            }
+            if (!ReferenceEquals(SelectedRepository, selected))
+                SelectedRepository = selected;
+        }
+        finally
+        {
+            _reordering = false;
         }
     }
 

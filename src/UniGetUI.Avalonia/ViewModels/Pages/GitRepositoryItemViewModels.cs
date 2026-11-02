@@ -8,6 +8,9 @@ namespace UniGetUI.Avalonia.ViewModels.Pages;
 /// <summary>How a clone's state is shown: the colour of its badge.</summary>
 public enum GitBadgeKind { Unknown, Ok, Update, Warning, Error }
 
+/// <summary>The order of the clones or of the worktrees; Default keeps the order they were listed in.</summary>
+public enum GitListSort { Default, NameAscending, NameDescending, SizeDescending, SizeAscending }
+
 /// <summary>Turns engine states into the words and badge colours the page shows.</summary>
 internal static class GitStatusText
 {
@@ -144,13 +147,17 @@ public partial class GitRepositoryItemViewModel : ViewModelBase
 
     /// <summary>The bytes the main clone takes, its .git folder included; null until measured.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SizeText), nameof(DetailText))]
+    [NotifyPropertyChangedFor(nameof(SizeText), nameof(TotalSize), nameof(TotalSizeText))]
     private long? _cloneSize;
 
     /// <summary>The bytes its linked worktrees take together; null until measured, or when it has none.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SizeText), nameof(DetailText))]
+    [NotifyPropertyChangedFor(nameof(SizeText), nameof(TotalSize), nameof(TotalSizeText))]
     private long? _worktreesSize;
+
+    /// <summary>The clone and its linked worktrees together, what the size column shows and sorts by.</summary>
+    public long? TotalSize => CloneSize is { } clone ? clone + (WorktreesSize ?? 0) : null;
+    public string TotalSizeText => TotalSize is { } bytes ? CoreTools.FormatAsSize(bytes) : "";
 
     internal bool IsMeasuringSize { get; set; }
     internal int SizeGeneration { get; set; }
@@ -164,11 +171,10 @@ public partial class GitRepositoryItemViewModel : ViewModelBase
             CoreTools.FormatAsSize(clone), CoreTools.FormatAsSize(worktrees)),
     };
 
-    /// <summary>The line under the branch: its worktrees, its size and when it was last checked, whichever are known.</summary>
+    /// <summary>The line under the branch: its worktrees and when it was last checked, whichever are known.</summary>
     public string DetailText => string.Join(" · ", new[]
     {
         WorktreeCountText,
-        SizeText,
         LastCheckedText,
         Status?.RemoteRefreshFailed == true ? CoreTools.Translate("Remote information may be out of date") : "",
     }.Where(text => text.Length > 0));
@@ -217,7 +223,7 @@ public sealed partial class GitWorktreeItemViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SizeText), nameof(HasSize))]
     private long? _size;
 
-    public string SizeText => Size is { } bytes ? CoreTools.Translate("{0} on disk", CoreTools.FormatAsSize(bytes)) : "";
+    public string SizeText => Size is { } bytes ? CoreTools.FormatAsSize(bytes) : "";
     public bool HasSize => Size is not null;
 
     public bool HasLocalChanges => LocalChanges == true;

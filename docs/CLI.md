@@ -176,9 +176,11 @@ branch, but only fast-forwards a clean clone checked out on its configured defau
 It never switches branches automatically. A recognized transient fetch failure is retried
 once after a short delay. If refreshing still fails, remote information is marked as
 potentially out of date; use **Retry** to check again or **Error details** for the full,
-copyable Git output. No Git lock files are removed automatically. The line under each
-repository's branch shows its size and the combined size of its linked worktrees; each
-worktree row also shows its own size. Sizes appear after a background scan and include
+copyable Git output. No Git lock files are removed automatically. The repository and
+worktree lists each have a **Size** column: a repository's size includes its linked
+worktrees (hover it for the breakdown). Click a column header to sort: **Size** sorts
+largest first, then smallest first, then back to the original order; **Name** sorts A–Z,
+then Z–A. Entries not yet measured sort last. Sizes appear after a background scan and include
 build output. They are the sum of file lengths, not allocated disk space; symbolic links
 and junctions are not followed.
 

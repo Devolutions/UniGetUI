@@ -214,18 +214,23 @@ public sealed class GitRepositoriesTests : IDisposable
         Assert.StartsWith("17 worktrees · Checked at ", item.DetailText);
 
         item.CloneSize = 2L * 1024 * 1024;
-        Assert.StartsWith("17 worktrees · 2.0 MB on disk · Checked at ", item.DetailText);
+        Assert.StartsWith("17 worktrees · Checked at ", item.DetailText);
+        Assert.Equal("2.0 MB", item.TotalSizeText);
+        Assert.Equal("2.0 MB on disk", item.SizeText);
         item.WorktreesSize = 3L * 1024 * 1024 * 1024;
-        Assert.StartsWith("17 worktrees · 2.0 MB on disk, 3.0 GB in worktrees · Checked at ", item.DetailText);
+        Assert.Equal(2L * 1024 * 1024 + 3L * 1024 * 1024 * 1024, item.TotalSize);
+        Assert.Equal("2.0 MB on disk, 3.0 GB in worktrees", item.SizeText);
         item.CloneSize = null;
         item.WorktreesSize = null;
+        Assert.Null(item.TotalSize);
+        Assert.Equal("", item.TotalSizeText);
 
         item.WorktreeCount = 0;
         Assert.StartsWith("Checked at ", item.DetailText);
     }
 
     [Fact]
-    public Task SizeLabelsAppearInTheRepositoryAndWorktreeRows() => _session.Dispatch(() =>
+    public Task SizeColumnsAppearInTheRepositoryAndWorktreeLists() => _session.Dispatch(() =>
     {
         if (!Application.Current!.Styles.OfType<FluentTheme>().Any())
             Application.Current.Styles.Add(new FluentTheme());
@@ -250,19 +255,105 @@ public sealed class GitRepositoriesTests : IDisposable
             Dispatcher.UIThread.RunJobs();
             window.UpdateLayout();
 
-            TextBlock details = view.GetVisualDescendants().OfType<TextBlock>()
-                .Single(text => text.Text == repository.DetailText);
+            TextBlock total = view.GetVisualDescendants().OfType<TextBlock>()
+                .Single(text => text.Text == "5.0 MB");
             TextBlock size = view.GetVisualDescendants().OfType<TextBlock>()
-                .Single(text => text.Text == worktree.SizeText);
-            Assert.True(details.IsEffectivelyVisible);
-            Assert.Equal(TextWrapping.Wrap, details.TextWrapping);
-            Assert.Contains("2.0 MB on disk, 3.0 MB in worktrees", details.Text);
+                .Single(text => text.Text == "3.0 MB");
+            Assert.True(total.IsEffectivelyVisible);
+            Assert.Equal("2.0 MB on disk, 3.0 MB in worktrees", ToolTip.GetTip(total));
             Assert.True(size.IsEffectivelyVisible);
-            Assert.Equal("3.0 MB on disk", size.Text);
+            Assert.DoesNotContain("on disk", repository.DetailText);
+
+            Button[] sizeHeaders = [.. view.GetVisualDescendants().OfType<Button>()
+                .Where(button => button.Content as string == "Size")];
+            Assert.Equal(2, sizeHeaders.Length);
+            Assert.All(sizeHeaders, header => Assert.True(header.IsEffectivelyVisible));
+            sizeHeaders[0].Command!.Execute(null);
+            sizeHeaders[1].Command!.Execute(null);
+            Assert.Equal(GitListSort.SizeDescending, vm.RepositorySort);
+            Assert.Equal(GitListSort.SizeDescending, vm.WorktreeSort);
+            Assert.Equal("Size ▼", vm.RepositorySizeHeader);
         }
         finally
         {
             window.Close();
+            vm.Stop();
+        }
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task RepositoriesSortBySizeAndName_KeepingUnmeasuredOnesLast() => _session.Dispatch(() =>
+    {
+        var vm = new GitRepositoriesViewModel(new GitRepositoryService(_git)) { IsGitMissing = true };
+        var small = new GitRepositoryItemViewModel(Path.Combine(_testRoot, "b-small"), null) { CloneSize = 10 };
+        var unknown = new GitRepositoryItemViewModel(Path.Combine(_testRoot, "a-unknown"), null);
+        var large = new GitRepositoryItemViewModel(Path.Combine(_testRoot, "c-large"), null) { CloneSize = 5, WorktreesSize = 100 };
+        vm.Repositories.Add(small);
+        vm.Repositories.Add(unknown);
+        vm.Repositories.Add(large);
+        vm.SelectedRepository = small;
+
+        try
+        {
+            vm.SortRepositoriesBySizeCommand.Execute(null);
+            Assert.Equal(new[] { large, small, unknown }, vm.Repositories);
+            vm.SortRepositoriesBySizeCommand.Execute(null);
+            Assert.Equal(GitListSort.SizeAscending, vm.RepositorySort);
+            Assert.Equal(new[] { small, large, unknown }, vm.Repositories);
+            Assert.Same(small, vm.SelectedRepository);
+
+            // A size measured later moves its row.
+            unknown.CloneSize = 1;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { unknown, small, large }, vm.Repositories);
+
+            vm.SortRepositoriesBySizeCommand.Execute(null);
+            Assert.Equal(GitListSort.Default, vm.RepositorySort);
+            Assert.Equal(new[] { small, unknown, large }, vm.Repositories);
+
+            vm.SortRepositoriesByNameCommand.Execute(null);
+            Assert.Equal(new[] { unknown, small, large }, vm.Repositories);
+            vm.SortRepositoriesByNameCommand.Execute(null);
+            Assert.Equal(new[] { large, small, unknown }, vm.Repositories);
+            Assert.Same(small, vm.SelectedRepository);
+        }
+        finally
+        {
+            vm.Stop();
+        }
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task WorktreesSortBySize_IncludingOnesListedLater() => _session.Dispatch(() =>
+    {
+        var vm = new GitRepositoriesViewModel(new GitRepositoryService(_git)) { IsGitMissing = true };
+        GitWorktreeItemViewModel Worktree(string name) => new(new GitWorktree(
+            Path.Combine(_testRoot, name), null, name, false, false, null, false));
+        GitWorktreeItemViewModel main = Worktree("main"), agent = Worktree("agent"), other = Worktree("other");
+
+        try
+        {
+            vm.SortWorktreesBySizeCommand.Execute(null);
+            vm.Worktrees.Add(main);
+            vm.Worktrees.Add(agent);
+            vm.Worktrees.Add(other);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { main, agent, other }, vm.Worktrees);
+
+            agent.Size = 300;
+            other.Size = 20;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { agent, other, main }, vm.Worktrees);
+
+            main.Size = 1_000;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { main, agent, other }, vm.Worktrees);
+
+            vm.SortWorktreesBySizeCommand.Execute(null);
+            Assert.Equal(new[] { other, agent, main }, vm.Worktrees);
+        }
+        finally
+        {
             vm.Stop();
         }
     }, CancellationToken.None);
@@ -391,7 +482,7 @@ public sealed class GitRepositoriesTests : IDisposable
             Assert.All(vm.Worktrees, worktree => Assert.True(worktree.Size > 0));
             Assert.Equal(vm.Worktrees.Single(worktree => worktree.IsMain).Size, item.CloneSize);
             Assert.Equal(vm.Worktrees.Single(worktree => !worktree.IsMain).Size, item.WorktreesSize);
-            Assert.Contains("on disk", item.DetailText);
+            Assert.Contains("on disk", item.SizeText);
         }
         finally
         {
@@ -853,7 +944,7 @@ public sealed class GitRepositoriesTests : IDisposable
 
             Assert.True(vm.ShowBranches);
             Assert.Empty(vm.Worktrees);
-            Assert.Equal(["main", "merged", "work"], vm.Branches.Select(branch => branch.Name).Order());
+            Assert.Equal(new[] { "main", "merged", "work" }, vm.Branches.Select(branch => branch.Name).Order());
             GitBranchItemViewModel main = vm.Branches[0];
             Assert.True(main.IsDefault);
             Assert.False(main.CanDelete);

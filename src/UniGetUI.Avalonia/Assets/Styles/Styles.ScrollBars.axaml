@@ -1,0 +1,28 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Assets.Styles.ScrollBarStyles">
+    <Styles.Resources>
+        <x:Double x:Key="CompactScrollBarThickness">8</x:Double>
+    </Styles.Resources>
+
+    <Style Selector="ScrollViewer">
+        <Setter Property="AllowAutoHide" Value="False"/>
+    </Style>
+    <Style Selector="DataGrid, ListBox, TreeView, ComboBox, TextBox">
+        <Setter Property="ScrollViewer.AllowAutoHide" Value="False"/>
+    </Style>
+    <Style Selector="ScrollBar">
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="ScrollBar:vertical, ScrollBar:vertical /template/ Thumb">
+        <Setter Property="Width" Value="{StaticResource CompactScrollBarThickness}"/>
+    </Style>
+    <Style Selector="ScrollBar:horizontal, ScrollBar:horizontal /template/ Thumb">
+        <Setter Property="Height" Value="{StaticResource CompactScrollBarThickness}"/>
+    </Style>
+    <Style Selector="ScrollBar /template/ RepeatButton#PART_LineUpButton,
+                     ScrollBar /template/ RepeatButton#PART_LineDownButton">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+</Styles>

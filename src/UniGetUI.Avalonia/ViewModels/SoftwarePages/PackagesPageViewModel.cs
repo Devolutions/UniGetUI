@@ -246,6 +246,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private bool _installerHostColumnVisible;
     [ObservableProperty] private bool _downloadSizeColumnVisible;
     [ObservableProperty] private bool _releaseDateColumnVisible;
+    [ObservableProperty] private bool _columnsFitToWindow;
     [ObservableProperty] private bool _reloadButtonVisible;
     [ObservableProperty] private string _reloadButtonTooltip = "";
     [ObservableProperty] private bool _isFilterPaneOpen;
@@ -325,8 +326,8 @@ public partial class PackagesPageViewModel : ViewModelBase
         SimilarSearchEnabled = !data.DisableSuggestedResultsRadio;
         RoleIsUpdateLike = data.PageRole == OperationType.Update;
         OptionalColumnsAvailable = data.PageRole != OperationType.Uninstall;
-        LoadColumnVisibility();
-        ColumnVisibilityChanged += LoadColumnVisibility;
+        LoadColumnLayout();
+        ColumnLayoutChanged += LoadColumnLayout;
         ReloadButtonVisible = !DisableReload;
         SearchBoxPlaceholder = CoreTools.Translate("Search for packages");
 
@@ -869,12 +870,12 @@ public partial class PackagesPageViewModel : ViewModelBase
     public const string DownloadSizeColumn = "DownloadSize";
     public const string ReleaseDateColumn = "ReleaseDate";
 
-    private static event Action? ColumnVisibilityChanged;
+    private static event Action? ColumnLayoutChanged;
 
     private static bool ColumnHidden(string column)
         => Settings.GetDictionaryItem<string, bool>(Settings.K.HiddenPackageListColumns, column);
 
-    private void LoadColumnVisibility()
+    public void LoadColumnLayout()
     {
         NameColumnVisible = !ColumnHidden(NameColumn);
         IdColumnVisible = !ColumnHidden(IdColumn);
@@ -887,6 +888,13 @@ public partial class PackagesPageViewModel : ViewModelBase
         if (!IdColumnVisible && !VersionColumnVisible && !NewVersionHeaderVisible && !SourceColumnVisible
             && !InstallerHostColumnVisible && !DownloadSizeColumnVisible && !ReleaseDateColumnVisible)
             NameColumnVisible = true;
+        ColumnsFitToWindow = !Settings.Get(Settings.K.DisablePackageListColumnAutoFit);
+    }
+
+    public static void SetColumnsFitToWindow(bool fit)
+    {
+        Settings.Set(Settings.K.DisablePackageListColumnAutoFit, !fit);
+        ColumnLayoutChanged?.Invoke();
     }
 
     public static void SetColumnVisible(string column, bool visible)
@@ -907,7 +915,7 @@ public partial class PackagesPageViewModel : ViewModelBase
                 else Settings.SetDictionaryItem(Settings.K.HiddenPackageListColumns, column, true);
                 break;
         }
-        ColumnVisibilityChanged?.Invoke();
+        ColumnLayoutChanged?.Invoke();
     }
 
     partial void OnDownloadSizeColumnVisibleChanged(bool value)

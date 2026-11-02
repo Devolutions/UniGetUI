@@ -93,6 +93,8 @@ public abstract partial class AbstractPackagesPage : UserControl,
                                   or nameof(PackagesPageViewModel.DownloadSizeColumnVisible)
                                   or nameof(PackagesPageViewModel.ReleaseDateColumnVisible))
                 LoadRealizedRowValues();
+            if (args.PropertyName is nameof(PackagesPageViewModel.ColumnsFitToWindow))
+                ApplyColumnSizing();
             if (args.PropertyName is nameof(PackagesPageViewModel.IsFilterPaneOpen))
             {
                 SyncFiltersButtonName();
@@ -162,6 +164,23 @@ public abstract partial class AbstractPackagesPage : UserControl,
             col.CanUserSort = true;
             col.CustomSortComparer = ObservablePackageCollection.GetColumnComparer(sorter.Value);
         }
+        ApplyColumnSizing();
+        AttachedToVisualTree += (_, _) =>
+        {
+            ViewModel.LoadColumnLayout();
+            ApplyColumnSizing();
+        };
+        PackageListColumnLayout.WidthsSaved += () =>
+        {
+            if (!ViewModel.ColumnsFitToWindow) ApplyColumnSizing();
+        };
+        PackageList.AddHandler(PointerReleasedEvent, (_, e) =>
+        {
+            if (!ViewModel.ColumnsFitToWindow
+                && e.Source is Visual source
+                && (source is DataGridColumnHeader || source.FindAncestorOfType<DataGridColumnHeader>() is not null))
+                Dispatcher.UIThread.Post(() => PackageListColumnLayout.SaveFrom(PackageList), DispatcherPriority.Background);
+        }, RoutingStrategies.Bubble, handledEventsToo: true);
 
         // Keyboard shortcuts on the package list. Handled on the tunnel route (and even when
         // already handled) because the DataGrid swallows Enter on the bubble route otherwise.
@@ -657,8 +676,25 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         var shown = items.OfType<MenuItem>().Where(item => item.IsChecked).ToList();
         if (shown.Count == 1) shown[0].IsEnabled = false;
+
+        bool fit = vm.ColumnsFitToWindow;
+        var fitItem = new MenuItem
+        {
+            Header = CoreTools.Translate("Fit columns to the window"),
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = fit,
+        };
+        fitItem.Click += (_, _) =>
+        {
+            if (fit) PackageListColumnLayout.SeedFrom(PackageList);
+            PackagesPageViewModel.SetColumnsFitToWindow(!fit);
+        };
+        items.Add(new Separator());
+        items.Add(fitItem);
         return items;
     }
+
+    private void ApplyColumnSizing() => PackageListColumnLayout.Apply(PackageList, ViewModel.ColumnsFitToWindow);
 
     private static MenuItem ColumnMenuItem(string label, string column, bool isChecked)
     {

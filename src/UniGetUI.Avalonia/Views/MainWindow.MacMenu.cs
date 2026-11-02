@@ -71,7 +71,9 @@ public partial class MainWindow
             Item(CoreTools.Translate("Toggle navigation panel"), ViewModel.ToggleSidebarCommand, null, Key.S, KeyModifiers.Control),
             new NativeMenuItemSeparator(),
             Action(CoreTools.Translate("Reload"), TriggerPageReload, Key.R, enabled: () => PageShortcutListener is not null),
-            Action(CoreTools.Translate("Package details"), TriggerPageDetails, Key.I, enabled: () => PageShortcutListener is not null)]);
+            Action(CoreTools.Translate("Package details"), TriggerPageDetails, Key.I, enabled: () => PageShortcutListener is not null),
+            Action(CoreTools.Translate("Details panel"), TriggerPageDetailsPane, Key.I, KeyModifiers.Shift,
+                enabled: () => PageDetailsPaneHost is not null)]);
 
         // macOS greys Minimize and Zoom out for a window in full screen.
         var window = Submenu(CoreTools.Translate("Window"),

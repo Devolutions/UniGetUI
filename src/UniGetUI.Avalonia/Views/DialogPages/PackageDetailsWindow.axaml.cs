@@ -53,6 +53,15 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
     public string? InstallVersion { get; init; }
 
+    public bool IsEmbedded { get; }
+
+    public IPackage Package => _vm.Package;
+
+    public event EventHandler? MainActionRequested;
+
+    public void CancelLoading() => _vm.CancelLoading();
+
+    private bool _activated;
     private readonly PackageDetailsViewModel _vm;
     private readonly TEL_InstallReferral _referral;
     private InstallOptionsViewModel? _installVm;
@@ -75,12 +84,17 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     public PackageDetailsWindow(
         IPackage package,
         OperationType operation,
-        TEL_InstallReferral referral)
+        TEL_InstallReferral referral,
+        bool embedded = false)
     {
         _referral = referral;
+        IsEmbedded = embedded;
         _vm = new PackageDetailsViewModel(package, operation);
         DataContext = _vm;
         InitializeComponent();
+
+        if (embedded)
+            ApplyEmbeddedLayout();
 
         ScreenshotStrip.RenderTransform = _screenshotStripTranslate;
         _screenshotGestureTimer = new DispatcherTimer
@@ -137,11 +151,41 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        ApplyLayoutForCurrentSize();
+        Activate();
         Dispatcher.UIThread.Post(() => MainActionButton.Focus(), DispatcherPriority.Background);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (IsEmbedded)
+            Activate();
+    }
+
+    private void Activate()
+    {
+        ApplyLayoutForCurrentSize();
+        if (_activated) return;
+        _activated = true;
         _ = _vm.LoadDetailsAsync();
-        TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
+        if (!IsEmbedded)
+            TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
         _ = InitInstallOptionsAsync();
+    }
+
+    private void ApplyEmbeddedLayout()
+    {
+        MinWidth = 0;
+        MinHeight = 0;
+        MaxWidth = double.PositiveInfinity;
+        MaxHeight = double.PositiveInfinity;
+        Background = Brushes.Transparent;
+        MainGrid.Margin = new Thickness(16, 12, 16, 16);
+        TitleIconBorder.Width = TitleIconBorder.Height = 64;
+        TitleIconBorder.CornerRadius = new CornerRadius(12);
+        TitleIcon.Width = TitleIcon.Height = 44;
+        TitleIcon.Margin = new Thickness(10);
+        TitleText.FontSize = 24;
     }
 
     private async Task InitInstallOptionsAsync()
@@ -976,6 +1020,12 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
     private async Task OnMainActionAsync()
     {
+        if (IsEmbedded)
+        {
+            MainActionRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         if (!await ConfirmUninstallAsync(_vm.OperationRole)) return;
         ShouldProceedWithOperation = true;
         Close();

@@ -316,6 +316,11 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         _ = LaunchInstall([package]);
     }
 
+    protected override bool SupportsDetailsPane => true;
+
+    protected override PackageDetailsWindow CreateDetailsPaneView(IPackage package) =>
+        new(package, OperationType.Install, TEL_InstallReferral.DIRECT_SEARCH, embedded: true);
+
     protected override async Task ShowDetailsForPackage(IPackage? package)
     {
         if (package is null) return;

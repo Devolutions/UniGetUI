@@ -323,6 +323,11 @@ public class InstalledPackagesPage : AbstractPackagesPage
         _ = ConfirmAndLaunchUninstall([package]);
     }
 
+    protected override bool SupportsDetailsPane => true;
+
+    protected override PackageDetailsWindow CreateDetailsPaneView(IPackage package) =>
+        new(package, OperationType.Uninstall, TEL_InstallReferral.ALREADY_INSTALLED, embedded: true);
+
     protected override async Task ShowDetailsForPackage(IPackage? package)
     {
         if (package is null) return;

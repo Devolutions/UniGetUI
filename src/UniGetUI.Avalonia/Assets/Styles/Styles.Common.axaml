@@ -922,6 +922,57 @@
     <Style Selector="ListBoxItem.segment-item:selected /template/ Border#SelectionPill">
         <Setter Property="Opacity" Value="1"/>
     </Style>
+    <Style Selector="ToggleButton.segment-toggle">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <ContentPresenter Name="ContentHost"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
+                                      CornerRadius="{TemplateBinding CornerRadius}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Content="{TemplateBinding Content}"
+                                      Padding="{TemplateBinding Padding}"
+                                      VerticalContentAlignment="Center"
+                                      HorizontalContentAlignment="Center"/>
+                    <Border Name="SelectionPill"
+                            Width="16" Height="3" CornerRadius="1.5"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Margin="0,0,0,2"
+                            Opacity="0">
+                        <Border.Transitions>
+                            <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.1"/></Transitions>
+                        </Border.Transitions>
+                    </Border>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="ToggleButton.segment-toggle:pointerover /template/ ContentPresenter#ContentHost">
+        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.segment-toggle:pressed /template/ ContentPresenter#ContentHost">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.segment-toggle:checked /template/ ContentPresenter#ContentHost">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.segment-toggle:checked:pointerover /template/ ContentPresenter#ContentHost">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.segment-toggle:checked /template/ Border#SelectionPill">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="ToggleButton.segment-toggle:disabled">
+        <Setter Property="Opacity" Value="0.4"/>
+    </Style>
 
     <!-- SettingsCard appearance -->
     <Style Selector="Border.settings-card">

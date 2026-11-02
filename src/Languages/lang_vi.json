@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Các gói được liệt kê ở đây sẽ không được tính đến khi kiểm tra cập nhật. Nhấp vào nút cập nhật bên phải để cập nhật chúng một lần hoặc nút xóa để ngừng bỏ qua các bản cập nhật của chúng.",
   "Updating {0} once. Its updates will stay ignored.": "Đang cập nhật {0} một lần. Các bản cập nhật của gói này sẽ tiếp tục bị bỏ qua.",
   "{0} is already being updated": "{0} đang được cập nhật",
-  "{0} is already up to date": "{0} đã được cập nhật"
+  "{0} is already up to date": "{0} đã được cập nhật",
+  "Could not refresh from remote": "Không thể làm mới từ kho từ xa",
+  "Remote information may be out of date": "Thông tin từ kho từ xa có thể đã lỗi thời",
+  "Error details": "Chi tiết lỗi"
 }

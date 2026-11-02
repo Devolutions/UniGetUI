@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "ಇಲ್ಲಿ ಪಟ್ಟಿ ಮಾಡಲಾದ ಪ್ಯಾಕೇಜ್‌ಗಳನ್ನು updates ಪರಿಶೀಲಿಸುವಾಗ ಗಣನೆಗೆ ತೆಗೆದುಕೊಳ್ಳಲಾಗುವುದಿಲ್ಲ. ಅವುಗಳನ್ನು ಒಮ್ಮೆ ನವೀಕರಿಸಲು ಅವುಗಳ ಬಲಭಾಗದಲ್ಲಿರುವ update ಬಟನ್ ಕ್ಲಿಕ್ ಮಾಡಿ, ಅಥವಾ ಅವುಗಳ updates ಅನ್ನು ನಿರ್ಲಕ್ಷಿಸುವುದನ್ನು ನಿಲ್ಲಿಸಲು delete ಬಟನ್ ಕ್ಲಿಕ್ ಮಾಡಿ.",
   "Updating {0} once. Its updates will stay ignored.": "{0} ಅನ್ನು ಒಮ್ಮೆ ನವೀಕರಿಸಲಾಗುತ್ತಿದೆ. ಅದರ updates ನಿರ್ಲಕ್ಷಿಸಲ್ಪಟ್ಟೇ ಇರುತ್ತವೆ.",
   "{0} is already being updated": "{0} ಈಗಾಗಲೇ ನವೀಕರಿಸಲಾಗುತ್ತಿದೆ",
-  "{0} is already up to date": "{0} ಈಗಾಗಲೇ ಇತ್ತೀಚಿನ ಆವೃತ್ತಿಯಲ್ಲಿದೆ"
+  "{0} is already up to date": "{0} ಈಗಾಗಲೇ ಇತ್ತೀಚಿನ ಆವೃತ್ತಿಯಲ್ಲಿದೆ",
+  "Could not refresh from remote": "ರಿಮೋಟ್‌ನಿಂದ ರಿಫ್ರೆಶ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
+  "Remote information may be out of date": "ರಿಮೋಟ್ ಮಾಹಿತಿ ಹಳೆಯದಾಗಿರಬಹುದು",
+  "Error details": "ದೋಷದ ವಿವರಗಳು"
 }

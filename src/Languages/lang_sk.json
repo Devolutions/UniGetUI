@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Balíky uvedené tu sa pri kontrole aktualizácií nebudú zohľadňovať. Kliknutím na tlačidlo aktualizácie napravo ich raz aktualizujete alebo kliknutím na tlačidlo odstránenia prestanete ignorovať ich aktualizácie.",
   "Updating {0} once. Its updates will stay ignored.": "Prebieha jednorazová aktualizácia {0}. Jeho aktualizácie zostanú ignorované.",
   "{0} is already being updated": "{0} sa už aktualizuje",
-  "{0} is already up to date": "{0} je už aktuálny"
+  "{0} is already up to date": "{0} je už aktuálny",
+  "Could not refresh from remote": "Nepodarilo sa obnoviť údaje zo vzdialeného repozitára",
+  "Remote information may be out of date": "Informácie zo vzdialeného repozitára môžu byť zastarané",
+  "Error details": "Podrobnosti o chybe"
 }

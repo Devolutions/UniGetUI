@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "แพ็กเกจที่แสดงที่นี่จะไม่ถูกนำมาพิจารณาเมื่อตรวจสอบการอัปเดต คลิกปุ่มอัปเดตทางด้านขวาเพื่ออัปเดตแพ็กเกจเหล่านี้ครั้งเดียว หรือคลิกปุ่มลบเพื่อหยุดละเว้นการอัปเดต",
   "Updating {0} once. Its updates will stay ignored.": "กำลังอัปเดต {0} ครั้งเดียว โดยยังคงละเว้นการอัปเดตของแพ็กเกจนี้",
   "{0} is already being updated": "{0} กำลังอัปเดตอยู่แล้ว",
-  "{0} is already up to date": "{0} เป็นเวอร์ชันล่าสุดอยู่แล้ว"
+  "{0} is already up to date": "{0} เป็นเวอร์ชันล่าสุดอยู่แล้ว",
+  "Could not refresh from remote": "ไม่สามารถรีเฟรชจากรีโมตได้",
+  "Remote information may be out of date": "ข้อมูลจากรีโมตอาจไม่เป็นปัจจุบัน",
+  "Error details": "รายละเอียดข้อผิดพลาด"
 }

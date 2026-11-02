@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "আপডেটের জন্য চেক করার সময় এখানে তালিকাভুক্ত প্যাকেজগুলি অ্যাকাউন্টে নেওয়া হবে না। একবার আপডেট করতে তাদের ডান পাশের আপডেট বোতামে ক্লিক করুন, অথবা তাদের আপডেট উপেক্ষা করা বন্ধ করতে মুছে ফেলার বোতামে ক্লিক করুন।",
   "Updating {0} once. Its updates will stay ignored.": "{0}-কে একবার আপডেট করা হচ্ছে। এর আপডেটগুলি উপেক্ষিতই থাকবে।",
   "{0} is already being updated": "{0}-কে ইতিমধ্যেই আপডেট করা হচ্ছে",
-  "{0} is already up to date": "{0} ইতিমধ্যেই সর্বশেষ সংস্করণে আছে"
+  "{0} is already up to date": "{0} ইতিমধ্যেই সর্বশেষ সংস্করণে আছে",
+  "Could not refresh from remote": "রিমোট থেকে রিফ্রেশ করা যায়নি",
+  "Remote information may be out of date": "রিমোটের তথ্য পুরোনো হতে পারে",
+  "Error details": "ত্রুটির বিবরণ"
 }

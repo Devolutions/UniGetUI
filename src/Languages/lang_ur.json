@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "اپ ڈیٹس کی جانچ کرتے وقت یہاں درج پیکیجز کو مدنظر نہیں رکھا جائے گا۔ انہیں ایک بار اپ ڈیٹ کرنے کے لیے ان کے دائیں جانب اپ ڈیٹ بٹن پر کلک کریں، یا ان کی اپ ڈیٹس نظرانداز کرنا بند کرنے کے لیے حذف بٹن پر کلک کریں۔",
   "Updating {0} once. Its updates will stay ignored.": "{0} کو ایک بار اپ ڈیٹ کیا جا رہا ہے۔ اس کی اپ ڈیٹس نظرانداز ہی رہیں گی۔",
   "{0} is already being updated": "{0} پہلے ہی اپ ڈیٹ ہو رہا ہے",
-  "{0} is already up to date": "{0} پہلے ہی تازہ ترین ہے"
+  "{0} is already up to date": "{0} پہلے ہی تازہ ترین ہے",
+  "Could not refresh from remote": "ریموٹ سے تازہ کاری نہیں ہو سکی",
+  "Remote information may be out of date": "ریموٹ کی معلومات پرانی ہو سکتی ہیں",
+  "Error details": "خرابی کی تفصیلات"
 }

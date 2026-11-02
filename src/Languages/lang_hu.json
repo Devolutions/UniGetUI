@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Az itt felsorolt csomagokat a rendszer nem veszi figyelembe a frissítések keresésekor. Kattintson a jobb oldali frissítés gombra az egyszeri frissítésükhöz, vagy a törlés gombra a frissítéseik figyelmen kívül hagyásának megszüntetéséhez.",
   "Updating {0} once. Its updates will stay ignored.": "{0} egyszeri frissítése folyamatban. A frissítései továbbra is figyelmen kívül maradnak.",
   "{0} is already being updated": "{0} frissítése már folyamatban van",
-  "{0} is already up to date": "{0} már naprakész"
+  "{0} is already up to date": "{0} már naprakész",
+  "Could not refresh from remote": "Nem sikerült frissíteni a távoli forrásból",
+  "Remote information may be out of date": "A távoli információk elavultak lehetnek",
+  "Error details": "Hiba részletei"
 }

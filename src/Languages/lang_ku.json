@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "ئەو پاکێجانەی لێرە لیست کراون لە کاتی پشکنینی نوێکردنەوەدا لەبەرچاو ناگیرێن. کلیک لە دوگمەی نوێکردنەوەی لای ڕاستیان بکە بۆ ئەوەی یەک جار نوێیان بکەیتەوە، یان لە دوگمەی سڕینەوە بکە بۆ وەستاندنی پشتگوێخستنی نوێکردنەوەکانیان.",
   "Updating {0} once. Its updates will stay ignored.": "نوێکردنەوەی {0} بۆ یەک جار دەکرێت. نوێکردنەوەکانی بەردەوام پشتگوێ دەخرێن.",
   "{0} is already being updated": "پێشتر خەریکی نوێکردنەوەی {0}ین",
-  "{0} is already up to date": "{0} پێشتر نوێترین وەشانە"
+  "{0} is already up to date": "{0} پێشتر نوێترین وەشانە",
+  "Could not refresh from remote": "نەکرا لە ڕیمۆتەوە نوێ بکرێتەوە",
+  "Remote information may be out of date": "لەوانەیە زانیارییەکانی ڕیمۆت کۆن بووبێتن",
+  "Error details": "وردەکارییەکانی هەڵە"
 }

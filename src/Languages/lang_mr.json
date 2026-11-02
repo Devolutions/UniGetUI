@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "अद्यतने तपासताना येथे सूचीबद्ध पॅकेजेस विचारात घेतली जाणार नाहीत. त्यांना एकदा अद्यतनित करण्यासाठी त्यांच्या उजवीकडील अद्यतन बटणावर क्लिक करा, किंवा त्यांच्या अद्यतनांकडे दुर्लक्ष करणे थांबवण्यासाठी हटवा बटणावर क्लिक करा.",
   "Updating {0} once. Its updates will stay ignored.": "{0} एकदा अद्यतनित करत आहे. त्याची अद्यतने दुर्लक्षितच राहतील.",
   "{0} is already being updated": "{0} आधीपासून अद्यतनित होत आहे",
-  "{0} is already up to date": "{0} आधीच अद्ययावत आहे"
+  "{0} is already up to date": "{0} आधीच अद्ययावत आहे",
+  "Could not refresh from remote": "रिमोटवरून रिफ्रेश करता आले नाही",
+  "Remote information may be out of date": "रिमोटची माहिती जुनी असू शकते",
+  "Error details": "त्रुटीचे तपशील"
 }

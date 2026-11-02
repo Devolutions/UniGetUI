@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "මෙහි ලැයිස්තුගත පැකේජ යාවත්කාලීන පරීක්ෂා කිරීමේදී සැලකිල්ලට නොගැනේ. ඒවා එක් වරක් යාවත්කාලීන කිරීමට දකුණු පස ඇති යාවත්කාලීන බොත්තම ක්ලික් කරන්න, නැතහොත් ඒවායේ යාවත්කාලීන නොසලකා හැරීම නැවැත්වීමට මැකීමේ බොත්තම ක්ලික් කරන්න.",
   "Updating {0} once. Its updates will stay ignored.": "{0} එක් වරක් යාවත්කාලීන කරමින්. එහි යාවත්කාලීන නොසලකා හරිනු ඇත.",
   "{0} is already being updated": "{0} දැනටමත් යාවත්කාලීන වෙමින් පවතී",
-  "{0} is already up to date": "{0} දැනටමත් යාවත්කාලීනයි"
+  "{0} is already up to date": "{0} දැනටමත් යාවත්කාලීනයි",
+  "Could not refresh from remote": "remote වෙතින් නැවුම් කළ නොහැකි විය",
+  "Remote information may be out of date": "remote තොරතුරු යාවත්කාලීන නොවී තිබිය හැක",
+  "Error details": "දෝෂ විස්තර"
 }

@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Pakiety wymienione tutaj nie będą uwzględniane podczas sprawdzania dostępności aktualizacji. Kliknij przycisk aktualizacji po prawej stronie, aby zaktualizować pakiet jednorazowo, lub przycisk usuwania, aby przestać ignorować jego aktualizacje.",
   "Updating {0} once. Its updates will stay ignored.": "Aktualizowanie {0} jednorazowo. Jego aktualizacje nadal będą ignorowane.",
   "{0} is already being updated": "{0} jest już aktualizowany",
-  "{0} is already up to date": "{0} jest już aktualny"
+  "{0} is already up to date": "{0} jest już aktualny",
+  "Could not refresh from remote": "Nie udało się pobrać danych ze zdalnego repozytorium",
+  "Remote information may be out of date": "Informacje ze zdalnego repozytorium mogą być nieaktualne",
+  "Error details": "Szczegóły błędu"
 }

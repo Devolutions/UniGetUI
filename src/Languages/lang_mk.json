@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Пакетите наведени овде нема да се земаат предвид при проверка за ажурирања. Кликнете на копчето за ажурирање десно за да ги ажурирате еднаш или на копчето за бришење за да престанете да ги игнорирате нивните ажурирања.",
   "Updating {0} once. Its updates will stay ignored.": "{0} се ажурира еднаш. Неговите ажурирања ќе останат игнорирани.",
   "{0} is already being updated": "{0} веќе се ажурира",
-  "{0} is already up to date": "{0} е веќе ажуриран"
+  "{0} is already up to date": "{0} е веќе ажуриран",
+  "Could not refresh from remote": "Не може да се освежи од оддалечениот извор",
+  "Remote information may be out of date": "Информациите од оддалечениот извор можеби се застарени",
+  "Error details": "Детали за грешката"
 }

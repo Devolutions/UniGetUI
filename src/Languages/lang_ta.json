@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "புதுப்பிப்புகளைச் சரிபார்க்கும்போது இங்கே பட்டியலிடப்பட்டுள்ள தொகுப்புகள் கணக்கில் எடுத்துக்கொள்ளப்படாது. அவற்றை ஒருமுறை புதுப்பிக்க வலப்புறமுள்ள புதுப்பிப்பு பொத்தானைக் கிளிக் செய்யவும்; அல்லது புதுப்பிப்புகளைப் புறக்கணிப்பதை நிறுத்த நீக்கு பொத்தானைக் கிளிக் செய்யவும்.",
   "Updating {0} once. Its updates will stay ignored.": "{0}-ஐ ஒருமுறை புதுப்பிக்கிறது. அதன் புதுப்பிப்புகள் தொடர்ந்து புறக்கணிக்கப்படும்.",
   "{0} is already being updated": "{0} ஏற்கனவே புதுப்பிக்கப்பட்டு வருகிறது",
-  "{0} is already up to date": "{0} ஏற்கனவே சமீபத்திய பதிப்பில் உள்ளது"
+  "{0} is already up to date": "{0} ஏற்கனவே சமீபத்திய பதிப்பில் உள்ளது",
+  "Could not refresh from remote": "தொலைநிலையிலிருந்து புதுப்பிக்க முடியவில்லை",
+  "Remote information may be out of date": "தொலைநிலைத் தகவல் புதுப்பித்த நிலையில் இல்லாமல் இருக்கலாம்",
+  "Error details": "பிழை விவரங்கள்"
 }

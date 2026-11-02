@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Els paquets que es mostren aquí no es tindran en compte en cercar actualitzacions. Feu clic al botó d'actualització de la dreta per actualitzar-los una vegada, o al botó de supressió per deixar d'ignorar-ne les actualitzacions.",
   "Updating {0} once. Its updates will stay ignored.": "S'està actualitzant {0} una vegada. Les seves actualitzacions continuaran ignorades.",
   "{0} is already being updated": "{0} ja s'està actualitzant",
-  "{0} is already up to date": "{0} ja està actualitzat"
+  "{0} is already up to date": "{0} ja està actualitzat",
+  "Could not refresh from remote": "No s'ha pogut actualitzar des del remot",
+  "Remote information may be out of date": "La informació remota pot estar desactualitzada",
+  "Error details": "Detalls de l'error"
 }

@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Hindi isasama sa pagsusuri ng mga update ang mga package na nakalista rito. I-click ang button na update sa kanan ng mga ito para i-update nang isang beses, o ang button na delete para huwag nang balewalain ang mga update ng mga ito.",
   "Updating {0} once. Its updates will stay ignored.": "Isang beses ina-update ang {0}. Patuloy na babalewalain ang mga update nito.",
   "{0} is already being updated": "Ina-update na ang {0}",
-  "{0} is already up to date": "Napapanahon na ang {0}."
+  "{0} is already up to date": "Napapanahon na ang {0}.",
+  "Could not refresh from remote": "Hindi ma-refresh mula sa remote",
+  "Remote information may be out of date": "Maaaring luma na ang impormasyon mula sa remote",
+  "Error details": "Mga detalye ng error"
 }

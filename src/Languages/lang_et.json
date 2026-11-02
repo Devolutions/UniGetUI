@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Siin loetletud pakette ei arvestata uuenduste kontrollimisel. Klõpsa paketi paremal asuvat uuendamisnuppu, et seda üks kord uuendada, või kustutamisnuppu, et selle uuenduste ignoreerimine lõpetada.",
   "Updating {0} once. Its updates will stay ignored.": "Uuendan {0} üks kord. Selle uuendused jäävad ignoreerituks.",
   "{0} is already being updated": "Paketti {0} uuendatakse juba",
-  "{0} is already up to date": "Pakett {0} on juba ajakohane"
+  "{0} is already up to date": "Pakett {0} on juba ajakohane",
+  "Could not refresh from remote": "Kaugserverist ei saanud värskendada",
+  "Remote information may be out of date": "Kaugserveri teave võib olla aegunud",
+  "Error details": "Tõrke üksikasjad"
 }

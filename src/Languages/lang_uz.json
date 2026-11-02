@@ -2197,5 +2197,8 @@
     "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Bu yerda ko‘rsatilgan paketlar yangilanishlarni tekshirishda hisobga olinmaydi. Ularni bir marta yangilash uchun o‘ng tomonidagi yangilash tugmasini bosing yoki yangilanishlarini e’tiborsiz qoldirishni to‘xtatish uchun o‘chirish tugmasini bosing.",
     "Updating {0} once. Its updates will stay ignored.": "{0} bir marta yangilanmoqda. Uning yangilanishlari e’tiborsiz qoldirilishda davom etadi.",
     "{0} is already being updated": "{0} allaqachon yangilanmoqda",
-    "{0} is already up to date": "{0} allaqachon yangilangan"
+    "{0} is already up to date": "{0} allaqachon yangilangan",
+    "Could not refresh from remote": "Masofaviy ombordan yangilab bo‘lmadi",
+    "Remote information may be out of date": "Masofaviy ombor ma’lumotlari eskirgan bo‘lishi mumkin",
+    "Error details": "Xatolik tafsilotlari"
 }

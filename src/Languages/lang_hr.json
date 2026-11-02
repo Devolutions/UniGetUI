@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Paketi navedeni ovdje neće se uzimati u obzir pri provjeri ažuriranja. Kliknite gumb za ažuriranje s njihove desne strane da biste ih jednom ažurirali ili gumb za brisanje da biste prestali zanemarivati njihova ažuriranja.",
   "Updating {0} once. Its updates will stay ignored.": "{0} se jednokratno ažurira. Njegova će ažuriranja i dalje biti zanemarena.",
   "{0} is already being updated": "{0} se već ažurira",
-  "{0} is already up to date": "{0} je već ažuran"
+  "{0} is already up to date": "{0} je već ažuran",
+  "Could not refresh from remote": "Nije moguće osvježiti s udaljenog izvora",
+  "Remote information may be out of date": "Informacije s udaljenog izvora možda nisu ažurne",
+  "Error details": "Detalji pogreške"
 }

@@ -2202,5 +2202,8 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "Τα πακέτα που εμφανίζονται εδώ δεν λαμβάνονται υπόψη κατά τον έλεγχο για ενημερώσεις. Κάντε κλικ στο κουμπί ενημέρωσης στα δεξιά τους για να τα ενημερώσετε μία φορά ή στο κουμπί διαγραφής για να σταματήσετε να αγνοείτε τις ενημερώσεις τους.",
   "Updating {0} once. Its updates will stay ignored.": "Γίνεται ενημέρωση του {0} μία φορά. Οι ενημερώσεις του θα εξακολουθήσουν να αγνοούνται.",
   "{0} is already being updated": "Το {0} ενημερώνεται ήδη",
-  "{0} is already up to date": "Το {0} είναι ήδη ενημερωμένο"
+  "{0} is already up to date": "Το {0} είναι ήδη ενημερωμένο",
+  "Could not refresh from remote": "Δεν ήταν δυνατή η ανανέωση από το απομακρυσμένο αποθετήριο",
+  "Remote information may be out of date": "Οι πληροφορίες από το απομακρυσμένο αποθετήριο ενδέχεται να μην είναι ενημερωμένες",
+  "Error details": "Λεπτομέρειες σφάλματος"
 }

@@ -198,6 +198,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
     }
 
     public string VersionComboString { get; }
+    public string CardVersionString { get; }
     public string ListedNameTooltip { get; private set; } = "";
     public float ListedOpacity { get; private set; } = 1.0f;
     public string TagBackdropIconPath { get; private set; } = "";
@@ -261,6 +262,11 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
         Package = package;
         _page = page;
         VersionComboString = package.VersionString;
+        CardVersionString = package.IsUpgradable
+            && !string.IsNullOrWhiteSpace(package.NewVersionString)
+            && package.NewVersionString != package.VersionString
+            ? $"{package.VersionString} → {package.NewVersionString}"
+            : package.VersionString;
         InstalledVersionTooltip = InstalledVersionNotice.BuildTooltip(package);
 
         Package.PropertyChanged += Package_PropertyChanged;

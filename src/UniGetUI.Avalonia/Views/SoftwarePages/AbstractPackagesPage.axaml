@@ -983,7 +983,7 @@
                                                     <TextBlock Text="{Binding Package.Id}"
                                                                FontSize="11" Opacity="0.7"
                                                                TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding VersionComboString}"
+                                                    <TextBlock Text="{Binding CardVersionString}"
                                                                FontSize="11" Opacity="0.5"
                                                                TextTrimming="CharacterEllipsis"
                                                                ToolTip.Tip="{Binding InstalledVersionTooltip}"/>
@@ -1098,7 +1098,7 @@
                                                            TextAlignment="Center"
                                                            MaxLines="2"/>
                                                 <TextBlock Grid.Row="3"
-                                                           Text="{Binding VersionComboString}"
+                                                           Text="{Binding CardVersionString}"
                                                            FontSize="11" Opacity="0.5"
                                                            HorizontalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis"

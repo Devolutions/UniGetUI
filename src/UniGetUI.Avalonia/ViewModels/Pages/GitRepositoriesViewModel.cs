@@ -557,30 +557,40 @@ public partial class GitRepositoriesViewModel : ViewModelBase
     private bool _reordering, _repositorySortPending, _worktreeSortPending;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(RepositoryNameHeader), nameof(RepositorySizeHeader))]
+    [NotifyPropertyChangedFor(nameof(RepositoryNameHeader), nameof(RepositorySizeHeader),
+        nameof(RepositoryNameSortIndicator), nameof(RepositorySizeSortIndicator))]
     private GitListSort _repositorySort;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(WorktreeNameHeader), nameof(WorktreeSizeHeader))]
+    [NotifyPropertyChangedFor(nameof(WorktreeNameHeader), nameof(WorktreeSizeHeader),
+        nameof(WorktreeNameSortIndicator), nameof(WorktreeSizeSortIndicator))]
     private GitListSort _worktreeSort;
 
-    public string RepositoryNameHeader => NameHeader(RepositorySort);
-    public string RepositorySizeHeader => SizeHeader(RepositorySort);
-    public string WorktreeNameHeader => NameHeader(WorktreeSort);
-    public string WorktreeSizeHeader => SizeHeader(WorktreeSort);
+    public string RepositoryNameHeader => SortHeader("Name", RepositoryNameSortIndicator);
+    public string RepositorySizeHeader => SortHeader("Total size", RepositorySizeSortIndicator);
+    public string WorktreeNameHeader => SortHeader("Name", WorktreeNameSortIndicator);
+    public string WorktreeSizeHeader => SortHeader("Size", WorktreeSizeSortIndicator);
+    public string RepositoryNameSortIndicator => NameSortIndicator(RepositorySort);
+    public string RepositorySizeSortIndicator => SizeSortIndicator(RepositorySort);
+    public string WorktreeNameSortIndicator => NameSortIndicator(WorktreeSort);
+    public string WorktreeSizeSortIndicator => SizeSortIndicator(WorktreeSort);
 
-    private static string NameHeader(GitListSort sort) => sort switch
+    private static string SortHeader(string text, string indicator) => indicator.Length == 0
+        ? CoreTools.Translate(text)
+        : $"{CoreTools.Translate(text)} {indicator}";
+
+    private static string NameSortIndicator(GitListSort sort) => sort switch
     {
-        GitListSort.NameAscending => CoreTools.Translate("Name") + " ▲",
-        GitListSort.NameDescending => CoreTools.Translate("Name") + " ▼",
-        _ => CoreTools.Translate("Name"),
+        GitListSort.NameAscending => "▲",
+        GitListSort.NameDescending => "▼",
+        _ => "",
     };
 
-    private static string SizeHeader(GitListSort sort) => sort switch
+    private static string SizeSortIndicator(GitListSort sort) => sort switch
     {
-        GitListSort.SizeAscending => CoreTools.Translate("Size") + " ▲",
-        GitListSort.SizeDescending => CoreTools.Translate("Size") + " ▼",
-        _ => CoreTools.Translate("Size"),
+        GitListSort.SizeAscending => "▲",
+        GitListSort.SizeDescending => "▼",
+        _ => "",
     };
 
     /// <summary>A–Z, then Z–A, then the order they were listed in.</summary>

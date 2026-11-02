@@ -1,6 +1,8 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -264,15 +266,215 @@ public sealed class GitRepositoriesTests : IDisposable
             Assert.True(size.IsEffectivelyVisible);
             Assert.DoesNotContain("on disk", repository.DetailText);
 
-            Button[] sizeHeaders = [.. view.GetVisualDescendants().OfType<Button>()
-                .Where(button => button.Content as string == "Size")];
-            Assert.Equal(2, sizeHeaders.Length);
-            Assert.All(sizeHeaders, header => Assert.True(header.IsEffectivelyVisible));
-            sizeHeaders[0].Command!.Execute(null);
-            sizeHeaders[1].Command!.Execute(null);
+            Button repositoryHeader = view.FindControl<Button>("RepositorySizeSort")!;
+            Button worktreeHeader = view.FindControl<Button>("WorktreeSizeSort")!;
+            Assert.True(repositoryHeader.IsEffectivelyVisible);
+            Assert.True(worktreeHeader.IsEffectivelyVisible);
+            Assert.Equal("Total size", AutomationProperties.GetName(repositoryHeader));
+            Assert.Equal("Size", AutomationProperties.GetName(worktreeHeader));
+            repositoryHeader.Command!.Execute(null);
+            worktreeHeader.Command!.Execute(null);
             Assert.Equal(GitListSort.SizeDescending, vm.RepositorySort);
             Assert.Equal(GitListSort.SizeDescending, vm.WorktreeSort);
-            Assert.Equal("Size ▼", vm.RepositorySizeHeader);
+            Assert.Equal("Total size ▼", AutomationProperties.GetName(repositoryHeader));
+            Assert.Equal("Size ▼", AutomationProperties.GetName(worktreeHeader));
+        }
+        finally
+        {
+            window.Close();
+            vm.Stop();
+        }
+    }, CancellationToken.None);
+
+    [Theory]
+    [InlineData(1200, 12, 2)]
+    [InlineData(1200, 12, 12)]
+    [InlineData(900, 2, 12)]
+    [InlineData(700, 2, 2)]
+    public Task GitListColumnsAlignAtDifferentWidthsAndScrollbarStates(
+        int width, int repositoryCount, int worktreeCount) => _session.Dispatch(() =>
+    {
+        if (!Application.Current!.Styles.OfType<FluentTheme>().Any())
+            Application.Current.Styles.Add(new FluentTheme());
+
+        var vm = new GitRepositoriesViewModel(new GitRepositoryService(_git)) { IsGitMissing = true };
+        var repositories = new List<GitRepositoryItemViewModel>();
+        for (int i = 0; i < repositoryCount; i++)
+        {
+            string path = Path.Combine(_testRoot, $"clone-{i}");
+            var repository = new GitRepositoryItemViewModel(path, null)
+            {
+                CloneSize = (i + 1L) * 1024 * 1024,
+                WorktreeCount = 6,
+                LastChecked = new DateTime(2026, 11, 1, 21, 22, 0),
+                Status = new GitRepositoryStatus(path, i == 1 ? GitRepositoryState.Error : GitRepositoryState.UpToDate,
+                    "main", "main", Error: i == 1 ? "Git failed" : null),
+            };
+            repositories.Add(repository);
+            vm.Repositories.Add(repository);
+        }
+        vm.SelectedRepository = repositories[0];
+
+        var worktrees = new List<GitWorktreeItemViewModel>();
+        for (int i = 0; i < worktreeCount; i++)
+        {
+            var worktree = new GitWorktreeItemViewModel(new GitWorktree(
+                Path.Combine(_testRoot, $"worktree-{i}"), null, "main", i == 0, false, null, false,
+                HasLocalChanges: i == 1, UniqueCommits: i == 1 ? 3 : 0))
+            {
+                Size = (i + 1L) * 1024 * 1024,
+            };
+            worktrees.Add(worktree);
+            vm.Worktrees.Add(worktree);
+        }
+
+        var view = new GitRepositoriesPage(vm);
+        var window = new Window { Width = width, Height = 700, Content = view };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+
+            var repoList = view.FindControl<ListBox>("RepositoryList")!;
+            var repoScroll = repoList.GetVisualDescendants().OfType<ScrollViewer>().First();
+            var worktreeScroll = view.FindControl<ScrollViewer>("WorktreeScroll")!;
+            Assert.Equal(repositoryCount > 2, repoScroll.Extent.Height > repoScroll.Viewport.Height);
+            Assert.Equal(worktreeCount > 2, worktreeScroll.Extent.Height > worktreeScroll.Viewport.Height);
+
+            Grid Row(object item) => view.GetVisualDescendants().OfType<Grid>()
+                .Single(grid => grid.Classes.Contains("git-list-row") && ReferenceEquals(grid.DataContext, item));
+            Control Cell(Grid row, string className) => row.GetVisualDescendants().OfType<Control>()
+                .Single(control => control.Classes.Contains(className));
+            TextBlock Name(Grid row, string name) => row.GetVisualDescendants().OfType<TextBlock>()
+                .Single(text => text.Text == name);
+            static double Left(Control control, Window root) => control.TranslatePoint(default, root)!.Value.X;
+            static double Right(Control control, Window root) => Left(control, root) + control.Bounds.Width;
+            void SameLeft(Control first, Control second) =>
+                Assert.InRange(Math.Abs(Left(first, window) - Left(second, window)), 0, 0.75);
+            void SameRight(Control first, Control second) =>
+                Assert.InRange(Math.Abs(Right(first, window) - Right(second, window)), 0, 0.75);
+
+            Grid repoRow = Row(repositories[0]);
+            Grid mainRow = Row(worktrees[0]);
+            Grid otherRow = Row(worktrees[1]);
+            var repoName = view.FindControl<TextBlock>("RepositoryNameLabel")!;
+            var worktreeName = view.FindControl<TextBlock>("WorktreeNameLabel")!;
+            var repoStatus = view.FindControl<TextBlock>("RepositoryStatusHeader")!;
+            var worktreeStatus = view.FindControl<TextBlock>("WorktreeStatusHeader")!;
+            var repoSize = view.FindControl<TextBlock>("RepositorySizeLabel")!;
+            var worktreeSize = view.FindControl<TextBlock>("WorktreeSizeLabel")!;
+            var repoActions = view.FindControl<TextBlock>("RepositoryActionsHeader")!;
+            var worktreeActions = view.FindControl<TextBlock>("WorktreeActionsHeader")!;
+
+            SameLeft(repoName, worktreeName);
+            SameLeft(repoName, Name(repoRow, repositories[0].Name));
+            SameLeft(worktreeName, Name(mainRow, worktrees[0].Name));
+            SameLeft(repoStatus, worktreeStatus);
+            SameLeft(repoStatus, Cell(repoRow, "git-status-cell"));
+            SameLeft(worktreeStatus, Cell(mainRow, "git-status-cell"));
+            SameRight(repoSize, worktreeSize);
+            SameRight(repoSize, Cell(repoRow, "git-size-cell"));
+            SameRight(worktreeSize, Cell(mainRow, "git-size-cell"));
+            SameRight(worktreeSize, Cell(otherRow, "git-size-cell"));
+            SameLeft(repoActions, worktreeActions);
+            SameLeft(repoActions, Cell(repoRow, "git-actions"));
+            SameLeft(worktreeActions, Cell(mainRow, "git-actions"));
+            SameLeft(worktreeActions, Cell(otherRow, "git-actions"));
+
+            Button MainOpen() => Cell(mainRow, "git-actions").GetVisualDescendants().OfType<Button>()
+                .Single(button => button.Content as string == "Open folder");
+            Button OtherOpen() => Cell(otherRow, "git-actions").GetVisualDescendants().OfType<Button>()
+                .Single(button => button.Content as string == "Open folder");
+            SameLeft(MainOpen(), OtherOpen());
+
+            Control statusCell = Cell(otherRow, "git-status-cell");
+            Border[] visibleTags = [.. statusCell.GetVisualDescendants().OfType<Border>()
+                .Where(border => border.Classes.Contains("worktree-status") && border.IsEffectivelyVisible)];
+            Assert.Equal(2, visibleTags.Length);
+            Assert.All(visibleTags, tag => Assert.True(Right(tag, window) <= Right(statusCell, window) + 0.75));
+            if (width == 700)
+            {
+                Assert.True(((TextBlock)visibleTags[0].Child!).Bounds.Height > 16);
+                TextBlock details = Name(repoRow, repositories[0].DetailText);
+                Assert.True(details.Bounds.Height < 20);
+                Assert.Equal(repositories[0].DetailText, ToolTip.GetTip(details));
+            }
+
+            repositories[0].IsBusy = true;
+            window.UpdateLayout();
+            Control busyCell = Cell(repoRow, "git-status-cell");
+            ProgressBar progress = busyCell.GetVisualDescendants().OfType<ProgressBar>().Single();
+            Assert.True(Right(progress, window) <= Right(busyCell, window) + 0.75);
+        }
+        finally
+        {
+            window.Close();
+            vm.Stop();
+        }
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task SortIndicatorsKeepSizeLabelsAlignedAndAnnounceTheSortDirection() => _session.Dispatch(() =>
+    {
+        if (!Application.Current!.Styles.OfType<FluentTheme>().Any())
+            Application.Current.Styles.Add(new FluentTheme());
+
+        var vm = new GitRepositoriesViewModel(new GitRepositoryService(_git)) { IsGitMissing = true };
+        var small = new GitRepositoryItemViewModel(Path.Combine(_testRoot, "small"), null) { CloneSize = 10 };
+        var large = new GitRepositoryItemViewModel(Path.Combine(_testRoot, "large"), null) { CloneSize = 30 };
+        vm.Repositories.Add(small);
+        vm.Repositories.Add(large);
+        vm.SelectedRepository = small;
+        var first = new GitWorktreeItemViewModel(new GitWorktree(
+            Path.Combine(_testRoot, "first"), null, "main", true, false, null, false))
+        { Size = 10 };
+        var second = new GitWorktreeItemViewModel(new GitWorktree(
+            Path.Combine(_testRoot, "second"), null, "main", false, false, null, false))
+        { Size = 30 };
+        vm.Worktrees.Add(first);
+        vm.Worktrees.Add(second);
+        var view = new GitRepositoriesPage(vm);
+        var window = new Window { Width = 900, Height = 700, Content = view };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+            var repoHeader = view.FindControl<Button>("RepositorySizeSort")!;
+            var worktreeHeader = view.FindControl<Button>("WorktreeSizeSort")!;
+            var repoLabel = view.FindControl<TextBlock>("RepositorySizeLabel")!;
+            var worktreeLabel = view.FindControl<TextBlock>("WorktreeSizeLabel")!;
+            double repoRight = repoLabel.TranslatePoint(new Point(repoLabel.Bounds.Width, 0), window)!.Value.X;
+            double worktreeRight = worktreeLabel.TranslatePoint(new Point(worktreeLabel.Bounds.Width, 0), window)!.Value.X;
+
+            void Click(Button button)
+            {
+                Point point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(point, MouseButton.Left);
+                window.MouseUp(point, MouseButton.Left);
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+            }
+
+            Click(repoHeader);
+            Click(worktreeHeader);
+            Assert.Equal(new[] { large, small }, vm.Repositories);
+            Assert.Equal(new[] { second, first }, vm.Worktrees);
+            Assert.Same(small, vm.SelectedRepository);
+            Assert.Equal("Total size ▼", AutomationProperties.GetName(repoHeader));
+            Assert.Equal("Size ▼", AutomationProperties.GetName(worktreeHeader));
+            Assert.InRange(Math.Abs(repoRight - repoLabel.TranslatePoint(new Point(repoLabel.Bounds.Width, 0), window)!.Value.X), 0, 0.75);
+            Assert.InRange(Math.Abs(worktreeRight - worktreeLabel.TranslatePoint(new Point(worktreeLabel.Bounds.Width, 0), window)!.Value.X), 0, 0.75);
+
+            Click(repoHeader);
+            Click(worktreeHeader);
+            Assert.Equal(new[] { small, large }, vm.Repositories);
+            Assert.Equal(new[] { first, second }, vm.Worktrees);
+            Assert.Equal("Total size ▲", AutomationProperties.GetName(repoHeader));
+            Assert.Equal("Size ▲", AutomationProperties.GetName(worktreeHeader));
+            Assert.InRange(Math.Abs(repoRight - repoLabel.TranslatePoint(new Point(repoLabel.Bounds.Width, 0), window)!.Value.X), 0, 0.75);
+            Assert.InRange(Math.Abs(worktreeRight - worktreeLabel.TranslatePoint(new Point(worktreeLabel.Bounds.Width, 0), window)!.Value.X), 0, 0.75);
         }
         finally
         {

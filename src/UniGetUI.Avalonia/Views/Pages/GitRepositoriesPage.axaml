@@ -21,9 +21,19 @@
             <Setter Property="CornerRadius" Value="8"/>
         </Style>
         <Style Selector="ListBox#RepositoryList ListBoxItem">
-            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0,1"/>
             <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="Border.git-list-header">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="4,0"/>
+        </Style>
+        <Style Selector="Border.git-list-row-border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="12,8"/>
         </Style>
         <!-- State badges: colour follows what the clone needs, text says it. -->
         <Style Selector="Border.state">
@@ -65,18 +75,23 @@
         <Style Selector="Border.tag TextBlock">
             <Setter Property="FontSize" Value="11"/>
         </Style>
+        <Style Selector="Border.worktree-status TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
         <Style Selector="Button.column-header">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0,2"/>
             <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Opacity" Value="0.7"/>
         </Style>
     </UserControl.Styles>
 
-    <Grid Name="PageGrid" Margin="8,6,8,8">
+    <Grid Name="PageGrid" Margin="8,6,8,8" Grid.IsSharedSizeScope="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -155,22 +170,40 @@
 
         <!-- Repositories -->
         <Border Grid.Row="4" Classes="git-card">
-            <Grid RowDefinitions="Auto,*" Grid.IsSharedSizeScope="True">
-                <!-- Column headers: the margin lines them up with the cells of the rows below. -->
-                <Grid Name="RepositoryHeader" ColumnSpacing="16" Margin="16,6,16,0" IsVisible="{Binding HasRepositories}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="State"/>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="Actions"/>
-                    </Grid.ColumnDefinitions>
-                    <Button Classes="column-header" Content="{Binding RepositoryNameHeader}"
-                            Command="{Binding SortRepositoriesByNameCommand}"/>
-                    <Button Grid.Column="2" Classes="column-header" HorizontalAlignment="Right"
-                            Content="{Binding RepositorySizeHeader}"
-                            Command="{Binding SortRepositoriesBySizeCommand}"/>
-                </Grid>
+            <Grid RowDefinitions="Auto,*">
+                <!-- Headers and rows use the same outer gutter and inner padding. -->
+                <Border Classes="git-list-header" IsVisible="{Binding HasRepositories}">
+                    <Grid Name="RepositoryHeader" ColumnSpacing="12" Margin="12,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120" SharedSizeGroup="GitSize"/>
+                            <ColumnDefinition Width="Auto" MinWidth="180" SharedSizeGroup="GitActions"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Name="RepositoryNameSort" Classes="column-header" HorizontalAlignment="Left"
+                                Command="{Binding SortRepositoriesByNameCommand}"
+                                automation:AutomationProperties.Name="{Binding RepositoryNameHeader}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Name="RepositoryNameLabel" Text="{t:Translate Name}"/>
+                                <TextBlock Width="16" Text="{Binding RepositoryNameSortIndicator}"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Name="RepositoryStatusHeader" Grid.Column="1" Text="{t:Translate Status}"
+                                   FontSize="12" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center"/>
+                        <Button Name="RepositorySizeSort" Grid.Column="2" Classes="column-header" HorizontalAlignment="Stretch"
+                                Command="{Binding SortRepositoriesBySizeCommand}"
+                                ToolTip.Tip="{t:Translate Total size}"
+                                automation:AutomationProperties.Name="{Binding RepositorySizeHeader}">
+                            <Grid ColumnDefinitions="*,16">
+                                <TextBlock Name="RepositorySizeLabel" Text="{t:Translate Total size}"
+                                           TextAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="1" Text="{Binding RepositorySizeSortIndicator}" TextAlignment="Center"/>
+                            </Grid>
+                        </Button>
+                        <TextBlock Name="RepositoryActionsHeader" Grid.Column="3" Text="{t:Translate Actions}"
+                                   FontSize="12" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
                 <ListBox Name="RepositoryList" Grid.Row="1"
                          ItemsSource="{Binding Repositories}"
                          SelectedItem="{Binding SelectedRepository, Mode=TwoWay}"
@@ -179,83 +212,85 @@
                          automation:AutomationProperties.Name="{t:Translate Git repositories}">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:GitRepositoryItemViewModel">
-                            <!-- Every row gives the badge and the buttons the width of the widest, so the
-                                 branch column lines up whether or not a row offers to update. -->
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="State"/>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Actions"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Path}" FontSize="11" Opacity="0.6"
-                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/git_branch.svg"
-                                                          Width="14" Height="14" VerticalAlignment="Center"
-                                                          automation:AutomationProperties.AccessibilityView="Raw"/>
-                                        <TextBlock Text="{Binding BranchText}" FontSize="12"
-                                                   TextTrimming="CharacterEllipsis"/>
+                            <Border Classes="git-list-row-border">
+                                <Grid Classes="git-list-row" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="120" SharedSizeGroup="GitSize"/>
+                                        <ColumnDefinition Width="Auto" MinWidth="180" SharedSizeGroup="GitActions"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid ColumnDefinitions="2*,*" ColumnSpacing="12" VerticalAlignment="Center">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                                            <TextBlock Text="{Binding Path}" FontSize="11" Opacity="0.6"
+                                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/git_branch.svg"
+                                                                  Width="14" Height="14" VerticalAlignment="Center"
+                                                                  automation:AutomationProperties.AccessibilityView="Raw"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BranchText}" FontSize="12"
+                                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding BranchText}"/>
+                                            </Grid>
+                                            <TextBlock Text="{Binding DetailText}" FontSize="11" Opacity="0.6"
+                                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding DetailText}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Panel Classes="git-status-cell" Grid.Column="1" VerticalAlignment="Center">
+                                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
+                                                     MaxWidth="120" MinWidth="0" HorizontalAlignment="Stretch"/>
+                                        <Border Classes="state"
+                                                Classes.ok="{Binding IsOk}"
+                                                Classes.update="{Binding IsUpdate}"
+                                                Classes.warning="{Binding IsWarning}"
+                                                Classes.error="{Binding IsError}"
+                                                IsVisible="{Binding IsIdle}"
+                                                automation:AutomationProperties.HelpText="{Binding StateDetail}">
+                                            <ToolTip.Tip>
+                                                <TextBlock Text="{Binding StateDetail}" MaxWidth="420" TextWrapping="Wrap"/>
+                                            </ToolTip.Tip>
+                                            <TextBlock Text="{Binding StateText}" FontSize="12"
+                                                       TextTrimming="CharacterEllipsis" MaxWidth="260"/>
+                                        </Border>
+                                    </Panel>
+                                    <TextBlock Classes="git-size-cell" Grid.Column="2" Text="{Binding TotalSizeText}" FontSize="12"
+                                               HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0"
+                                               ToolTip.Tip="{Binding SizeText}"/>
+                                    <StackPanel Classes="git-actions" Grid.Column="3" Orientation="Horizontal" Spacing="4"
+                                                VerticalAlignment="Center">
+                                        <Button Content="{t:Translate Update}" Classes="accent"
+                                                IsVisible="{Binding CanUpdate}"
+                                                Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).UpdateCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="{Binding CheckText}" IsEnabled="{Binding IsIdle}"
+                                                Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).CheckCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="{t:Translate Error details}" IsVisible="{Binding HasErrorDetails}"
+                                                Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).ShowErrorDetailsCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Padding="8,4" automation:AutomationProperties.Name="{t:Translate More options}"
+                                                ToolTip.Tip="{t:Translate More options}">
+                                            <TextBlock Text="⋯" FontSize="14"/>
+                                            <Button.Flyout>
+                                                <MenuFlyout>
+                                                    <MenuItem Header="{t:Translate Open folder}"
+                                                              Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).OpenFolderCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="{t:Translate Choose the branch to keep current}"
+                                                              Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).ChooseBranchCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="{t:Translate Remove from the list}"
+                                                              Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).RemoveFromListCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                        </Button>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding DetailText}" FontSize="11" Opacity="0.6"
-                                               TextWrapping="Wrap" ToolTip.Tip="{Binding DetailText}"/>
-                                </StackPanel>
-                                <TextBlock Grid.Column="2" Text="{Binding TotalSizeText}" FontSize="12"
-                                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                                           ToolTip.Tip="{Binding SizeText}"/>
-                                <Panel Grid.Column="3" VerticalAlignment="Center" MinWidth="170">
-                                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
-                                                 Width="120" MinWidth="0" HorizontalAlignment="Left"/>
-                                    <Border Classes="state"
-                                            Classes.ok="{Binding IsOk}"
-                                            Classes.update="{Binding IsUpdate}"
-                                            Classes.warning="{Binding IsWarning}"
-                                            Classes.error="{Binding IsError}"
-                                            IsVisible="{Binding IsIdle}"
-                                            automation:AutomationProperties.HelpText="{Binding StateDetail}">
-                                        <ToolTip.Tip>
-                                            <TextBlock Text="{Binding StateDetail}" MaxWidth="420" TextWrapping="Wrap"/>
-                                        </ToolTip.Tip>
-                                        <TextBlock Text="{Binding StateText}" FontSize="12"
-                                                   TextTrimming="CharacterEllipsis" MaxWidth="260"/>
-                                    </Border>
-                                </Panel>
-                                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                    <Button Content="{t:Translate Update}" Classes="accent"
-                                            IsVisible="{Binding CanUpdate}"
-                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).UpdateCommand}"
-                                            CommandParameter="{Binding}"/>
-                                    <Button Content="{Binding CheckText}" IsEnabled="{Binding IsIdle}"
-                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).CheckCommand}"
-                                            CommandParameter="{Binding}"/>
-                                    <Button Content="{t:Translate Error details}" IsVisible="{Binding HasErrorDetails}"
-                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).ShowErrorDetailsCommand}"
-                                            CommandParameter="{Binding}"/>
-                                    <Button Padding="8,4" automation:AutomationProperties.Name="{t:Translate More options}"
-                                            ToolTip.Tip="{t:Translate More options}">
-                                        <TextBlock Text="⋯" FontSize="14"/>
-                                        <Button.Flyout>
-                                            <MenuFlyout>
-                                                <MenuItem Header="{t:Translate Open folder}"
-                                                          Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).OpenFolderCommand}"
-                                                          CommandParameter="{Binding}"/>
-                                                <MenuItem Header="{t:Translate Choose the branch to keep current}"
-                                                          Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).ChooseBranchCommand}"
-                                                          CommandParameter="{Binding}"/>
-                                                <MenuItem Header="{t:Translate Remove from the list}"
-                                                          Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).RemoveFromListCommand}"
-                                                          CommandParameter="{Binding}"/>
-                                            </MenuFlyout>
-                                        </Button.Flyout>
-                                    </Button>
-                                </StackPanel>
-                            </Grid>
+                                </Grid>
+                            </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -398,78 +433,114 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
-                    <Grid IsVisible="{Binding ShowWorktrees}" RowDefinitions="Auto,*" Grid.IsSharedSizeScope="True">
-                        <Grid Name="WorktreeHeader" ColumnSpacing="12" Margin="12,6,12,0" IsVisible="{Binding HasSelection}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="Auto" SharedSizeGroup="WorktreeActions"/>
-                            </Grid.ColumnDefinitions>
-                            <Button Classes="column-header" Content="{Binding WorktreeNameHeader}"
-                                    Command="{Binding SortWorktreesByNameCommand}"/>
-                            <Button Grid.Column="1" Classes="column-header" HorizontalAlignment="Right"
-                                    Content="{Binding WorktreeSizeHeader}"
-                                    Command="{Binding SortWorktreesBySizeCommand}"/>
-                        </Grid>
-                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding Worktrees}" Margin="8,4">
+                    <Grid IsVisible="{Binding ShowWorktrees}" RowDefinitions="Auto,*">
+                        <Border Classes="git-list-header" IsVisible="{Binding HasSelection}">
+                            <Grid Name="WorktreeHeader" ColumnSpacing="12" Margin="12,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120" SharedSizeGroup="GitSize"/>
+                                    <ColumnDefinition Width="Auto" MinWidth="180" SharedSizeGroup="GitActions"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Name="WorktreeNameSort" Classes="column-header" HorizontalAlignment="Left"
+                                        Command="{Binding SortWorktreesByNameCommand}"
+                                        automation:AutomationProperties.Name="{Binding WorktreeNameHeader}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Name="WorktreeNameLabel" Text="{t:Translate Name}"/>
+                                        <TextBlock Width="16" Text="{Binding WorktreeNameSortIndicator}"/>
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Name="WorktreeStatusHeader" Grid.Column="1" Text="{t:Translate Status}"
+                                           FontSize="12" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center"/>
+                                <Button Name="WorktreeSizeSort" Grid.Column="2" Classes="column-header" HorizontalAlignment="Stretch"
+                                        Command="{Binding SortWorktreesBySizeCommand}"
+                                        ToolTip.Tip="{t:Translate Size}"
+                                        automation:AutomationProperties.Name="{Binding WorktreeSizeHeader}">
+                                    <Grid ColumnDefinitions="*,16">
+                                        <TextBlock Name="WorktreeSizeLabel" Text="{t:Translate Size}"
+                                                   TextAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorktreeSizeSortIndicator}" TextAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <TextBlock Name="WorktreeActionsHeader" Grid.Column="3" Text="{t:Translate Actions}"
+                                           FontSize="12" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ScrollViewer Name="WorktreeScroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding Worktrees}" Margin="4,0">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:GitWorktreeItemViewModel">
-                                        <Grid ColumnSpacing="12" Margin="4,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="80"/>
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="WorktreeActions"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="2">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding BranchText}" FontSize="12" Opacity="0.7" VerticalAlignment="Center"/>
+                                        <Border Classes="git-list-row-border">
+                                            <Grid Classes="git-list-row" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="120" SharedSizeGroup="GitSize"/>
+                                                    <ColumnDefinition Width="Auto" MinWidth="180" SharedSizeGroup="GitActions"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                   MaxWidth="260" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding BranchText}" FontSize="12" Opacity="0.7"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                   ToolTip.Tip="{Binding BranchText}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding Path}" FontSize="11" Opacity="0.6"
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+                                                    <TextBlock Text="{Binding LastCommitText}" FontSize="11" Opacity="0.6"
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LastCommitText}"/>
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding Path}" FontSize="11" Opacity="0.6"
-                                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
-                                                <WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,2,0,0">
-                                                    <Border Classes="tag" IsVisible="{Binding IsMain}">
+                                                <StackPanel Classes="git-status-cell" Grid.Column="1" Spacing="4"
+                                                            VerticalAlignment="Center">
+                                                    <Border Classes="tag worktree-status" IsVisible="{Binding IsMain}"
+                                                            HorizontalAlignment="Left">
                                                         <TextBlock Text="{t:Translate Main clone}"/>
                                                     </Border>
-                                                    <Border Classes="tag good" IsVisible="{Binding IsMerged}"
+                                                    <Border Classes="tag good worktree-status" IsVisible="{Binding IsMerged}"
+                                                            HorizontalAlignment="Left"
                                                             ToolTip.Tip="{t:Translate Everything committed on it is on the default branch}">
                                                         <TextBlock Text="{t:Translate Merged}"/>
                                                     </Border>
-                                                    <Border Classes="tag good" IsVisible="{Binding UpstreamGone}"
+                                                    <Border Classes="tag good worktree-status" IsVisible="{Binding UpstreamGone}"
+                                                            HorizontalAlignment="Left"
                                                             ToolTip.Tip="{t:Translate Text='Its remote branch was deleted, as after a merged pull request'}">
                                                         <TextBlock Text="{t:Translate Remote branch deleted}"/>
                                                     </Border>
-                                                    <Border Classes="tag caution" IsVisible="{Binding HasLocalChanges}">
+                                                    <Border Classes="tag caution worktree-status" IsVisible="{Binding HasLocalChanges}"
+                                                            HorizontalAlignment="Left">
                                                         <TextBlock Text="{t:Translate Has changed or untracked files}"/>
                                                     </Border>
-                                                    <Border Classes="tag" IsVisible="{Binding IsCheckingChanges}" Opacity="0.6">
+                                                    <Border Classes="tag worktree-status" IsVisible="{Binding IsCheckingChanges}"
+                                                            HorizontalAlignment="Left" Opacity="0.6">
                                                         <TextBlock Text="{t:Translate Looking for changed files...}"/>
                                                     </Border>
-                                                    <Border Classes="tag" IsVisible="{Binding HasUniqueCommits}">
+                                                    <Border Classes="tag worktree-status" IsVisible="{Binding HasUniqueCommits}"
+                                                            HorizontalAlignment="Left">
                                                         <TextBlock Text="{Binding UniqueCommitsText}"/>
                                                     </Border>
-                                                    <Border Classes="tag caution" IsVisible="{Binding IsLocked}">
+                                                    <Border Classes="tag caution worktree-status" IsVisible="{Binding IsLocked}"
+                                                            HorizontalAlignment="Left">
                                                         <TextBlock Text="{Binding LockText}"/>
                                                     </Border>
-                                                    <Border Classes="tag caution" IsVisible="{Binding IsPrunable}">
+                                                    <Border Classes="tag caution worktree-status" IsVisible="{Binding IsPrunable}"
+                                                            HorizontalAlignment="Left">
                                                         <TextBlock Text="{t:Translate Folder missing}"/>
                                                     </Border>
-                                                    <TextBlock Text="{Binding LastCommitText}" FontSize="11" Opacity="0.6"
-                                                               VerticalAlignment="Center"/>
-                                                </WrapPanel>
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="1" Text="{Binding SizeText}" FontSize="12"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                <Button Content="{t:Translate Open folder}" IsEnabled="{Binding CanOpen}"
-                                                        Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).OpenWorktreeFolderCommand}"
-                                                        CommandParameter="{Binding}"/>
-                                                <Button Content="{t:Translate Remove}" IsVisible="{Binding CanRemove}"
-                                                        Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).RemoveWorktreeCommand}"
-                                                        CommandParameter="{Binding}"/>
-                                            </StackPanel>
-                                        </Grid>
+                                                </StackPanel>
+                                                <TextBlock Classes="git-size-cell" Grid.Column="2" Text="{Binding SizeText}" FontSize="12"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                                <StackPanel Classes="git-actions" Grid.Column="3" Orientation="Horizontal" Spacing="4"
+                                                            VerticalAlignment="Center">
+                                                    <Button Content="{t:Translate Open folder}" IsEnabled="{Binding CanOpen}"
+                                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).OpenWorktreeFolderCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                    <Button Content="{t:Translate Remove}" IsVisible="{Binding CanRemove}"
+                                                            Command="{Binding $parent[UserControl].((vm:GitRepositoriesViewModel)DataContext).RemoveWorktreeCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

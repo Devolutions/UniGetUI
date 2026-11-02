@@ -24,6 +24,7 @@ public partial class PackageDetailsViewModel : ObservableObject
 
     public readonly IPackage Package;
     public readonly OperationType OperationRole;
+    private readonly CancellationTokenSource _loadingCancellation = new();
 
     // ── Header ─────────────────────────────────────────────────────────────────
     public string PackageName { get; }
@@ -343,19 +344,23 @@ public partial class PackageDetailsViewModel : ObservableObject
         catch { }
     }
 
+    public void CancelLoading() => _loadingCancellation.Cancel();
+
     private async Task LoadScreenshotsAsync()
     {
+        var token = _loadingCancellation.Token;
         try
         {
-            var uris = await Task.Run(Package.GetScreenshots);
+            var uris = await Task.Run(Package.GetScreenshots, token);
             if (!uris.Any()) return;
 
             using var http = new HttpClient(CoreTools.GenericHttpClientParameters);
             foreach (var uri in uris)
             {
+                if (token.IsCancellationRequested) return;
                 try
                 {
-                    var bytes = await http.GetByteArrayAsync(uri);
+                    var bytes = await http.GetByteArrayAsync(uri, token);
                     using var ms = new MemoryStream(bytes);
                     var bmp = new Bitmap(ms);
                     await Dispatcher.UIThread.InvokeAsync(() =>
@@ -366,6 +371,9 @@ public partial class PackageDetailsViewModel : ObservableObject
                 }
                 catch { /* skip failed screenshots */ }
             }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
         }
         catch (Exception ex)
         {

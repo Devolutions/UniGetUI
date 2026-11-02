@@ -466,6 +466,11 @@ public partial class MainWindow : Window
             TriggerPageDetails();
             e.Handled = true;
         }
+        else if (isCtrl && isShift && (e.Key == Key.D || (OperatingSystem.IsMacOS() && e.Key == Key.I)))
+        {
+            TriggerPageDetailsPane();
+            e.Handled = true;
+        }
     }
 
     // The page that receives Reload/Find/Select All/Details, or null while a dialog is open; shared
@@ -480,6 +485,11 @@ public partial class MainWindow : Window
     private void TriggerPageSelectAll() => PageShortcutListener?.SelectAllTriggered();
 
     private void TriggerPageDetails() => PageShortcutListener?.DetailsTriggered();
+
+    private IDetailsPaneHost? PageDetailsPaneHost
+        => PageShortcutListener is IDetailsPaneHost { CanToggleDetailsPane: true } host ? host : null;
+
+    private void TriggerPageDetailsPane() => PageDetailsPaneHost?.ToggleDetailsPane();
 
     private void OnCurrentPageChanged(object? sender, PageType pageType)
     {

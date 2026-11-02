@@ -25,6 +25,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public static int SavedGeneration => Volatile.Read(ref _savedGeneration);
 
+        public static event EventHandler? OptionsSaved;
+
         public static bool IsIdentityScopedOptionsFile(string fileName) =>
             StoragePath.IsIdentityScoped(fileName);
 
@@ -243,6 +245,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
                 string fileContents = options.AsJsonString();
                 File.WriteAllText(filePath, fileContents);
+                OptionsSaved?.Invoke(null, EventArgs.Empty);
             }
             catch (Exception ex)
             {

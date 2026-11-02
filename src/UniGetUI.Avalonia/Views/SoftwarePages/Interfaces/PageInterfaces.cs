@@ -12,6 +12,12 @@ public interface IKeyboardShortcutListener
     void DetailsTriggered();
 }
 
+public interface IDetailsPaneHost
+{
+    bool CanToggleDetailsPane { get; }
+    void ToggleDetailsPane();
+}
+
 /// <summary>
 /// Implemented by pages that have enter/leave lifecycle events.
 /// Mirrors UniGetUI.Pages.PageInterfaces.IEnterLeaveListener

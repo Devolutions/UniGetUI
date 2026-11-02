@@ -97,6 +97,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
             {
                 SyncFiltersButtonName();
                 UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen, animate: true);
+                UpdateDetailsPaneLayout();
             }
             // Set last by UpdateSubtitle, so the segments and the detail are both current by then
             if (args.PropertyName is nameof(PackagesPageViewModel.SubtitleAccessibleText))
@@ -226,6 +227,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         // Apply the initial filter-pane state (AXAML defaults to 220px open).
         UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+        InitializeDetailsPane();
 
         // Attach inline transitions AFTER the initial state so launch doesn't animate. The inline
         // pane uses Avalonia's RenderTransform while the separate compact pane uses the compositor.
@@ -696,7 +698,11 @@ public abstract partial class AbstractPackagesPage : UserControl,
     {
         if (width <= 0) return; // layout not complete yet
         bool shouldBeOverlay = width < 1000;
-        if (shouldBeOverlay == _isOverlayMode) return;
+        if (shouldBeOverlay == _isOverlayMode)
+        {
+            UpdateDetailsPaneLayout();
+            return;
+        }
 
         _isOverlayMode = shouldBeOverlay;
         ViewModel.FilterPaneOverlaysContent = _isOverlayMode;
@@ -704,6 +710,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Presentation changes must not alter the user's logical open/closed choice. Each mode
         // owns a separate visual, so switching modes only activates the appropriate instance.
         UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+        UpdateDetailsPaneLayout();
     }
 
     private void UpdateFilterPaneColumn(bool open, bool animate = false)

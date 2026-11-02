@@ -103,6 +103,31 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
+    public void SaveForPackage_RaisesOptionsSavedOnceTheNewOptionsAreReadable()
+    {
+        var manager = new PackageManagerBuilder().WithName("WinGet").Build();
+        var package = new PackageBuilder().WithManager(manager).WithId("Contoso.Tool").Build();
+        var seenLocations = new System.Collections.Concurrent.ConcurrentBag<string>();
+        void OnSaved(object? sender, EventArgs e) =>
+            seenLocations.Add(InstallOptionsFactory.LoadForPackage(package).CustomInstallLocation);
+
+        InstallOptionsFactory.OptionsSaved += OnSaved;
+        try
+        {
+            InstallOptionsFactory.SaveForPackage(
+                new InstallOptions { CustomInstallLocation = @"C:\Apps\Saved" },
+                package
+            );
+        }
+        finally
+        {
+            InstallOptionsFactory.OptionsSaved -= OnSaved;
+        }
+
+        Assert.Contains(@"C:\Apps\Saved", seenLocations);
+    }
+
+    [Fact]
     public void SaveForPackage_DoesNotLetSanitisationCollideDistinctIds()
     {
         var manager = new PackageManagerBuilder().WithName("WinGet").Build();

@@ -12,7 +12,6 @@
         MinWidth="720"
         MaxHeight="800"
         MinHeight="480"
-        Background="{DynamicResource AppDialogBackground}"
         Title="{t:Translate Package details}">
 
     <dialogs:ImmersiveDialog.Resources>
@@ -182,11 +181,13 @@
                     <Grid x:Name="TitlePanel"
                           ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
-                        <Border Width="112" Height="112"
+                        <Border x:Name="TitleIconBorder"
+                                Width="112" Height="112"
                                 CornerRadius="20"
                                 Background="{DynamicResource AppDialogPanelBackground}"
                                 ClipToBounds="True">
-                            <Image Source="{Binding PackageIcon}"
+                            <Image x:Name="TitleIcon"
+                                   Source="{Binding PackageIcon}"
                                    Width="72" Height="72"
                                    Margin="12"
                                    automation:AutomationProperties.AccessibilityView="Raw"
@@ -197,7 +198,8 @@
                         <StackPanel Grid.Column="1"
                                     VerticalAlignment="Center"
                                     Spacing="4">
-                            <TextBlock Text="{Binding PackageName}"
+                            <TextBlock x:Name="TitleText"
+                                       Text="{Binding PackageName}"
                                        FontSize="40" FontWeight="Bold"
                                        FontFamily="Segoe UI Variable Display"
                                        TextWrapping="Wrap"

@@ -341,6 +341,11 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         _ = LaunchUpdate([package]);
     }
 
+    protected override bool SupportsDetailsPane => true;
+
+    protected override PackageDetailsWindow CreateDetailsPaneView(IPackage package) =>
+        new(package, OperationType.Update, TEL_InstallReferral.ALREADY_INSTALLED, embedded: true);
+
     protected override async Task ShowDetailsForPackage(IPackage? package)
     {
         if (package is null) return;

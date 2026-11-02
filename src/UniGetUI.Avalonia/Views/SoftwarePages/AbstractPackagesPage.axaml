@@ -385,7 +385,7 @@
         <Grid x:Name="FilteringPanel"
               Grid.Row="3"
               ClipToBounds="True"
-              ColumnDefinitions="220,12,*">
+              ColumnDefinitions="220,12,*,0,0">
 
             <!-- Both presentations use this single content definition. Their containers remain
                  isolated so compact compositor state cannot leak into the inline pane. -->
@@ -1209,6 +1209,59 @@
                 </Grid>
 
             </Grid>
+
+            <GridSplitter x:Name="DetailsSplitter"
+                          Classes="winui-vertical-splitter"
+                          Grid.Column="3"
+                          Margin="2,0,0,0"
+                          IsVisible="False"
+                          HorizontalAlignment="Stretch"
+                          ResizeDirection="Columns"/>
+
+            <Border x:Name="DetailsPane"
+                    Grid.Column="4"
+                    Margin="0,6,0,6"
+                    CornerRadius="8"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource PackageListBorderBrush}"
+                    Background="{DynamicResource PackageListBackground}"
+                    ClipToBounds="True"
+                    IsVisible="False"
+                    automation:AutomationProperties.Name="{t:Translate Package details}">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto" Margin="16,8,8,0">
+                        <TextBlock Text="{t:Translate Package details}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <Button x:Name="CloseDetailsPaneButton"
+                                Grid.Column="1"
+                                Width="32" Height="32"
+                                Padding="8"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                ToolTip.Tip="{t:Translate Close}"
+                                automation:AutomationProperties.Name="{t:Translate Close}">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg" Width="14" Height="14"/>
+                        </Button>
+                    </Grid>
+                    <Panel Grid.Row="1">
+                        <ContentControl x:Name="DetailsPaneHost"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch"/>
+                        <TextBlock x:Name="DetailsPanePlaceholder"
+                                   Text="{t:Translate Select a package to see its details}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="24"/>
+                    </Panel>
+                </Grid>
+            </Border>
         </Grid>
 
     <!-- ==================== FOOTER STATUS BAR ==================== -->
@@ -1319,6 +1372,31 @@
                     </ListBoxItem>
                 </ListBox>
             </StackPanel>
+
+            <Border x:Name="DetailsToggleContainer"
+                    IsVisible="False"
+                    VerticalAlignment="Center"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    CornerRadius="4">
+                <ToggleButton x:Name="ToggleDetailsButton"
+                              Classes="segment-toggle"
+                              Padding="8,4,8,8"
+                              automation:AutomationProperties.Name="{t:Translate Details panel}">
+                    <Viewbox Width="18" Height="18" automation:AutomationProperties.AccessibilityView="Raw">
+                        <Grid Width="16" Height="16">
+                            <Path Data="M 10,2.5 H 13.5 V 13.5 H 10 Z"
+                                  Fill="{DynamicResource TextFillColorPrimaryBrush}"
+                                  Opacity="0.35"/>
+                            <Path Data="M 2.5,2.5 H 13.5 V 13.5 H 2.5 Z M 10,2.5 V 13.5"
+                                  Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                  StrokeThickness="1.3"
+                                  StrokeJoin="Round"
+                                  Fill="Transparent"/>
+                        </Grid>
+                    </Viewbox>
+                </ToggleButton>
+            </Border>
 
         </StackPanel>
     </Border>

@@ -53,10 +53,20 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
     public string? InstallVersion { get; init; }
 
+    public bool IsEmbedded { get; }
+
+    public IPackage Package => _vm.Package;
+
+    public event EventHandler? MainActionRequested;
+
+    public void CancelLoading() => _vm.CancelLoading();
+
+    private bool _activated;
     private readonly PackageDetailsViewModel _vm;
     private readonly TEL_InstallReferral _referral;
     private InstallOptionsViewModel? _installVm;
     private InstallOptions? _installOpts;
+    private string? _installOptsSnapshot;
     private readonly DispatcherTimer _screenshotGestureTimer;
     private readonly TranslateTransform _screenshotStripTranslate = new();
     private Vector _screenshotGestureIntent;
@@ -75,12 +85,19 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     public PackageDetailsWindow(
         IPackage package,
         OperationType operation,
-        TEL_InstallReferral referral)
+        TEL_InstallReferral referral,
+        bool embedded = false)
     {
         _referral = referral;
+        IsEmbedded = embedded;
         _vm = new PackageDetailsViewModel(package, operation);
         DataContext = _vm;
         InitializeComponent();
+
+        if (embedded)
+            ApplyEmbeddedLayout();
+        else
+            Bind(BackgroundProperty, this.GetResourceObservable("AppDialogBackground"));
 
         ScreenshotStrip.RenderTransform = _screenshotStripTranslate;
         _screenshotGestureTimer = new DispatcherTimer
@@ -137,16 +154,70 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        ApplyLayoutForCurrentSize();
+        Activate();
         Dispatcher.UIThread.Post(() => MainActionButton.Focus(), DispatcherPriority.Background);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (!IsEmbedded) return;
+        InstallOptionsFactory.OptionsSaved += OnInstallOptionsSaved;
+        if (_activated)
+            _ = ReloadInstallOptionsIfChangedAsync();
+        Activate();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        InstallOptionsFactory.OptionsSaved -= OnInstallOptionsSaved;
+    }
+
+    private void OnInstallOptionsSaved(object? sender, EventArgs e) =>
+        Dispatcher.UIThread.Post(() => _ = ReloadInstallOptionsIfChangedAsync());
+
+    private async Task ReloadInstallOptionsIfChangedAsync()
+    {
+        if (_installOpts is null) return;
+        var saved = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
+        if (saved.AsJsonString() == _installOptsSnapshot) return;
+        ShowInstallOptions(saved);
+        await _vm.RefreshDetailsAsync();
+    }
+
+    private void Activate()
+    {
+        ApplyLayoutForCurrentSize();
+        if (_activated) return;
+        _activated = true;
         _ = _vm.LoadDetailsAsync();
-        TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
+        if (!IsEmbedded)
+            TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
         _ = InitInstallOptionsAsync();
     }
 
-    private async Task InitInstallOptionsAsync()
+    private void ApplyEmbeddedLayout()
     {
-        _installOpts = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
+        MinWidth = 0;
+        MinHeight = 0;
+        MaxWidth = double.PositiveInfinity;
+        MaxHeight = double.PositiveInfinity;
+        MainGrid.Margin = new Thickness(16, 12, 16, 16);
+        TitleIconBorder.Width = TitleIconBorder.Height = 64;
+        TitleIconBorder.CornerRadius = new CornerRadius(12);
+        TitleIcon.Width = TitleIcon.Height = 44;
+        TitleIcon.Margin = new Thickness(10);
+        TitleText.FontSize = 24;
+    }
+
+    private async Task InitInstallOptionsAsync() =>
+        ShowInstallOptions(await InstallOptionsFactory.LoadForPackageAsync(_vm.Package));
+
+    private void ShowInstallOptions(InstallOptions options)
+    {
+        _installOpts = options;
+        _installOptsSnapshot = options.AsJsonString();
         _installVm = new InstallOptionsViewModel(_vm.Package, _vm.OperationRole, _installOpts);
         _installVm.CloseRequested += (_, _) =>
         {
@@ -167,6 +238,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         if (_installVm is null || _installOpts is null) return;
         _installVm.ApplyChanges();
+        _installOptsSnapshot = _installOpts.AsJsonString();
         await InstallOptionsFactory.SaveForPackageAsync(_installOpts, _vm.Package);
     }
 
@@ -976,6 +1048,12 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
     private async Task OnMainActionAsync()
     {
+        if (IsEmbedded)
+        {
+            MainActionRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         if (!await ConfirmUninstallAsync(_vm.OperationRole)) return;
         ShouldProceedWithOperation = true;
         Close();

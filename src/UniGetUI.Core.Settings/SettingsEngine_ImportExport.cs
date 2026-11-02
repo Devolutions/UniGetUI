@@ -12,6 +12,7 @@ public partial class Settings
         "OperationHistory.json",
         "WinGetAlreadyUpgradedPackages.json",
         "WinGetUpgradeAttempts.json",
+        "WinGetTrustedInstallerHosts.json",
         "MaintenanceTaskLastRun.json",
         "MaintenanceTaskLastFailure.json",
         "MaintenanceSchedules.invalid",

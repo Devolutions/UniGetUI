@@ -244,6 +244,14 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             return PingetPackageDetailsProvider.TryGetInstallerHostsForVersion(package, version);
         }
 
+        public static bool InstallerHostsAreTrusted(
+            UniGetUI.PackageEngine.Interfaces.IPackage package,
+            IReadOnlySet<string> hosts
+        )
+        {
+            return WinGetPkgOperationHelper.InstallerHostsAreTrusted(package, hosts);
+        }
+
         public static IReadOnlyList<string>? TryGetInstallerUrls(
             UniGetUI.PackageEngine.Interfaces.IPackage package,
             string? version

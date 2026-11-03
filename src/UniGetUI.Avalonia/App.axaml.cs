@@ -35,6 +35,8 @@ public partial class App : Application
         TabControlFocusGuard.Install();
         UiAutomationGuard.Install();
         SmoothScrollManager.Install();
+        if (!MacGlassWindowHelper.IsGlassEnabled())
+            Styles.Add(new ScrollBarStyles());
 
         // Windows 11 Mica look is opt-in per environment: only merge the translucent
         // surface overrides when Mica is actually usable (Win11 + transparency on).

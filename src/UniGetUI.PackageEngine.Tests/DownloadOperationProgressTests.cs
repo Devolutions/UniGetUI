@@ -93,6 +93,8 @@ public sealed class DownloadOperationProgressTests
 
         protected override SignatureCheck? CheckSignature(string path) => Signature;
 
+        public void ApplyRetryActionForTests(string retryMode) => ApplyRetryAction(retryMode);
+
         public Task<OperationVeredict> InvokePerformOperationForTests() =>
             PerformOperation();
     }
@@ -608,8 +610,82 @@ public sealed class DownloadOperationProgressTests
                     && line.Item1.Contains(Convert.ToHexStringLower(SHA512.HashData(payload)))
             );
             Assert.DoesNotContain(operation.GetOutput(), line => line.Item1.Contains("signed by"));
+            Assert.True(operation.HashMismatched);
             Assert.Equal(
                 InstallerHashStatus.Mismatch,
+                InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus
+            );
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task RetryingAMismatchedDownloadSkippingIntegrityChecksKeepsTheFile()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(101).NextBytes(payload);
+        byte[] published = new byte[64 * 1024];
+        new Random(103).NextBytes(published);
+        Uri installerUrl = UniqueInstallerUrl();
+        string publishedHash = Convert.ToHexStringLower(SHA256.HashData(published));
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-kept-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler)
+            {
+                Signature = new SignatureCheck(0, "Example Corp"),
+            };
+
+            Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
+            Assert.True(operation.HashMismatched);
+            Assert.False(File.Exists(downloadPath));
+
+            operation.ApplyRetryActionForTests(AbstractOperation.RetryMode.Retry_SkipIntegrity);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.False(operation.HashMismatched);
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Empty(PartialFilesOf(downloadPath));
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("kept because the hash check was skipped"));
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("signed by Example Corp"));
+            Assert.Equal(
+                InstallerHashStatus.MismatchKept,
+                InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus
+            );
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task SkippingIntegrityChecksStillReportsAMatchingDownloadAsVerified()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(107).NextBytes(payload);
+        Uri installerUrl = UniqueInstallerUrl();
+        string publishedHash = Convert.ToHexStringLower(SHA256.HashData(payload));
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-skip-match-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+            operation.ApplyRetryActionForTests(AbstractOperation.RetryMode.Retry_SkipIntegrity);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(
+                InstallerHashStatus.Verified,
                 InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus
             );
         }

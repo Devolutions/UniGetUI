@@ -45,7 +45,14 @@ public class DownloadOperation : AbstractOperation
         return Task.Run(_package.GetIconUrl);
     }
 
-    protected override void ApplyRetryAction(string retryMode) { }
+    public bool SkipHashCheck { get; private set; }
+    public bool HashMismatched { get; private set; }
+
+    protected override void ApplyRetryAction(string retryMode)
+    {
+        if (retryMode is RetryMode.Retry_SkipIntegrity)
+            SkipHashCheck = true;
+    }
 
     /// <summary>
     /// Creates the HTTP client for the download. Virtual so tests can serve an
@@ -144,6 +151,7 @@ public class DownloadOperation : AbstractOperation
     {
         bool partialFileCreated = false;
         string partialLocation = "";
+        HashMismatched = false;
         try
         {
             CancellationToken.ThrowIfCancellationRequested();
@@ -319,23 +327,39 @@ public class DownloadOperation : AbstractOperation
             if (hashPublished)
             {
                 byte[] actualHash = await expectedHash.ComputeAsync(partialLocation, CancellationToken);
-                if (!expectedHash.Matches(actualHash))
+                if (expectedHash.Matches(actualHash))
+                {
+                    Line(
+                        $"The downloaded file matches the {expectedHash.AlgorithmName} hash published for this installer",
+                        LineType.Information
+                    );
+                    hashStatus = InstallerHashStatus.Verified;
+                }
+                else if (SkipHashCheck)
                 {
                     Line(
                         $"The downloaded file does not match the {expectedHash.AlgorithmName} hash published "
                             + $"for this installer (expected {Convert.ToHexStringLower(expectedHash.Digest)}, "
-                            + $"got {Convert.ToHexStringLower(actualHash)}). The file was discarded",
+                            + $"got {Convert.ToHexStringLower(actualHash)}). It was kept because the hash check "
+                            + "was skipped",
                         LineType.Error
                     );
+                    hashStatus = InstallerHashStatus.MismatchKept;
+                }
+                else
+                {
+                    Line(
+                        $"The downloaded file does not match the {expectedHash.AlgorithmName} hash published "
+                            + $"for this installer (expected {Convert.ToHexStringLower(expectedHash.Digest)}, "
+                            + $"got {Convert.ToHexStringLower(actualHash)}). The file was discarded. "
+                            + "If the publisher replaced the installer without updating its manifest, "
+                            + "retry skipping integrity checks to keep it anyway",
+                        LineType.Error
+                    );
+                    HashMismatched = true;
                     RecordVerification(InstallerHashStatus.Mismatch, expectedHash.AlgorithmName, null);
                     return OperationVeredict.Failure;
                 }
-
-                Line(
-                    $"The downloaded file matches the {expectedHash.AlgorithmName} hash published for this installer",
-                    LineType.Information
-                );
-                hashStatus = InstallerHashStatus.Verified;
             }
             else if (string.IsNullOrWhiteSpace(_package.Details.InstallerHash))
             {

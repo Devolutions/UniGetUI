@@ -2224,5 +2224,6 @@
   "an unknown publisher": "an unknown publisher",
   "Not signed": "Not signed",
   "Signature not trusted ({0})": "Signature not trusted ({0})",
-  "Last download": "Last download"
+  "Last download": "Last download",
+  "Hash mismatch, kept because the hash check was skipped": "Hash mismatch, kept because the hash check was skipped"
 }

@@ -22,6 +22,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public string UninstallVerb { get; set; } = "Unset";
         public IManagerSource[] KnownSources { get; set; } = [];
         public IManagerSource DefaultSource { get; set; } = null!;
+        public string SetupGuide { get; set; } = "";
+        public ManagerInstallCommands InstallCommands { get; set; } = new();
 
         public ManagerProperties() { }
 

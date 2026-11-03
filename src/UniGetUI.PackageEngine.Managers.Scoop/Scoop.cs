@@ -153,6 +153,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             {
                 Id = "scoop",
                 Name = "Scoop",
+                SetupGuide = "PACKAGE_MANAGERS.md#scoop",
                 Description = CoreTools.Translate(
                     "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>"
                 ),

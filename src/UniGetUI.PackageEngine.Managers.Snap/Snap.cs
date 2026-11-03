@@ -41,6 +41,7 @@ public partial class Snap : PackageManager
         {
             Id = "snap",
             Name = "Snap",
+            SetupGuide = "PACKAGE_MANAGERS.md#snap",
             Description = CoreTools.Translate(
                 "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>"
             ),

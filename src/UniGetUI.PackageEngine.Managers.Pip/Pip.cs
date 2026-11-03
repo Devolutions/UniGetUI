@@ -75,6 +75,8 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             {
                 Id = "pip",
                 Name = "Pip",
+                SetupGuide = "PACKAGE_MANAGERS.md#pip",
+                InstallCommands = new(Windows: "winget install --exact --id Python.Python.3.14", MacOS: "brew install python"),
                 Description = CoreTools.Translate(
                     "Python's library manager. Full of python libraries and other python-related utilities<br>Contains: <b>Python libraries and related utilities</b>"
                 ),
@@ -951,6 +953,11 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
             return Paths;
         }
+
+        public override bool HasExecutable() =>
+            (!OperatingSystem.IsWindows()
+                && (CoreTools.WhichMultiple("pip3").Count > 0 || CoreTools.WhichMultiple("pip").Count > 0))
+            || base.HasExecutable();
 
         protected override void _loadManagerExecutableFile(
             out bool found,

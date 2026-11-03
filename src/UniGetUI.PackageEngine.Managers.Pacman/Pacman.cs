@@ -32,6 +32,7 @@ public class Pacman : PackageManager
         {
             Id = "pacman",
             Name = "Pacman",
+            SetupGuide = "PACKAGE_MANAGERS.md#pacman",
             Description = CoreTools.Translate(
                 "The default package manager for Arch Linux and its derivatives.<br>Contains: <b>Arch Linux packages</b>"
             ),

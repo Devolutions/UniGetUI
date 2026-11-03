@@ -36,6 +36,7 @@ public class Dnf : PackageManager
         {
             Id = "dnf",
             Name = "Dnf",
+            SetupGuide = "PACKAGE_MANAGERS.md#dnf",
             Description = CoreTools.Translate(
                 "The default package manager for RHEL/Fedora-based Linux distributions.<br>Contains: <b>RPM packages</b>"
             ),

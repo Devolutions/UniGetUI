@@ -88,6 +88,8 @@ public partial class Cargo : PackageManager
         {
             Id = "cargo",
             Name = "Cargo",
+            SetupGuide = "PACKAGE_MANAGERS.md#cargo",
+            InstallCommands = new(Windows: "winget install --exact --id Rustlang.Rustup"),
             Description = CoreTools.Translate(
                 "The Rust package manager.<br>Contains: <b>Rust libraries and programs written in Rust</b>"
             ),

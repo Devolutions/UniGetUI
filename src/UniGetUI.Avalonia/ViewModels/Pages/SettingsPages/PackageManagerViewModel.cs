@@ -3,10 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
@@ -36,6 +38,16 @@ public partial class PackageManagerViewModel : ViewModelBase
     [ObservableProperty] private bool _versionTextVisible;
     [ObservableProperty] private bool _showVersionVisible;
     public string ShowVersionLabel { get; } = CoreTools.Translate("Expand version");
+    [ObservableProperty] private bool _setupGuideVisible;
+    [ObservableProperty] private bool _installCommandVisible;
+    public string SetupGuideLabel => CoreTools.Translate("How to set up {0}", Manager.DisplayName);
+    public string InstallCommandLabel { get; } = CoreTools.Translate("Install it with this command:");
+    public string OpenInTerminalLabel { get; } = CoreTools.Translate("Open in a terminal");
+    [ObservableProperty] private string? _installCommand;
+    public IReadOnlyList<string> CandidateExecutables { get; private set; } = [];
+    private bool _executableFoundWhileDisabled;
+
+    private const string DocsBaseUrl = "https://github.com/Devolutions/UniGetUI/blob/main/docs/";
 
     // ── Path label ────────────────────────────────────────────────────────────
     [ObservableProperty] private string _pathLabelText = "";
@@ -50,6 +62,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     public PackageManagerViewModel(IPackageManager manager)
     {
         Manager = manager;
+        ApplyProbe(ProbeExecutables());
         RefreshState();
         IsCustomVcpkgRootSet = CoreSettings.Get(CoreSettings.K.CustomVcpkgRoot);
         VcpkgRootPath = IsCustomVcpkgRootSet
@@ -63,7 +76,11 @@ public partial class PackageManagerViewModel : ViewModelBase
     {
         IsLoading = true;
         RefreshState();
-        await Task.Run(Manager.Initialize);
+        ApplyProbe(await Task.Run(() =>
+        {
+            Manager.Initialize();
+            return ProbeExecutables();
+        }));
         IsLoading = false;
         RefreshState(showVersion: true);
         (MainWindow.Instance?.DataContext as MainWindowViewModel)?.ReloadPagesWithoutReadyManager();
@@ -71,6 +88,36 @@ public partial class PackageManagerViewModel : ViewModelBase
 
     [RelayCommand]
     public void ShowVersion() => RefreshState(showVersion: true);
+
+    [RelayCommand]
+    private void OpenSetupGuide() => CoreTools.Launch(GetSetupGuideUrl(Manager.Properties));
+
+    [RelayCommand]
+    private Task OpenInstallCommandInTerminal() =>
+        InstallCommand is null ? Task.CompletedTask : ManualInstallHelper.LaunchManualAsync(InstallCommand);
+
+    private (IReadOnlyList<string> Candidates, bool FoundWhileDisabled, string? Command) ProbeExecutables() =>
+        (Manager.FindCandidateExecutableFiles(),
+         !Manager.IsEnabled() && Manager.HasExecutable(),
+         RunnableCommand(Manager.Properties.InstallCommands.ForCurrentPlatform(), program => CoreTools.Which(program).Item1));
+
+    private void ApplyProbe((IReadOnlyList<string> Candidates, bool FoundWhileDisabled, string? Command) probe)
+    {
+        CandidateExecutables = probe.Candidates;
+        _executableFoundWhileDisabled = probe.FoundWhileDisabled;
+        InstallCommand = probe.Command;
+    }
+
+    internal static string? RunnableCommand(string? command, Func<string, bool> programExists)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+            return null;
+        string program = command.Split(' ', 2)[0];
+        return programExists(program) ? command : null;
+    }
+
+    internal static string GetSetupGuideUrl(ManagerProperties properties) =>
+        DocsBaseUrl + (properties.SetupGuide.Length > 0 ? properties.SetupGuide : "PACKAGE_MANAGERS.md");
 
     public void OnExecutableSelected(string path)
     {
@@ -138,6 +185,17 @@ public partial class PackageManagerViewModel : ViewModelBase
         }
 
         StatusMessageVisible = !string.IsNullOrEmpty(StatusMessage);
+        (SetupGuideVisible, InstallCommandVisible) = GetSetupHelpVisibility(
+            IsLoading, Manager.IsReady(), Manager.IsEnabled(), Manager.Status.Found,
+            _executableFoundWhileDisabled, InstallCommand is not null);
+    }
+
+    internal static (bool Guide, bool InstallCommand) GetSetupHelpVisibility(
+        bool loading, bool ready, bool enabled, bool statusFound, bool foundWhileDisabled, bool hasInstallCommand)
+    {
+        bool guide = !loading && !ready;
+        bool executableFound = enabled ? statusFound : foundWhileDisabled;
+        return (guide, guide && hasInstallCommand && !executableFound);
     }
 
     // ── Scoop commands ────────────────────────────────────────────────────────

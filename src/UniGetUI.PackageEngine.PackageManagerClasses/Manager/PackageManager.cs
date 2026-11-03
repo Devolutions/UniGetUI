@@ -290,6 +290,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
         }
 
+        public virtual bool HasExecutable() => GetExecutableFile().Item1;
+
         protected bool IsUserSelectedExecutablePath(string path)
         {
             if (!SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths))

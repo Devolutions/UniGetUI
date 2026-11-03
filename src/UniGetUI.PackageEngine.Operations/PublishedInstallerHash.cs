@@ -120,6 +120,18 @@ internal readonly record struct PublishedInstallerHash(
         _ => "SHA-256",
     };
 
+    public IncrementalHash CreateHasher() =>
+        IncrementalHash.CreateHash(
+            Algorithm switch
+            {
+                PublishedHashAlgorithm.Md5 => HashAlgorithmName.MD5,
+                PublishedHashAlgorithm.Sha1 => HashAlgorithmName.SHA1,
+                PublishedHashAlgorithm.Sha384 => HashAlgorithmName.SHA384,
+                PublishedHashAlgorithm.Sha512 => HashAlgorithmName.SHA512,
+                _ => HashAlgorithmName.SHA256,
+            }
+        );
+
     public async Task<byte[]> ComputeAsync(string filePath, CancellationToken token)
     {
         await using FileStream stream = new(

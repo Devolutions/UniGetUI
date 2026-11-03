@@ -538,7 +538,119 @@ public sealed class DownloadOperationProgressTests
     private static Uri UniqueInstallerUrl() => new($"http://127.0.0.1/{Guid.NewGuid():N}/payload.bin");
 
     private static string[] PartialFilesOf(string downloadPath) =>
-        Directory.GetFiles(Path.GetDirectoryName(downloadPath)!, Path.GetFileName(downloadPath) + ".*.partial");
+        Directory.GetFiles(Path.GetDirectoryName(downloadPath)!, Path.GetFileName(downloadPath) + "*.partial");
+
+    private sealed class CancelAfterFirstReadHandler(byte[] payload, CancellationTokenSource cancellation)
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            var content = new StreamContent(new CancelAfterFirstReadStream(payload, cancellation));
+            content.Headers.ContentLength = payload.Length;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        }
+    }
+
+    private sealed class CancelAfterFirstReadStream(byte[] payload, CancellationTokenSource cancellation)
+        : MemoryStream(payload, writable: false)
+    {
+        public override async ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default
+        )
+        {
+            int count = await base.ReadAsync(buffer[..Math.Min(buffer.Length, 4096)], cancellationToken);
+            await cancellation.CancelAsync();
+            return count;
+        }
+    }
+
+    [Fact]
+    public void InstallerDownloadsAreNotTransparentlyDecompressed()
+    {
+        using HttpClientHandler handler = DownloadOperation.CreateDownloadHandler();
+        Assert.Equal(DecompressionMethods.None, handler.AutomaticDecompression);
+    }
+
+    [Fact]
+    public async Task CancellingADownloadKeepsTheExistingFileAndRemovesThePartialOne()
+    {
+        byte[] payload = new byte[256 * 1024];
+        new Random(109).NextBytes(payload);
+        byte[] existing = new byte[1024];
+        new Random(113).NextBytes(existing);
+
+        IPackage package = CreatePackageWithHash(
+            Convert.ToHexStringLower(SHA256.HashData(payload)),
+            UniqueInstallerUrl()
+        );
+        using var cancellation = new CancellationTokenSource();
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-cancelled-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(downloadPath, existing);
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(
+                package,
+                downloadPath,
+                new CancelAfterFirstReadHandler(payload, cancellation)
+            );
+            operation.SetRunCancellationSourceForTests(cancellation);
+
+            Assert.Equal(OperationVeredict.Canceled, await operation.InvokePerformOperationForTests());
+            Assert.Equal(existing, File.ReadAllBytes(downloadPath));
+            Assert.Empty(PartialFilesOf(downloadPath));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task APartialFileLeftByAnInterruptedDownloadIsReplacedAndRemoved()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(127).NextBytes(payload);
+
+        IPackage package = CreatePackageWithHash(
+            Convert.ToHexStringLower(SHA256.HashData(payload)),
+            UniqueInstallerUrl()
+        );
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-stale-partial-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(downloadPath + ".partial", new byte[64 * 1024]);
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Empty(PartialFilesOf(downloadPath));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+            File.Delete(downloadPath + ".partial");
+        }
+    }
+
+    [Fact]
+    public void TheVerificationRegistryForgetsTheOldestResultsPastItsCapacity()
+    {
+        Uri first = UniqueInstallerUrl();
+        var result = new InstallerVerification(InstallerHashStatus.NotPublished, null, null);
+
+        InstallerVerification.Record(first, null, result);
+        for (int i = 0; i < InstallerVerification.Capacity; i++)
+            InstallerVerification.Record(UniqueInstallerUrl(), null, result);
+
+        Assert.Null(InstallerVerification.Find(first, null));
+    }
 
     [Fact]
     public async Task ADownloadMatchingThePublishedHashIsVerifiedAndReportsItsSigner()

@@ -33,10 +33,13 @@ public static partial class AuthenticodeSignature
     private const uint ChoiceFile = 1;
     private const uint StateActionVerify = 1;
     private const uint StateActionClose = 2;
+    private const uint RevokeNone = 0;
     private const uint RevocationCheckChain = 0x40;
+    private const uint RevocationCheckNone = 0x10;
+    private const uint CacheOnlyUrlRetrieval = 0x1000;
     private static readonly Guid GenericVerifyV2 = new("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
 
-    public static SignatureCheck VerifyFile(string path)
+    public static SignatureCheck VerifyFile(string path, bool checkRevocationOnline = true)
     {
         nint pathPointer = Marshal.StringToHGlobalUni(path);
         nint fileInfoPointer = Marshal.AllocHGlobal(Marshal.SizeOf<FileInfo>());
@@ -51,11 +54,13 @@ public static partial class AuthenticodeSignature
             {
                 cbStruct = (uint)Marshal.SizeOf<TrustData>(),
                 dwUIChoice = UiNone,
-                fdwRevocationChecks = RevokeWholeChain,
+                fdwRevocationChecks = checkRevocationOnline ? RevokeWholeChain : RevokeNone,
                 dwUnionChoice = ChoiceFile,
                 pFile = fileInfoPointer,
                 dwStateAction = StateActionVerify,
-                dwProvFlags = RevocationCheckChain,
+                dwProvFlags = checkRevocationOnline
+                    ? RevocationCheckChain
+                    : RevocationCheckNone | CacheOnlyUrlRetrieval,
             };
             Guid action = GenericVerifyV2;
             int status = WinVerifyTrust(nint.Zero, ref action, ref data);

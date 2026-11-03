@@ -199,7 +199,10 @@ internal sealed class FakeDetailsHelper(FakePackageManager manager) : BasePkgDet
         details.LicenseUrl = new Uri($"{p.Homepage}/license");
         details.InstallerUrl = new Uri($"{p.Homepage}/{p.LatestVersion}/installer.{p.InstallerType}");
         details.InstallerHash = Convert.ToHexStringLower(
-            System.Security.Cryptography.SHA256.HashData(FakeDownloadOperation.PlaceholderInstaller(details.InstallerUrl)));
+            System.Security.Cryptography.SHA256.HashData(
+                p.Id.Contains("Failing", StringComparison.OrdinalIgnoreCase)
+                    ? []
+                    : FakeDownloadOperation.PlaceholderInstaller(details.InstallerUrl)));
         details.InstallerType = p.InstallerType;
         details.InstallerSize = p.InstallerSize;
         details.ManifestUrl = new Uri($"{p.Homepage}/manifest.yaml");

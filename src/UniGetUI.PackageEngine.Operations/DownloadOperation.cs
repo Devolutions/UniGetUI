@@ -1,3 +1,5 @@
+using System.Net;
+using System.Security.Cryptography;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -58,11 +60,19 @@ public class DownloadOperation : AbstractOperation
     /// Creates the HTTP client for the download. Virtual so tests can serve an
     /// in-memory payload without standing up a loopback server.
     /// </summary>
-    protected virtual HttpClient CreateHttpClient() =>
-        new(CoreTools.GenericHttpClientParameters);
+    protected virtual HttpClient CreateHttpClient() => new(CreateDownloadHandler());
+
+    internal static HttpClientHandler CreateDownloadHandler()
+    {
+        HttpClientHandler handler = CoreTools.GenericHttpClientParameters;
+        handler.AutomaticDecompression = DecompressionMethods.None;
+        return handler;
+    }
 
     protected virtual SignatureCheck? CheckSignature(string path) =>
-        OperatingSystem.IsWindows() ? AuthenticodeSignature.VerifyFile(path) : null;
+        OperatingSystem.IsWindows()
+            ? AuthenticodeSignature.VerifyFile(path, checkRevocationOnline: false)
+            : null;
 
     private async Task<SignatureCheck?> ReportSignatureAsync(string path)
     {
@@ -246,7 +256,7 @@ public class DownloadOperation : AbstractOperation
                 );
             }
 
-            partialLocation = $"{downloadLocation}.{Guid.NewGuid():N}.partial";
+            partialLocation = downloadLocation + ".partial";
             Line($"Download URL found at {downloadUrl} ", LineType.Information);
             using HttpClient? httpClient = downloadUrl.IsFile ? null : CreateHttpClient();
             using HttpResponseMessage? response =
@@ -274,10 +284,11 @@ public class DownloadOperation : AbstractOperation
             }
 
             var canReportProgress = totalBytes > 0;
+            using IncrementalHash? hasher = hashPublished ? expectedHash.CreateHasher() : null;
             await using (var contentStream = sourceStream)
             await using (var fileStream = new FileStream(
                 partialLocation,
-                FileMode.CreateNew,
+                FileMode.Create,
                 FileAccess.Write,
                 FileShare.None,
                 8192,
@@ -294,6 +305,7 @@ public class DownloadOperation : AbstractOperation
                 )
                 {
                     await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken);
+                    hasher?.AppendData(buffer, 0, bytesRead);
                     totalRead += bytesRead;
 
                     if (canReportProgress)
@@ -324,9 +336,9 @@ public class DownloadOperation : AbstractOperation
             CancellationToken.ThrowIfCancellationRequested();
 
             InstallerHashStatus hashStatus;
-            if (hashPublished)
+            if (hasher is not null)
             {
-                byte[] actualHash = await expectedHash.ComputeAsync(partialLocation, CancellationToken);
+                byte[] actualHash = hasher.GetHashAndReset();
                 if (expectedHash.Matches(actualHash))
                 {
                     Line(

@@ -402,6 +402,36 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
     }
 
     [Test]
+    public async Task DownloadInstaller_WithAMismatchedHash_FailsThenIsKeptWhenRetriedSkippingIntegrityChecks()
+    {
+        await ResetAsync(TuiPageIds.Discover);
+        await EnterPage();
+        await Type("failing");
+        await Key(K.Enter);
+        await WaitForTextAsync("Fabrikam Failing Updater");
+        await Key(K.Down);
+        await Type("m");
+        await ChooseAsync("Download installer");
+        await WaitForDialogAsync("Download installer");
+        string folder = Path.Join(FakeDataSetUp.Sandbox, "downloads-mismatch-test");
+        await ReplaceTextAsync(folder);
+        await Key(K.Enter);
+        await WaitForOperationsToFinishAsync();
+        NAssert.That(Directory.Exists(folder) ? Directory.GetFiles(folder) : Array.Empty<string>(), Is.Empty);
+
+        await OnUi(() => Window.NavigateTo(TuiPageIds.Operations));
+        await WaitForTextAsync("Failed");
+        await EnterPage();
+        await Type("m");
+        await ChooseAsync("Retry skipping integrity checks");
+        await WaitForOperationsToFinishAsync();
+
+        string[] files = Directory.GetFiles(folder);
+        NAssert.That(files, Has.Length.EqualTo(1));
+        NAssert.That(File.ReadAllText(files[0]), Does.Contain("fake-data placeholder installer"));
+    }
+
+    [Test]
     public async Task ExportToCsv()
     {
         await ResetAsync(TuiPageIds.Installed);

@@ -18,7 +18,9 @@ public sealed record InstallerVerification(
     SignatureCheck? Signature
 )
 {
+    internal const int Capacity = 256;
     private static readonly ConcurrentDictionary<string, InstallerVerification> _results = new();
+    private static readonly ConcurrentQueue<string> _recordOrder = new();
 
     public static InstallerVerification? Find(Uri? installerUrl, string? installerHash) =>
         installerUrl is not null && _results.TryGetValue(Key(installerUrl, installerHash), out var result)
@@ -51,8 +53,17 @@ public sealed record InstallerVerification(
         return signature is null ? hash : $"{hash} · {signature}";
     }
 
-    internal static void Record(Uri installerUrl, string? installerHash, InstallerVerification result) =>
-        _results[Key(installerUrl, installerHash)] = result;
+    internal static void Record(Uri installerUrl, string? installerHash, InstallerVerification result)
+    {
+        string key = Key(installerUrl, installerHash);
+        if (_results.TryAdd(key, result))
+            _recordOrder.Enqueue(key);
+        else
+            _results[key] = result;
+
+        while (_results.Count > Capacity && _recordOrder.TryDequeue(out string? oldest))
+            _results.TryRemove(oldest, out _);
+    }
 
     private static string Key(Uri installerUrl, string? installerHash) =>
         installerUrl.AbsoluteUri + "\n" + (installerHash ?? "").Trim();

@@ -89,7 +89,8 @@ public partial class MainWindow
             new NativeMenuItemSeparator(),
             Item(CoreTools.Translate("UniGetUI Log"), navigate, "OwnLog"),
             Item(CoreTools.Translate("Package Manager logs"), navigate, "ManagerLog"),
-            Item(CoreTools.Translate("Operation history"), navigate, "OperationHistory"));
+            Item(CoreTools.Translate("Operation history"), navigate, "OperationHistory"),
+            Item(CoreTools.Translate("Manager health"), navigate, "ManagerHealth"));
 
         _macViewMenu = view.Menu;
         sidebar.PropertyChanged += (_, e) =>

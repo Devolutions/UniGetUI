@@ -12,6 +12,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Scheduling;
+using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.Tui.FakeData;
 using UniGetUI.Tui.Infrastructure;
@@ -240,15 +241,16 @@ internal sealed class MainWindow : Window
                     CoreTools.Translate("UniGetUI has been ran as administrator, which is not recommended. When running UniGetUI as administrator, EVERY operation launched from UniGetUI will have administrator privileges. You can still use the program, but we highly recommend not running UniGetUI with administrator privileges."));
             }
 
-            // Desktop parity: a ready WinGet that lists no installed package at all has most likely malfunctioned.
             var installed = InstalledPackagesLoader.Instance;
             if (installed.IsLoading) await installed.WaitForCurrentLoadAsync();
-            if (!Settings.Get(Settings.K.DisableWinGetMalfunctionDetector)
-                && TuiEngine.FindManager("Winget") is { } winget && winget.IsReady()
-                && installed.Packages.All(p => p.Manager != winget))
-                TuiNotifications.Warning(CoreTools.Translate("WinGet malfunction detected"),
-                    CoreTools.Translate("It looks like WinGet is not working properly. Do you want to attempt to repair WinGet?")
-                    + " " + CoreTools.Translate("Managers → WinGet settings → Reset WinGet"), TimeSpan.FromSeconds(12));
+            if (!TuiEngine.IsFakeData)
+            {
+                foreach (var report in ManagerHealthEvaluator.ManagersNeedingAttention(TuiEngine.Managers))
+                    TuiNotifications.Warning(
+                        CoreTools.Translate("{0} is not working properly", report.Manager.DisplayName),
+                        ManagerHealthEvaluator.Describe(report) + " "
+                        + CoreTools.Translate("Open the Managers page to repair it."), TimeSpan.FromSeconds(12));
+            }
 
             foreach (MaintenanceTaskKind kind in new[] { MaintenanceTaskKind.LocalBackup, MaintenanceTaskKind.CheckForUpdates })
             {

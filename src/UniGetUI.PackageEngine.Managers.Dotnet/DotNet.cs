@@ -18,6 +18,17 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
 {
     public class DotNet : BaseNuGet
     {
+        protected override IEnumerable<ManagerMaintenanceAction> GetExtraMaintenanceActions()
+        {
+            yield return new ManagerMaintenanceAction
+            {
+                Id = "clear-cache",
+                Title = CoreTools.Translate("Clear cache"),
+                Description = CoreTools.Translate("Delete the NuGet HTTP cache used to look up .NET tools."),
+                RunAsync = () => RunMaintenanceCommandAsync(Status.ExecutablePath, "nuget locals http-cache --clear"),
+            };
+        }
+
         public static string[] FALSE_PACKAGE_IDS = [""];
         public static string[] FALSE_PACKAGE_VERSIONS = [""];
 

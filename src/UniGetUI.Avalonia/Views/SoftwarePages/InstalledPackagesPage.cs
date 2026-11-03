@@ -72,17 +72,6 @@ public class InstalledPackagesPage : AbstractPackagesPage
                 if (MaintenanceScheduler.ShouldRunAtAppStart(MaintenanceTaskKind.CloudBackup))
                     _ = MaintenanceScheduler.RunAsync(MaintenanceTaskKind.CloudBackup);
             }
-
-            if (OperatingSystem.IsWindows()
-                && !Settings.Get(Settings.K.DisableWinGetMalfunctionDetector)
-                && AvaloniaPackageOperationHelper.IsWinGetMalfunctioning())
-            {
-                UpdateWinGetMalfunctionBanner(malfunction: true);
-            }
-            else
-            {
-                UpdateWinGetMalfunctionBanner(malfunction: false);
-            }
         };
     }
 
@@ -353,31 +342,6 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
         if (dialog.ShouldProceedWithOperation)
             await ConfirmAndLaunchUninstall([package]);
-    }
-
-    // ─── WinGet malfunction banner ────────────────────────────────────────────
-
-    private static void UpdateWinGetMalfunctionBanner(bool malfunction)
-    {
-        if (MainWindow.Instance?.DataContext is not MainWindowViewModel vm) return;
-        var banner = vm.WinGetWarningBanner;
-        if (malfunction)
-        {
-            banner.Title = CoreTools.Translate("WinGet malfunction detected");
-            banner.Message = CoreTools.Translate(
-                "It looks like WinGet is not working properly. Do you want to attempt to repair WinGet?");
-            banner.ActionButtonText = CoreTools.Translate("Repair WinGet");
-            if (OperatingSystem.IsWindows())
-                banner.ActionButtonCommand = new AsyncRelayCommand(AvaloniaPackageOperationHelper.HandleBrokenWinGetAsync);
-            banner.IsClosable = true;
-            banner.IsOpen = true;
-        }
-        else
-        {
-            banner.IsOpen = false;
-            banner.ActionButtonText = "";
-            banner.ActionButtonCommand = null;
-        }
     }
 
     // ─── Page-specific actions ────────────────────────────────────────────────

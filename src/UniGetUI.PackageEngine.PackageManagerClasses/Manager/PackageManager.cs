@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Classes.Packages;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
@@ -67,7 +68,20 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public PackageManager()
         {
             _baseConstructorCalled = true;
-            TaskLogger = new ManagerLogger(this);
+            TaskLogger = new ManagerLogger(
+                this,
+                (type, process) =>
+                {
+                    if (
+                        type
+                        is LoggableTaskType.FindPackages
+                            or LoggableTaskType.ListUpdates
+                            or LoggableTaskType.ListInstalledPackages
+                            or LoggableTaskType.RefreshIndexes
+                    )
+                        RegisterListingProcess(process);
+                }
+            );
         }
 
         private static void Throw(string message)
@@ -97,8 +111,11 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         protected virtual void _performExtraLoadingSteps() { }
 
+        public bool IsInitializing { get; private set; } = true;
+
         public virtual void Initialize()
         {
+            IsInitializing = true;
             try
             {
                 _ready = false;
@@ -161,6 +178,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             {
                 Logger.Error($"An error occurred while initialising package manager {Name}");
                 Logger.Error(ex);
+            }
+            finally
+            {
+                IsInitializing = false;
             }
         }
 
@@ -345,6 +366,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         // Processes started by the current listing task, so a timeout can kill them instead of orphaning them.
         private readonly AsyncLocal<List<Process>?> _listingProcesses = new();
 
+        private readonly HashSet<List<Process>> _activeListingProcesses = [];
+
         // Lets a listing task register a process for kill-on-timeout. No-op when outside a listing task.
         protected void RegisterListingProcess(Process process)
         {
@@ -352,24 +375,44 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             if (processes is null)
                 return;
             lock (processes)
-                processes.Add(process);
+                if (!processes.Contains(process))
+                    processes.Add(process);
         }
 
-        private static void KillListingProcesses(List<Process> processes)
+        private static int KillListingProcesses(List<Process> processes)
         {
+            int killed = 0;
             lock (processes)
                 foreach (Process p in processes)
                 {
                     try
                     {
                         if (!p.HasExited)
+                        {
                             p.Kill(entireProcessTree: true);
+                            killed++;
+                        }
+                    }
+                    catch (InvalidOperationException)
+                    {
                     }
                     catch (Exception ex)
                     {
                         Logger.Warn($"Could not kill a timed-out process tree: {ex.Message}");
                     }
                 }
+            return killed;
+        }
+
+        public int StopRunningListings()
+        {
+            List<Process>[] active;
+            lock (_activeListingProcesses)
+                active = [.. _activeListingProcesses];
+
+            int killed = active.Sum(KillListingProcesses);
+            Logger.Warn($"Stopped {killed} running process(es) of manager {Name}");
+            return killed;
         }
 
         private void RefreshPackageIndexesSafely()
@@ -406,49 +449,245 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         )
         {
             List<Process> processes = [];
-            var task = Task.Run(() =>
-            {
-                _listingProcesses.Value = processes;
-                return method();
-            });
+            lock (_activeListingProcesses)
+                _activeListingProcesses.Add(processes);
 
-            if (!task.Wait(TimeSpan.FromSeconds(PackageListingTaskTimeout)))
+            bool abandoned = false;
+            try
             {
-                if (
-                    !allowDisablingTimeout
-                    || !Settings.Get(Settings.K.DisableTimeoutOnPackageListingTasks)
-                )
+                var task = Task.Run(() =>
                 {
-                    KillListingProcesses(processes);
-                    CoreTools.FinalizeDangerousTask(task);
+                    _listingProcesses.Value = processes;
+                    return method();
+                });
+
+                if (!task.Wait(TimeSpan.FromSeconds(PackageListingTaskTimeout)))
+                {
+                    if (
+                        !allowDisablingTimeout
+                        || !Settings.Get(Settings.K.DisableTimeoutOnPackageListingTasks)
+                    )
+                    {
+                        KillListingProcesses(processes);
+                        abandoned = true;
+                        task.ContinueWith(
+                            _ => ForgetListingProcesses(processes),
+                            CancellationToken.None,
+                            TaskContinuationOptions.ExecuteSynchronously,
+                            TaskScheduler.Default
+                        );
+                        CoreTools.FinalizeDangerousTask(task);
+                        throw new TimeoutException(
+                            $"Task {taskName} for manager {Name} did not finish after "
+                                + $"{PackageListingTaskTimeout} seconds, aborting."
+                                + (
+                                    allowDisablingTimeout
+                                        ? "  You may disable timeouts from UniGetUI Advanced Settings"
+                                        : ""
+                                )
+                        );
+                    }
+
+                    task.Wait();
+                }
+
+                return task.GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (!abandoned)
+                    ForgetListingProcesses(processes);
+            }
+        }
+
+        private void ForgetListingProcesses(List<Process> processes)
+        {
+            lock (_activeListingProcesses)
+                _activeListingProcesses.Remove(processes);
+        }
+
+        private sealed class ListingOutcome
+        {
+            public bool Skipped;
+            public Exception? FastRepairCause;
+            public Exception? Failure;
+        }
+
+        private IReadOnlyList<IPackage> TrackListing(
+            ManagerListingKind kind,
+            Func<ListingOutcome, IReadOnlyList<IPackage>> listing,
+            out bool failed
+        )
+        {
+            ListingOutcome outcome = new();
+            long start = Stopwatch.GetTimestamp();
+            IReadOnlyList<IPackage> packages = listing(outcome);
+            failed = outcome.Failure is not null;
+
+            if (!outcome.Skipped)
+            {
+                ManagerHealthStore.RecordListing(
+                    Name,
+                    kind,
+                    Stopwatch.GetElapsedTime(start),
+                    packages.Count,
+                    outcome.Failure,
+                    outcome.FastRepairCause
+                );
+            }
+
+            return packages;
+        }
+
+        public ManagerHealthRecord GetHealthRecord() => ManagerHealthStore.Get(Name);
+
+        public virtual bool ExpectsInstalledPackages => false;
+
+        public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() =>
+            [
+                new ManagerMaintenanceAction
+                {
+                    Id = "reload",
+                    Title = CoreTools.Translate("Reload"),
+                    Description = CoreTools.Translate(
+                        "Look for {0} again and reload its configuration",
+                        DisplayName
+                    ),
+                    RequiresConfirmation = false,
+                    ReloadsManager = false,
+                    RunAsync = () => Task.Run(Initialize),
+                },
+                new ManagerMaintenanceAction
+                {
+                    Id = "stop-stuck-listings",
+                    Title = CoreTools.Translate("Stop stuck processes"),
+                    Description = CoreTools.Translate(
+                        "Kill the processes of any search, package listing or maintenance command {0} is still running",
+                        DisplayName
+                    ),
+                    ReloadsManager = false,
+                    RunAsync = () => Task.Run(StopRunningListings),
+                },
+                .. GetExtraMaintenanceActions()
+                    .Where(action => action.AvailableWhenNotReady || IsReady()),
+            ];
+
+        protected virtual IEnumerable<ManagerMaintenanceAction> GetExtraMaintenanceActions() => [];
+
+        protected virtual TimeSpan MaintenanceCommandTimeout => TimeSpan.FromMinutes(15);
+
+        protected async Task RunMaintenanceCommandAsync(
+            string fileName,
+            string arguments,
+            bool elevated = false
+        )
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                throw new InvalidOperationException(
+                    CoreTools.Translate(
+                        "{0} is enabled but could not be found on this system.",
+                        DisplayName
+                    )
+                );
+            }
+
+            using Process process = new()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    UseShellExecute = elevated,
+                    Verb = elevated ? "runas" : string.Empty,
+                    CreateNoWindow = !elevated,
+                    RedirectStandardOutput = !elevated,
+                    RedirectStandardError = !elevated,
+                },
+            };
+
+            if (!elevated)
+            {
+                process.StartInfo.StandardOutputEncoding = OutputEncoding;
+                process.StartInfo.StandardErrorEncoding = OutputEncoding;
+            }
+
+            IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.OtherTask, process);
+            List<Process> tracked = [process];
+            lock (_activeListingProcesses)
+                _activeListingProcesses.Add(tracked);
+
+            try
+            {
+                process.Start();
+                Task<string> stdout = elevated
+                    ? Task.FromResult("")
+                    : process.StandardOutput.ReadToEndAsync();
+                Task<string> stderr = elevated
+                    ? Task.FromResult("")
+                    : process.StandardError.ReadToEndAsync();
+
+                using var timeout = new CancellationTokenSource(MaintenanceCommandTimeout);
+                try
+                {
+                    await process.WaitForExitAsync(timeout.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    KillListingProcesses(tracked);
+                    logger.Close(-1);
                     throw new TimeoutException(
-                        $"Task {taskName} for manager {Name} did not finish after "
-                            + $"{PackageListingTaskTimeout} seconds, aborting."
-                            + (
-                                allowDisablingTimeout
-                                    ? "  You may disable timeouts from UniGetUI Advanced Settings"
-                                    : ""
-                            )
+                        $"The maintenance command did not finish after {MaintenanceCommandTimeout.TotalMinutes} minutes and was stopped."
                     );
                 }
 
-                task.Wait();
+                logger.AddToStdOut(await stdout);
+                logger.AddToStdErr(await stderr);
+            }
+            finally
+            {
+                ForgetListingProcesses(tracked);
             }
 
-            return task.GetAwaiter().GetResult();
+            logger.Close(process.ExitCode);
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"The maintenance command exited with code {process.ExitCode}."
+                );
+            }
         }
+
+        protected string WithCallArguments(string arguments) =>
+            $"{Status.ExecutableCallArgs.Trim()} {arguments}".Trim();
 
         /// <summary>
         /// Returns an array of Package objects that the manager lists for the given query. Depending on the manager, the list may
         /// also include similar results. This method is fail-safe and will return an empty array if an error occurs.
         /// </summary>
-        public IReadOnlyList<IPackage> FindPackages(string query) => _findPackages(query, false);
+        public IReadOnlyList<IPackage> FindPackages(string query) =>
+            FindPackages(query, out _);
 
-        private IReadOnlyList<IPackage> _findPackages(string query, bool SecondAttempt)
+        public IReadOnlyList<IPackage> FindPackages(string query, out bool failed) =>
+            TrackListing(
+                ManagerListingKind.Search,
+                outcome => _findPackages(query, false, outcome),
+                out failed
+            );
+
+        private IReadOnlyList<IPackage> _findPackages(
+            string query,
+            bool SecondAttempt,
+            ListingOutcome outcome
+        )
         {
             if (!IsReady())
             {
                 Logger.Warn($"Manager {Name} is disabled but yet FindPackages was called");
+                if (SecondAttempt)
+                    outcome.Failure = outcome.FastRepairCause;
+                else
+                    outcome.Skipped = true;
                 return [];
             }
             try
@@ -475,12 +714,14 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     Logger.Warn(
                         $"Since this was the first attempt, {Name}.AttemptFastRepair() will be called and the procedure will be restarted"
                     );
+                    outcome.FastRepairCause = e;
                     AttemptFastRepair();
-                    return _findPackages(query, true);
+                    return _findPackages(query, true, outcome);
                 }
 
                 Logger.Error("Error finding packages on manager " + Name + " with query " + query);
                 Logger.Error(e);
+                outcome.Failure = e;
                 return [];
             }
         }
@@ -494,14 +735,28 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public IReadOnlyList<IPackage> GetAvailableUpdates()
         {
             LastUpdatesListingFailed = false;
-            return _getAvailableUpdates(false);
+            return TrackListing(
+                ManagerListingKind.Updates,
+                outcome => _getAvailableUpdates(false, outcome),
+                out _
+            );
         }
 
-        private IReadOnlyList<IPackage> _getAvailableUpdates(bool SecondAttempt)
+        private IReadOnlyList<IPackage> _getAvailableUpdates(
+            bool SecondAttempt,
+            ListingOutcome outcome
+        )
         {
             if (!IsReady())
             {
                 Logger.Warn($"Manager {Name} is disabled but yet GetAvailableUpdates was called");
+                if (SecondAttempt)
+                {
+                    outcome.Failure = outcome.FastRepairCause;
+                    LastUpdatesListingFailed = true;
+                }
+                else
+                    outcome.Skipped = true;
                 return [];
             }
             try
@@ -531,13 +786,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     Logger.Warn(
                         $"Since this was the first attempt, {Name}.AttemptFastRepair() will be called and the procedure will be restarted"
                     );
+                    outcome.FastRepairCause = e;
                     AttemptFastRepair();
-                    return _getAvailableUpdates(true);
+                    return _getAvailableUpdates(true, outcome);
                 }
 
                 Logger.Error("Error finding updates on manager " + Name);
                 Logger.Error(e);
                 LastUpdatesListingFailed = true;
+                outcome.Failure = e;
                 return [];
             }
         }
@@ -558,14 +815,28 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public IReadOnlyList<IPackage> GetInstalledPackages()
         {
             LastInstalledListingFailed = false;
-            return _getInstalledPackages(false);
+            return TrackListing(
+                ManagerListingKind.Installed,
+                outcome => _getInstalledPackages(false, outcome),
+                out _
+            );
         }
 
-        private IReadOnlyList<IPackage> _getInstalledPackages(bool SecondAttempt)
+        private IReadOnlyList<IPackage> _getInstalledPackages(
+            bool SecondAttempt,
+            ListingOutcome outcome
+        )
         {
             if (!IsReady())
             {
                 Logger.Warn($"Manager {Name} is disabled but yet GetInstalledPackages was called");
+                if (SecondAttempt)
+                {
+                    outcome.Failure = outcome.FastRepairCause;
+                    LastInstalledListingFailed = true;
+                }
+                else
+                    outcome.Skipped = true;
                 return [];
             }
             try
@@ -590,13 +861,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     Logger.Warn(
                         $"Since this was the first attempt, {Name}.AttemptFastRepair() will be called and the procedure will be restarted"
                     );
+                    outcome.FastRepairCause = e;
                     AttemptFastRepair();
-                    return _getInstalledPackages(true);
+                    return _getInstalledPackages(true, outcome);
                 }
 
                 Logger.Error("Error finding installed packages on manager " + Name);
                 Logger.Error(e);
                 LastInstalledListingFailed = true;
+                outcome.Failure = e;
                 return [];
             }
         }

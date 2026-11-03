@@ -112,7 +112,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                         HttpMethod.Get,
                         PackageManifestUrl
                     );
-                    NuGetFeedCredentials.ApplyTo(initialRequest);
+                    NuGetFeedCredentials.ApplyTo(initialRequest, package.Source.Url);
                     using HttpResponseMessage initialResponse = client.Send(initialRequest);
 
                     if (!initialResponse.IsSuccessStatusCode && version.EndsWith(".0"))
@@ -121,7 +121,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                             HttpMethod.Get,
                             new Uri(PackageManifestUrl.ToString().Replace(".0')", "')"))
                         );
-                        NuGetFeedCredentials.ApplyTo(fallbackRequest);
+                        NuGetFeedCredentials.ApplyTo(fallbackRequest, package.Source.Url);
                         using HttpResponseMessage fallbackResponse = client.Send(fallbackRequest);
                         return CacheManifestContent(cacheKey, package, PackageManifestUrl, fallbackResponse, latest: false);
                     }

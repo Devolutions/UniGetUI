@@ -72,7 +72,7 @@ internal static partial class NuGetConfigFiles
     public static NuGetConfigSettings Read(IReadOnlyList<string> pathsByPriority)
     {
         Dictionary<string, string[]> mapping = new(StringComparer.OrdinalIgnoreCase);
-        Dictionary<string, NuGetCredential> credentials = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, NuGetCredential?> credentials = new(StringComparer.OrdinalIgnoreCase);
         bool mappingCleared = false;
         bool credentialsCleared = false;
 
@@ -92,7 +92,14 @@ internal static partial class NuGetConfigFiles
                 credentialsCleared = ReadCredentials(credentialsSection, credentials);
         }
 
-        return new NuGetConfigSettings(new NuGetSourceMapping(mapping), credentials);
+        Dictionary<string, NuGetCredential> usable = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, credential) in credentials)
+        {
+            if (credential is not null)
+                usable[key] = credential;
+        }
+
+        return new NuGetConfigSettings(new NuGetSourceMapping(mapping), usable);
     }
 
     private static XElement? Load(string path)
@@ -148,10 +155,10 @@ internal static partial class NuGetConfigFiles
 
     private static bool ReadCredentials(
         XElement section,
-        Dictionary<string, NuGetCredential> credentials
+        Dictionary<string, NuGetCredential?> credentials
     )
     {
-        Dictionary<string, NuGetCredential> fromThisFile = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, NuGetCredential?> fromThisFile = new(StringComparer.OrdinalIgnoreCase);
         bool cleared = false;
 
         foreach (XElement entry in section.Elements())
@@ -163,43 +170,42 @@ internal static partial class NuGetConfigFiles
                 continue;
             }
 
-            Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
-            foreach (XElement add in entry.Elements("add"))
-            {
-                if (add.Attribute("key")?.Value is { } name && add.Attribute("value")?.Value is { } value)
-                    values[name] = Environment.ExpandEnvironmentVariables(value);
-            }
-
-            if (
-                values.TryGetValue("ValidAuthenticationTypes", out string? authTypes)
-                && !authTypes
-                    .Split(',', StringSplitOptions.TrimEntries)
-                    .Contains("basic", StringComparer.OrdinalIgnoreCase)
-            )
-                continue;
-
-            if (!values.TryGetValue("Username", out string? username))
-                continue;
-
-            string? password = values.TryGetValue("ClearTextPassword", out string? clearText)
-                ? clearText
-                : values.TryGetValue("Password", out string? encrypted)
-                    ? DecryptPassword(encrypted)
-                    : null;
-
-            if (password is null)
-                continue;
-
-            fromThisFile[XmlConvert.DecodeName(entry.Name.LocalName)] = new NuGetCredential(
-                username,
-                password
-            );
+            fromThisFile[XmlConvert.DecodeName(entry.Name.LocalName)] = ReadBasicCredential(entry);
         }
 
         foreach (var (key, credential) in fromThisFile)
             credentials.TryAdd(key, credential);
 
         return cleared;
+    }
+
+    private static NuGetCredential? ReadBasicCredential(XElement entry)
+    {
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        foreach (XElement add in entry.Elements("add"))
+        {
+            if (add.Attribute("key")?.Value is { } name && add.Attribute("value")?.Value is { } value)
+                values[name] = Environment.ExpandEnvironmentVariables(value);
+        }
+
+        if (
+            values.TryGetValue("ValidAuthenticationTypes", out string? authTypes)
+            && !authTypes
+                .Split(',', StringSplitOptions.TrimEntries)
+                .Contains("basic", StringComparer.OrdinalIgnoreCase)
+        )
+            return null;
+
+        if (!values.TryGetValue("Username", out string? username))
+            return null;
+
+        string? password = values.TryGetValue("ClearTextPassword", out string? clearText)
+            ? clearText
+            : values.TryGetValue("Password", out string? encrypted)
+                ? DecryptPassword(encrypted)
+                : null;
+
+        return password is null ? null : new NuGetCredential(username, password);
     }
 
     private static string? DecryptPassword(string encrypted)

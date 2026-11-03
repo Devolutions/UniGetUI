@@ -93,6 +93,57 @@ public sealed class NuGetV2UpdatesTests
         Assert.Equal(["1.0.0", "1.1.0", "1.2.0", "2.0.0"], manager.DetailsHelper.GetVersions(package).Order());
     }
 
+    [Fact]
+    public void APackageTheMappingKeepsOffAFeedIsNeverSentToIt()
+    {
+        using var feed = new V2UpdatesFeed();
+        var manager = feed.CreateManager(
+            InstalledModules(3, duplicatedVersions: 0),
+            canResolve: id => id != "Microsoft.Graph.Beta.Module001"
+        );
+
+        var updates = manager.GetAvailableUpdates();
+
+        Assert.Equal(2, updates.Count);
+        Assert.DoesNotContain(feed.Server.RequestPaths, path => path.Contains("Module001"));
+    }
+
+    [Fact]
+    public void AFeedNoInstalledPackageMayUseIsNotQueried()
+    {
+        using var feed = new V2UpdatesFeed();
+        var manager = feed.CreateManager(InstalledModules(3, duplicatedVersions: 0), canResolve: _ => false);
+
+        Assert.Empty(manager.GetAvailableUpdates());
+        Assert.Empty(feed.Server.RequestPaths);
+    }
+
+    [Theory]
+    [InlineData("<link rel=\"next\" href=\"https://feed.test/api/v2/Search()?$skip=100&amp;q=a\" />", "https://feed.test/api/v2/Search()?$skip=100&q=a")]
+    [InlineData("<link href=\"https://feed.test/api/v2/Search()?$skip=100\" rel=\"next\"/>", "https://feed.test/api/v2/Search()?$skip=100")]
+    [InlineData("<link rel='next' href='Search()?$skip=100'></link>", "https://feed.test/api/v2/Search()?$skip=100")]
+    [InlineData("<link rel=\"self\" href=\"https://feed.test/self\" /><link type=\"application/atom+xml\" rel=\"next\" href=\"/api/v2/Search()?$skip=100\" />", "https://feed.test/api/v2/Search()?$skip=100")]
+    public void NextPageLinksAreReadWhateverTheirAttributeOrderOrForm(string feedXml, string expected)
+    {
+        var next = BaseNuGet.FindNextPageUrl(
+            $"<feed>{feedXml}</feed>",
+            new Uri("https://feed.test/api/v2/Search()?q=a")
+        );
+
+        Assert.Equal(expected, next?.AbsoluteUri);
+    }
+
+    [Fact]
+    public void AFeedWithoutANextLinkHasNoNextPage()
+    {
+        Assert.Null(
+            BaseNuGet.FindNextPageUrl(
+                "<feed><link rel=\"self\" href=\"https://feed.test/self\" /></feed>",
+                new Uri("https://feed.test/api/v2/Search()")
+            )
+        );
+    }
+
     private static List<(string Id, string Version)> InstalledModules(int count, int duplicatedVersions)
     {
         var modules = new List<(string Id, string Version)>();
@@ -131,9 +182,12 @@ public sealed class NuGetV2UpdatesTests
             }
         }
 
-        public V2TestManager CreateManager(IReadOnlyList<(string Id, string Version)> installed)
+        public V2TestManager CreateManager(
+            IReadOnlyList<(string Id, string Version)> installed,
+            Func<string, bool>? canResolve = null
+        )
         {
-            var manager = new V2TestManager($"{Server.BaseUri.AbsoluteUri}api/v2/", installed);
+            var manager = new V2TestManager($"{Server.BaseUri.AbsoluteUri}api/v2/", installed, canResolve);
             manager.Initialize();
             Assert.True(manager.IsReady());
             return manager;
@@ -203,9 +257,16 @@ public sealed class NuGetV2UpdatesTests
     {
         private readonly IReadOnlyList<(string Id, string Version)> _installed;
 
-        public V2TestManager(string sourceUrl, IReadOnlyList<(string Id, string Version)> installed)
+        private readonly Func<string, bool>? _canResolve;
+
+        public V2TestManager(
+            string sourceUrl,
+            IReadOnlyList<(string Id, string Version)> installed,
+            Func<string, bool>? canResolve = null
+        )
         {
             _installed = installed;
+            _canResolve = canResolve;
 
             Capabilities = new ManagerCapabilities
             {
@@ -249,6 +310,9 @@ public sealed class NuGetV2UpdatesTests
         }
 
         protected override void _loadManagerVersion(out string version) => version = "0.0.0";
+
+        protected override bool CanResolveFromSource(string packageId, IManagerSource source) =>
+            _canResolve?.Invoke(packageId) ?? true;
 
         private sealed class Helper(BaseNuGet manager) : BaseNuGetDetailsHelper(manager)
         {

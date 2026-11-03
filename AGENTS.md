@@ -111,9 +111,12 @@ retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path 
   with `DOTNET_CLI_UI_LANGUAGE=en`, so `disabledPackageSources` and the whole config hierarchy
   apply as they do for `dotnet tool install`. Output it cannot read, or a failed command, falls
   back to nuget.org. The files from `dotnet nuget config paths` supply `packageSourceMapping`
-  (searches and updates skip a feed the mapping does not allow for that id) and basic
+  (an installed package is never sent to a feed the mapping does not allow for its id) and basic
   `packageSourceCredentials` (clear text, or DPAPI-encrypted with the `NuGet` entropy on
-  Windows), which `NuGetFeedCredentials` sends only to the origin of the source they belong to.
+  Windows; a closer file's entry wins even when it cannot be used, such as one restricted to
+  `negotiate`). `NuGetFeedCredentials` keys each credential by its feed, since feeds sharing a
+  server (Azure Artifacts) carry different ones, and sends it only on requests made for that
+  feed and only to that feed's own server; every request site passes the feed it belongs to.
   The snapshot is kept until a config file's write time changes, or for ten minutes. Updates are
   checked on every enabled feed and the newest wins; the feed at nuget.org's URL is always
   `DefaultSource`, whatever its key. `dotnet tool list` names no feed, so installed tools sit

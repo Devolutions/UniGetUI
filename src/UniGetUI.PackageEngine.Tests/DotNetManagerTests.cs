@@ -391,6 +391,7 @@ public sealed class DotNetManagerTests
 
         try
         {
+            var feed = new Uri("https://packages.example.test/feed/v3/index.json");
             using var sameOrigin = new HttpRequestMessage(
                 HttpMethod.Get,
                 "https://PACKAGES.example.test/other/path"
@@ -399,8 +400,13 @@ public sealed class DotNetManagerTests
                 HttpMethod.Get,
                 "https://api.nuget.org/v3/index.json"
             );
-            NuGetFeedCredentials.ApplyTo(sameOrigin);
-            NuGetFeedCredentials.ApplyTo(otherOrigin);
+            using var noFeed = new HttpRequestMessage(
+                HttpMethod.Get,
+                "https://packages.example.test/feed/v3/index.json"
+            );
+            NuGetFeedCredentials.ApplyTo(sameOrigin, feed);
+            NuGetFeedCredentials.ApplyTo(otherOrigin, feed);
+            NuGetFeedCredentials.ApplyTo(noFeed, null);
 
             Assert.Equal("Basic", sameOrigin.Headers.Authorization?.Scheme);
             Assert.Equal(
@@ -408,11 +414,103 @@ public sealed class DotNetManagerTests
                 sameOrigin.Headers.Authorization?.Parameter
             );
             Assert.Null(otherOrigin.Headers.Authorization);
+            Assert.Null(noFeed.Headers.Authorization);
         }
         finally
         {
             NuGetFeedCredentials.Replace([]);
         }
+    }
+
+    [Fact]
+    public void FeedsSharingAServerKeepTheirOwnCredentials()
+    {
+        var settings = new NuGetConfigSettings(
+            NuGetSourceMapping.None,
+            new Dictionary<string, NuGetCredential>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Feed A"] = new("alice", "a-secret"),
+                ["Feed B"] = new("bob", "b-secret"),
+            }
+        );
+        NuGetFeedCredentials.Replace(
+            DotNetSourceHelper.BuildCredentials(
+                [
+                    new("Feed A", new Uri("https://pkgs.example.test/org/_packaging/feed-a/nuget/v3/index.json")),
+                    new("Feed B", new Uri("https://pkgs.example.test/org/_packaging/feed-b/nuget/v3")),
+                ],
+                settings
+            )
+        );
+
+        try
+        {
+            foreach (
+                var (feed, expected) in new[]
+                {
+                    ("https://pkgs.example.test/org/_packaging/feed-a/nuget/v3", "alice:a-secret"),
+                    ("https://pkgs.example.test/org/_packaging/feed-b/nuget/v3/index.json", "bob:b-secret"),
+                }
+            )
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    "https://pkgs.example.test/org/_packaging/0f3a/nuget/v3/flat2/contoso.tool/index.json"
+                );
+                NuGetFeedCredentials.ApplyTo(request, new Uri(feed));
+
+                Assert.Equal(
+                    Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(expected)),
+                    request.Headers.Authorization?.Parameter
+                );
+            }
+        }
+        finally
+        {
+            NuGetFeedCredentials.Replace([]);
+        }
+    }
+
+    [Fact]
+    public void ACloserCredentialThatCannotBeUsedHidesAFartherOne()
+    {
+        using var folder = new TempFolder();
+        string closest = folder.Write(
+            "closest.config",
+            """
+            <configuration>
+              <packageSourceCredentials>
+                <Private>
+                  <add key="Username" value="someone" />
+                  <add key="ClearTextPassword" value="kerberos-only" />
+                  <add key="ValidAuthenticationTypes" value="negotiate" />
+                </Private>
+              </packageSourceCredentials>
+            </configuration>
+            """
+        );
+        string farthest = folder.Write(
+            "farthest.config",
+            """
+            <configuration>
+              <packageSourceCredentials>
+                <Private>
+                  <add key="Username" value="old" />
+                  <add key="ClearTextPassword" value="basic" />
+                </Private>
+                <Other>
+                  <add key="Username" value="other" />
+                  <add key="ClearTextPassword" value="kept" />
+                </Other>
+              </packageSourceCredentials>
+            </configuration>
+            """
+        );
+
+        var settings = NuGetConfigFiles.Read([closest, farthest]);
+
+        Assert.False(settings.Credentials.ContainsKey("Private"));
+        Assert.Equal(new NuGetCredential("other", "kept"), settings.Credentials["Other"]);
     }
 
     [Fact]

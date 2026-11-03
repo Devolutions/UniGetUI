@@ -836,6 +836,28 @@ public sealed class NuGetV3ClientTests
     }
 
     [Theory]
+    [InlineData("DotnetTool", true)]
+    [InlineData("Dependency", false)]
+    public void AnExactIdSearchOnARegistrationOnlyFeedChecksThePackageTypeThere(
+        string requiredType,
+        bool expectFound
+    )
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertisePackageBaseAddress = false,
+            AdvertiseSearchService = false,
+            LeafWithoutCatalogEntry = true,
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        var results = NuGetV3Client.Search(index, "Contoso.Tool", false, requiredType, 50);
+
+        Assert.Equal(expectFound, results.Any(result => result.Id == "Contoso.Tool" && result.Version == "2.0.0"));
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void APackageMissingFromAFeedHasNoVersionsRatherThanAFailedCheck(bool flatContainer)
@@ -1708,7 +1730,7 @@ public sealed class NuGetV3ClientTests
             string items = string.Join(
                 ",",
                 page.Select(version =>
-                    $$"""{"@id":"{{BaseUri}}registration-gz-semver2/contoso.tool/{{version}}.json","catalogEntry":{"id":"Contoso.Tool","version":"{{version}}","listed":true,"description":"Registered on a page"},"packageContent":"{{BaseUri}}download/contoso.tool/{{version}}"}"""
+                    $$"""{"@id":"{{BaseUri}}registration-gz-semver2/contoso.tool/{{version}}.json","catalogEntry":{"id":"Contoso.Tool","version":"{{version}}","listed":true,"description":"Registered on a page","packageTypes":[{"name":"DotnetTool"}]},"packageContent":"{{BaseUri}}download/contoso.tool/{{version}}"}"""
                 )
             );
             string itemsProperty = InlineRegistrationPages || includeContext ? $",\"items\":[{items}]" : "";

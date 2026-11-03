@@ -620,7 +620,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             for (int page = 0; SearchUrl is not null && page < MaxV2VersionPages; page++)
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
-                NuGetFeedCredentials.ApplyTo(request);
+                NuGetFeedCredentials.ApplyTo(request, package.Source.Url);
                 using HttpResponseMessage response = client.Send(request);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -642,11 +642,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     }
                 }
 
-                Match next = Regex.Match(SearchResults, "<link rel=\"next\" href=\"([^\"]+)\" ?\\/>");
-                SearchUrl = next.Success
-                    && Uri.TryCreate(next.Groups[1].Value.Replace("&amp;", "&"), UriKind.Absolute, out Uri? nextUrl)
-                    ? nextUrl
-                    : null;
+                SearchUrl = BaseNuGet.FindNextPageUrl(SearchResults, SearchUrl);
             }
 
             results.Sort(StringComparer.OrdinalIgnoreCase);

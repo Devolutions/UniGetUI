@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -161,7 +162,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     while (SearchUrl is not null)
                     {
                         using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
-                        NuGetFeedCredentials.ApplyTo(request);
+                        NuGetFeedCredentials.ApplyTo(request, source.Url);
                         using HttpResponseMessage response = client.Send(request);
 
                         if (!response.IsSuccessStatusCode)
@@ -214,16 +215,9 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             };
                         }
 
-                        SearchUrl = null;
-                        Match next = Regex.Match(
-                            SearchResults,
-                            "<link rel=\"next\" href=\"([^\"]+)\" ?\\/>"
-                        );
-                        if (next.Success)
-                        {
-                            SearchUrl = new Uri(next.Groups[1].Value.Replace("&amp;", "&"));
+                        SearchUrl = FindNextPageUrl(SearchResults, SearchUrl);
+                        if (SearchUrl is not null)
                             logger.Log($"Adding extra info from URL={SearchUrl}");
-                        }
                     }
 
                     foreach (SearchResult package in AlreadyProcessedPackages.Values)
@@ -466,10 +460,17 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 List<Package> found = [];
                 foreach (IManagerSource source in GetUpdateSources(pair.Key))
                 {
+                    List<IPackage> allowed =
+                    [
+                        .. pair.Value.Where(package => CanResolveFromSource(package.Id, source)),
+                    ];
+                    if (allowed.Count is 0)
+                        continue;
+
                     found.AddRange(
                         GetAvailableUpdatesFromSource(
                             source,
-                            pair.Value,
+                            allowed,
                             canPrerelease,
                             logger,
                             out int sourceErrors
@@ -478,11 +479,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     errors += sourceErrors;
                 }
 
-                Packages.AddRange(
-                    KeepNewestUpdatePerId(
-                        [.. found.Where(update => CanResolveFromSource(update.Id, update.Source))]
-                    )
-                );
+                Packages.AddRange(KeepNewestUpdatePerId(found));
             }
 
             logger.Close(errors);
@@ -560,7 +557,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     try
                     {
                         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                        NuGetFeedCredentials.ApplyTo(request);
+                        NuGetFeedCredentials.ApplyTo(request, source.Url);
                         using HttpResponseMessage response = client.Send(request);
 
                         if (!response.IsSuccessStatusCode)
@@ -671,6 +668,29 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         private static bool HasV2Entries(string content) =>
             Regex.IsMatch(content, "<entry[\\s>]");
+
+        internal static Uri? FindNextPageUrl(string content, Uri currentUrl)
+        {
+            foreach (Match link in Regex.Matches(content, "<link\\b[^>]*>"))
+            {
+                if (!Regex.IsMatch(link.Value, "\\brel\\s*=\\s*([\"'])next\\1"))
+                    continue;
+
+                Match href = Regex.Match(link.Value, "\\bhref\\s*=\\s*([\"'])(.*?)\\1");
+                if (!href.Success)
+                    continue;
+
+                return Uri.TryCreate(
+                    currentUrl,
+                    WebUtility.HtmlDecode(href.Groups[2].Value),
+                    out Uri? next
+                )
+                    ? next
+                    : null;
+            }
+
+            return null;
+        }
 
         internal IReadOnlyList<string> BuildV2UpdateUrls(
             IManagerSource source,

@@ -1398,7 +1398,7 @@ namespace UniGetUI.PackageEngine.Operations
                 var installedMatches = await Task.Run(() =>
                     Package
                         .Manager.GetInstalledPackages()
-                        .Where(candidate => candidate.IsEquivalentTo(Package))
+                        .Where(candidate => candidate.IsSamePackageAs(Package))
                         .ToArray()
                 );
 
@@ -1530,7 +1530,7 @@ namespace UniGetUI.PackageEngine.Operations
                         : package.OverridenOptions.Scope;
 
                 var matches = InstalledPackagesLoader.Instance.Packages.Where(p =>
-                    p.IsEquivalentTo(package)
+                    p.IsSamePackageAs(package)
                     && (
                         string.IsNullOrEmpty(p.OverridenOptions.Scope)
                         || string.IsNullOrEmpty(updatedScope)

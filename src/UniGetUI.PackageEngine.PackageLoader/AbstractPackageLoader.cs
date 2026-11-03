@@ -403,13 +403,18 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return;
             }
 
-            if (!Contains(package))
+            if (Contains(package))
             {
+                PackageReference.Remove(HashPackage(package), out _);
+                InvokePackagesChangedEvent(true, [], [package]);
                 return;
             }
 
-            PackageReference.Remove(HashPackage(package), out _);
-            InvokePackagesChangedEvent(true, [], [package]);
+            if (FindFromAnySource(package) is { } stored)
+            {
+                PackageReference.Remove(HashPackage(stored), out _);
+                InvokePackagesChangedEvent(true, [], [stored]);
+            }
         }
 
         /// <summary>
@@ -427,19 +432,19 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (PackageReference.TryGetValue(HashPackage(package), out IPackage? eq))
                 return eq;
 
+            return FindFromAnySource(package);
+        }
+
+        private IPackage? FindFromAnySource(IPackage package)
+        {
             if (package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
                 return null;
 
             return Packages.FirstOrDefault(candidate =>
-                IsSamePackageFromAnySource(candidate, package)
+                PackageIdentity.IsSamePackageFromAnySource(candidate, package)
                 && (!ALLOW_MULTIPLE_PACKAGE_VERSIONS || candidate.VersionString == package.VersionString)
             );
         }
-
-        private static bool IsSamePackageFromAnySource(IPackage candidate, IPackage package) =>
-            !package.Manager.Capabilities.InstalledPackagesKeepTheirSource
-            && candidate.Manager.Name == package.Manager.Name
-            && string.Equals(candidate.Id, package.Id, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Gets ALL of the equivalent packages on this loader.
@@ -454,9 +459,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return [];
             }
 
-            return Packages
-                .Where(p => p.IsEquivalentTo(package) || IsSamePackageFromAnySource(p, package))
-                .ToArray();
+            return Packages.Where(p => p.IsSamePackageAs(package)).ToArray();
         }
 
         public IPackage? GetPackageForId(string id, string? sourceName = null)

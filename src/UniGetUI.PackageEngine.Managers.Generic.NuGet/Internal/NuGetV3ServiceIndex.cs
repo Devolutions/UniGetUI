@@ -95,7 +95,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
         private static NuGetV3ServiceIndex? Fetch(Uri serviceIndexUrl)
         {
-            if (!NuGetV3Client.TryDownloadString(serviceIndexUrl, out string content))
+            if (!NuGetV3Client.TryDownloadString(serviceIndexUrl, serviceIndexUrl, out string content, out _))
             {
                 Logger.Warn($"Could not load the NuGet V3 service index at Url={serviceIndexUrl}");
                 return null;

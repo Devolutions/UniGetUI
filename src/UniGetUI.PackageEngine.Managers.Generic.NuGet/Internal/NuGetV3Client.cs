@@ -39,10 +39,25 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             LeafCache.Clear();
         }
 
-        public static bool TryDownloadString(Uri url, out string content) =>
-            TryDownloadString(url, out content, out _);
+        private static bool TryDownloadString(
+            NuGetV3ServiceIndex index,
+            Uri url,
+            out string content
+        ) => TryDownloadString(url, index.ServiceIndexUrl, out content, out _);
 
-        internal static bool TryDownloadString(Uri url, out string content, out bool notFound)
+        private static bool TryDownloadString(
+            NuGetV3ServiceIndex index,
+            Uri url,
+            out string content,
+            out bool notFound
+        ) => TryDownloadString(url, index.ServiceIndexUrl, out content, out notFound);
+
+        internal static bool TryDownloadString(
+            Uri url,
+            Uri? feed,
+            out string content,
+            out bool notFound
+        )
         {
             content = string.Empty;
             notFound = false;
@@ -53,7 +68,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                NuGetFeedCredentials.ApplyTo(request);
+                NuGetFeedCredentials.ApplyTo(request, feed);
                 using HttpResponseMessage response = client.Send(request);
 
                 if (!response.IsSuccessStatusCode)
@@ -165,7 +180,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             if (!Uri.TryCreate(url.ToString(), UriKind.Absolute, out Uri? searchUrl))
                 return null;
 
-            if (!TryDownloadString(searchUrl, out string content))
+            if (!TryDownloadString(index, searchUrl, out string content))
                 return null;
 
             try
@@ -233,7 +248,9 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
             if (!string.IsNullOrEmpty(requiredPackageType))
             {
-                V3CatalogEntry? entry = GetNuspecMetadata(index, candidate, version);
+                V3CatalogEntry? entry = index.PackageBaseAddress is null
+                    ? GetCatalogEntry(index, candidate, version)
+                    : GetNuspecMetadata(index, candidate, version);
                 if (entry is null || !entry.HasPackageType(requiredPackageType))
                 {
                     Logger.Debug(
@@ -304,7 +321,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             )
                 return [];
 
-            if (!TryDownloadString(versionsUrl, out string content, out bool notFound))
+            if (!TryDownloadString(index, versionsUrl, out string content, out bool notFound))
             {
                 if (notFound)
                     VersionCache[cacheKey] = (DateTime.UtcNow, []);
@@ -359,7 +376,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             )
                 return [];
 
-            if (!TryDownloadString(registrationUrl, out string content, out bool notFound))
+            if (!TryDownloadString(index, registrationUrl, out string content, out bool notFound))
             {
                 if (notFound)
                     VersionCache[cacheKey] = (DateTime.UtcNow, []);
@@ -388,7 +405,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                     {
                         if (
                             !Uri.TryCreate(page.Id, UriKind.Absolute, out Uri? pageUrl)
-                            || !TryDownloadString(pageUrl, out string pageContent)
+                            || !TryDownloadString(index, pageUrl, out string pageContent)
                         )
                         {
                             requestFailed = true;
@@ -433,7 +450,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                     UriKind.Absolute,
                     out Uri? registrationUrl
                 )
-                || !TryDownloadString(registrationUrl, out string content)
+                || !TryDownloadString(index, registrationUrl, out string content)
             )
                 return null;
 
@@ -453,7 +470,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                 if (
                     leaves is null
                     && Uri.TryCreate(page.Id, UriKind.Absolute, out Uri? pageUrl)
-                    && TryDownloadString(pageUrl, out string pageContent)
+                    && TryDownloadString(index, pageUrl, out string pageContent)
                 )
                     leaves = NuGetV3Json.DeserializeRegistrationPage(pageContent)?.Items;
 
@@ -684,7 +701,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             )
                 return cached.Leaf;
 
-            if (!TryDownloadString(leafUrl, out string content))
+            if (!TryDownloadString(index, leafUrl, out string content))
                 return null;
 
             try
@@ -730,7 +747,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                         UriKind.Absolute,
                         out Uri? catalogUrl
                     )
-                    && TryDownloadString(catalogUrl, out string catalogContent)
+                    && TryDownloadString(index, catalogUrl, out string catalogContent)
                 )
                 {
                     V3CatalogEntry? entry = NuGetV3Json.DeserializeCatalogEntry(catalogContent);
@@ -794,7 +811,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             if (GetNuspecUrl(index, packageId, version) is not { } nuspecUrl)
                 return null;
 
-            if (!TryDownloadString(nuspecUrl, out string content))
+            if (!TryDownloadString(index, nuspecUrl, out string content))
                 return null;
 
             try

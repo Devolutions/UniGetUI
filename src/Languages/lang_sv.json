@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} är redan uppdaterat",
   "Could not refresh from remote": "Det gick inte att uppdatera från fjärrlagringsplatsen",
   "Remote information may be out of date": "Informationen från fjärrlagringsplatsen kan vara inaktuell",
-  "Error details": "Felinformation"
+  "Error details": "Felinformation",
+  "Total size": "Total storlek",
+  "Actions": "Åtgärder",
+  "{0} on disk": "{0} på disk",
+  "{0} on disk, {1} in worktrees": "{0} på disk, {1} i arbetskataloger",
+  "Install UniGetUI updates automatically while it is idle in the background": "Installera UniGetUI-uppdateringar automatiskt när programmet är inaktivt i bakgrunden",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI kan endast installera uppdateringar i bakgrunden när det är installerat för den aktuella användaren eller körs som administratör.",
+  "Select a package to see its details": "Välj ett paket för att visa dess detaljer",
+  "Make the window wider to show package details here": "Gör fönstret bredare för att visa paketdetaljer här",
+  "Details panel": "Detaljpanel",
+  "Show details panel": "Visa detaljpanelen",
+  "Hide details panel": "Dölj detaljpanelen"
 }

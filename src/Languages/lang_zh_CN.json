@@ -2236,5 +2236,16 @@
   "The packages listed here won't be taken in account when checking for updates. Click the update button on their right to update them once, or the delete button to stop ignoring their updates.": "检查更新时不会考虑此处列出的软件包。点击其右侧的更新按钮可仅更新一次，点击删除按钮可停止忽略其更新。",
   "Updating {0} once. Its updates will stay ignored.": "正在仅更新 {0} 一次。其后续更新仍会被忽略。",
   "{0} is already being updated": "{0} 正在更新",
-  "{0} is already up to date": "{0} 已是最新版本"
+  "{0} is already up to date": "{0} 已是最新版本",
+  "Total size": "总大小",
+  "Actions": "操作",
+  "{0} on disk": "磁盘占用 {0}",
+  "{0} on disk, {1} in worktrees": "磁盘占用 {0}，工作树中占用 {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI 在后台空闲运行时自动安装更新",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI 仅在为当前用户安装，或以管理员身份运行时，才能在后台安装更新。",
+  "Select a package to see its details": "选择一个软件包以查看其详细信息",
+  "Make the window wider to show package details here": "请加宽窗口以在此处显示软件包详细信息",
+  "Details panel": "详细信息面板",
+  "Show details panel": "显示详细信息面板",
+  "Hide details panel": "隐藏详细信息面板"
 }

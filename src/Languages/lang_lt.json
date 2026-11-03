@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} jau atnaujintas",
   "Could not refresh from remote": "Nepavyko atnaujinti nuotolinio šaltinio",
   "Remote information may be out of date": "Nuotolinė informacija gali būti pasenusi",
-  "Error details": "Išsami klaidos informacija"
+  "Error details": "Išsami klaidos informacija",
+  "Total size": "Bendras dydis",
+  "Actions": "Veiksmai",
+  "{0} on disk": "{0} diske",
+  "{0} on disk, {1} in worktrees": "{0} diske, {1} darbo medžiuose",
+  "Install UniGetUI updates automatically while it is idle in the background": "Automatiškai įdiegti „UniGetUI“ naujinimus, kai ji veikia fone ir yra nenaudojama",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "„UniGetUI“ gali įdiegti naujinimus fone tik tada, kai ji įdiegta dabartiniam naudotojui arba veikia administratoriaus teisėmis.",
+  "Select a package to see its details": "Pasirinkite paketą, kad pamatytumėte jo išsamią informaciją",
+  "Make the window wider to show package details here": "Išplėskite langą, kad čia būtų rodoma paketo išsami informacija",
+  "Details panel": "Išsamios informacijos skydelis",
+  "Show details panel": "Rodyti išsamios informacijos skydelį",
+  "Hide details panel": "Slėpti išsamios informacijos skydelį"
 }

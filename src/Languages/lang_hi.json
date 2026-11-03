@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} पहले से नवीनतम संस्करण पर है",
   "Could not refresh from remote": "रिमोट से रीफ़्रेश नहीं किया जा सका",
   "Remote information may be out of date": "रिमोट की जानकारी पुरानी हो सकती है",
-  "Error details": "त्रुटि विवरण"
+  "Error details": "त्रुटि विवरण",
+  "Total size": "कुल आकार",
+  "Actions": "कार्रवाइयाँ",
+  "{0} on disk": "डिस्क पर {0}",
+  "{0} on disk, {1} in worktrees": "डिस्क पर {0}, वर्कट्री में {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI निष्क्रिय होने पर बैकग्राउंड में उसके अपडेट अपने आप इंस्टॉल करें",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI बैकग्राउंड में अपने अपडेट तभी इंस्टॉल कर सकता है, जब यह मौजूदा उपयोगकर्ता के लिए इंस्टॉल हो या व्यवस्थापक के रूप में चल रहा हो।",
+  "Select a package to see its details": "विवरण देखने के लिए कोई पैकेज चुनें",
+  "Make the window wider to show package details here": "पैकेज का विवरण यहाँ देखने के लिए विंडो को चौड़ा करें",
+  "Details panel": "विवरण पैनल",
+  "Show details panel": "विवरण पैनल दिखाएँ",
+  "Hide details panel": "विवरण पैनल छिपाएँ"
 }

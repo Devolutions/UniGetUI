@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} is reeds op datum",
   "Could not refresh from remote": "Kon nie vanaf die afgeleë bron verfris nie",
   "Remote information may be out of date": "Afgeleë inligting is dalk verouderd",
-  "Error details": "Foutbesonderhede"
+  "Error details": "Foutbesonderhede",
+  "Total size": "Totale grootte",
+  "Actions": "Aksies",
+  "{0} on disk": "{0} op skyf",
+  "{0} on disk, {1} in worktrees": "{0} op skyf, {1} in werkbome",
+  "Install UniGetUI updates automatically while it is idle in the background": "Installeer UniGetUI-opdaterings outomaties terwyl dit ledig in die agtergrond is",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI kan sy opdaterings net in die agtergrond installeer wanneer dit vir die huidige gebruiker geïnstalleer is, of terwyl dit as administrateur loop.",
+  "Select a package to see its details": "Kies 'n pakket om die besonderhede daarvan te sien",
+  "Make the window wider to show package details here": "Maak die venster wyer om pakketbesonderhede hier te wys",
+  "Details panel": "Besonderhede-paneel",
+  "Show details panel": "Wys besonderhede-paneel",
+  "Hide details panel": "Versteek besonderhede-paneel"
 }

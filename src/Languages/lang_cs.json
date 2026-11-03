@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} je již aktuální",
   "Could not refresh from remote": "Nepodařilo se obnovit data ze vzdáleného úložiště",
   "Remote information may be out of date": "Informace ze vzdáleného úložiště mohou být neaktuální",
-  "Error details": "Podrobnosti o chybě"
+  "Error details": "Podrobnosti o chybě",
+  "Total size": "Celková velikost",
+  "Actions": "Akce",
+  "{0} on disk": "{0} na disku",
+  "{0} on disk, {1} in worktrees": "{0} na disku, {1} v pracovních stromech",
+  "Install UniGetUI updates automatically while it is idle in the background": "Automaticky instalovat aktualizace UniGetUI, když je aplikace nečinná na pozadí",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI může instalovat aktualizace na pozadí pouze tehdy, když je nainstalováno pro aktuálního uživatele nebo když běží jako správce.",
+  "Select a package to see its details": "Výběrem balíčku zobrazíte jeho podrobnosti",
+  "Make the window wider to show package details here": "Zvětšete šířku okna, aby se zde zobrazily podrobnosti o balíčku",
+  "Details panel": "Panel podrobností",
+  "Show details panel": "Zobrazit panel podrobností",
+  "Hide details panel": "Skrýt panel podrobností"
 }

@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} දැනටමත් යාවත්කාලීනයි",
   "Could not refresh from remote": "remote වෙතින් නැවුම් කළ නොහැකි විය",
   "Remote information may be out of date": "remote තොරතුරු යාවත්කාලීන නොවී තිබිය හැක",
-  "Error details": "දෝෂ විස්තර"
+  "Error details": "දෝෂ විස්තර",
+  "Total size": "මුළු ප්‍රමාණය",
+  "Actions": "ක්‍රියාමාර්ග",
+  "{0} on disk": "තැටියේ {0}",
+  "{0} on disk, {1} in worktrees": "තැටියේ {0}, worktree තුළ {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI පසුබිමේ නිෂ්ක්‍රියව පවතින විට යාවත්කාලීන ස්වයංක්‍රීයව ස්ථාපනය කරන්න",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI හට යාවත්කාලීන පසුබිමේ ස්ථාපනය කළ හැක්කේ එය වත්මන් පරිශීලකයා සඳහා ස්ථාපනය කර ඇති විට හෝ පරිපාලක ලෙස ක්‍රියාත්මක වන විට පමණි.",
+  "Select a package to see its details": "පැකේජයක විස්තර බැලීමට එය තෝරන්න",
+  "Make the window wider to show package details here": "මෙහි පැකේජ විස්තර පෙන්වීමට කවුළුව පුළුල් කරන්න",
+  "Details panel": "විස්තර පැනලය",
+  "Show details panel": "විස්තර පැනලය පෙන්වන්න",
+  "Hide details panel": "විස්තර පැනලය සඟවන්න"
 }

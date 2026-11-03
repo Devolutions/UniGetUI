@@ -2206,5 +2206,16 @@
   "{0} is already up to date": "{0} 已是最新版本",
   "Could not refresh from remote": "無法從遠端重新整理",
   "Remote information may be out of date": "遠端資訊可能已過時",
-  "Error details": "錯誤詳細資料"
+  "Error details": "錯誤詳細資料",
+  "Total size": "總大小",
+  "Actions": "動作",
+  "{0} on disk": "{0} 位於磁碟上",
+  "{0} on disk, {1} in worktrees": "{0} 位於磁碟上，{1} 位於工作樹中",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI 在背景閒置時自動安裝更新",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "只有在 UniGetUI 為目前使用者安裝，或以系統管理員身分執行時，才能在背景安裝更新。",
+  "Select a package to see its details": "選取套件以查看詳細資料",
+  "Make the window wider to show package details here": "加寬視窗以在此處顯示套件詳細資料",
+  "Details panel": "詳細資料面板",
+  "Show details panel": "顯示詳細資料面板",
+  "Hide details panel": "隱藏詳細資料面板"
 }

@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} इदानीमेव अद्यतनम् अस्ति",
   "Could not refresh from remote": "दूरस्थस्रोततः पुनः ताजीकर्तुं न शक्यम्",
   "Remote information may be out of date": "दूरस्थसूचना पुरातनी भवितुम् अर्हति",
-  "Error details": "दोषविवरणम्"
+  "Error details": "दोषविवरणम्",
+  "Total size": "समग्रं परिमाणम्",
+  "Actions": "क्रियाः",
+  "{0} on disk": "डिस्के {0}",
+  "{0} on disk, {1} in worktrees": "डिस्के {0}, कार्यवृक्षेषु {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI निष्क्रियावस्थायां पृष्ठभूमौ अद्यतनानि स्वयमेव स्थापयतु",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI केवलं तदा पृष्ठभूमौ स्वस्य अद्यतनानि स्थापयितुं शक्नोति यदा तत् वर्तमान-उपयोक्तुः कृते स्थापितम् अस्ति, अथवा प्रशासकरूपेण चलति।",
+  "Select a package to see its details": "विवरणानि द्रष्टुं पुटकं चिनुत",
+  "Make the window wider to show package details here": "अत्र पुटकस्य विवरणानि दर्शयितुं विण्डो अधिकं विस्तृतं कुर्वन्तु",
+  "Details panel": "विवरण-पटलम्",
+  "Show details panel": "विवरण-पटलं दर्शयतु",
+  "Hide details panel": "विवरण-पटलं गोपयतु"
 }

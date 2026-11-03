@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} je već ažuran",
   "Could not refresh from remote": "Nije moguće osvježiti s udaljenog izvora",
   "Remote information may be out of date": "Informacije s udaljenog izvora možda nisu ažurne",
-  "Error details": "Detalji pogreške"
+  "Error details": "Detalji pogreške",
+  "Total size": "Ukupna veličina",
+  "Actions": "Radnje",
+  "{0} on disk": "{0} na disku",
+  "{0} on disk, {1} in worktrees": "{0} na disku, {1} u radnim stablima",
+  "Install UniGetUI updates automatically while it is idle in the background": "Automatski instaliraj ažuriranja za UniGetUI dok miruje u pozadini",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI može instalirati svoja ažuriranja u pozadini samo ako je instaliran za trenutačnog korisnika ili ako se pokreće kao administrator.",
+  "Select a package to see its details": "Odaberite paket da biste vidjeli njegove detalje",
+  "Make the window wider to show package details here": "Proširite prozor da biste ovdje prikazali detalje paketa",
+  "Details panel": "Ploča s detaljima",
+  "Show details panel": "Prikaži ploču s detaljima",
+  "Hide details panel": "Sakrij ploču s detaljima"
 }

@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} כבר מעודכן",
   "Could not refresh from remote": "לא ניתן היה לרענן מהמאגר המרוחק",
   "Remote information may be out of date": "ייתכן שהמידע מהמאגר המרוחק אינו מעודכן",
-  "Error details": "פרטי השגיאה"
+  "Error details": "פרטי השגיאה",
+  "Total size": "גודל כולל",
+  "Actions": "פעולות",
+  "{0} on disk": "{0} בדיסק",
+  "{0} on disk, {1} in worktrees": "{0} בדיסק, {1} בעצי עבודה",
+  "Install UniGetUI updates automatically while it is idle in the background": "התקן עדכונים של UniGetUI באופן אוטומטי כשהיא אינה פעילה ברקע",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI יכולה להתקין את העדכונים שלה ברקע רק כשהיא מותקנת עבור המשתמש הנוכחי, או כשהיא פועלת כמנהל מערכת.",
+  "Select a package to see its details": "בחר חבילה כדי לראות את פרטיה",
+  "Make the window wider to show package details here": "הרחב את החלון כדי להציג כאן את פרטי החבילה",
+  "Details panel": "חלונית הפרטים",
+  "Show details panel": "הצג את חלונית הפרטים",
+  "Hide details panel": "הסתר את חלונית הפרטים"
 }

@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} უკვე განახლებულია",
   "Could not refresh from remote": "დისტანციური წყაროდან მონაცემების განახლება ვერ მოხერხდა",
   "Remote information may be out of date": "დისტანციური წყაროს ინფორმაცია შესაძლოა მოძველებული იყოს",
-  "Error details": "შეცდომის დეტალები"
+  "Error details": "შეცდომის დეტალები",
+  "Total size": "საერთო ზომა",
+  "Actions": "მოქმედებები",
+  "{0} on disk": "დისკზე {0}",
+  "{0} on disk, {1} in worktrees": "დისკზე {0}, სამუშაო ხეებში {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "ავტომატურად დააინსტალირეთ UniGetUI-ის განახლებები, როცა ის ფონურ რეჟიმში უმოქმედოდაა",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI-ს განახლებების ფონურ რეჟიმში დაყენება მხოლოდ მაშინ შეუძლია, როცა ის მიმდინარე მომხმარებლისთვის არის დაინსტალირებული ან ადმინისტრატორის უფლებებით მუშაობს.",
+  "Select a package to see its details": "აირჩიეთ პაკეტი მისი დეტალების სანახავად",
+  "Make the window wider to show package details here": "გააფართოეთ ფანჯარა, რომ აქ პაკეტის დეტალები გამოჩნდეს",
+  "Details panel": "დეტალების პანელი",
+  "Show details panel": "დეტალების პანელის ჩვენება",
+  "Hide details panel": "დეტალების პანელის დამალვა"
 }

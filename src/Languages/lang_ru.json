@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} уже обновлен до последней версии",
   "Could not refresh from remote": "Не удалось обновить данные из удаленного репозитория",
   "Remote information may be out of date": "Информация об удаленном репозитории может быть неактуальной",
-  "Error details": "Подробности ошибки"
+  "Error details": "Подробности ошибки",
+  "Total size": "Общий размер",
+  "Actions": "Действия",
+  "{0} on disk": "{0} на диске",
+  "{0} on disk, {1} in worktrees": "{0} на диске, {1} в рабочих деревьях",
+  "Install UniGetUI updates automatically while it is idle in the background": "Автоматически устанавливать обновления UniGetUI, когда приложение простаивает в фоновом режиме",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI может устанавливать обновления в фоновом режиме, только если приложение установлено для текущего пользователя или запущено от имени администратора.",
+  "Select a package to see its details": "Выберите пакет, чтобы просмотреть сведения о нём",
+  "Make the window wider to show package details here": "Увеличьте ширину окна, чтобы здесь отображались сведения о пакете",
+  "Details panel": "Панель сведений",
+  "Show details panel": "Показать панель сведений",
+  "Hide details panel": "Скрыть панель сведений"
 }

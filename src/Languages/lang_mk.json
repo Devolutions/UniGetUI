@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} е веќе ажуриран",
   "Could not refresh from remote": "Не може да се освежи од оддалечениот извор",
   "Remote information may be out of date": "Информациите од оддалечениот извор можеби се застарени",
-  "Error details": "Детали за грешката"
+  "Error details": "Детали за грешката",
+  "Total size": "Вкупна големина",
+  "Actions": "Дејства",
+  "{0} on disk": "{0} на дискот",
+  "{0} on disk, {1} in worktrees": "{0} на дискот, {1} во работните дрвја",
+  "Install UniGetUI updates automatically while it is idle in the background": "Инсталирајте ги ажурирањата на UniGetUI автоматски додека е неактивен во заднина",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI може да ги инсталира своите ажурирања во заднина само кога е инсталиран за тековниот корисник или додека работи како администратор.",
+  "Select a package to see its details": "Изберете пакет за да ги видите неговите детали",
+  "Make the window wider to show package details here": "Зголемете ја ширината на прозорецот за да ги прикажете деталите за пакетот овде",
+  "Details panel": "Панел за детали",
+  "Show details panel": "Прикажи го панелот за детали",
+  "Hide details panel": "Сокриј го панелот за детали"
 }

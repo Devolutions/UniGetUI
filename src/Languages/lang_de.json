@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} ist bereits auf dem neuesten Stand",
   "Could not refresh from remote": "Das Remote konnte nicht aktualisiert werden",
   "Remote information may be out of date": "Die Remote-Informationen sind möglicherweise veraltet",
-  "Error details": "Fehlerdetails"
+  "Error details": "Fehlerdetails",
+  "Total size": "Gesamtgröße",
+  "Actions": "Aktionen",
+  "{0} on disk": "{0} auf dem Datenträger",
+  "{0} on disk, {1} in worktrees": "{0} auf dem Datenträger, {1} in Arbeitsbäumen",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI-Updates automatisch installieren, während UniGetUI im Hintergrund inaktiv ist",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI kann Updates nur im Hintergrund installieren, wenn es für den aktuellen Benutzer installiert ist oder als Administrator ausgeführt wird.",
+  "Select a package to see its details": "Wählen Sie ein Paket aus, um seine Details anzuzeigen",
+  "Make the window wider to show package details here": "Vergrößern Sie das Fenster, um hier Paketdetails anzuzeigen",
+  "Details panel": "Detailbereich",
+  "Show details panel": "Detailbereich anzeigen",
+  "Hide details panel": "Detailbereich ausblenden"
 }

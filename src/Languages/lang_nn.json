@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} er allereie oppdatert",
   "Could not refresh from remote": "Klarte ikkje å oppdatere frå fjernkjelda",
   "Remote information may be out of date": "Informasjonen frå fjernkjelda kan vere utdatert",
-  "Error details": "Feildetaljar"
+  "Error details": "Feildetaljar",
+  "Total size": "Total storleik",
+  "Actions": "Handlingar",
+  "{0} on disk": "{0} på disk",
+  "{0} on disk, {1} in worktrees": "{0} på disk, {1} i arbeidstre",
+  "Install UniGetUI updates automatically while it is idle in the background": "Installer UniGetUI-oppdateringar automatisk medan det er inaktivt i bakgrunnen",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI kan berre installere oppdateringar i bakgrunnen når det er installert for den gjeldande brukaren, eller når det køyrer som administrator.",
+  "Select a package to see its details": "Vel ein pakke for å sjå detaljane",
+  "Make the window wider to show package details here": "Gjer vindauget breiare for å vise pakkedetaljar her",
+  "Details panel": "Detaljrute",
+  "Show details panel": "Vis detaljrute",
+  "Hide details panel": "Skjul detaljrute"
 }

@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} پہلے ہی تازہ ترین ہے",
   "Could not refresh from remote": "ریموٹ سے تازہ کاری نہیں ہو سکی",
   "Remote information may be out of date": "ریموٹ کی معلومات پرانی ہو سکتی ہیں",
-  "Error details": "خرابی کی تفصیلات"
+  "Error details": "خرابی کی تفصیلات",
+  "Total size": "کل حجم",
+  "Actions": "کارروائیاں",
+  "{0} on disk": "ڈسک پر {0}",
+  "{0} on disk, {1} in worktrees": "ڈسک پر {0}، ورک ٹریز میں {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "جب UniGetUI پس منظر میں غیر فعال ہو تو اس کی اپ ڈیٹس خودکار طور پر انسٹال کریں",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI اپنی اپ ڈیٹس پس منظر میں صرف اسی وقت انسٹال کر سکتا ہے جب اسے موجودہ صارف کے لیے انسٹال کیا گیا ہو، یا یہ منتظم کے طور پر چل رہا ہو۔",
+  "Select a package to see its details": "تفصیلات دیکھنے کے لیے ایک پیکیج منتخب کریں",
+  "Make the window wider to show package details here": "پیکیج کی تفصیلات یہاں دیکھنے کے لیے ونڈو کو چوڑا کریں",
+  "Details panel": "تفصیلات کا پینل",
+  "Show details panel": "تفصیلات کا پینل دکھائیں",
+  "Hide details panel": "تفصیلات کا پینل چھپائیں"
 }

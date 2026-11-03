@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} jam estas ĝisdata",
   "Could not refresh from remote": "Ne eblis refreŝigi el fora fonto",
   "Remote information may be out of date": "La informoj de fora fonto eble estas malaktualaj",
-  "Error details": "Detaloj pri eraro"
+  "Error details": "Detaloj pri eraro",
+  "Total size": "Totala grandeco",
+  "Actions": "Agoj",
+  "{0} on disk": "{0} sur disko",
+  "{0} on disk, {1} in worktrees": "{0} sur disko, {1} en laborarboj",
+  "Install UniGetUI updates automatically while it is idle in the background": "Instalu ĝisdatigojn de UniGetUI aŭtomate dum ĝi estas neaktiva en fono",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI povas instali siajn ĝisdatigojn en fono nur kiam ĝi estas instalita por la nuna uzanto aŭ dum ĝi rulas kiel administranto.",
+  "Select a package to see its details": "Elektu pakaĵon por vidi ĝiajn detalojn",
+  "Make the window wider to show package details here": "Plilarĝigu la fenestron por montri ĉi tie la detalojn pri la pakaĵo",
+  "Details panel": "Panelo de detaloj",
+  "Show details panel": "Montri panelon de detaloj",
+  "Hide details panel": "Kaŝi panelon de detaloj"
 }

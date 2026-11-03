@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} вече е актуален",
   "Could not refresh from remote": "Не можа да се опресни от отдалеченото хранилище",
   "Remote information may be out of date": "Информацията от отдалеченото хранилище може да не е актуална",
-  "Error details": "Подробности за грешката"
+  "Error details": "Подробности за грешката",
+  "Total size": "Общ размер",
+  "Actions": "Действия",
+  "{0} on disk": "{0} на диска",
+  "{0} on disk, {1} in worktrees": "{0} на диска, {1} в работните дървета",
+  "Install UniGetUI updates automatically while it is idle in the background": "Инсталирайте автоматично актуализациите на UniGetUI, докато е неактивен във фонов режим",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI може да инсталира актуализациите си във фонов режим само ако е инсталиран за текущия потребител или работи като администратор.",
+  "Select a package to see its details": "Изберете пакет, за да видите подробностите му",
+  "Make the window wider to show package details here": "Разширете прозореца, за да покажете подробностите за пакета тук",
+  "Details panel": "Панел с подробности",
+  "Show details panel": "Показване на панела с подробности",
+  "Hide details panel": "Скриване на панела с подробности"
 }

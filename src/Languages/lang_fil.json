@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "Napapanahon na ang {0}",
   "Could not refresh from remote": "Hindi ma-refresh mula sa remote",
   "Remote information may be out of date": "Maaaring luma na ang impormasyon mula sa remote",
-  "Error details": "Mga detalye ng error"
+  "Error details": "Mga detalye ng error",
+  "Total size": "Kabuuang laki",
+  "Actions": "Mga pagkilos",
+  "{0} on disk": "{0} sa disk",
+  "{0} on disk, {1} in worktrees": "{0} sa disk, {1} sa mga worktree",
+  "Install UniGetUI updates automatically while it is idle in the background": "Awtomatikong i-install ang mga update ng UniGetUI kapag wala itong ginagawa sa background",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "Maaari lang i-install ng UniGetUI ang mga update nito sa background kapag naka-install ito para sa kasalukuyang user o kapag tumatakbo ito bilang administrator.",
+  "Select a package to see its details": "Pumili ng package para makita ang mga detalye nito",
+  "Make the window wider to show package details here": "Palaparin ang window para ipakita rito ang mga detalye ng package",
+  "Details panel": "Panel ng mga detalye",
+  "Show details panel": "Ipakita ang panel ng mga detalye",
+  "Hide details panel": "Itago ang panel ng mga detalye"
 }

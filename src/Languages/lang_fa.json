@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} در حال حاضر به‌روز است",
   "Could not refresh from remote": "تازه‌سازی از راه دور ممکن نشد",
   "Remote information may be out of date": "ممکن است اطلاعات راه دور به‌روز نباشد",
-  "Error details": "جزئیات خطا"
+  "Error details": "جزئیات خطا",
+  "Total size": "اندازه کل",
+  "Actions": "اقدامات",
+  "{0} on disk": "{0} روی دیسک",
+  "{0} on disk, {1} in worktrees": "{0} روی دیسک، {1} در درخت‌های کاری",
+  "Install UniGetUI updates automatically while it is idle in the background": "وقتی UniGetUI در پس‌زمینه بیکار است، به‌روزرسانی‌های UniGetUI را به‌طور خودکار نصب کنید",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI فقط زمانی می‌تواند به‌روزرسانی‌های خود را در پس‌زمینه نصب کند که برای کاربر فعلی نصب شده باشد یا به‌عنوان مدیر اجرا شود.",
+  "Select a package to see its details": "برای مشاهده جزئیات یک بسته را انتخاب کنید",
+  "Make the window wider to show package details here": "برای نمایش جزئیات بسته در اینجا، پنجره را عریض‌تر کنید",
+  "Details panel": "پنل جزئیات",
+  "Show details panel": "نمایش پنل جزئیات",
+  "Hide details panel": "پنهان کردن پنل جزئیات"
 }

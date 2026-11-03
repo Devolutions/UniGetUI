@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0}はすでに最新の状態です",
   "Could not refresh from remote": "リモートから更新できませんでした",
   "Remote information may be out of date": "リモートの情報が古くなっている可能性があります",
-  "Error details": "エラーの詳細"
+  "Error details": "エラーの詳細",
+  "Total size": "合計サイズ",
+  "Actions": "アクション",
+  "{0} on disk": "ディスク上に{0}",
+  "{0} on disk, {1} in worktrees": "ディスク上に{0}、ワークツリー内に{1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUIがバックグラウンドでアイドル状態のときに、更新を自動インストールする",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUIの更新をバックグラウンドでインストールできるのは、現在のユーザー用にインストールされている場合、または管理者として実行している場合のみです。",
+  "Select a package to see its details": "詳細を表示するにはパッケージを選択してください",
+  "Make the window wider to show package details here": "ここにパッケージの詳細を表示するには、ウィンドウを広げてください",
+  "Details panel": "詳細パネル",
+  "Show details panel": "詳細パネルを表示",
+  "Hide details panel": "詳細パネルを非表示"
 }

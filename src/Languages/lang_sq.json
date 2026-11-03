@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} është tashmë i përditësuar",
   "Could not refresh from remote": "Nuk mund të rifreskohej nga burimi në distancë",
   "Remote information may be out of date": "Informacioni nga burimi në distancë mund të jetë i vjetruar",
-  "Error details": "Detajet e gabimit"
+  "Error details": "Detajet e gabimit",
+  "Total size": "Madhësia totale",
+  "Actions": "Veprimet",
+  "{0} on disk": "{0} në disk",
+  "{0} on disk, {1} in worktrees": "{0} në disk, {1} në pemët e punës",
+  "Install UniGetUI updates automatically while it is idle in the background": "Instalo përditësimet e UniGetUI automatikisht, kur programi është i papërdorur në sfond",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI mund t'i instalojë përditësimet në sfond vetëm kur është instaluar për përdoruesin aktual ose kur ekzekutohet si administrator.",
+  "Select a package to see its details": "Zgjidh një paketë për të parë detajet e saj",
+  "Make the window wider to show package details here": "Zgjeroje dritaren për të shfaqur këtu detajet e paketës",
+  "Details panel": "Paneli i detajeve",
+  "Show details panel": "Shfaq panelin e detajeve",
+  "Hide details panel": "Fshih panelin e detajeve"
 }

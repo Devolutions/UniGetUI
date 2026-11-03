@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
@@ -87,6 +88,10 @@ public sealed class DownloadOperationProgressTests
 
         protected override HttpClient CreateHttpClient() =>
             new(_handler, disposeHandler: false);
+
+        public SignatureCheck? Signature { get; set; }
+
+        protected override SignatureCheck? CheckSignature(string path) => Signature;
 
         public Task<OperationVeredict> InvokePerformOperationForTests() =>
             PerformOperation();
@@ -402,14 +407,14 @@ public sealed class DownloadOperationProgressTests
         }
     }
 
-    private static IPackage CreatePackageWithHash(string installerHash)
+    private static IPackage CreatePackageWithHash(string? installerHash, Uri? installerUrl = null)
     {
         var manager = new PackageManagerBuilder()
             .ConfigureDetails(helper =>
             {
                 helper.PopulateDetails = details =>
                 {
-                    details.InstallerUrl = new Uri("http://127.0.0.1/payload.bin");
+                    details.InstallerUrl = installerUrl ?? new Uri("http://127.0.0.1/payload.bin");
                     details.InstallerType = "exe";
                     details.InstallerHash = installerHash;
                 };
@@ -521,6 +526,154 @@ public sealed class DownloadOperationProgressTests
                 operation.GetOutput(),
                 line => line.Item1.Contains("the download was skipped")
             );
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    private static Uri UniqueInstallerUrl() => new($"http://127.0.0.1/{Guid.NewGuid():N}/payload.bin");
+
+    private static string[] PartialFilesOf(string downloadPath) =>
+        Directory.GetFiles(Path.GetDirectoryName(downloadPath)!, Path.GetFileName(downloadPath) + ".*.partial");
+
+    [Fact]
+    public async Task ADownloadMatchingThePublishedHashIsVerifiedAndReportsItsSigner()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(71).NextBytes(payload);
+        Uri installerUrl = UniqueInstallerUrl();
+        string publishedHash = Convert.ToHexStringLower(SHA256.HashData(payload));
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-verified-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler)
+            {
+                Signature = new SignatureCheck(0, "Example Corp"),
+            };
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Empty(PartialFilesOf(downloadPath));
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("matches the SHA-256 hash"));
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("signed by Example Corp"));
+
+            InstallerVerification? recorded = InstallerVerification.Find(installerUrl, publishedHash);
+            Assert.NotNull(recorded);
+            Assert.Equal(InstallerHashStatus.Verified, recorded.HashStatus);
+            Assert.Equal("SHA-256", recorded.HashAlgorithm);
+            Assert.Equal("Example Corp", recorded.Signature?.Signer);
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task ADownloadThatDoesNotMatchThePublishedHashFailsAndLeavesTheExistingFileAlone()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(73).NextBytes(payload);
+        byte[] existing = new byte[64 * 1024];
+        new Random(79).NextBytes(existing);
+        byte[] published = new byte[64 * 1024];
+        new Random(83).NextBytes(published);
+        Uri installerUrl = UniqueInstallerUrl();
+        string publishedHash = "sha512-" + Convert.ToBase64String(SHA512.HashData(published));
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-tampered-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(downloadPath, existing);
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler)
+            {
+                Signature = new SignatureCheck(0, "Example Corp"),
+            };
+
+            Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
+            Assert.Equal(existing, File.ReadAllBytes(downloadPath));
+            Assert.Empty(PartialFilesOf(downloadPath));
+            Assert.Contains(
+                operation.GetOutput(),
+                line => line.Item1.Contains("does not match the SHA-512 hash")
+                    && line.Item1.Contains(Convert.ToHexStringLower(SHA512.HashData(payload)))
+            );
+            Assert.DoesNotContain(operation.GetOutput(), line => line.Item1.Contains("signed by"));
+            Assert.Equal(
+                InstallerHashStatus.Mismatch,
+                InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus
+            );
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Theory]
+    [InlineData(null, InstallerHashStatus.NotPublished)]
+    [InlineData("not-a-hash", InstallerHashStatus.Unreadable)]
+    public async Task ADownloadWithoutAUsableHashSucceedsButSaysItWasNotVerified(
+        string? publishedHash,
+        InstallerHashStatus expected
+    )
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(89).NextBytes(payload);
+        Uri installerUrl = UniqueInstallerUrl();
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-unverified-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("could not be verified"));
+            Assert.Equal(expected, InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus);
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task ASkippedDownloadIsRecordedAsVerified()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(97).NextBytes(payload);
+        Uri installerUrl = UniqueInstallerUrl();
+        string publishedHash = Convert.ToHexString(SHA256.HashData(payload));
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-skip-recorded-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(downloadPath, payload);
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, new UnreachableHandler())
+            {
+                Signature = new SignatureCheck(unchecked((int)0x800B0100), null),
+            };
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("The installer is not signed"));
+            InstallerVerification? recorded = InstallerVerification.Find(installerUrl, publishedHash);
+            Assert.Equal(InstallerHashStatus.Verified, recorded?.HashStatus);
+            Assert.False(recorded?.Signature?.IsValid);
         }
         finally
         {

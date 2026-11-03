@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using Architecture = System.Runtime.InteropServices.Architecture;
 using UniGetUI.PackageEngine.Managers.InstallerFeeds;

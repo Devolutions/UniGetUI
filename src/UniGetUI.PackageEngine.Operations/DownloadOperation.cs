@@ -54,6 +54,35 @@ public class DownloadOperation : AbstractOperation
     protected virtual HttpClient CreateHttpClient() =>
         new(CoreTools.GenericHttpClientParameters);
 
+    protected virtual SignatureCheck? CheckSignature(string path) =>
+        OperatingSystem.IsWindows() ? AuthenticodeSignature.VerifyFile(path) : null;
+
+    private async Task<SignatureCheck?> ReportSignatureAsync(string path)
+    {
+        try
+        {
+            SignatureCheck? check = await Task.Run(() => CheckSignature(path));
+            if (check is { } signature)
+                Line($"The installer is {signature.Describe()}", LineType.Information);
+            return check;
+        }
+        catch (Exception ex)
+        {
+            Line($"The signature of {path} could not be read: {ex.Message}", LineType.Information);
+            return null;
+        }
+    }
+
+    private void RecordVerification(InstallerHashStatus status, string? algorithm, SignatureCheck? signature)
+    {
+        if (_package.Details.InstallerUrl is { } installerUrl)
+            InstallerVerification.Record(
+                installerUrl,
+                _package.Details.InstallerHash,
+                new InstallerVerification(status, algorithm, signature)
+            );
+    }
+
     internal static bool ComesFromTheSourceFolder(Uri installerUrl, IManagerSource source)
     {
         if (source.Url is not { IsAbsoluteUri: true, IsFile: true } sourceUrl)
@@ -113,7 +142,8 @@ public class DownloadOperation : AbstractOperation
 
     protected override async Task<OperationVeredict> PerformOperation()
     {
-        bool downloadFileCreated = false;
+        bool partialFileCreated = false;
+        string partialLocation = "";
         try
         {
             CancellationToken.ThrowIfCancellationRequested();
@@ -171,11 +201,12 @@ public class DownloadOperation : AbstractOperation
                 return OperationVeredict.Failure;
             }
 
-            if (File.Exists(downloadLocation)
-                && PublishedInstallerHash.TryParse(
-                    _package.Details.InstallerHash,
-                    out PublishedInstallerHash expectedHash
-                ))
+            bool hashPublished = PublishedInstallerHash.TryParse(
+                _package.Details.InstallerHash,
+                out PublishedInstallerHash expectedHash
+            );
+
+            if (File.Exists(downloadLocation) && hashPublished)
             {
                 Line(
                     $"A file already exists at {downloadLocation}, checking whether it is this installer...",
@@ -188,20 +219,26 @@ public class DownloadOperation : AbstractOperation
                         OperationProgress.FromDownload((ulong)existingSize, (ulong)existingSize)
                     );
                     Line(
-                        $"The file {downloadLocation} matches the {expectedHash.Algorithm} hash "
+                        $"The file {downloadLocation} matches the {expectedHash.AlgorithmName} hash "
                             + "published for this installer, the download was skipped",
                         LineType.Information
+                    );
+                    RecordVerification(
+                        InstallerHashStatus.Verified,
+                        expectedHash.AlgorithmName,
+                        await ReportSignatureAsync(downloadLocation)
                     );
                     return OperationVeredict.Success;
                 }
 
                 Line(
-                    $"The file {downloadLocation} does not match the {expectedHash.Algorithm} hash "
+                    $"The file {downloadLocation} does not match the {expectedHash.AlgorithmName} hash "
                         + "published for this installer, it will be downloaded again",
                     LineType.Information
                 );
             }
 
+            partialLocation = $"{downloadLocation}.{Guid.NewGuid():N}.partial";
             Line($"Download URL found at {downloadUrl} ", LineType.Information);
             using HttpClient? httpClient = downloadUrl.IsFile ? null : CreateHttpClient();
             using HttpResponseMessage? response =
@@ -231,15 +268,15 @@ public class DownloadOperation : AbstractOperation
             var canReportProgress = totalBytes > 0;
             await using (var contentStream = sourceStream)
             await using (var fileStream = new FileStream(
-                downloadLocation,
-                FileMode.Create,
+                partialLocation,
+                FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
                 8192,
                 useAsync: true
             ))
             {
-                downloadFileCreated = true;
+                partialFileCreated = true;
                 var buffer = new byte[4 * 1024 * 1024];
                 long totalRead = 0;
                 int oldProgress = -1;
@@ -277,13 +314,58 @@ public class DownloadOperation : AbstractOperation
             }
 
             CancellationToken.ThrowIfCancellationRequested();
+
+            InstallerHashStatus hashStatus;
+            if (hashPublished)
+            {
+                byte[] actualHash = await expectedHash.ComputeAsync(partialLocation, CancellationToken);
+                if (!expectedHash.Matches(actualHash))
+                {
+                    Line(
+                        $"The downloaded file does not match the {expectedHash.AlgorithmName} hash published "
+                            + $"for this installer (expected {Convert.ToHexStringLower(expectedHash.Digest)}, "
+                            + $"got {Convert.ToHexStringLower(actualHash)}). The file was discarded",
+                        LineType.Error
+                    );
+                    RecordVerification(InstallerHashStatus.Mismatch, expectedHash.AlgorithmName, null);
+                    return OperationVeredict.Failure;
+                }
+
+                Line(
+                    $"The downloaded file matches the {expectedHash.AlgorithmName} hash published for this installer",
+                    LineType.Information
+                );
+                hashStatus = InstallerHashStatus.Verified;
+            }
+            else if (string.IsNullOrWhiteSpace(_package.Details.InstallerHash))
+            {
+                Line(
+                    "No hash is published for this installer, so the download could not be verified",
+                    LineType.Information
+                );
+                hashStatus = InstallerHashStatus.NotPublished;
+            }
+            else
+            {
+                Line(
+                    $"The hash published for this installer ({_package.Details.InstallerHash}) is not in a "
+                        + "format UniGetUI can check, so the download could not be verified",
+                    LineType.Information
+                );
+                hashStatus = InstallerHashStatus.Unreadable;
+            }
+
+            File.Move(partialLocation, downloadLocation, overwrite: true);
             Line($"The file was saved to {downloadLocation}", LineType.Information);
+            RecordVerification(
+                hashStatus,
+                hashPublished ? expectedHash.AlgorithmName : null,
+                await ReportSignatureAsync(downloadLocation)
+            );
             return OperationVeredict.Success;
         }
         catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
         {
-            if (downloadFileCreated)
-                File.Delete(downloadLocation);
             Line("User has canceled the operation", LineType.Error);
             return OperationVeredict.Canceled;
         }
@@ -292,6 +374,23 @@ public class DownloadOperation : AbstractOperation
             Line($"{ex.GetType()}: {ex.Message}", LineType.Error);
             Line($"{ex.StackTrace}", LineType.Error);
             return OperationVeredict.Failure;
+        }
+        finally
+        {
+            if (partialFileCreated && File.Exists(partialLocation))
+                TryDelete(partialLocation);
+        }
+    }
+
+    private void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            Line($"The temporary file {path} could not be removed: {ex.Message}", LineType.Information);
         }
     }
 }

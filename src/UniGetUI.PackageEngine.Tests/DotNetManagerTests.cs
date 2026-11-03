@@ -423,6 +423,55 @@ public sealed class DotNetManagerTests
     }
 
     [Fact]
+    public void FeedsWhosePathsDifferOnlyByCaseKeepTheirOwnCredentials()
+    {
+        var settings = new NuGetConfigSettings(
+            NuGetSourceMapping.None,
+            new Dictionary<string, NuGetCredential>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Upper"] = new("upper", "u-secret"),
+                ["Lower"] = new("lower", "l-secret"),
+            }
+        );
+        NuGetFeedCredentials.Replace(
+            DotNetSourceHelper.BuildCredentials(
+                [
+                    new("Upper", new Uri("https://packages.example.test/Team/v3/index.json")),
+                    new("Lower", new Uri("https://packages.example.test/team/v3/index.json")),
+                ],
+                settings
+            )
+        );
+
+        try
+        {
+            foreach (
+                var (feed, expected) in new[]
+                {
+                    ("https://PACKAGES.example.test/Team/v3/INDEX.JSON", "upper:u-secret"),
+                    ("https://packages.example.test/team/v3", "lower:l-secret"),
+                }
+            )
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    "https://packages.example.test/flat/contoso.tool/index.json"
+                );
+                NuGetFeedCredentials.ApplyTo(request, new Uri(feed));
+
+                Assert.Equal(
+                    Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(expected)),
+                    request.Headers.Authorization?.Parameter
+                );
+            }
+        }
+        finally
+        {
+            NuGetFeedCredentials.Replace([]);
+        }
+    }
+
+    [Fact]
     public void FeedsSharingAServerKeepTheirOwnCredentials()
     {
         var settings = new NuGetConfigSettings(

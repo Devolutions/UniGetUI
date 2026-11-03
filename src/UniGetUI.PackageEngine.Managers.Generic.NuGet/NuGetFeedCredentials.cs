@@ -35,7 +35,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet
             if (path.EndsWith(ServiceIndexSuffix, StringComparison.OrdinalIgnoreCase))
                 path = path[..^ServiceIndexSuffix.Length];
 
-            return Origin(feed) + path.ToLowerInvariant();
+            return Origin(feed) + path;
         }
 
         private static string Origin(Uri uri) =>

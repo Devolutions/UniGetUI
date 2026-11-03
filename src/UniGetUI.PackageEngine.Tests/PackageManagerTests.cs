@@ -587,6 +587,53 @@ public sealed class PackageManagerTests : IDisposable
 
         Assert.Equal(1, manager.StopRunningListings());
         await search.WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.Equal(0, manager.AttemptFastRepairCalls);
+        var listing = manager.GetHealthRecord().Search;
+        Assert.Equal(1, listing.ConsecutiveFailures);
+        Assert.Null(listing.LastSuccessUtc);
+        Assert.Contains("stopped", listing.LastFailureReason);
+    }
+
+    [Fact]
+    public async Task StoppedListingThatThrowsIsNotRetried()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateReadyManager();
+        using var started = new ManualResetEventSlim();
+        int attempts = 0;
+        manager.SetInstalledPackages(() =>
+        {
+            attempts++;
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(Environment.SystemDirectory, "ping.exe"),
+                    Arguments = "-n 120 127.0.0.1",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                },
+            };
+            manager.TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages, process);
+            process.Start();
+            started.Set();
+            process.WaitForExit();
+            throw new InvalidOperationException($"The listing process exited with {process.ExitCode}");
+        });
+
+        var listing = Task.Run(manager.GetInstalledPackages);
+        Assert.True(started.Wait(TimeSpan.FromSeconds(20)));
+
+        Assert.Equal(1, manager.StopRunningListings());
+        await listing.WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.Equal(1, attempts);
+        Assert.Equal(0, manager.AttemptFastRepairCalls);
+        Assert.True(manager.LastInstalledListingFailed);
+        Assert.Equal(1, manager.GetHealthRecord().Installed.ConsecutiveFailures);
     }
 
     [Fact]

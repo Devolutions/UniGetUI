@@ -411,6 +411,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             lock (_activeListingProcesses)
                 active = [.. _activeListingProcesses];
 
+            Interlocked.Exchange(ref _lastStopTimestamp, Stopwatch.GetTimestamp());
             int killed = active.Sum(KillListingProcesses);
             Logger.Warn($"Stopped {killed} running process(es) of manager {Name}");
             return killed;
@@ -507,8 +508,14 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 _activeListingProcesses.Remove(processes);
         }
 
+        private long _lastStopTimestamp;
+
+        private bool WasStoppedSince(long timestamp) =>
+            Interlocked.Read(ref _lastStopTimestamp) >= timestamp;
+
         private sealed class ListingOutcome
         {
+            public long Started;
             public bool Skipped;
             public Exception? FastRepairCause;
             public Exception? Failure;
@@ -520,9 +527,20 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             out bool failed
         )
         {
-            ListingOutcome outcome = new();
+            ListingOutcome outcome = new() { Started = Stopwatch.GetTimestamp() };
             long start = Stopwatch.GetTimestamp();
             IReadOnlyList<IPackage> packages = listing(outcome);
+            if (!outcome.Skipped && outcome.Failure is null && WasStoppedSince(outcome.Started))
+            {
+                outcome.Failure = new OperationCanceledException(
+                    "The listing was stopped from Stop stuck processes."
+                );
+                packages = [];
+                if (kind is ManagerListingKind.Installed)
+                    LastInstalledListingFailed = true;
+                else if (kind is ManagerListingKind.Updates)
+                    LastUpdatesListingFailed = true;
+            }
             failed = outcome.Failure is not null;
 
             if (!outcome.Skipped)
@@ -718,7 +736,11 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 while (e is AggregateException)
                     e = e.InnerException ?? new InvalidOperationException("How did we get here?");
 
-                if (!SecondAttempt && (RetryListingTasksOnTimeout || e is not TimeoutException))
+                if (
+                    !SecondAttempt
+                    && !WasStoppedSince(outcome.Started)
+                    && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                )
                 {
                     Logger.Warn(
                         $"Manager {DisplayName} failed to find packages with exception {e.GetType().Name}: {e.Message}"
@@ -790,7 +812,11 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 while (e is AggregateException)
                     e = e.InnerException ?? new InvalidOperationException("How did we get here?");
 
-                if (!SecondAttempt && (RetryListingTasksOnTimeout || e is not TimeoutException))
+                if (
+                    !SecondAttempt
+                    && !WasStoppedSince(outcome.Started)
+                    && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                )
                 {
                     Logger.Warn(
                         $"Manager {DisplayName} failed to list available updates with exception {e.GetType().Name}: {e.Message}"
@@ -865,7 +891,11 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 while (e is AggregateException)
                     e = e.InnerException ?? new InvalidOperationException("How did we get here?");
 
-                if (!SecondAttempt && (RetryListingTasksOnTimeout || e is not TimeoutException))
+                if (
+                    !SecondAttempt
+                    && !WasStoppedSince(outcome.Started)
+                    && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                )
                 {
                     Logger.Warn(
                         $"Manager {DisplayName} failed to list installed packages with exception {e.GetType().Name}: {e.Message}"

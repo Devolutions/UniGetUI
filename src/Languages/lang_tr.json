@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} zaten güncel",
   "Could not refresh from remote": "Uzak kaynaktan yenilenemedi",
   "Remote information may be out of date": "Uzak kaynak bilgileri güncel olmayabilir",
-  "Error details": "Hata ayrıntıları"
+  "Error details": "Hata ayrıntıları",
+  "Total size": "Toplam boyut",
+  "Actions": "Eylemler",
+  "{0} on disk": "Diskte {0}",
+  "{0} on disk, {1} in worktrees": "Diskte {0}, çalışma ağaçlarında {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI boşta ve arka plandayken güncellemeleri otomatik olarak yükle",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI güncellemelerini arka planda yalnızca geçerli kullanıcı için yüklüyse veya yönetici olarak çalışıyorsa yükleyebilir.",
+  "Select a package to see its details": "Ayrıntılarını görmek için bir paket seçin",
+  "Make the window wider to show package details here": "Paket ayrıntılarını burada göstermek için pencereyi genişletin",
+  "Details panel": "Ayrıntılar paneli",
+  "Show details panel": "Ayrıntılar panelini göster",
+  "Hide details panel": "Ayrıntılar panelini gizle"
 }

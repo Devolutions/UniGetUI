@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} on jo ajan tasalla",
   "Could not refresh from remote": "Etätietovaraston tietoja ei voitu päivittää",
   "Remote information may be out of date": "Etätietovaraston tiedot voivat olla vanhentuneita",
-  "Error details": "Virheen tiedot"
+  "Error details": "Virheen tiedot",
+  "Total size": "Kokonaiskoko",
+  "Actions": "Toiminnot",
+  "{0} on disk": "{0} levyllä",
+  "{0} on disk, {1} in worktrees": "{0} levyllä, {1} työpuissa",
+  "Install UniGetUI updates automatically while it is idle in the background": "Asenna UniGetUI-päivitykset automaattisesti, kun se on käyttämättömänä taustalla",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI voi asentaa päivityksensä taustalla vain, kun se on asennettu nykyiselle käyttäjälle tai kun sitä suoritetaan järjestelmänvalvojana.",
+  "Select a package to see its details": "Valitse paketti nähdäksesi sen tiedot",
+  "Make the window wider to show package details here": "Levennä ikkunaa, jotta paketin tiedot näkyvät tässä",
+  "Details panel": "Tietopaneeli",
+  "Show details panel": "Näytä tietopaneeli",
+  "Hide details panel": "Piilota tietopaneeli"
 }

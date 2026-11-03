@@ -2201,5 +2201,16 @@
   "{0} is already up to date": "{0}은(는) 이미 최신 상태입니다",
   "Could not refresh from remote": "원격에서 새로 고칠 수 없습니다",
   "Remote information may be out of date": "원격 정보가 최신이 아닐 수 있습니다",
-  "Error details": "오류 세부 정보"
+  "Error details": "오류 세부 정보",
+  "Total size": "전체 크기",
+  "Actions": "작업",
+  "{0} on disk": "디스크에 {0}개",
+  "{0} on disk, {1} in worktrees": "디스크에 {0}개, 작업 트리에 {1}개",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI가 백그라운드에서 유휴 상태일 때 업데이트 자동 설치",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI는 현재 사용자용으로 설치된 경우 또는 관리자 권한으로 실행 중인 경우에만 백그라운드에서 업데이트를 설치할 수 있습니다.",
+  "Select a package to see its details": "패키지를 선택하여 세부 정보 보기",
+  "Make the window wider to show package details here": "여기에 패키지 세부 정보를 표시하려면 창을 더 넓히세요",
+  "Details panel": "세부 정보 패널",
+  "Show details panel": "세부 정보 패널 표시",
+  "Hide details panel": "세부 정보 패널 숨기기"
 }

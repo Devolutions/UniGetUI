@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} ಈಗಾಗಲೇ ಇತ್ತೀಚಿನ ಆವೃತ್ತಿಯಲ್ಲಿದೆ",
   "Could not refresh from remote": "ರಿಮೋಟ್‌ನಿಂದ ರಿಫ್ರೆಶ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
   "Remote information may be out of date": "ರಿಮೋಟ್ ಮಾಹಿತಿ ಹಳೆಯದಾಗಿರಬಹುದು",
-  "Error details": "ದೋಷದ ವಿವರಗಳು"
+  "Error details": "ದೋಷದ ವಿವರಗಳು",
+  "Total size": "ಒಟ್ಟು ಗಾತ್ರ",
+  "Actions": "ಕ್ರಿಯೆಗಳು",
+  "{0} on disk": "ಡಿಸ್ಕ್‌ನಲ್ಲಿ {0}",
+  "{0} on disk, {1} in worktrees": "ಡಿಸ್ಕ್‌ನಲ್ಲಿ {0}, ವರ್ಕ್‌ಟ್ರೀಗಳಲ್ಲಿ {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI ನಿಷ್ಕ್ರಿಯವಾಗಿರುವಾಗ ಹಿನ್ನೆಲೆಯಲ್ಲೇ ಅದರ ನವೀಕರಣಗಳನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸ್ಥಾಪಿಸಿ",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI ಅನ್ನು ಪ್ರಸ್ತುತ ಬಳಕೆದಾರರಿಗಾಗಿ ಸ್ಥಾಪಿಸಿರುವಾಗ ಅಥವಾ ನಿರ್ವಾಹಕರಾಗಿ ಚಾಲನೆಯಲ್ಲಿರುವಾಗ ಮಾತ್ರ ಅದರ ನವೀಕರಣಗಳನ್ನು ಹಿನ್ನೆಲೆಯಲ್ಲೇ ಸ್ಥಾಪಿಸಬಹುದು.",
+  "Select a package to see its details": "ಅದರ ವಿವರಗಳನ್ನು ನೋಡಲು ಪ್ಯಾಕೇಜ್ ಆಯ್ಕೆಮಾಡಿ",
+  "Make the window wider to show package details here": "ಪ್ಯಾಕೇಜ್ ವಿವರಗಳನ್ನು ಇಲ್ಲಿ ತೋರಿಸಲು ವಿಂಡೋವನ್ನು ಇನ್ನಷ್ಟು ಅಗಲಗೊಳಿಸಿ",
+  "Details panel": "ವಿವರಗಳ ಫಲಕ",
+  "Show details panel": "ವಿವರಗಳ ಫಲಕವನ್ನು ತೋರಿಸಿ",
+  "Hide details panel": "ವಿವರಗಳ ಫಲಕವನ್ನು ಮರೆಮಾಡಿ"
 }

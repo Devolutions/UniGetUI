@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} đã được cập nhật",
   "Could not refresh from remote": "Không thể làm mới từ kho từ xa",
   "Remote information may be out of date": "Thông tin từ kho từ xa có thể đã lỗi thời",
-  "Error details": "Chi tiết lỗi"
+  "Error details": "Chi tiết lỗi",
+  "Total size": "Tổng dung lượng",
+  "Actions": "Hành động",
+  "{0} on disk": "{0} trên đĩa",
+  "{0} on disk, {1} in worktrees": "{0} trên đĩa, {1} trong worktree",
+  "Install UniGetUI updates automatically while it is idle in the background": "Tự động cài đặt các bản cập nhật UniGetUI khi ứng dụng không hoạt động ở chế độ nền",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI chỉ có thể cài đặt các bản cập nhật ở chế độ nền khi được cài đặt cho người dùng hiện tại hoặc khi chạy với quyền quản trị viên.",
+  "Select a package to see its details": "Chọn một gói để xem thông tin chi tiết",
+  "Make the window wider to show package details here": "Mở rộng cửa sổ để hiển thị thông tin chi tiết về gói tại đây",
+  "Details panel": "Bảng thông tin chi tiết",
+  "Show details panel": "Hiện bảng thông tin chi tiết",
+  "Hide details panel": "Ẩn bảng thông tin chi tiết"
 }

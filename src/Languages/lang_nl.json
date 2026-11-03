@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} is al up-to-date",
   "Could not refresh from remote": "Vernieuwen vanaf de externe bron is mislukt",
   "Remote information may be out of date": "De informatie van de externe bron is mogelijk verouderd",
-  "Error details": "Foutdetails"
+  "Error details": "Foutdetails",
+  "Total size": "Totale grootte",
+  "Actions": "Acties",
+  "{0} on disk": "{0} op schijf",
+  "{0} on disk, {1} in worktrees": "{0} op schijf, {1} in worktrees",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI-updates automatisch installeren wanneer het programma inactief is op de achtergrond",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI kan updates alleen op de achtergrond installeren wanneer het voor de huidige gebruiker is geïnstalleerd of wanneer het als beheerder wordt uitgevoerd.",
+  "Select a package to see its details": "Selecteer een pakket om de details ervan te zien",
+  "Make the window wider to show package details here": "Maak het venster breder om de pakketdetails hier weer te geven",
+  "Details panel": "Detailpaneel",
+  "Show details panel": "Detailpaneel weergeven",
+  "Hide details panel": "Detailpaneel verbergen"
 }

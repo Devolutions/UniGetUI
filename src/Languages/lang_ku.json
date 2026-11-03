@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} پێشتر نوێترین وەشانە",
   "Could not refresh from remote": "نەکرا لە ڕیمۆتەوە نوێ بکرێتەوە",
   "Remote information may be out of date": "لەوانەیە زانیارییەکانی ڕیمۆت کۆن بووبێتن",
-  "Error details": "وردەکارییەکانی هەڵە"
+  "Error details": "وردەکارییەکانی هەڵە",
+  "Total size": "Mezinahiya giştî",
+  "Actions": "Kiryar",
+  "{0} on disk": "{0} li ser dîskê",
+  "{0} on disk, {1} in worktrees": "{0} li ser dîskê, {1} di worktreeyan de",
+  "Install UniGetUI updates automatically while it is idle in the background": "Dema UniGetUI di paşxaneyê de bêkar e, nûvekirinên UniGetUI bixweber saz bike",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI tenê dikare nûvekirinên xwe di paşxaneyê de saz bike dema ku ji bo bikarhênerê niha hatibe sazkirin, an jî dema wekî rêveber dixebite.",
+  "Select a package to see its details": "Pakêtekê hilbijêre da ku hûrgiliyên wê bibînî",
+  "Make the window wider to show package details here": "Pencereyê firehtir bike da ku hûrgiliyên pakêtê li vir nîşan bide",
+  "Details panel": "Panela hûrgiliyan",
+  "Show details panel": "Panela hûrgiliyan nîşan bide",
+  "Hide details panel": "Panela hûrgiliyan veşêre"
 }

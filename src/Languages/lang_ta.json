@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} ஏற்கனவே சமீபத்திய பதிப்பில் உள்ளது",
   "Could not refresh from remote": "தொலைநிலையிலிருந்து புதுப்பிக்க முடியவில்லை",
   "Remote information may be out of date": "தொலைநிலைத் தகவல் புதுப்பித்த நிலையில் இல்லாமல் இருக்கலாம்",
-  "Error details": "பிழை விவரங்கள்"
+  "Error details": "பிழை விவரங்கள்",
+  "Total size": "மொத்த அளவு",
+  "Actions": "செயல்கள்",
+  "{0} on disk": "வட்டில் {0}",
+  "{0} on disk, {1} in worktrees": "வட்டில் {0}, worktree-களில் {1}",
+  "Install UniGetUI updates automatically while it is idle in the background": "UniGetUI பின்னணியில் செயலற்ற நிலையில் இருக்கும்போது அதன் புதுப்பிப்புகளைத் தானாக நிறுவு",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "தற்போதைய பயனருக்காக நிறுவப்பட்டிருக்கும்போது அல்லது நிர்வாகியாக இயங்கும்போது மட்டுமே UniGetUI-ஐ பின்னணியில் புதுப்பிக்க முடியும்.",
+  "Select a package to see its details": "விவரங்களைக் காண ஒரு தொகுப்பைத் தேர்ந்தெடுக்கவும்",
+  "Make the window wider to show package details here": "தொகுப்பு விவரங்களை இங்கே காட்ட சாளரத்தை அகலமாக்கவும்",
+  "Details panel": "விவரங்கள் பலகம்",
+  "Show details panel": "விவரங்கள் பலகையைக் காட்டு",
+  "Hide details panel": "விவரங்கள் பலகையை மறை"
 }

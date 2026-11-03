@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} je že posodobljen",
   "Could not refresh from remote": "Ni bilo mogoče osvežiti iz oddaljenega vira",
   "Remote information may be out of date": "Podatki o oddaljenem viru so morda zastareli",
-  "Error details": "Podrobnosti napake"
+  "Error details": "Podrobnosti napake",
+  "Total size": "Skupna velikost",
+  "Actions": "Dejanja",
+  "{0} on disk": "{0} na disku",
+  "{0} on disk, {1} in worktrees": "{0} na disku, {1} v delovnih drevesih",
+  "Install UniGetUI updates automatically while it is idle in the background": "Samodejno nameščaj posodobitve UniGetUI, ko je v ozadju nedejaven",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI lahko posodobitve v ozadju namesti samo, če je nameščen za trenutnega uporabnika ali če se izvaja kot skrbnik.",
+  "Select a package to see its details": "Izberite paket, da si ogledate njegove podrobnosti",
+  "Make the window wider to show package details here": "Razširite okno, da bodo tukaj prikazane podrobnosti paketa",
+  "Details panel": "Podokno s podrobnostmi",
+  "Show details panel": "Pokaži podokno s podrobnostmi",
+  "Hide details panel": "Skrij podokno s podrobnostmi"
 }

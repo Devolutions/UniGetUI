@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} ужо актуальны",
   "Could not refresh from remote": "Не ўдалося абнавіць даныя з аддаленага рэсурсу",
   "Remote information may be out of date": "Інфармацыя з аддаленага рэсурсу можа быць састарэлай",
-  "Error details": "Падрабязнасці памылкі"
+  "Error details": "Падрабязнасці памылкі",
+  "Total size": "Агульны памер",
+  "Actions": "Дзеянні",
+  "{0} on disk": "{0} на дыску",
+  "{0} on disk, {1} in worktrees": "{0} на дыску, {1} у працоўных дрэвах",
+  "Install UniGetUI updates automatically while it is idle in the background": "Аўтаматычна ўсталёўваць абнаўленні UniGetUI, калі праграма неактыўная ў фонавым рэжыме",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI можа ўсталёўваць абнаўленні ў фонавым рэжыме, толькі калі праграма ўсталявана для бягучага карыстальніка або працуе з правамі адміністратара.",
+  "Select a package to see its details": "Выберыце пакет, каб убачыць звесткі пра яго",
+  "Make the window wider to show package details here": "Павялічце шырыню акна, каб паказаць тут звесткі пра пакет",
+  "Details panel": "Панэль звестак",
+  "Show details panel": "Паказваць панэль звестак",
+  "Hide details panel": "Схаваць панэль звестак"
 }

@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "Το {0} είναι ήδη ενημερωμένο",
   "Could not refresh from remote": "Δεν ήταν δυνατή η ανανέωση από το απομακρυσμένο αποθετήριο",
   "Remote information may be out of date": "Οι πληροφορίες από το απομακρυσμένο αποθετήριο ενδέχεται να μην είναι ενημερωμένες",
-  "Error details": "Λεπτομέρειες σφάλματος"
+  "Error details": "Λεπτομέρειες σφάλματος",
+  "Total size": "Συνολικό μέγεθος",
+  "Actions": "Ενέργειες",
+  "{0} on disk": "{0} στον δίσκο",
+  "{0} on disk, {1} in worktrees": "{0} στον δίσκο, {1} στα worktrees",
+  "Install UniGetUI updates automatically while it is idle in the background": "Εγκατάσταση ενημερώσεων του UniGetUI αυτόματα όταν είναι σε αδράνεια στο παρασκήνιο",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "Το UniGetUI μπορεί να εγκαθιστά ενημερώσεις στο παρασκήνιο μόνο όταν είναι εγκατεστημένο για τον τρέχοντα χρήστη ή όταν εκτελείται ως διαχειριστής.",
+  "Select a package to see its details": "Επιλέξτε ένα πακέτο για να δείτε τις λεπτομέρειές του",
+  "Make the window wider to show package details here": "Μεγαλύνετε το πλάτος του παραθύρου για να εμφανιστούν εδώ οι λεπτομέρειες του πακέτου",
+  "Details panel": "Πλαίσιο λεπτομερειών",
+  "Show details panel": "Εμφάνιση πλαισίου λεπτομερειών",
+  "Hide details panel": "Απόκρυψη πλαισίου λεπτομερειών"
 }

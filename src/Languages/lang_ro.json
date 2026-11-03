@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} este deja actualizat",
   "Could not refresh from remote": "Nu s-a putut reîmprospăta de la distanță",
   "Remote information may be out of date": "Este posibil ca informațiile de la distanță să fie învechite",
-  "Error details": "Detalii despre eroare"
+  "Error details": "Detalii despre eroare",
+  "Total size": "Dimensiune totală",
+  "Actions": "Acțiuni",
+  "{0} on disk": "{0} pe disc",
+  "{0} on disk, {1} in worktrees": "{0} pe disc, {1} în worktree-uri",
+  "Install UniGetUI updates automatically while it is idle in the background": "Instalează automat actualizările UniGetUI atunci când aplicația este inactivă în fundal",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI își poate instala actualizările în fundal numai dacă este instalat pentru utilizatorul curent sau rulează ca administrator.",
+  "Select a package to see its details": "Selectează un pachet pentru a-i vedea detaliile",
+  "Make the window wider to show package details here": "Lărgește fereastra pentru a afișa aici detaliile pachetului",
+  "Details panel": "Panou de detalii",
+  "Show details panel": "Afișează panoul de detalii",
+  "Hide details panel": "Ascunde panoul de detalii"
 }

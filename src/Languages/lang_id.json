@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} sudah menggunakan versi terbaru",
   "Could not refresh from remote": "Tidak dapat memuat ulang dari remote",
   "Remote information may be out of date": "Informasi remote mungkin sudah usang",
-  "Error details": "Detail kesalahan"
+  "Error details": "Detail kesalahan",
+  "Total size": "Ukuran total",
+  "Actions": "Tindakan",
+  "{0} on disk": "{0} di disk",
+  "{0} on disk, {1} in worktrees": "{0} di disk, {1} di worktree",
+  "Install UniGetUI updates automatically while it is idle in the background": "Instal pembaruan UniGetUI secara otomatis saat tidak aktif di latar belakang",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI hanya dapat memasang pembaruannya di latar belakang jika diinstal untuk pengguna saat ini atau dijalankan sebagai administrator.",
+  "Select a package to see its details": "Pilih paket untuk melihat detailnya",
+  "Make the window wider to show package details here": "Perlebar jendela untuk menampilkan detail paket di sini",
+  "Details panel": "Panel detail",
+  "Show details panel": "Tampilkan panel detail",
+  "Hide details panel": "Sembunyikan panel detail"
 }

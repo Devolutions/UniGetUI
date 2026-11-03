@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} محدّث بالفعل",
   "Could not refresh from remote": "تعذّر التحديث من المصدر البعيد",
   "Remote information may be out of date": "قد تكون معلومات المصدر البعيد قديمة",
-  "Error details": "تفاصيل الخطأ"
+  "Error details": "تفاصيل الخطأ",
+  "Total size": "الحجم الإجمالي",
+  "Actions": "الإجراءات",
+  "{0} on disk": "{0} على القرص",
+  "{0} on disk, {1} in worktrees": "{0} على القرص، و{1} في أشجار العمل",
+  "Install UniGetUI updates automatically while it is idle in the background": "ثبّت تحديثات UniGetUI تلقائيًا عندما يكون خاملًا في الخلفية",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "لا يمكن لـ UniGetUI تثبيت تحديثاته في الخلفية إلا إذا كان مثبتًا للمستخدم الحالي أو عند تشغيله كمسؤول.",
+  "Select a package to see its details": "حدد حزمة لعرض تفاصيلها",
+  "Make the window wider to show package details here": "وسّع النافذة لعرض تفاصيل الحزمة هنا",
+  "Details panel": "لوحة التفاصيل",
+  "Show details panel": "إظهار لوحة التفاصيل",
+  "Hide details panel": "إخفاء لوحة التفاصيل"
 }

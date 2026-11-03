@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "Pakett {0} on juba ajakohane",
   "Could not refresh from remote": "Kaugserverist ei saanud värskendada",
   "Remote information may be out of date": "Kaugserveri teave võib olla aegunud",
-  "Error details": "Tõrke üksikasjad"
+  "Error details": "Tõrke üksikasjad",
+  "Total size": "Kogumaht",
+  "Actions": "Toimingud",
+  "{0} on disk": "{0} kettal",
+  "{0} on disk, {1} in worktrees": "{0} kettal, {1} tööpuudes",
+  "Install UniGetUI updates automatically while it is idle in the background": "Paigalda UniGetUI uuendused automaatselt, kui see on taustal jõudeolekus",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "UniGetUI saab uuendusi taustal paigaldada ainult siis, kui see on paigaldatud praegusele kasutajale või töötab administraatorina.",
+  "Select a package to see its details": "Vali pakett, et näha selle üksikasju",
+  "Make the window wider to show package details here": "Tee aken laiemaks, et näha siin paketi üksikasju",
+  "Details panel": "Üksikasjade paneel",
+  "Show details panel": "Kuva üksikasjade paneel",
+  "Hide details panel": "Peida üksikasjade paneel"
 }

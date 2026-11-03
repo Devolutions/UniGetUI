@@ -2205,5 +2205,16 @@
   "{0} is already up to date": "{0} már naprakész",
   "Could not refresh from remote": "Nem sikerült frissíteni a távoli forrásból",
   "Remote information may be out of date": "A távoli információk elavultak lehetnek",
-  "Error details": "Hiba részletei"
+  "Error details": "Hiba részletei",
+  "Total size": "Teljes méret",
+  "Actions": "Műveletek",
+  "{0} on disk": "{0} a lemezen",
+  "{0} on disk, {1} in worktrees": "{0} a lemezen, {1} a munkafákban",
+  "Install UniGetUI updates automatically while it is idle in the background": "A UniGetUI-frissítések automatikus telepítése, amikor a program tétlenül fut a háttérben",
+  "UniGetUI can only install its updates in the background when it is installed for the current user, or while it runs as administrator.": "Az UniGetUI csak akkor tudja a frissítéseit a háttérben telepíteni, ha az aktuális felhasználó számára van telepítve, vagy rendszergazdaként fut.",
+  "Select a package to see its details": "Válasszon ki egy csomagot a részletek megtekintéséhez",
+  "Make the window wider to show package details here": "Növelje az ablak szélességét a csomag részleteinek megjelenítéséhez",
+  "Details panel": "Részletek panel",
+  "Show details panel": "Részletek panel megjelenítése",
+  "Hide details panel": "Részletek panel elrejtése"
 }

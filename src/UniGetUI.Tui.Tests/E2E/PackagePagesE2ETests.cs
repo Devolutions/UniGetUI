@@ -417,7 +417,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await ReplaceTextAsync(folder);
         await Key(K.Enter);
         await WaitForOperationsToFinishAsync();
-        NAssert.That(Directory.Exists(folder) ? Directory.GetFiles(folder) : Array.Empty<string>(), Is.Empty);
+        NAssert.That(Directory.GetFiles(folder).Where(f => !f.EndsWith(".partial")), Is.Empty);
 
         await OnUi(() => Window.NavigateTo(TuiPageIds.Operations));
         await WaitForTextAsync("Failed");

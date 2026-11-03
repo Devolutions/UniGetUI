@@ -2217,13 +2217,18 @@
   "Install it with this command:": "Install it with this command:",
   "Open in a terminal": "Open in a terminal",
   "Hash verified ({0})": "Hash verified ({0})",
-  "Hash mismatch, the download was discarded": "Hash mismatch, the download was discarded",
   "No hash published, not verified": "No hash published, not verified",
   "Unrecognized hash format, not verified": "Unrecognized hash format, not verified",
   "Signed by {0}": "Signed by {0}",
   "an unknown publisher": "an unknown publisher",
   "Not signed": "Not signed",
-  "Signature not trusted ({0})": "Signature not trusted ({0})",
   "Last download": "Last download",
-  "Hash mismatch, kept because the hash check was skipped": "Hash mismatch, kept because the hash check was skipped"
+  "Hash mismatch, kept because the hash check was skipped": "Hash mismatch, kept because the hash check was skipped",
+  "Hash mismatch, the download was rejected": "Hash mismatch, the download was rejected",
+  "Signature does not match the file": "Signature does not match the file",
+  "Signed with an untrusted certificate": "Signed with an untrusted certificate",
+  "Signed with an expired certificate": "Signed with an expired certificate",
+  "Signed with a revoked certificate": "Signed with a revoked certificate",
+  "Signed by a distrusted publisher": "Signed by a distrusted publisher",
+  "Signature could not be verified ({0})": "Signature could not be verified ({0})"
 }

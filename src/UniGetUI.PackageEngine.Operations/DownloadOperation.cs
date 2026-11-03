@@ -49,6 +49,8 @@ public class DownloadOperation : AbstractOperation
 
     public bool SkipHashCheck { get; private set; }
     public bool HashMismatched { get; private set; }
+    private string? _rejectedFile;
+    private byte[]? _rejectedHash;
 
     protected override void ApplyRetryAction(string retryMode)
     {
@@ -74,14 +76,30 @@ public class DownloadOperation : AbstractOperation
             ? AuthenticodeSignature.VerifyFile(path, checkRevocationOnline: false)
             : null;
 
+    internal TimeSpan SignatureCheckTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
     private async Task<SignatureCheck?> ReportSignatureAsync(string path)
     {
         try
         {
-            SignatureCheck? check = await Task.Run(() => CheckSignature(path));
+            SignatureCheck? check = await Task.Run(() => CheckSignature(path))
+                .WaitAsync(SignatureCheckTimeout, CancellationToken);
             if (check is { } signature)
                 Line($"The installer is {signature.Describe()}", LineType.Information);
             return check;
+        }
+        catch (TimeoutException)
+        {
+            Line(
+                $"The signature of {path} could not be checked within {SignatureCheckTimeout.TotalSeconds:0} seconds",
+                LineType.Information
+            );
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            Line($"The signature check of {path} was skipped", LineType.Information);
+            return null;
         }
         catch (Exception ex)
         {
@@ -257,88 +275,19 @@ public class DownloadOperation : AbstractOperation
             }
 
             partialLocation = downloadLocation + ".partial";
-            Line($"Download URL found at {downloadUrl} ", LineType.Information);
-            using HttpClient? httpClient = downloadUrl.IsFile ? null : CreateHttpClient();
-            using HttpResponseMessage? response =
-                httpClient is null
-                    ? null
-                    : await httpClient.GetAsync(
-                        downloadUrl,
-                        HttpCompletionOption.ResponseHeadersRead,
-                        CancellationToken
-                    );
-            response?.EnsureSuccessStatusCode();
-
-            long totalBytes;
-            Stream sourceStream;
-            if (response is null)
-            {
-                FileInfo sourceFile = new(downloadUrl.LocalPath);
-                totalBytes = sourceFile.Length;
-                sourceStream = sourceFile.OpenRead();
-            }
-            else
-            {
-                totalBytes = response.Content.Headers.ContentLength ?? -1L;
-                sourceStream = await response.Content.ReadAsStreamAsync(CancellationToken);
-            }
-
-            var canReportProgress = totalBytes > 0;
-            using IncrementalHash? hasher = hashPublished ? expectedHash.CreateHasher() : null;
-            await using (var contentStream = sourceStream)
-            await using (var fileStream = new FileStream(
-                partialLocation,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                8192,
-                useAsync: true
-            ))
-            {
+            byte[]? actualHash = hashPublished && SkipHashCheck
+                ? await ReuseRejectedFileAsync(partialLocation, expectedHash)
+                : null;
+            if (actualHash is not null)
                 partialFileCreated = true;
-                var buffer = new byte[4 * 1024 * 1024];
-                long totalRead = 0;
-                int oldProgress = -1;
-                int bytesRead;
-                while (
-                    (bytesRead = await contentStream.ReadAsync(buffer.AsMemory(), CancellationToken)) > 0
-                )
-                {
-                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken);
-                    hasher?.AppendData(buffer, 0, bytesRead);
-                    totalRead += bytesRead;
-
-                    if (canReportProgress)
-                    {
-                        var progress = (int)((totalRead * 100L) / totalBytes);
-                        if (progress != oldProgress)
-                        {
-                            oldProgress = progress;
-                            ReportProgress(
-                                OperationProgress.FromDownload(
-                                    (ulong)totalRead,
-                                    (ulong)totalBytes
-                                )
-                            );
-                            Line(
-                                CoreTools.TextProgressGenerator(
-                                    30,
-                                    progress,
-                                    $"{CoreTools.FormatAsSize(totalRead)}/{CoreTools.FormatAsSize(totalBytes)}"
-                                ),
-                                LineType.ProgressIndicator
-                            );
-                        }
-                    }
-                }
-            }
+            else
+                actualHash = await DownloadToAsync(downloadUrl, partialLocation, hashPublished ? expectedHash : null, () => partialFileCreated = true);
 
             CancellationToken.ThrowIfCancellationRequested();
 
             InstallerHashStatus hashStatus;
-            if (hasher is not null)
+            if (hashPublished)
             {
-                byte[] actualHash = hasher.GetHashAndReset();
                 if (expectedHash.Matches(actualHash))
                 {
                     Line(
@@ -363,12 +312,15 @@ public class DownloadOperation : AbstractOperation
                     Line(
                         $"The downloaded file does not match the {expectedHash.AlgorithmName} hash published "
                             + $"for this installer (expected {Convert.ToHexStringLower(expectedHash.Digest)}, "
-                            + $"got {Convert.ToHexStringLower(actualHash)}). The file was discarded. "
+                            + $"got {Convert.ToHexStringLower(actualHash)}). It was set aside as {partialLocation}. "
                             + "If the publisher replaced the installer without updating its manifest, "
                             + "retry skipping integrity checks to keep it anyway",
                         LineType.Error
                     );
                     HashMismatched = true;
+                    _rejectedFile = partialLocation;
+                    _rejectedHash = actualHash;
+                    partialFileCreated = false;
                     RecordVerification(InstallerHashStatus.Mismatch, expectedHash.AlgorithmName, null);
                     return OperationVeredict.Failure;
                 }
@@ -415,6 +367,133 @@ public class DownloadOperation : AbstractOperation
         {
             if (partialFileCreated && File.Exists(partialLocation))
                 TryDelete(partialLocation);
+        }
+    }
+
+    private async Task<byte[]?> ReuseRejectedFileAsync(string partialLocation, PublishedInstallerHash expectedHash)
+    {
+        string? rejectedFile = _rejectedFile;
+        byte[]? rejectedHash = _rejectedHash;
+        _rejectedFile = null;
+        _rejectedHash = null;
+        if (rejectedFile != partialLocation || rejectedHash is null || !File.Exists(partialLocation))
+            return null;
+
+        byte[] currentHash = await expectedHash.ComputeAsync(partialLocation, CancellationToken);
+        if (!CryptographicOperations.FixedTimeEquals(currentHash, rejectedHash))
+        {
+            Line(
+                $"The file set aside as {partialLocation} changed since it was downloaded, it will be downloaded again",
+                LineType.Information
+            );
+            return null;
+        }
+
+        long size = new FileInfo(partialLocation).Length;
+        ReportProgress(OperationProgress.FromDownload((ulong)size, (ulong)size));
+        Line($"Reusing the installer set aside as {partialLocation} by the previous attempt", LineType.Information);
+        return currentHash;
+    }
+
+    private async Task<byte[]> DownloadToAsync(
+        Uri downloadUrl,
+        string partialLocation,
+        PublishedInstallerHash? expectedHash,
+        Action onFileCreated
+    )
+    {
+        Line($"Download URL found at {downloadUrl} ", LineType.Information);
+        using HttpClient? httpClient = downloadUrl.IsFile ? null : CreateHttpClient();
+        using HttpResponseMessage? response =
+            httpClient is null
+                ? null
+                : await httpClient.GetAsync(
+                    downloadUrl,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    CancellationToken
+                );
+        response?.EnsureSuccessStatusCode();
+
+        long totalBytes;
+        Stream sourceStream;
+        if (response is null)
+        {
+            FileInfo sourceFile = new(downloadUrl.LocalPath);
+            totalBytes = sourceFile.Length;
+            sourceStream = sourceFile.OpenRead();
+        }
+        else
+        {
+            totalBytes = response.Content.Headers.ContentLength ?? -1L;
+            sourceStream = await response.Content.ReadAsStreamAsync(CancellationToken);
+        }
+
+        var canReportProgress = totalBytes > 0;
+        using IncrementalHash? hasher = expectedHash?.CreateHasher();
+        await using (var contentStream = sourceStream)
+        await using (var fileStream = new FileStream(
+            partialLocation,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            8192,
+            useAsync: true
+        ))
+        {
+            onFileCreated();
+            var buffer = new byte[4 * 1024 * 1024];
+            long totalRead = 0;
+            int oldProgress = -1;
+            int bytesRead;
+            while (
+                (bytesRead = await contentStream.ReadAsync(buffer.AsMemory(), CancellationToken)) > 0
+            )
+            {
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken);
+                hasher?.AppendData(buffer, 0, bytesRead);
+                totalRead += bytesRead;
+
+                if (canReportProgress)
+                {
+                    var progress = (int)((totalRead * 100L) / totalBytes);
+                    if (progress != oldProgress)
+                    {
+                        oldProgress = progress;
+                        ReportProgress(
+                            OperationProgress.FromDownload(
+                                (ulong)totalRead,
+                                (ulong)totalBytes
+                            )
+                        );
+                        Line(
+                            CoreTools.TextProgressGenerator(
+                                30,
+                                progress,
+                                $"{CoreTools.FormatAsSize(totalRead)}/{CoreTools.FormatAsSize(totalBytes)}"
+                            ),
+                            LineType.ProgressIndicator
+                        );
+                    }
+                }
+            }
+        }
+
+        return hasher?.GetHashAndReset() ?? [];
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing && _rejectedFile is { } rejectedFile)
+        {
+            _rejectedFile = null;
+            try
+            {
+                File.Delete(rejectedFile);
+            }
+            catch (Exception)
+            {
+            }
         }
     }
 

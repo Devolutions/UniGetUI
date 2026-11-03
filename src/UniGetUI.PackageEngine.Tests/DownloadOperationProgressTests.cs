@@ -62,6 +62,7 @@ public sealed class DownloadOperationProgressTests
     ) : HttpMessageHandler
     {
         public int StreamReadCalls => _stream?.ReadCalls ?? 0;
+        public int Requests { get; private set; }
         private FragmentedReadStream? _stream = streamSink;
 
         protected override Task<HttpResponseMessage> SendAsync(
@@ -69,6 +70,7 @@ public sealed class DownloadOperationProgressTests
             CancellationToken cancellationToken
         )
         {
+            Requests++;
             var stream = new FragmentedReadStream(payload, maxChunk, clock, perRead);
             _stream = stream;
             var content = new StreamContent(stream);
@@ -91,7 +93,13 @@ public sealed class DownloadOperationProgressTests
 
         public SignatureCheck? Signature { get; set; }
 
-        protected override SignatureCheck? CheckSignature(string path) => Signature;
+        public TimeSpan SignatureDelay { get; set; }
+
+        protected override SignatureCheck? CheckSignature(string path)
+        {
+            Thread.Sleep(SignatureDelay);
+            return Signature;
+        }
 
         public void ApplyRetryActionForTests(string retryMode) => ApplyRetryAction(retryMode);
 
@@ -715,7 +723,7 @@ public sealed class DownloadOperationProgressTests
 
             Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
             Assert.Equal(existing, File.ReadAllBytes(downloadPath));
-            Assert.Empty(PartialFilesOf(downloadPath));
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath + ".partial"));
             Assert.Contains(
                 operation.GetOutput(),
                 line => line.Item1.Contains("does not match the SHA-512 hash")
@@ -727,10 +735,14 @@ public sealed class DownloadOperationProgressTests
                 InstallerHashStatus.Mismatch,
                 InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus
             );
+
+            operation.Dispose();
+            Assert.Empty(PartialFilesOf(downloadPath));
         }
         finally
         {
             File.Delete(downloadPath);
+            File.Delete(downloadPath + ".partial");
         }
     }
 
@@ -763,6 +775,8 @@ public sealed class DownloadOperationProgressTests
 
             Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
             Assert.False(operation.HashMismatched);
+            Assert.Equal(1, handler.Requests);
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("Reusing the installer set aside"));
             Assert.Equal(payload, File.ReadAllBytes(downloadPath));
             Assert.Empty(PartialFilesOf(downloadPath));
             Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("kept because the hash check was skipped"));
@@ -771,6 +785,69 @@ public sealed class DownloadOperationProgressTests
                 InstallerHashStatus.MismatchKept,
                 InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus
             );
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task ASetAsideFileThatChangedIsDownloadedAgainOnTheSkipRetry()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(131).NextBytes(payload);
+        byte[] published = new byte[16 * 1024];
+        new Random(137).NextBytes(published);
+        Uri installerUrl = UniqueInstallerUrl();
+        string publishedHash = Convert.ToHexStringLower(SHA256.HashData(published));
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-swapped-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
+            File.WriteAllBytes(downloadPath + ".partial", [1, 2, 3]);
+            operation.ApplyRetryActionForTests(AbstractOperation.RetryMode.Retry_SkipIntegrity);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(2, handler.Requests);
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+            File.Delete(downloadPath + ".partial");
+        }
+    }
+
+    [Fact]
+    public async Task ASlowSignatureCheckDoesNotHoldTheDownload()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(139).NextBytes(payload);
+        IPackage package = CreatePackageWithHash(null, UniqueInstallerUrl());
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-slow-signature-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler)
+            {
+                Signature = new SignatureCheck(0, "Example Corp"),
+                SignatureDelay = TimeSpan.FromSeconds(5),
+                SignatureCheckTimeout = TimeSpan.FromMilliseconds(100),
+            };
+
+            var stopwatch = Stopwatch.StartNew();
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4), $"took {stopwatch.Elapsed}");
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("could not be checked within"));
         }
         finally
         {

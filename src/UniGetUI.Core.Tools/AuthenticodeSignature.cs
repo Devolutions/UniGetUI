@@ -5,23 +5,63 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace UniGetUI.Core.Tools;
 
+public enum SignatureKind
+{
+    Valid,
+    NotSigned,
+    UnsignedFileType,
+    Tampered,
+    UntrustedRoot,
+    Expired,
+    Revoked,
+    DistrustedPublisher,
+    Unverifiable,
+}
+
 public readonly record struct SignatureCheck(int Status, string? Signer)
 {
     public bool IsValid => Status == 0;
 
-    public bool IsUnsignedFileType => Status == unchecked((int)0x800B0003);
-
-    public string Describe() => Status switch
+    public SignatureKind Kind => Status switch
     {
-        0 => $"signed by {Signer ?? "an unknown publisher"}",
-        unchecked((int)0x800B0100) => "not signed",
-        unchecked((int)0x800B0003) => "of a file type that carries no Authenticode signature",
-        unchecked((int)0x80096010) => "its signature does not match its contents",
-        unchecked((int)0x800B0109) => "signed with a certificate this computer does not trust",
-        unchecked((int)0x800B0101) => "signed with an expired certificate",
-        unchecked((int)0x800B010C) => "signed with a revoked certificate",
-        unchecked((int)0x800B0111) => "signed by a publisher this computer distrusts",
+        0 => SignatureKind.Valid,
+        unchecked((int)0x800B0100) => SignatureKind.NotSigned,
+        unchecked((int)0x800B0003) => SignatureKind.UnsignedFileType,
+        unchecked((int)0x80096010) => SignatureKind.Tampered,
+        unchecked((int)0x800B0109) => SignatureKind.UntrustedRoot,
+        unchecked((int)0x800B0101) => SignatureKind.Expired,
+        unchecked((int)0x800B010C) => SignatureKind.Revoked,
+        unchecked((int)0x800B0111) => SignatureKind.DistrustedPublisher,
+        _ => SignatureKind.Unverifiable,
+    };
+
+    public string Describe() => Kind switch
+    {
+        SignatureKind.Valid => $"signed by {Signer ?? "an unknown publisher"}",
+        SignatureKind.NotSigned => "not signed",
+        SignatureKind.UnsignedFileType => "of a file type that carries no Authenticode signature",
+        SignatureKind.Tampered => "its signature does not match its contents",
+        SignatureKind.UntrustedRoot => "signed with a certificate this computer does not trust",
+        SignatureKind.Expired => "signed with an expired certificate",
+        SignatureKind.Revoked => "signed with a revoked certificate",
+        SignatureKind.DistrustedPublisher => "signed by a publisher this computer distrusts",
         _ => $"its signature could not be verified (0x{Status:X8})",
+    };
+
+    public string? Summary() => Kind switch
+    {
+        SignatureKind.Valid => CoreTools.Translate(
+            "Signed by {0}",
+            Signer ?? CoreTools.Translate("an unknown publisher")
+        ),
+        SignatureKind.NotSigned => CoreTools.Translate("Not signed"),
+        SignatureKind.UnsignedFileType => null,
+        SignatureKind.Tampered => CoreTools.Translate("Signature does not match the file"),
+        SignatureKind.UntrustedRoot => CoreTools.Translate("Signed with an untrusted certificate"),
+        SignatureKind.Expired => CoreTools.Translate("Signed with an expired certificate"),
+        SignatureKind.Revoked => CoreTools.Translate("Signed with a revoked certificate"),
+        SignatureKind.DistrustedPublisher => CoreTools.Translate("Signed by a distrusted publisher"),
+        _ => CoreTools.Translate("Signature could not be verified ({0})", $"0x{Status:X8}"),
     };
 }
 
@@ -36,7 +76,6 @@ public static partial class AuthenticodeSignature
     private const uint RevokeNone = 0;
     private const uint RevocationCheckChain = 0x40;
     private const uint RevocationCheckNone = 0x10;
-    private const uint CacheOnlyUrlRetrieval = 0x1000;
     private static readonly Guid GenericVerifyV2 = new("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
 
     public static SignatureCheck VerifyFile(string path, bool checkRevocationOnline = true)
@@ -58,9 +97,7 @@ public static partial class AuthenticodeSignature
                 dwUnionChoice = ChoiceFile,
                 pFile = fileInfoPointer,
                 dwStateAction = StateActionVerify,
-                dwProvFlags = checkRevocationOnline
-                    ? RevocationCheckChain
-                    : RevocationCheckNone | CacheOnlyUrlRetrieval,
+                dwProvFlags = checkRevocationOnline ? RevocationCheckChain : RevocationCheckNone,
             };
             Guid action = GenericVerifyV2;
             int status = WinVerifyTrust(nint.Zero, ref action, ref data);

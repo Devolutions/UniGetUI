@@ -2260,5 +2260,6 @@
   "Check again": "Check again",
   "WinGet is not available on this system": "WinGet is not available on this system",
   "Kill the processes of any search, package listing or maintenance command {0} is still running": "Kill the processes of any search, package listing or maintenance command {0} is still running",
-  "{0} is still loading.": "{0} is still loading."
+  "{0} is still loading.": "{0} is still loading.",
+  "No package manager matches your search": "No package manager matches your search"
 }

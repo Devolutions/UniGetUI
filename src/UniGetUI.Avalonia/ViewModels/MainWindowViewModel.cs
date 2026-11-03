@@ -215,6 +215,8 @@ public partial class MainWindowViewModel : ViewModelBase
             UpdateSettingsSuggestions(value);
         else if (CurrentPageContent is Views.Pages.LogPages.OperationHistoryPage historyPage)
             historyPage.ApplyQuery(value);
+        else if (CurrentPageContent is ManagerHealthPage healthPage)
+            healthPage.ApplyQuery(value);
     }
 
     public void ClearAllSearchQueries()

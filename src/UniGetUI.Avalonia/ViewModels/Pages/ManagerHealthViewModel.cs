@@ -18,6 +18,9 @@ public partial class ManagerHealthViewModel : ViewModelBase
     public ObservableCollection<ManagerHealthRowViewModel> Managers { get; } = [];
 
     [ObservableProperty] private string _summary = "";
+    [ObservableProperty] private bool _hasNoMatches;
+
+    private string _filter = "";
 
     private int _refreshQueued;
 
@@ -67,10 +70,25 @@ public partial class ManagerHealthViewModel : ViewModelBase
                 Managers.Move(current, index);
         }
 
+        ApplyFilter();
+
         int attention = reports.Count(report => report.NeedsAttention);
         Summary = attention == 0
             ? CoreTools.Translate("No package manager needs attention.")
             : CoreTools.Translate("{0} package manager(s) need attention.", attention);
+    }
+
+    public void SetFilter(string query)
+    {
+        _filter = query.Trim();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        foreach (var row in Managers)
+            row.IsShown = row.Matches(_filter);
+        HasNoMatches = Managers.Count > 0 && !Managers.Any(row => row.IsShown);
     }
 
     [RelayCommand]
@@ -136,6 +154,7 @@ public partial class ManagerHealthRowViewModel : ObservableObject
     [ObservableProperty] private bool _isHealthy;
     [ObservableProperty] private bool _needsAttention;
     [ObservableProperty] private bool _isWarning;
+    [ObservableProperty] private bool _isShown = true;
 
     public ManagerHealthRowViewModel(ManagerHealthReport report, ManagerHealthViewModel owner)
     {
@@ -143,6 +162,11 @@ public partial class ManagerHealthRowViewModel : ObservableObject
         _owner = owner;
         Update(report);
     }
+
+    public bool Matches(string filter) =>
+        filter.Length == 0
+        || new[] { DisplayName, Manager.Name, Manager.Id, StateLabel, Description }
+            .Any(text => text.Contains(filter, StringComparison.OrdinalIgnoreCase));
 
     public void Update(ManagerHealthReport report)
     {

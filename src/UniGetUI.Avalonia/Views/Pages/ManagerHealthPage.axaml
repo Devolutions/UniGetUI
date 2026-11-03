@@ -71,11 +71,15 @@
             </Button>
         </WrapPanel>
 
+        <TextBlock Grid.Row="2" Text="{t:Translate No package manager matches your search}"
+                   IsVisible="{Binding HasNoMatches}" Opacity="0.6"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"/>
+
         <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Managers}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:ManagerHealthRowViewModel">
-                        <Border Classes="health-card">
+                        <Border Classes="health-card" IsVisible="{Binding IsShown}">
                             <StackPanel Spacing="8">
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                     <TextBlock Grid.Column="0" Text="{Binding DisplayName}" FontSize="16"

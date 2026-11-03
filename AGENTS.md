@@ -76,13 +76,27 @@ place under the same version keeps showing the icon it had until a restart.
 |---|---|
 | `SearchQueryService` (3.5.0 → 3.0.0-beta → unversioned) | package search |
 | `PackageBaseAddress/3.0.0` | version enumeration, update detection, `.nupkg` and embedded-icon URLs |
-| `RegistrationsBaseUrl` (3.6.0 → 3.4.0 → 3.0.0-rc → 3.0.0-beta → unversioned) | package metadata, listed/unlisted checks |
+| `RegistrationsBaseUrl` (3.6.0 → 3.4.0 → 3.0.0-rc → 3.0.0-beta → unversioned) | package metadata, listed/unlisted checks; versions, `.nupkg` URLs and metadata when there is no `PackageBaseAddress` |
 
 A feed needs `PackageBaseAddress` or `RegistrationsBaseUrl` to be usable. If it advertises no
 `SearchQueryService` — or its search returns nothing — search degrades to an exact
 package-id lookup against the flat container. Flat-container version lists include unlisted
 versions, so an update candidate is confirmed against its registration leaf before being
-surfaced.
+surfaced. A version index answering 404 means the package is not on that feed, not a failed
+check, since .NET Tool asks every configured feed about every installed tool.
+
+A registration-only feed (JFrog Artifactory serves no flat container) is read through its
+registration index instead: versions come from its pages, fetching only the pages above the
+installed version during an update check; the `.nupkg` URL comes from the registration leaf;
+and metadata comes from the version's page entry when the leaf carries no `catalogEntry`.
+None of this runs for a feed that has a flat container.
+
+On V2, Artifactory answers `GetUpdates()` with nothing unless `includeAllVersions` is true, and
+then truncates the list at 100 without a next link. So when every `GetUpdates()` batch of a
+source comes back empty, one `includeAllVersions=true` request tells "nothing is newer" (still
+empty: stop there) from "this server ignores the request", in which case each installed package
+is looked up with `FindPackagesById()?$filter=IsLatestVersion` (`IsAbsoluteLatestVersion` with
+pre-releases). V2 version lists follow `next` links, up to 50 pages.
 
 ### Fallback behaviour
 

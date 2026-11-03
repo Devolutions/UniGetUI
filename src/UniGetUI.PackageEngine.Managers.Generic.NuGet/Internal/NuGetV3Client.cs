@@ -39,9 +39,13 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             LeafCache.Clear();
         }
 
-        public static bool TryDownloadString(Uri url, out string content)
+        public static bool TryDownloadString(Uri url, out string content) =>
+            TryDownloadString(url, out content, out _);
+
+        internal static bool TryDownloadString(Uri url, out string content, out bool notFound)
         {
             content = string.Empty;
+            notFound = false;
 
             try
             {
@@ -54,6 +58,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    notFound = response.StatusCode is System.Net.HttpStatusCode.NotFound;
                     Logger.Debug(
                         $"NuGet V3 request to Url={url} failed with status code {response.StatusCode}"
                     );
@@ -259,9 +264,19 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             NuGetV3ServiceIndex index,
             string packageId,
             out bool requestFailed
+        ) => GetVersions(index, packageId, newerThan: null, out requestFailed);
+
+        internal static IReadOnlyList<string> GetVersions(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            SemanticVersion? newerThan,
+            out bool requestFailed
         )
         {
             requestFailed = false;
+
+            if (index.PackageBaseAddress is null && index.RegistrationsBaseUrl is not null)
+                return GetRegistrationVersions(index, packageId, newerThan, out requestFailed);
 
             if (index.PackageBaseAddress is null)
             {
@@ -289,9 +304,12 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             )
                 return [];
 
-            if (!TryDownloadString(versionsUrl, out string content))
+            if (!TryDownloadString(versionsUrl, out string content, out bool notFound))
             {
-                requestFailed = true;
+                if (notFound)
+                    VersionCache[cacheKey] = (DateTime.UtcNow, []);
+                else
+                    requestFailed = true;
                 return [];
             }
 
@@ -312,6 +330,151 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                 requestFailed = true;
                 return [];
             }
+        }
+
+        private static IReadOnlyList<string> GetRegistrationVersions(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            SemanticVersion? newerThan,
+            out bool requestFailed
+        )
+        {
+            requestFailed = false;
+            Uri registrationBase = index.RegistrationsBaseUrl!;
+
+            string cacheKey = $"{registrationBase.AbsoluteUri}|{packageId.ToLowerInvariant()}";
+            if (
+                newerThan is null
+                && VersionCache.TryGetValue(cacheKey, out var cached)
+                && DateTime.UtcNow - cached.FetchedAt < VersionCacheLifetime
+            )
+                return cached.Versions;
+
+            if (
+                !Uri.TryCreate(
+                    $"{registrationBase.AbsoluteUri.TrimEnd('/')}/{EscapeId(packageId)}/index.json",
+                    UriKind.Absolute,
+                    out Uri? registrationUrl
+                )
+            )
+                return [];
+
+            if (!TryDownloadString(registrationUrl, out string content, out bool notFound))
+            {
+                if (notFound)
+                    VersionCache[cacheKey] = (DateTime.UtcNow, []);
+                else
+                    requestFailed = true;
+                return [];
+            }
+
+            try
+            {
+                List<string> versions = [];
+                foreach (
+                    V3RegistrationPage page in NuGetV3Json.DeserializeRegistrationIndex(content)?.Items
+                        ?? []
+                )
+                {
+                    if (
+                        newerThan is { } floor
+                        && TryParseNuGetVersion(page.Upper, out SemanticVersion upper)
+                        && upper <= floor
+                    )
+                        continue;
+
+                    IReadOnlyList<V3RegistrationLeaf>? leaves = page.Items;
+                    if (leaves is null)
+                    {
+                        if (
+                            !Uri.TryCreate(page.Id, UriKind.Absolute, out Uri? pageUrl)
+                            || !TryDownloadString(pageUrl, out string pageContent)
+                        )
+                        {
+                            requestFailed = true;
+                            return [];
+                        }
+
+                        leaves = NuGetV3Json.DeserializeRegistrationPage(pageContent)?.Items ?? [];
+                    }
+
+                    foreach (V3RegistrationLeaf leaf in leaves)
+                    {
+                        if (NuGetV3Json.DeserializeCatalogEntry(leaf.CatalogEntry)?.Version is { } version)
+                            versions.Add(version);
+                    }
+                }
+
+                if (newerThan is null)
+                    VersionCache[cacheKey] = (DateTime.UtcNow, versions);
+                return versions;
+            }
+            catch (Exception e)
+            {
+                Logger.Warn($"Malformed NuGet V3 registration index at Url={registrationUrl}");
+                Logger.Warn(e);
+                requestFailed = true;
+                return [];
+            }
+        }
+
+        private static V3CatalogEntry? GetRegistrationPageEntry(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            string version
+        )
+        {
+            if (
+                index.PackageBaseAddress is not null
+                || index.RegistrationsBaseUrl is null
+                || !TryParseNuGetVersion(version, out SemanticVersion wanted)
+                || !Uri.TryCreate(
+                    $"{index.RegistrationsBaseUrl.AbsoluteUri.TrimEnd('/')}/{EscapeId(packageId)}/index.json",
+                    UriKind.Absolute,
+                    out Uri? registrationUrl
+                )
+                || !TryDownloadString(registrationUrl, out string content)
+            )
+                return null;
+
+            foreach (
+                V3RegistrationPage page in NuGetV3Json.DeserializeRegistrationIndex(content)?.Items
+                    ?? []
+            )
+            {
+                if (
+                    TryParseNuGetVersion(page.Lower, out SemanticVersion lower)
+                    && TryParseNuGetVersion(page.Upper, out SemanticVersion upper)
+                    && (wanted < lower || wanted > upper)
+                )
+                    continue;
+
+                IReadOnlyList<V3RegistrationLeaf>? leaves = page.Items;
+                if (
+                    leaves is null
+                    && Uri.TryCreate(page.Id, UriKind.Absolute, out Uri? pageUrl)
+                    && TryDownloadString(pageUrl, out string pageContent)
+                )
+                    leaves = NuGetV3Json.DeserializeRegistrationPage(pageContent)?.Items;
+
+                foreach (V3RegistrationLeaf leaf in leaves ?? [])
+                {
+                    V3CatalogEntry? entry = NuGetV3Json.DeserializeCatalogEntry(leaf.CatalogEntry);
+                    if (
+                        entry?.Version is not null
+                        && TryParseNuGetVersion(entry.Version, out SemanticVersion candidate)
+                        && candidate == wanted
+                    )
+                    {
+                        entry.PackageContent ??= leaf.PackageContent;
+                        entry.Published ??= leaf.Published;
+                        entry.Listed ??= leaf.Listed;
+                        return entry;
+                    }
+                }
+            }
+
+            return null;
         }
 
         public static IReadOnlyList<string> GetVersionsDescending(
@@ -381,6 +544,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             IReadOnlyList<string> allVersions = GetVersions(
                 index,
                 packageId,
+                installed,
                 out bool versionsFailed
             );
             if (versionsFailed)
@@ -547,7 +711,8 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             {
                 V3RegistrationLeaf? leaf = GetRegistrationLeaf(index, packageId, version);
                 if (leaf is null)
-                    return GetNuspecMetadata(index, packageId, version);
+                    return GetNuspecMetadata(index, packageId, version)
+                        ?? GetRegistrationPageEntry(index, packageId, version);
 
                 V3CatalogEntry? inline = NuGetV3Json.DeserializeCatalogEntry(leaf.CatalogEntry);
                 if (inline is not null)
@@ -579,7 +744,18 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                     return entry;
                 }
 
-                return GetNuspecMetadata(index, packageId, version);
+                if (GetNuspecMetadata(index, packageId, version) is { } nuspecEntry)
+                    return nuspecEntry;
+
+                V3CatalogEntry? pageEntry = GetRegistrationPageEntry(index, packageId, version);
+                if (pageEntry is not null)
+                {
+                    pageEntry.PackageContent ??= leaf.PackageContent;
+                    pageEntry.Published ??= leaf.Published;
+                    pageEntry.Listed ??= leaf.Listed;
+                }
+
+                return pageEntry;
             }
             catch (Exception e)
             {
@@ -802,7 +978,13 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         )
         {
             if (index.PackageBaseAddress is null)
-                return null;
+                return Uri.TryCreate(
+                    GetRegistrationLeaf(index, packageId, version)?.PackageContent,
+                    UriKind.Absolute,
+                    out Uri? registeredContentUrl
+                )
+                    ? registeredContentUrl
+                    : null;
 
             string id = EscapeId(packageId);
             string normalized = EscapeVersion(version);

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
@@ -43,6 +44,55 @@ public sealed class NuGetV2UpdatesTests
         Assert.Contains(updates, update => update.Id == "Microsoft.Graph.Beta.Module449");
     }
 
+    [Theory]
+    [InlineData(false, "99.0.0")]
+    [InlineData(true, "100.0.0-beta")]
+    public void AFeedWhoseGetUpdatesOnlyAnswersForAllVersionsFallsBackToTheLatestVersionById(
+        bool preRelease,
+        string expected
+    )
+    {
+        using var feed = new V2UpdatesFeed { IgnoresLatestOnlyGetUpdates = true };
+        var manager = feed.CreateManager(InstalledModules(3, duplicatedVersions: 0));
+        var source = manager.Properties.DefaultSource;
+
+        var updates = manager.GetAvailableUpdatesFromSource(
+            source,
+            manager.GetInstalledPackages(),
+            preRelease,
+            manager.TaskLogger.CreateNew(LoggableTaskType.ListUpdates),
+            out int errors
+        );
+
+        Assert.Equal(0, errors);
+        Assert.Equal(3, updates.Count);
+        Assert.All(updates, update => Assert.Equal(expected, update.NewVersionString));
+        Assert.Equal(3, feed.Server.RequestPaths.Count(path => path.Contains("/FindPackagesById()")));
+    }
+
+    [Fact]
+    public void AnUpToDateFeedCostsOneExtraRequestAndNoLookupById()
+    {
+        using var feed = new V2UpdatesFeed { UpToDate = true };
+        var manager = feed.CreateManager(InstalledModules(3, duplicatedVersions: 0));
+
+        var updates = manager.GetAvailableUpdates();
+
+        Assert.Empty(updates);
+        Assert.Equal(2, feed.Server.RequestPaths.Count(path => path.Contains("/GetUpdates()")));
+        Assert.DoesNotContain(feed.Server.RequestPaths, path => path.Contains("/FindPackagesById()"));
+    }
+
+    [Fact]
+    public void V2VersionListsFollowTheFeedsNextPageLinks()
+    {
+        using var feed = new V2UpdatesFeed();
+        var manager = feed.CreateManager(InstalledModules(1, duplicatedVersions: 0));
+        var package = manager.GetInstalledPackages()[0];
+
+        Assert.Equal(["1.0.0", "1.1.0", "1.2.0", "2.0.0"], manager.DetailsHelper.GetVersions(package).Order());
+    }
+
     private static List<(string Id, string Version)> InstalledModules(int count, int duplicatedVersions)
     {
         var modules = new List<(string Id, string Version)>();
@@ -65,6 +115,10 @@ public sealed class NuGetV2UpdatesTests
         public TestHttpServer Server => _server ??= new TestHttpServer(Handle);
 
         public string? FailingPackageId { get; init; }
+
+        public bool IgnoresLatestOnlyGetUpdates { get; init; }
+
+        public bool UpToDate { get; init; }
 
         public IReadOnlyList<int> RequestedUrlLengths
         {
@@ -97,8 +151,34 @@ public sealed class NuGetV2UpdatesTests
                 _requestedUrlLengths.Add(rawUrl.Length);
             }
 
-            if (!(request.Url?.AbsolutePath ?? string.Empty).EndsWith("/GetUpdates()"))
+            string path = request.Url?.AbsolutePath ?? string.Empty;
+            if (path.EndsWith("/FindPackagesById()"))
+            {
+                string id = (request.QueryString["id"] ?? string.Empty).Trim('\'');
+                string? filter = request.QueryString["$filter"];
+                if (filter is null)
+                {
+                    int page = int.TryParse(request.QueryString["$skip"], out int skip) ? skip / 2 : 0;
+                    string[][] pages = [["1.0.0", "1.1.0"], ["1.2.0", "2.0.0"]];
+                    var body = new StringBuilder("<feed>");
+                    foreach (string version in pages[page])
+                        body.Append($"<entry><id>{Server.BaseUri}api/v2/Packages(Id='{id}',Version='{version}')</id></entry>");
+                    if (page + 1 < pages.Length)
+                        body.Append($"<link rel=\"next\" href=\"{Server.BaseUri}api/v2/FindPackagesById()?id='{id}'&amp;$skip={(page + 1) * 2}\" />");
+                    body.Append("</feed>");
+                    return (200, body.ToString(), "application/atom+xml");
+                }
+
+                string latest = filter == "IsAbsoluteLatestVersion" ? "100.0.0-beta" : "99.0.0";
+                return (200, $"<feed><entry><d:Id>{id}</d:Id><d:Version>{latest}</d:Version></entry></feed>", "application/atom+xml");
+            }
+
+            if (!path.EndsWith("/GetUpdates()"))
                 return (404, string.Empty, "application/xml");
+
+            bool allVersions = request.QueryString["includeAllVersions"] == "true";
+            if (UpToDate || (IgnoresLatestOnlyGetUpdates && !allVersions))
+                return (200, "<feed></feed>", "application/atom+xml");
 
             if (rawUrl.Length > FeedMaxUrlLength)
                 return (404, string.Empty, "application/xml");

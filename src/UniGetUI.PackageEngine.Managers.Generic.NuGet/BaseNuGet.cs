@@ -554,49 +554,91 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 using HttpClient client = new(CoreTools.GenericHttpClientParameters);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
 
-                foreach (
-                    string SearchUrl in BuildV2UpdateUrls(source, installedPackages, canPrerelease)
-                )
+                int requestErrors = 0;
+                string? Fetch(string url)
                 {
                     try
                     {
-                        using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+                        using var request = new HttpRequestMessage(HttpMethod.Get, url);
                         NuGetFeedCredentials.ApplyTo(request);
                         using HttpResponseMessage response = client.Send(request);
 
                         if (!response.IsSuccessStatusCode)
                         {
                             logger.Error(
-                                $"Failed to fetch api at Url={SearchUrl} with status code {response.StatusCode}"
+                                $"Failed to fetch api at Url={url} with status code {response.StatusCode}"
                             );
-                            errors++;
-                            continue;
+                            requestErrors++;
+                            return null;
                         }
 
-                        string SearchResults = response
-                            .Content.ReadAsStringAsync()
-                            .GetAwaiter()
-                            .GetResult();
-                        packages.AddRange(
-                            ParseUpdatesResponse(
-                                SearchResults,
-                                packageIdVersion,
-                                packageIdScope,
-                                source,
-                                this,
-                                logger
-                            )
-                        );
+                        return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(
-                            $"Failed to fetch api at Url={SearchUrl} on source {source.Name}"
-                        );
+                        logger.Error($"Failed to fetch api at Url={url} on source {source.Name}");
                         logger.Error(ex);
-                        errors++;
+                        requestErrors++;
+                        return null;
                     }
                 }
+
+                List<Package> Parse(string content) =>
+                    ParseUpdatesResponse(
+                        content,
+                        packageIdVersion,
+                        packageIdScope,
+                        source,
+                        this,
+                        logger
+                    );
+
+                bool foundAny = false;
+                foreach (
+                    string SearchUrl in BuildV2UpdateUrls(source, installedPackages, canPrerelease)
+                )
+                {
+                    if (Fetch(SearchUrl) is not { } SearchResults)
+                        continue;
+
+                    List<Package> found = Parse(SearchResults);
+                    foundAny |= found.Count > 0;
+                    packages.AddRange(found);
+                }
+
+                if (
+                    !foundAny
+                    && requestErrors is 0
+                    && BuildV2UpdateUrls(
+                            source,
+                            installedPackages,
+                            canPrerelease,
+                            includeAllVersions: true
+                        )
+                        .Any(url => Fetch(url) is { } content && HasV2Entries(content))
+                )
+                {
+                    logger.Log(
+                        $"GetUpdates() on source {source.Name} returned no update although newer versions "
+                            + "exist, so each package is looked up by id instead"
+                    );
+
+                    string baseUrl = source.Url.ToString().Trim('/');
+                    string latestFilter = canPrerelease
+                        ? "IsAbsoluteLatestVersion"
+                        : "IsLatestVersion";
+                    foreach (IPackage package in newestInstalled.Values)
+                    {
+                        string id = HttpUtility.UrlEncode(package.Id.Replace("'", "''"));
+                        if (
+                            Fetch($"{baseUrl}/FindPackagesById()?id='{id}'&$filter={latestFilter}")
+                            is { } content
+                        )
+                            packages.AddRange(Parse(content));
+                    }
+                }
+
+                errors += requestErrors;
             }
             catch (Exception ex)
             {
@@ -627,10 +669,14 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         internal const int MaxV2UpdateUrlLength = 8000;
 
+        private static bool HasV2Entries(string content) =>
+            Regex.IsMatch(content, "<entry[\\s>]");
+
         internal IReadOnlyList<string> BuildV2UpdateUrls(
             IManagerSource source,
             IReadOnlyList<IPackage> installedPackages,
-            bool canPrerelease
+            bool canPrerelease,
+            bool includeAllVersions = false
         )
         {
             var entries = new List<(string Id, string Version)>();
@@ -652,7 +698,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             string prefix = $"{source.Url.ToString().Trim('/')}/GetUpdates()?packageIds=%27";
             const string middle = "%27&versions=%27";
             string suffix =
-                $"%27&includePrerelease={(canPrerelease ? "true" : "false")}&includeAllVersions=0";
+                $"%27&includePrerelease={(canPrerelease ? "true" : "false")}"
+                + $"&includeAllVersions={(includeAllVersions ? "true" : "0")}";
             string separator = HttpUtility.UrlEncode("|");
             int fixedLength = prefix.Length + middle.Length + suffix.Length;
 

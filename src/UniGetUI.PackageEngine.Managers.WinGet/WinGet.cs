@@ -41,7 +41,10 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                     "Clear WinGet's cache, reset its sources, repair it and reset App Installer. Requires administrator rights."
                 ),
                 RequiresElevation = true,
-                RunAsync = () => WinGetRepair.RunAsync(),
+                RunAsync = () =>
+                    WinGetRepair.RunAsync(() =>
+                        RunMaintenanceProcessAsync(CoreData.PowerShell5, WinGetRepair.Arguments, elevated: true)
+                    ),
             };
             yield return new ManagerMaintenanceAction
             {

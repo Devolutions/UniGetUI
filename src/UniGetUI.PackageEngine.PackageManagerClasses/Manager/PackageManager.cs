@@ -182,6 +182,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             finally
             {
                 IsInitializing = false;
+                ManagerHealthStore.NotifyChanged(Name);
             }
         }
 
@@ -582,6 +583,21 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             bool elevated = false
         )
         {
+            int exitCode = await RunMaintenanceProcessAsync(fileName, arguments, elevated);
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"The maintenance command exited with code {exitCode}."
+                );
+            }
+        }
+
+        protected async Task<int> RunMaintenanceProcessAsync(
+            string fileName,
+            string arguments,
+            bool elevated = false
+        )
+        {
             if (string.IsNullOrWhiteSpace(fileName))
             {
                 throw new InvalidOperationException(
@@ -630,7 +646,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 using var timeout = new CancellationTokenSource(MaintenanceCommandTimeout);
                 try
                 {
-                    await process.WaitForExitAsync(timeout.Token);
+                    await Task.WhenAll(process.WaitForExitAsync(timeout.Token), stdout, stderr)
+                        .WaitAsync(timeout.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -650,12 +667,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
 
             logger.Close(process.ExitCode);
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException(
-                    $"The maintenance command exited with code {process.ExitCode}."
-                );
-            }
+            return process.ExitCode;
         }
 
         protected string WithCallArguments(string arguments) =>

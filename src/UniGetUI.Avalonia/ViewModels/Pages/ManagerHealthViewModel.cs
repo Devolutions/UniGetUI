@@ -141,8 +141,6 @@ public partial class ManagerHealthRowViewModel : ObservableObject
     {
         Manager = report.Manager;
         _owner = owner;
-        foreach (var action in Manager.GetMaintenanceActions())
-            Actions.Add(new ManagerHealthActionViewModel(action, () => _owner.RunActionAsync(Manager, action)));
         Update(report);
     }
 
@@ -163,6 +161,32 @@ public partial class ManagerHealthRowViewModel : ObservableObject
                 Listings[index] = listing;
             else
                 Listings.Add(listing);
+        }
+
+        var actions = Manager.GetMaintenanceActions();
+        for (int index = Actions.Count - 1; index >= 0; index--)
+        {
+            if (actions.All(action => action.Id != Actions[index].Id))
+                Actions.RemoveAt(index);
+        }
+
+        for (int index = 0; index < actions.Count; index++)
+        {
+            var action = actions[index];
+            int existing = -1;
+            for (int candidate = 0; candidate < Actions.Count; candidate++)
+            {
+                if (Actions[candidate].Id == action.Id)
+                {
+                    existing = candidate;
+                    break;
+                }
+            }
+
+            if (existing < 0)
+                Actions.Insert(index, new ManagerHealthActionViewModel(action, () => _owner.RunActionAsync(Manager, action)));
+            else if (existing != index)
+                Actions.Move(existing, index);
         }
     }
 }
@@ -197,12 +221,14 @@ public sealed class ManagerListingHealthViewModel
 
 public sealed class ManagerHealthActionViewModel
 {
+    public string Id { get; }
     public string Title { get; }
     public string Description { get; }
     public IAsyncRelayCommand RunCommand { get; }
 
     public ManagerHealthActionViewModel(ManagerMaintenanceAction action, Func<Task> run)
     {
+        Id = action.Id;
         Title = action.Title;
         Description = action.Description;
         RunCommand = new AsyncRelayCommand(run);

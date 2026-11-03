@@ -102,6 +102,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             HealthChanged?.Invoke(null, managerName);
         }
 
+        public static void NotifyChanged(string managerName) =>
+            HealthChanged?.Invoke(null, managerName);
+
         public static void Flush()
         {
             lock (Gate)

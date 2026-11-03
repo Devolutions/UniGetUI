@@ -35,6 +35,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                     .OrderByDescending(entry => entry.Listing.ConsecutiveFailures)
                     .ThenByDescending(entry => entry.Listing.LastFailureUtc)
                     .FirstOrDefault();
+                if (urgent.Listing is null && IsMalfunctioning(manager, record))
+                    return Malfunction(manager, record);
+
                 var shown = urgent.Listing is not null
                     ? urgent
                     : failures.OrderByDescending(entry => entry.Listing.LastFailureUtc).First();
@@ -52,16 +55,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             }
 
             if (IsMalfunctioning(manager, record))
-            {
-                return new ManagerHealthReport
-                {
-                    Manager = manager,
-                    Record = record,
-                    State = ManagerHealthState.Malfunctioning,
-                    FailingListing = ManagerListingKind.Installed,
-                    NeedsAttention = true,
-                };
-            }
+                return Malfunction(manager, record);
 
             bool anySuccess = Enum.GetValues<ManagerListingKind>()
                 .Any(kind => record[kind].LastSuccessUtc is not null);
@@ -140,8 +134,22 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
 
         private static bool IsMalfunctioning(IPackageManager manager, ManagerHealthRecord record) =>
             DetectsMalfunctions(manager)
+            && record.Installed.ConsecutiveFailures == 0
             && record.Installed.LastSuccessUtc is not null
             && record.Installed.LastPackageCount == 0;
+
+        private static ManagerHealthReport Malfunction(
+            IPackageManager manager,
+            ManagerHealthRecord record
+        ) =>
+            new()
+            {
+                Manager = manager,
+                Record = record,
+                State = ManagerHealthState.Malfunctioning,
+                FailingListing = ManagerListingKind.Installed,
+                NeedsAttention = true,
+            };
 
         private static bool DetectsMalfunctions(IPackageManager manager) =>
             manager.ExpectsInstalledPackages

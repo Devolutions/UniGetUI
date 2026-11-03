@@ -88,7 +88,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             {
                 logger.Error(e);
                 logger.Close(1);
-                return [];
+                throw;
             }
         }
 

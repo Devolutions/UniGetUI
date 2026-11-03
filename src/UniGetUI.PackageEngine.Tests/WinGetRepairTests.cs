@@ -80,6 +80,14 @@ public sealed class WinGetRepairTests
     }
 
     [Fact]
+    public void RepairScriptTurnsCmdletErrorsIntoAFailedExitCode()
+    {
+        Assert.DoesNotContain("ErrorActionPreference", WinGetRepair.Arguments);
+        Assert.Contains("-ErrorVariable +repairErrors", WinGetRepair.Arguments);
+        Assert.Contains("if ($sourceResetFailed -or $repairErrors) { exit 1 }", WinGetRepair.Arguments);
+    }
+
+    [Fact]
     public void ExecutableActionsAreHiddenUntilTheManagerIsFound()
     {
         var actions = new UniGetUI.PackageEngine.Managers.ChocolateyManager.Chocolatey().GetMaintenanceActions();

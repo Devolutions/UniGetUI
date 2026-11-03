@@ -722,6 +722,60 @@ public sealed class PackageManagerTests : IDisposable
         Assert.Contains("https://****@feed.example.test/v3/index.json", reason);
     }
 
+    [Fact]
+    public void MalfunctionIsNotHiddenByANonUrgentFailure()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        manager.SetFindPackages(_ => throw new InvalidOperationException("search down"));
+
+        manager.GetInstalledPackages();
+        manager.FindPackages("tool");
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Malfunctioning, report.State);
+        Assert.True(report.NeedsAttention);
+    }
+
+    [Fact]
+    public void FinishingInitializationRaisesHealthChanged()
+    {
+        var manager = CreateManager();
+        manager.ExecutablePath = CreateExecutable($"{manager.Name}.exe");
+        var raised = new List<string>();
+        void Observe(object? sender, string name) => raised.Add(name);
+        ManagerHealthStore.HealthChanged += Observe;
+        try
+        {
+            manager.Initialize();
+        }
+        finally
+        {
+            ManagerHealthStore.HealthChanged -= Observe;
+        }
+
+        Assert.Contains(manager.Name, raised);
+    }
+
+    [Fact]
+    public async Task MaintenanceTimeoutCoversOutputHeldByAChildProcess()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateReadyManager();
+        manager.MaintenanceTimeout = TimeSpan.FromSeconds(2);
+
+        await Assert.ThrowsAsync<TimeoutException>(() =>
+            manager
+                .RunMaintenanceCommandForTestAsync(
+                    Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+                    "/c start /b ping -n 60 127.0.0.1"
+                )
+                .WaitAsync(TimeSpan.FromSeconds(30))
+        );
+    }
+
     private static TestPackageManager CreateManager()
     {
         return new PackageManagerBuilder()

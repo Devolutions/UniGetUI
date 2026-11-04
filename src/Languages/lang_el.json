@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Μεγαλύνετε το πλάτος του παραθύρου για να εμφανιστούν εδώ οι λεπτομέρειες του πακέτου",
   "Details panel": "Πλαίσιο λεπτομερειών",
   "Show details panel": "Εμφάνιση πλαισίου λεπτομερειών",
-  "Hide details panel": "Απόκρυψη πλαισίου λεπτομερειών"
+  "Hide details panel": "Απόκρυψη πλαισίου λεπτομερειών",
+  "Fit columns to the window": "Προσαρμογή στηλών στο παράθυρο",
+  "How to set up {0}": "Πώς να ρυθμίσετε το {0}",
+  "Install it with this command:": "Εγκαταστήστε το με αυτήν την εντολή:",
+  "Open in a terminal": "Άνοιγμα σε τερματικό"
 }

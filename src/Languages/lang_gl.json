@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Amplía a xanela para mostrar aquí os detalles do paquete",
   "Details panel": "Panel de detalles",
   "Show details panel": "Mostrar o panel de detalles",
-  "Hide details panel": "Ocultar o panel de detalles"
+  "Hide details panel": "Ocultar o panel de detalles",
+  "Fit columns to the window": "Axustar as columnas á xanela",
+  "How to set up {0}": "Como configurar {0}",
+  "Install it with this command:": "Instálao con este comando:",
+  "Open in a terminal": "Abrir nun terminal"
 }

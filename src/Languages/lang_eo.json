@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Plilarĝigu la fenestron por montri ĉi tie la detalojn pri la pakaĵo",
   "Details panel": "Panelo de detaloj",
   "Show details panel": "Montri panelon de detaloj",
-  "Hide details panel": "Kaŝi panelon de detaloj"
+  "Hide details panel": "Kaŝi panelon de detaloj",
+  "Fit columns to the window": "Adapti kolumnojn al la fenestro",
+  "How to set up {0}": "Kiel agordi {0}",
+  "Install it with this command:": "Instalu ĝin per ĉi tiu komando:",
+  "Open in a terminal": "Malfermi en terminalo"
 }

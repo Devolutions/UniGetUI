@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Pencereyê firehtir bike da ku hûrgiliyên pakêtê li vir nîşan bide",
   "Details panel": "Panela hûrgiliyan",
   "Show details panel": "Panela hûrgiliyan nîşan bide",
-  "Hide details panel": "Panela hûrgiliyan veşêre"
+  "Hide details panel": "Panela hûrgiliyan veşêre",
+  "Fit columns to the window": "ستوونەکان لەگەڵ پەنجەرەکە بگونجێنە",
+  "How to set up {0}": "چۆن {0} ڕێک بخەین؟",
+  "Install it with this command:": "بە ئەم فەرمانە دایبمەزرێنە:",
+  "Open in a terminal": "لە ناو terminal بکەرەوە"
 }

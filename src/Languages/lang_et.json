@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Tee aken laiemaks, et näha siin paketi üksikasju",
   "Details panel": "Üksikasjade paneel",
   "Show details panel": "Kuva üksikasjade paneel",
-  "Hide details panel": "Peida üksikasjade paneel"
+  "Hide details panel": "Peida üksikasjade paneel",
+  "Fit columns to the window": "Sobita veerud aknasse",
+  "How to set up {0}": "Kuidas {0} seadistada",
+  "Install it with this command:": "Paigalda see selle käsuga:",
+  "Open in a terminal": "Ava terminalis"
 }

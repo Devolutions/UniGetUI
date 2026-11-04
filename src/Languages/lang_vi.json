@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Mở rộng cửa sổ để hiển thị thông tin chi tiết về gói tại đây",
   "Details panel": "Bảng thông tin chi tiết",
   "Show details panel": "Hiện bảng thông tin chi tiết",
-  "Hide details panel": "Ẩn bảng thông tin chi tiết"
+  "Hide details panel": "Ẩn bảng thông tin chi tiết",
+  "Fit columns to the window": "Tự điều chỉnh độ rộng cột theo cửa sổ",
+  "How to set up {0}": "Cách thiết lập {0}",
+  "Install it with this command:": "Cài đặt bằng lệnh này:",
+  "Open in a terminal": "Mở trong terminal"
 }

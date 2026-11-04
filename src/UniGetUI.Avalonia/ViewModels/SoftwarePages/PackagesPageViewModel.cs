@@ -1287,10 +1287,14 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     public async Task ReloadAfterManagerExecutableChangedAsync()
     {
-        if (!LoadsOnStart || Loader.HasPendingInitialLoad)
+        if (!LoadsOnStart)
             return;
 
-        await Loader.WaitForCurrentLoadAsync();
+        if (Loader.IsLoading)
+            await Loader.WaitForCurrentLoadAsync();
+        else if (Loader.HasPendingInitialLoad)
+            return;
+
         await Loader.ReloadPackages();
     }
 

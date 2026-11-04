@@ -326,11 +326,14 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         public virtual bool HasExecutable() => GetExecutableFile().Item1;
 
-        protected bool IsUserSelectedExecutablePath(string path)
+        protected bool IsUserSelectedExecutablePath(string path) =>
+            GetUserSelectedExecutablePath()?.Equals(path, StringComparison.OrdinalIgnoreCase) == true;
+
+        protected string? GetUserSelectedExecutablePath()
         {
             if (!SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths))
             {
-                return false;
+                return null;
             }
 
             string? exeSelection = Settings.GetDictionaryItem<string, string>(
@@ -338,9 +341,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 Name
             );
 
-            return !string.IsNullOrEmpty(exeSelection)
-                && File.Exists(exeSelection)
-                && exeSelection.Equals(path, StringComparison.OrdinalIgnoreCase);
+            return !string.IsNullOrEmpty(exeSelection) && File.Exists(exeSelection)
+                ? exeSelection
+                : null;
         }
 
         /// <summary>

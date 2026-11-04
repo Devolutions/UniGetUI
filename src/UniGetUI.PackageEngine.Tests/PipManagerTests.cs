@@ -162,6 +162,26 @@ public sealed class PipManagerTests : IDisposable
     }
 
     [Fact]
+    public void APickedExecutableIsRecognisedThroughAnyInterpreterInItsEnvironment()
+    {
+        string venvPython = CreateFile("app", "venv", "bin", "python");
+        string venvPython3 = CreateFile("app", "venv", "bin", "python3");
+        CreateFile("app", "venv", "pyvenv.cfg");
+        string systemPython3 = CreateFile("usr", "bin", "python3");
+        AllowCustomManagerPaths(true);
+        var pip = new ScriptedPip([systemPython3, venvPython3]);
+        Settings.SetDictionaryItem(Settings.K.ManagerPaths, pip.Name, venvPython);
+
+        Assert.True(pip.IsChosenExecutable(venvPython3));
+        Assert.False(pip.IsChosenExecutable(systemPython3));
+
+        Pip.SetEnvironmentManaged(venvPython3, false);
+
+        Assert.False(pip.IsChosenExecutable(venvPython3));
+        Assert.Equal(new(true, systemPython3), pip.GetExecutableFile());
+    }
+
+    [Fact]
     public void AnEnvironmentIsRepresentedByTheFirstInterpreterFoundInIt()
     {
         string python3 = CreateFile("usr", "bin", "python3");

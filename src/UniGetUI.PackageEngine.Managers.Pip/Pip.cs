@@ -1226,7 +1226,9 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             GetEnvironmentChoice(path) is not false;
 
         public bool IsChosenExecutable(string path) =>
-            IsUserSelectedExecutablePath(path) && CanUseSelectedExecutable(path);
+            GetUserSelectedExecutablePath() is { } selected
+            && IsSameEnvironment(selected, path)
+            && CanUseSelectedExecutable(selected);
 
         protected override void _loadManagerExecutableFile(
             out bool found,

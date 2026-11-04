@@ -149,14 +149,18 @@ Install Python, which includes pip:
 - **macOS:** `brew install python`, or download it from <https://www.python.org/downloads/macos/>
 - **Linux:** use your distribution's packages, for example `python3-pip` on Ubuntu.
 
-On Windows, UniGetUI runs `python -m pip` with the first `python` it finds on `PATH`. If typing
-`python` in a terminal opens the Microsoft Store or reports that the command is not found,
-UniGetUI cannot use it either. Python's documentation covers this case: open Start, search for
-**Manage app execution aliases**, and check the Python entries there
-(<https://docs.python.org/3/using/windows.html>).
+UniGetUI always runs `python -m pip` with the Python it selects. On Windows it looks for `python`
+on `PATH`, then for Pythons installed in Program Files, `%LOCALAPPDATA%\Programs\Python` and the
+Python install manager's `%LOCALAPPDATA%\Python`. On macOS and Linux it looks for `python3`, then
+`python`, on `PATH`. If typing `python` in a Windows terminal opens the Microsoft Store or reports
+that the command is not found, UniGetUI ranks that alias below any installed Python. Python's
+documentation covers this case: open Start, search for **Manage app execution aliases**, and check
+the Python entries there (<https://docs.python.org/3/using/windows.html>).
 
-On macOS and Linux, UniGetUI uses `pip3` or `pip` on `PATH` when one is there, and otherwise runs
-`python -m pip`, or `python3 -m pip` when there is no `python`.
+Virtual environments, conda environments and embedded Pythons usually belong to another app, so
+UniGetUI does not manage them unless you check them under **Python environments** in the Pip
+settings. Checking one that is not managed by default requires the administrator setting that
+allows changing package manager executables.
 
 Check: `python -m pip --version` (or `python3 -m pip --version`)
 

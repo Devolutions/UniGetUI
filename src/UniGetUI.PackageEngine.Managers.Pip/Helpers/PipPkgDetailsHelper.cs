@@ -135,13 +135,12 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
         protected override string? GetInstallLocation_UnSafe(IPackage package)
         {
-            var full_path = Path.Join(
-                Path.GetDirectoryName(Manager.Status.ExecutablePath),
-                "Lib",
-                "site-packages",
-                package.Id
+            return Pip.ResolveInstallLocation(
+                Manager.Status.Version,
+                Manager.Status.ExecutablePath,
+                package.Id,
+                Directory.Exists
             );
-            return Directory.Exists(full_path) ? full_path : Path.GetDirectoryName(full_path);
         }
 
         protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)

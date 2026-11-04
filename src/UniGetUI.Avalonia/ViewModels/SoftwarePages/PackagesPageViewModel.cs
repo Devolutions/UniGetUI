@@ -1285,6 +1285,19 @@ public partial class PackagesPageViewModel : ViewModelBase
             _ = LoadPackages(ReloadReason.Automated);
     }
 
+    public async Task ReloadAfterManagerExecutableChangedAsync()
+    {
+        if (!LoadsOnStart)
+            return;
+
+        if (Loader.IsLoading)
+            await Loader.WaitForCurrentLoadAsync();
+        else if (Loader.HasPendingInitialLoad)
+            return;
+
+        await Loader.ReloadPackages();
+    }
+
     // ─── Sort commands ────────────────────────────────────────────────────────
     [RelayCommand] private void SortByName() => SortFieldIndex = 0;
     [RelayCommand] private void SortById() => SortFieldIndex = 1;

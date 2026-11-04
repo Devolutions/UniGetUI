@@ -1001,6 +1001,12 @@ public partial class MainWindowViewModel : ViewModelBase
         InstalledPage.ViewModel.ReloadIfManagerBecameReady();
     }
 
+    public void ReloadPagesAfterManagerExecutableChanged()
+    {
+        _ = UpdatesPage.ViewModel.ReloadAfterManagerExecutableChangedAsync();
+        _ = InstalledPage.ViewModel.ReloadAfterManagerExecutableChangedAsync();
+    }
+
     private async Task OpenManagerSettingsAsync(IPackageManager? manager)
     {
         if (!await NavigateToAsync(PageType.Managers))

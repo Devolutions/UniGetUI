@@ -706,6 +706,57 @@ public sealed class DownloadOperationProgressTests
     }
 
     [Fact]
+    public async Task ASkipRetryForADifferentInstallerDoesNotReuseTheRejectedFile()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(167).NextBytes(payload);
+        Uri firstUrl = UniqueInstallerUrl();
+        string firstHash = Convert.ToHexStringLower(SHA256.HashData([1]));
+        Uri secondUrl = UniqueInstallerUrl();
+        string secondHash = Convert.ToHexStringLower(SHA256.HashData([2]));
+        (Uri Url, string Hash) current = (firstUrl, firstHash);
+
+        var manager = new PackageManagerBuilder()
+            .ConfigureDetails(helper =>
+            {
+                helper.PopulateDetails = details =>
+                {
+                    details.InstallerUrl = current.Url;
+                    details.InstallerType = "exe";
+                    details.InstallerHash = current.Hash;
+                };
+            })
+            .Build();
+        IPackage package = new PackageBuilder().WithManager(manager).Build();
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-installer-changed-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
+            current = (secondUrl, secondHash);
+            operation.ApplyRetryActionForTests(AbstractOperation.RetryMode.Retry_SkipIntegrity);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(2, handler.Requests);
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("changed since the rejected attempt"));
+            Assert.Equal(
+                InstallerHashStatus.MismatchKept,
+                InstallerVerification.Find(secondUrl, secondHash)?.HashStatus
+            );
+            Assert.Empty(PartialFilesOf(downloadPath));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+            foreach (string staging in PartialFilesOf(downloadPath))
+                File.Delete(staging);
+        }
+    }
+
+    [Fact]
     public void TheStagingFileKeepsTheInstallersExtension()
     {
         string staging = DownloadOperation.StagingPathFor(Path.Join("C:", "dl", "setup.msix"), "1a2b3c4d");

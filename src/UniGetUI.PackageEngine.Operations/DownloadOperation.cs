@@ -51,6 +51,8 @@ public class DownloadOperation : AbstractOperation
     public bool HashMismatched { get; private set; }
     private string? _rejectedFile;
     private byte[]? _rejectedHash;
+    private Uri? _rejectedUrl;
+    private string? _rejectedPublishedHash;
     private readonly string _stagingToken = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
 
     internal static string StagingPathFor(string destination, string token) =>
@@ -288,7 +290,7 @@ public class DownloadOperation : AbstractOperation
 
             partialLocation = StagingPathFor(downloadLocation, _stagingToken);
             byte[]? actualHash = hashPublished && SkipHashCheck
-                ? await ReuseRejectedFileAsync(partialLocation, expectedHash)
+                ? await ReuseRejectedFileAsync(partialLocation, expectedHash, downloadUrl, publishedHash)
                 : null;
             if (actualHash is not null)
                 partialFileCreated = true;
@@ -332,6 +334,8 @@ public class DownloadOperation : AbstractOperation
                     HashMismatched = true;
                     _rejectedFile = partialLocation;
                     _rejectedHash = actualHash;
+                    _rejectedUrl = downloadUrl;
+                    _rejectedPublishedHash = publishedHash;
                     partialFileCreated = false;
                     RecordVerification(
                         downloadUrl,
@@ -392,16 +396,31 @@ public class DownloadOperation : AbstractOperation
         }
     }
 
-    private async Task<byte[]?> ReuseRejectedFileAsync(string partialLocation, PublishedInstallerHash expectedHash)
+    private async Task<byte[]?> ReuseRejectedFileAsync(
+        string partialLocation,
+        PublishedInstallerHash expectedHash,
+        Uri downloadUrl,
+        string? publishedHash
+    )
     {
-        string? rejectedFile = _rejectedFile;
-        byte[]? rejectedHash = _rejectedHash;
-        _rejectedFile = null;
-        _rejectedHash = null;
-        if (rejectedFile != partialLocation || rejectedHash is null || !File.Exists(partialLocation))
+        if (_rejectedFile != partialLocation || _rejectedHash is not { } rejectedHash || !File.Exists(partialLocation))
+        {
+            ForgetRejectedFile();
             return null;
+        }
+
+        if (_rejectedUrl != downloadUrl || _rejectedPublishedHash != publishedHash)
+        {
+            Line(
+                "The installer to download changed since the rejected attempt, it will be downloaded again",
+                LineType.Information
+            );
+            ForgetRejectedFile();
+            return null;
+        }
 
         byte[] currentHash = await expectedHash.ComputeAsync(partialLocation, CancellationToken);
+        ForgetRejectedFile();
         if (!CryptographicOperations.FixedTimeEquals(currentHash, rejectedHash))
         {
             Line(
@@ -415,6 +434,14 @@ public class DownloadOperation : AbstractOperation
         ReportProgress(OperationProgress.FromDownload((ulong)size, (ulong)size));
         Line($"Reusing the installer set aside as {partialLocation} by the previous attempt", LineType.Information);
         return currentHash;
+    }
+
+    private void ForgetRejectedFile()
+    {
+        _rejectedFile = null;
+        _rejectedHash = null;
+        _rejectedUrl = null;
+        _rejectedPublishedHash = null;
     }
 
     private async Task<byte[]> DownloadToAsync(

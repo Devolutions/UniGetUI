@@ -543,6 +543,8 @@ internal static partial class AvaloniaAutoUpdater
                         InfoBarSeverity.Success,
                         isClosable: true);
                 }
+                if (OperatingSystem.IsWindows())
+                    WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
                 MarkAttemptFinished("no update available");
                 return true;
             }

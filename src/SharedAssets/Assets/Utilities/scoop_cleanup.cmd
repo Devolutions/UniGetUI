@@ -6,7 +6,6 @@ echo Cleaning Scoop cache...
 call scoop cleanup --all
 call scoop cleanup --all --global
 call scoop cache rm --all
-call scoop cache rm --all --global
 echo Done!
 pause
 exit

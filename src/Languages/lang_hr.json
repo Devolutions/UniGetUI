@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Proširite prozor da biste ovdje prikazali detalje paketa",
   "Details panel": "Ploča s detaljima",
   "Show details panel": "Prikaži ploču s detaljima",
-  "Hide details panel": "Sakrij ploču s detaljima"
+  "Hide details panel": "Sakrij ploču s detaljima",
+  "Fit columns to the window": "Prilagodi stupce prozoru",
+  "How to set up {0}": "Kako postaviti {0}",
+  "Install it with this command:": "Instalirajte ga ovom naredbom:",
+  "Open in a terminal": "Otvori u terminalu"
 }

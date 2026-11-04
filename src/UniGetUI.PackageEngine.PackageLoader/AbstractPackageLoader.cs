@@ -403,13 +403,18 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return;
             }
 
-            if (!Contains(package))
+            if (Contains(package))
             {
+                PackageReference.Remove(HashPackage(package), out _);
+                InvokePackagesChangedEvent(true, [], [package]);
                 return;
             }
 
-            PackageReference.Remove(HashPackage(package), out _);
-            InvokePackagesChangedEvent(true, [], [package]);
+            if (FindFromAnySource(package) is { } stored)
+            {
+                PackageReference.Remove(HashPackage(stored), out _);
+                InvokePackagesChangedEvent(true, [], [stored]);
+            }
         }
 
         /// <summary>
@@ -424,8 +429,21 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return null;
             }
 
-            PackageReference.TryGetValue(HashPackage(package), out IPackage? eq);
-            return eq;
+            if (PackageReference.TryGetValue(HashPackage(package), out IPackage? eq))
+                return eq;
+
+            return FindFromAnySource(package);
+        }
+
+        private IPackage? FindFromAnySource(IPackage package)
+        {
+            if (package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
+                return null;
+
+            return Packages.FirstOrDefault(candidate =>
+                PackageIdentity.IsSamePackageFromAnySource(candidate, package)
+                && (!ALLOW_MULTIPLE_PACKAGE_VERSIONS || candidate.VersionString == package.VersionString)
+            );
         }
 
         /// <summary>
@@ -441,7 +459,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return [];
             }
 
-            return Packages.Where(p => p.IsEquivalentTo(package)).ToArray();
+            return Packages.Where(p => p.IsSamePackageAs(package)).ToArray();
         }
 
         public IPackage? GetPackageForId(string id, string? sourceName = null)

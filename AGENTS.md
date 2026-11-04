@@ -76,13 +76,27 @@ place under the same version keeps showing the icon it had until a restart.
 |---|---|
 | `SearchQueryService` (3.5.0 → 3.0.0-beta → unversioned) | package search |
 | `PackageBaseAddress/3.0.0` | version enumeration, update detection, `.nupkg` and embedded-icon URLs |
-| `RegistrationsBaseUrl` (3.6.0 → 3.4.0 → 3.0.0-rc → 3.0.0-beta → unversioned) | package metadata, listed/unlisted checks |
+| `RegistrationsBaseUrl` (3.6.0 → 3.4.0 → 3.0.0-rc → 3.0.0-beta → unversioned) | package metadata, listed/unlisted checks; versions, `.nupkg` URLs and metadata when there is no `PackageBaseAddress` |
 
 A feed needs `PackageBaseAddress` or `RegistrationsBaseUrl` to be usable. If it advertises no
 `SearchQueryService` — or its search returns nothing — search degrades to an exact
 package-id lookup against the flat container. Flat-container version lists include unlisted
 versions, so an update candidate is confirmed against its registration leaf before being
-surfaced.
+surfaced. A version index answering 404 means the package is not on that feed, not a failed
+check, since .NET Tool asks every configured feed about every installed tool.
+
+A registration-only feed (JFrog Artifactory serves no flat container) is read through its
+registration index instead: versions come from its pages, fetching only the pages above the
+installed version during an update check; the `.nupkg` URL comes from the registration leaf;
+and metadata comes from the version's page entry when the leaf carries no `catalogEntry`.
+None of this runs for a feed that has a flat container.
+
+On V2, Artifactory answers `GetUpdates()` with nothing unless `includeAllVersions` is true, and
+then truncates the list at 100 without a next link. So when every `GetUpdates()` batch of a
+source comes back empty, one `includeAllVersions=true` request tells "nothing is newer" (still
+empty: stop there) from "this server ignores the request", in which case each installed package
+is looked up with `FindPackagesById()?$filter=IsLatestVersion` (`IsAbsoluteLatestVersion` with
+pre-releases). V2 version lists follow `next` links, up to 50 pages.
 
 ### Fallback behaviour
 
@@ -92,9 +106,24 @@ retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path 
 
 ### Which feed is which
 
-- **.NET Tool** — `https://api.nuget.org/v3/index.json`. Safe to repoint because the manager
-  does not support custom sources and never passes the source URL to the `dotnet` CLI. Also
-  filters search on `packageType=DotnetTool`.
+- **.NET Tool** — the enabled sources of the user's NuGet configuration, read (not edited) by
+  `DotNetSourceHelper` from `dotnet nuget list source --format Detailed` run in the user profile
+  with `DOTNET_CLI_UI_LANGUAGE=en`, so `disabledPackageSources` and the whole config hierarchy
+  apply as they do for `dotnet tool install`. Output it cannot read, or a failed command, falls
+  back to nuget.org. The files from `dotnet nuget config paths` supply `packageSourceMapping`
+  (an installed package is never sent to a feed the mapping does not allow for its id) and basic
+  `packageSourceCredentials` (clear text, or DPAPI-encrypted with the `NuGet` entropy on
+  Windows; a closer file's entry wins even when it cannot be used, such as one restricted to
+  `negotiate`). `NuGetFeedCredentials` keys each credential by its feed, since feeds sharing a
+  server (Azure Artifacts) carry different ones, and sends it only on requests made for that
+  feed and only to that feed's own server; every request site passes the feed it belongs to.
+  The snapshot is kept until a config file's write time changes, or for ten minutes. Updates are
+  checked on every enabled feed and the newest wins; the feed at nuget.org's URL is always
+  `DefaultSource`, whatever its key. `dotnet tool list` names no feed, so installed tools sit
+  under nuget.org when it is enabled, else the first feed, and `InstalledPackagesKeepTheirSource`
+  is false so loaders match them to updates and search results from any feed by id. Search
+  filters on `packageType=DotnetTool` on V3 feeds and local folders; V2 feeds have no such
+  filter and may list libraries. Icons and installer downloads do not carry credentials.
 - **PowerShell / PowerShell 7** — sources are enumerated from `Get-PSRepository` (or
   `Get-PSResourceRepository` on PowerShell 7), so the URL is CLI-owned identity
   (`PowerShellSourceHelper` compares it literally to choose `Register-PSRepository -Default`)

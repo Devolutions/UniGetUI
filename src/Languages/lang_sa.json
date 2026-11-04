@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "अत्र पुटकस्य विवरणानि दर्शयितुं विण्डो अधिकं विस्तृतं कुर्वन्तु",
   "Details panel": "विवरण-पटलम्",
   "Show details panel": "विवरण-पटलं दर्शयतु",
-  "Hide details panel": "विवरण-पटलं गोपयतु"
+  "Hide details panel": "विवरण-पटलं गोपयतु",
+  "Fit columns to the window": "विण्डो-अनुसारं स्तम्भान् समायोजयतु",
+  "How to set up {0}": "{0} कथं विन्यस्तव्यम्",
+  "Install it with this command:": "अनेन आदेशेन तत् संस्थापयतु:",
+  "Open in a terminal": "टर्मिनले उद्घाटयतु"
 }

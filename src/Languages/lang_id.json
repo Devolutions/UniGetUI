@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Perlebar jendela untuk menampilkan detail paket di sini",
   "Details panel": "Panel detail",
   "Show details panel": "Tampilkan panel detail",
-  "Hide details panel": "Sembunyikan panel detail"
+  "Hide details panel": "Sembunyikan panel detail",
+  "Fit columns to the window": "Sesuaikan kolom dengan ukuran jendela",
+  "How to set up {0}": "Cara menyiapkan {0}",
+  "Install it with this command:": "Instal dengan perintah ini:",
+  "Open in a terminal": "Buka di terminal"
 }

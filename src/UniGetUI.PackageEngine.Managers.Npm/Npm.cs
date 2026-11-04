@@ -17,6 +17,17 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 {
     public class Npm : PackageManager
     {
+        protected override IEnumerable<ManagerMaintenanceAction> GetExtraMaintenanceActions()
+        {
+            yield return new ManagerMaintenanceAction
+            {
+                Id = "clear-cache",
+                Title = CoreTools.Translate("Clear cache"),
+                Description = CoreTools.Translate("Delete the packages Npm keeps in its cache."),
+                RunAsync = () => RunMaintenanceCommandAsync(Status.ExecutablePath, WithCallArguments("cache clean --force")),
+            };
+        }
+
         public override bool CommandLineIsShellInterpreted => true;
 
         public Npm()

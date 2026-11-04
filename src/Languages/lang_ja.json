@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "ここにパッケージの詳細を表示するには、ウィンドウを広げてください",
   "Details panel": "詳細パネル",
   "Show details panel": "詳細パネルを表示",
-  "Hide details panel": "詳細パネルを非表示"
+  "Hide details panel": "詳細パネルを非表示",
+  "Fit columns to the window": "列幅をウィンドウに合わせる",
+  "How to set up {0}": "{0}のセットアップ方法",
+  "Install it with this command:": "次のコマンドでインストール:",
+  "Open in a terminal": "ターミナルで開く"
 }

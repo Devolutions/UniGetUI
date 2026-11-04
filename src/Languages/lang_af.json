@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Maak die venster wyer om pakketbesonderhede hier te wys",
   "Details panel": "Besonderhede-paneel",
   "Show details panel": "Wys besonderhede-paneel",
-  "Hide details panel": "Versteek besonderhede-paneel"
+  "Hide details panel": "Versteek besonderhede-paneel",
+  "Fit columns to the window": "Pas kolomme by die venster aan",
+  "How to set up {0}": "Hoe om {0} op te stel",
+  "Install it with this command:": "Installeer dit met hierdie opdrag:",
+  "Open in a terminal": "Maak in 'n terminaal oop"
 }

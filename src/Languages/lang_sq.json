@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Zgjeroje dritaren për të shfaqur këtu detajet e paketës",
   "Details panel": "Paneli i detajeve",
   "Show details panel": "Shfaq panelin e detajeve",
-  "Hide details panel": "Fshih panelin e detajeve"
+  "Hide details panel": "Fshih panelin e detajeve",
+  "Fit columns to the window": "Përshtat kolonat me dritaren",
+  "How to set up {0}": "Si të konfigurosh {0}",
+  "Install it with this command:": "Instaloje me këtë komandë:",
+  "Open in a terminal": "Hape në një terminal"
 }

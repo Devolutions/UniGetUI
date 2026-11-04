@@ -458,7 +458,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     "Winget" => p.Source.Name switch
                     {
                         "Steam" => p
-                            .Id.ToLower()
+                            .Id.ToLowerInvariant()
                             .Split("\\")[^1]
                             .Replace("steam app ", "steam-")
                             .Trim(),
@@ -488,7 +488,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
             }
 
             return iconId
-                .ToLower()
+                .ToLowerInvariant()
                 .Replace('_', '-')
                 .Replace('.', '-')
                 .Replace(' ', '-')

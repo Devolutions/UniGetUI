@@ -21,6 +21,17 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 {
     public partial class Pip : PackageManager
     {
+        protected override IEnumerable<ManagerMaintenanceAction> GetExtraMaintenanceActions()
+        {
+            yield return new ManagerMaintenanceAction
+            {
+                Id = "clear-cache",
+                Title = CoreTools.Translate("Clear cache"),
+                Description = CoreTools.Translate("Delete the wheels and downloads Pip keeps in its cache."),
+                RunAsync = () => RunMaintenanceCommandAsync(Status.ExecutablePath, WithCallArguments("cache purge")),
+            };
+        }
+
         public static string[] FALSE_PACKAGE_IDS =
         [
             "",

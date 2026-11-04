@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Павялічце шырыню акна, каб паказаць тут звесткі пра пакет",
   "Details panel": "Панэль звестак",
   "Show details panel": "Паказваць панэль звестак",
-  "Hide details panel": "Схаваць панэль звестак"
+  "Hide details panel": "Схаваць панэль звестак",
+  "Fit columns to the window": "Падагнаць слупкі пад памер акна",
+  "How to set up {0}": "Як наладзіць {0}",
+  "Install it with this command:": "Усталюйце яго з дапамогай гэтай каманды:",
+  "Open in a terminal": "Адкрыць у тэрмінале"
 }

@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "தொகுப்பு விவரங்களை இங்கே காட்ட சாளரத்தை அகலமாக்கவும்",
   "Details panel": "விவரங்கள் பலகம்",
   "Show details panel": "விவரங்கள் பலகையைக் காட்டு",
-  "Hide details panel": "விவரங்கள் பலகையை மறை"
+  "Hide details panel": "விவரங்கள் பலகையை மறை",
+  "Fit columns to the window": "சாளரத்திற்கு ஏற்றவாறு நெடுவரிசைகளைப் பொருத்து",
+  "How to set up {0}": "{0}-ஐ எவ்வாறு அமைப்பது",
+  "Install it with this command:": "இந்தக் கட்டளையைப் பயன்படுத்தி இதை நிறுவவும்:",
+  "Open in a terminal": "முனையத்தில் திற"
 }

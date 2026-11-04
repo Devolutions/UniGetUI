@@ -273,14 +273,18 @@ the machine must be restarted before the change takes effect. See
 
 | Method | Path | Auth | Parameters/body | CLI equivalent |
 | --- | --- | --- | --- | --- |
-| `GET` | `/uniget/v1/managers` | Yes | None | `manager list` |
-| `GET` | `/uniget/v1/managers/maintenance` | Yes | Query `manager` | `manager maintenance` |
+| `GET` | `/uniget/v1/managers` | Yes | None | `manager list`; each manager carries a `health` object |
+| `GET` | `/uniget/v1/managers/maintenance` | Yes | Query `manager` | `manager maintenance`; includes `supportedActions` and `health` |
 | `POST` | `/uniget/v1/managers/maintenance/reload` | Yes | JSON body: manager maintenance request body | `manager reload` |
 | `POST` | `/uniget/v1/managers/maintenance/executable/set` | Yes | JSON body: manager maintenance request body | `manager set-executable` |
 | `POST` | `/uniget/v1/managers/maintenance/executable/clear` | Yes | JSON body: manager maintenance request body | `manager clear-executable` |
 | `POST` | `/uniget/v1/managers/maintenance/action` | Yes | JSON body: manager maintenance request body | `manager action` |
 | `POST` | `/uniget/v1/managers/set-enabled` | Yes | Query `manager`, `enabled` | `manager enable`, `manager disable` |
 | `POST` | `/uniget/v1/managers/set-update-notifications` | Yes | Query `manager`, `enabled` | `manager notifications enable`, `manager notifications disable` |
+
+`/managers/maintenance/action` accepts any action the manager lists in `supportedActions`, and refuses
+every action but `reload` unless the body sets `confirm` to `true`. The actions and the `health` fields
+are described in [docs/CLI.md](CLI.md#manager-health).
 
 ### Sources
 

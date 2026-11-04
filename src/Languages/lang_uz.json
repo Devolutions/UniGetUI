@@ -2211,5 +2211,9 @@
     "Make the window wider to show package details here": "Paket tafsilotlarini bu yerda ko‘rsatish uchun oynani kengaytiring",
     "Details panel": "Tafsilotlar paneli",
     "Show details panel": "Tafsilotlar panelini ko‘rsatish",
-    "Hide details panel": "Tafsilotlar panelini yashirish"
+    "Hide details panel": "Tafsilotlar panelini yashirish",
+    "Fit columns to the window": "Ustunlarni oynaga moslashtirish",
+    "How to set up {0}": "{0} ni qanday sozlash kerak",
+    "Install it with this command:": "Buni ushbu buyruq bilan o‘rnating:",
+    "Open in a terminal": "Terminalda ochish"
 }

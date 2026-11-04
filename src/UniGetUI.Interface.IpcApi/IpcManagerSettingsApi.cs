@@ -3,6 +3,7 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageOperations;
 
@@ -34,6 +35,69 @@ public sealed class IpcManagerInfo
     public string ExecutablePath { get; set; } = "";
     public string ExecutableArguments { get; set; } = "";
     public IpcManagerCapabilitiesInfo Capabilities { get; set; } = new();
+    public IpcManagerHealthInfo Health { get; set; } = new();
+}
+
+public sealed class IpcManagerListingHealthInfo
+{
+    public DateTime? LastSuccessUtc { get; set; }
+    public DateTime? LastFailureUtc { get; set; }
+    public string? LastFailureReason { get; set; }
+    public bool LastFailureWasTimeout { get; set; }
+    public int ConsecutiveFailures { get; set; }
+    public int? LastPackageCount { get; set; }
+    public DateTime? LastFastRepairUtc { get; set; }
+    public string? LastFastRepairReason { get; set; }
+    public IReadOnlyList<long> RecentDurationsMs { get; set; } = [];
+
+    public static IpcManagerListingHealthInfo From(ManagerListingHealth listing) =>
+        new()
+        {
+            LastSuccessUtc = listing.LastSuccessUtc,
+            LastFailureUtc = listing.LastFailureUtc,
+            LastFailureReason = listing.LastFailureReason,
+            LastFailureWasTimeout = listing.LastFailureWasTimeout,
+            ConsecutiveFailures = listing.ConsecutiveFailures,
+            LastPackageCount = listing.LastPackageCount,
+            LastFastRepairUtc = listing.LastFastRepairUtc,
+            LastFastRepairReason = listing.LastFastRepairReason,
+            RecentDurationsMs = listing.RecentDurationsMs.ToArray(),
+        };
+}
+
+public sealed class IpcManagerHealthInfo
+{
+    public string State { get; set; } = "unknown";
+    public bool NeedsAttention { get; set; }
+    public string? FailingListing { get; set; }
+    public string? Reason { get; set; }
+    public int ConsecutiveFailures { get; set; }
+    public IpcManagerListingHealthInfo Search { get; set; } = new();
+    public IpcManagerListingHealthInfo Installed { get; set; } = new();
+    public IpcManagerListingHealthInfo Updates { get; set; } = new();
+
+    public static IpcManagerHealthInfo From(IPackageManager manager)
+    {
+        ManagerHealthReport report = ManagerHealthEvaluator.Evaluate(manager);
+        return new IpcManagerHealthInfo
+        {
+            State = ToPublicName(report.State.ToString()),
+            NeedsAttention = report.NeedsAttention,
+            FailingListing = report.FailingListing is { } listing
+                ? ToPublicName(listing.ToString())
+                : null,
+            Reason = report.Reason,
+            ConsecutiveFailures = report.ConsecutiveFailures,
+            Search = IpcManagerListingHealthInfo.From(report.Record.Search),
+            Installed = IpcManagerListingHealthInfo.From(report.Record.Installed),
+            Updates = IpcManagerListingHealthInfo.From(report.Record.Updates),
+        };
+    }
+
+    private static string ToPublicName(string name) =>
+        string.Concat(
+            name.Select((c, i) => i > 0 && char.IsUpper(c) ? "-" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString())
+        );
 }
 
 public sealed class IpcSourceInfo
@@ -245,6 +309,7 @@ public static class IpcManagerSettingsApi
                 SupportsCustomSources = manager.Capabilities.SupportsCustomSources,
                 MustInstallSourcesAsAdmin = manager.Capabilities.Sources.MustBeInstalledAsAdmin,
             },
+            Health = IpcManagerHealthInfo.From(manager),
         };
     }
 

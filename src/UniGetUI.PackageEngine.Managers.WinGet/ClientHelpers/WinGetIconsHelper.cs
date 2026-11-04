@@ -33,7 +33,7 @@ internal static class WinGetIconsHelper
         httpRequest.Method = "POST";
         httpRequest.ContentType = "application/json";
 
-        string data = "{\"productIds\": \"" + package.Id.ToLower() + "\"}";
+        string data = "{\"productIds\": \"" + package.Id.ToLowerInvariant() + "\"}";
 
         using (StreamWriter streamWriter = new(httpRequest.GetRequestStream()))
             streamWriter.Write(data);

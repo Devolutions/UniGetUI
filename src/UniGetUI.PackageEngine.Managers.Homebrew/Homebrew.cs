@@ -29,6 +29,17 @@ internal sealed class HomebrewSource : ManagerSource
 
 public partial class Homebrew : PackageManager
 {
+    protected override IEnumerable<ManagerMaintenanceAction> GetExtraMaintenanceActions()
+    {
+        yield return new ManagerMaintenanceAction
+        {
+            Id = "clear-cache",
+            Title = CoreTools.Translate("Clear cache"),
+            Description = CoreTools.Translate("Remove old versions and the download cache Homebrew keeps."),
+            RunAsync = () => RunMaintenanceCommandAsync(Status.ExecutablePath, WithCallArguments("cleanup -s")),
+        };
+    }
+
     // Standard Homebrew installation paths, in priority order
     private static readonly string[] BREW_PATHS =
     [

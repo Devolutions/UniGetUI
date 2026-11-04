@@ -58,7 +58,7 @@ public partial class SettingsPageButton : SettingsCard
             IconType.Experimental => "experimental",
             IconType.ClipboardList => "clipboard_list",
             IconType.GitBranch => "git_branch",
-            _ => icon.ToString().ToLower(),
+            _ => icon.ToString().ToLowerInvariant(),
         };
         return $"avares://UniGetUI/Assets/Symbols/{name}.svg";
     }

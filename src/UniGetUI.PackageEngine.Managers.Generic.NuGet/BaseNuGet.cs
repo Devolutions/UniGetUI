@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -9,6 +10,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Managers.Generic.NuGet;
 using UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Structs;
@@ -30,11 +32,11 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         protected virtual bool UseSubstringSearch => false;
 
         /// <summary>
-        /// Only applies to V3 sources. When set, searches are restricted to packages
-        /// advertising this package type (for example "DotnetTool"). V2 sources have no
-        /// equivalent filter and ignore it.
+        /// Applies to V3 sources and to local folder feeds. When set, searches are restricted
+        /// to packages advertising this package type (for example "DotnetTool"). V2 sources
+        /// have no equivalent filter and ignore it.
         /// </summary>
-        protected virtual string? V3PackageType => null;
+        protected virtual string? SearchPackageType => null;
 
         public static Dictionary<long, string> Manifests = new();
 
@@ -160,6 +162,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     while (SearchUrl is not null)
                     {
                         using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+                        NuGetFeedCredentials.ApplyTo(request, source.Url);
                         using HttpResponseMessage response = client.Send(request);
 
                         if (!response.IsSuccessStatusCode)
@@ -212,16 +215,9 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             };
                         }
 
-                        SearchUrl = null;
-                        Match next = Regex.Match(
-                            SearchResults,
-                            "<link rel=\"next\" href=\"([^\"]+)\" ?\\/>"
-                        );
-                        if (next.Success)
-                        {
-                            SearchUrl = new Uri(next.Groups[1].Value.Replace("&amp;", "&"));
+                        SearchUrl = FindNextPageUrl(SearchResults, SearchUrl);
+                        if (SearchUrl is not null)
                             logger.Log($"Adding extra info from URL={SearchUrl}");
-                        }
                     }
 
                     foreach (SearchResult package in AlreadyProcessedPackages.Values)
@@ -250,7 +246,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             }
 
             logger.Close(0);
-            return Packages;
+            return [.. Packages.Where(package => CanResolveFromSource(package.Id, package.Source))];
         }
 
         internal IReadOnlyList<Package> FindPackagesLocal(
@@ -273,6 +269,12 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     continue;
 
                 if (!NuGetLocalFeed.MatchesQuery(candidate, query, UseSubstringSearch))
+                    continue;
+
+                if (
+                    SearchPackageType is { } packageType
+                    && !candidate.PackageTypes.Contains(packageType, StringComparer.OrdinalIgnoreCase)
+                )
                     continue;
 
                 if (
@@ -363,7 +365,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                         newest,
                         source,
                         this,
-                        new OverridenInstallationOptions(scopeMap.GetValueOrDefault(id.ToLower()))
+                        new OverridenInstallationOptions(scopeMap.GetValueOrDefault(id.ToLowerInvariant()))
                     )
                 );
             }
@@ -404,7 +406,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     index,
                     query,
                     canPrerelease,
-                    V3PackageType,
+                    SearchPackageType,
                     50
                 )
             )
@@ -455,123 +457,253 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             foreach (var pair in sourceMapping)
             {
-                try
+                List<Package> found = [];
+                foreach (IManagerSource source in GetUpdateSources(pair.Key))
                 {
-                    if (NuGetLocalFeed.TryGetDirectory(pair.Key, out string localDirectory))
-                    {
-                        Packages.AddRange(
-                            GetAvailableUpdatesLocal(
-                                pair.Key,
-                                localDirectory,
-                                pair.Value,
-                                canPrerelease,
-                                logger
-                            )
-                        );
+                    List<IPackage> allowed =
+                    [
+                        .. pair.Value.Where(package => CanResolveFromSource(package.Id, source)),
+                    ];
+                    if (allowed.Count is 0)
                         continue;
-                    }
 
-                    if (NuGetV3ServiceIndex.IsV3Source(pair.Key))
-                    {
-                        var v3Updates = GetAvailableUpdatesV3(
-                            pair.Key,
-                            pair.Value,
+                    found.AddRange(
+                        GetAvailableUpdatesFromSource(
+                            source,
+                            allowed,
                             canPrerelease,
                             logger,
-                            out int v3Errors
-                        );
-                        if (v3Updates is null)
-                        {
-                            errors++;
-                        }
-                        else
-                        {
-                            Packages.AddRange(v3Updates);
-                            errors += v3Errors;
-                        }
-
-                        continue;
-                    }
-
-                    var newestInstalled = SelectNewestInstalled(pair.Value);
-                    var packageIdVersion = newestInstalled.ToDictionary(
-                        entry => entry.Key,
-                        entry => entry.Value.VersionString
+                            out int sourceErrors
+                        )
                     );
-                    var packageIdScope = BuildInstalledScopeMap(newestInstalled.Values);
-
-                    using HttpClient client = new(CoreTools.GenericHttpClientParameters);
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-
-                    foreach (
-                        string SearchUrl in BuildV2UpdateUrls(pair.Key, pair.Value, canPrerelease)
-                    )
-                    {
-                        try
-                        {
-                            using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
-                            using HttpResponseMessage response = client.Send(request);
-
-                            if (!response.IsSuccessStatusCode)
-                            {
-                                logger.Error(
-                                    $"Failed to fetch api at Url={SearchUrl} with status code {response.StatusCode}"
-                                );
-                                errors++;
-                                continue;
-                            }
-
-                            string SearchResults = response
-                                .Content.ReadAsStringAsync()
-                                .GetAwaiter()
-                                .GetResult();
-                            Packages.AddRange(
-                                ParseUpdatesResponse(
-                                    SearchResults,
-                                    packageIdVersion,
-                                    packageIdScope,
-                                    pair.Key,
-                                    this,
-                                    logger
-                                )
-                            );
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Error(
-                                $"Failed to fetch api at Url={SearchUrl} on source {pair.Key.Name}"
-                            );
-                            logger.Error(ex);
-                            errors++;
-                        }
-                    }
+                    errors += sourceErrors;
                 }
-                catch (Exception ex)
-                {
-                    logger.Error(
-                        $"Source {pair.Key.Name} on manager {pair.Key.Manager.Name} failed to load updates info with exception"
-                    );
-                    logger.Error(ex);
-                }
+
+                Packages.AddRange(KeepNewestUpdatePerId(found));
             }
 
             logger.Close(errors);
             return KeepUpdatesNewerThanInstalled(Packages, installedPackages);
         }
 
+        protected virtual IReadOnlyList<IManagerSource> GetUpdateSources(
+            IManagerSource installedSource
+        ) => [installedSource];
+
+        protected virtual bool CanResolveFromSource(string packageId, IManagerSource source) =>
+            true;
+
+        internal IReadOnlyList<Package> GetAvailableUpdatesFromSource(
+            IManagerSource source,
+            IReadOnlyList<IPackage> installedPackages,
+            bool canPrerelease,
+            INativeTaskLogger logger,
+            out int errors
+        )
+        {
+            errors = 0;
+            List<Package> packages = [];
+            try
+            {
+                if (NuGetLocalFeed.TryGetDirectory(source, out string localDirectory))
+                {
+                    packages.AddRange(
+                        GetAvailableUpdatesLocal(
+                            source,
+                            localDirectory,
+                            installedPackages,
+                            canPrerelease,
+                            logger
+                        )
+                    );
+                    return packages;
+                }
+
+                if (NuGetV3ServiceIndex.IsV3Source(source))
+                {
+                    var v3Updates = GetAvailableUpdatesV3(
+                        source,
+                        installedPackages,
+                        canPrerelease,
+                        logger,
+                        out int v3Errors
+                    );
+                    if (v3Updates is null)
+                    {
+                        errors++;
+                    }
+                    else
+                    {
+                        packages.AddRange(v3Updates);
+                        errors += v3Errors;
+                    }
+
+                    return packages;
+                }
+
+                var newestInstalled = SelectNewestInstalled(installedPackages);
+                var packageIdVersion = newestInstalled.ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value.VersionString
+                );
+                var packageIdScope = BuildInstalledScopeMap(newestInstalled.Values);
+
+                using HttpClient client = new(CoreTools.GenericHttpClientParameters);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+
+                int requestErrors = 0;
+                string? Fetch(string url)
+                {
+                    try
+                    {
+                        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                        NuGetFeedCredentials.ApplyTo(request, source.Url);
+                        using HttpResponseMessage response = client.Send(request);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            logger.Error(
+                                $"Failed to fetch api at Url={url} with status code {response.StatusCode}"
+                            );
+                            requestErrors++;
+                            return null;
+                        }
+
+                        return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error($"Failed to fetch api at Url={url} on source {source.Name}");
+                        logger.Error(ex);
+                        requestErrors++;
+                        return null;
+                    }
+                }
+
+                List<Package> Parse(string content) =>
+                    ParseUpdatesResponse(
+                        content,
+                        packageIdVersion,
+                        packageIdScope,
+                        source,
+                        this,
+                        logger
+                    );
+
+                bool foundAny = false;
+                foreach (
+                    string SearchUrl in BuildV2UpdateUrls(source, installedPackages, canPrerelease)
+                )
+                {
+                    if (Fetch(SearchUrl) is not { } SearchResults)
+                        continue;
+
+                    List<Package> found = Parse(SearchResults);
+                    foundAny |= found.Count > 0;
+                    packages.AddRange(found);
+                }
+
+                if (
+                    !foundAny
+                    && requestErrors is 0
+                    && BuildV2UpdateUrls(
+                            source,
+                            installedPackages,
+                            canPrerelease,
+                            includeAllVersions: true
+                        )
+                        .Any(url => Fetch(url) is { } content && HasV2Entries(content))
+                )
+                {
+                    logger.Log(
+                        $"GetUpdates() on source {source.Name} returned no update although newer versions "
+                            + "exist, so each package is looked up by id instead"
+                    );
+
+                    string baseUrl = source.Url.ToString().Trim('/');
+                    string latestFilter = canPrerelease
+                        ? "IsAbsoluteLatestVersion"
+                        : "IsLatestVersion";
+                    foreach (IPackage package in newestInstalled.Values)
+                    {
+                        string id = HttpUtility.UrlEncode(package.Id.Replace("'", "''"));
+                        if (
+                            Fetch($"{baseUrl}/FindPackagesById()?id='{id}'&$filter={latestFilter}")
+                            is { } content
+                        )
+                            packages.AddRange(Parse(content));
+                    }
+                }
+
+                errors += requestErrors;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(
+                    $"Source {source.Name} on manager {source.Manager.Name} failed to load updates info with exception"
+                );
+                logger.Error(ex);
+            }
+
+            return packages;
+        }
+
+        internal IReadOnlyList<Package> KeepNewestUpdatePerId(IReadOnlyList<Package> updates)
+        {
+            Dictionary<string, Package> newest = [];
+            foreach (Package update in updates)
+            {
+                string key = update.Id.ToLower();
+                if (
+                    !newest.TryGetValue(key, out Package? current)
+                    || IsNewerVersion(update.NewVersionString, current.NewVersionString)
+                )
+                    newest[key] = update;
+            }
+
+            return [.. newest.Values];
+        }
+
         internal const int MaxV2UpdateUrlLength = 8000;
+
+        private static bool HasV2Entries(string content) =>
+            Regex.IsMatch(content, "<entry[\\s>]");
+
+        internal static Uri? FindNextPageUrl(string content, Uri currentUrl)
+        {
+            foreach (Match link in Regex.Matches(content, "<link\\b[^>]*>"))
+            {
+                if (!Regex.IsMatch(link.Value, "\\brel\\s*=\\s*([\"'])next\\1"))
+                    continue;
+
+                Match href = Regex.Match(link.Value, "\\bhref\\s*=\\s*([\"'])(.*?)\\1");
+                if (!href.Success)
+                    continue;
+
+                return Uri.TryCreate(
+                    currentUrl,
+                    WebUtility.HtmlDecode(href.Groups[2].Value),
+                    out Uri? next
+                )
+                    ? next
+                    : null;
+            }
+
+            return null;
+        }
 
         internal IReadOnlyList<string> BuildV2UpdateUrls(
             IManagerSource source,
             IReadOnlyList<IPackage> installedPackages,
-            bool canPrerelease
+            bool canPrerelease,
+            bool includeAllVersions = false
         )
         {
             var entries = new List<(string Id, string Version)>();
             var indexById = new Dictionary<string, int>();
             foreach (var package in installedPackages)
             {
-                string key = package.Id.ToLower();
+                string key = package.Id.ToLowerInvariant();
                 if (!indexById.TryGetValue(key, out int index))
                 {
                     indexById[key] = entries.Count;
@@ -586,7 +718,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             string prefix = $"{source.Url.ToString().Trim('/')}/GetUpdates()?packageIds=%27";
             const string middle = "%27&versions=%27";
             string suffix =
-                $"%27&includePrerelease={(canPrerelease ? "true" : "false")}&includeAllVersions=0";
+                $"%27&includePrerelease={(canPrerelease ? "true" : "false")}"
+                + $"&includeAllVersions={(includeAllVersions ? "true" : "0")}";
             string separator = HttpUtility.UrlEncode("|");
             int fixedLength = prefix.Length + middle.Length + suffix.Length;
 
@@ -753,7 +886,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             {
                 if (
                     !newestInstalled.TryGetValue(
-                        candidate.Id.ToLower(),
+                        candidate.Id.ToLowerInvariant(),
                         out IPackage? newestPackage
                     )
                 )
@@ -791,7 +924,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             var newest = new Dictionary<string, IPackage>();
             foreach (var package in installedPackages)
             {
-                string key = package.Id.ToLower();
+                string key = package.Id.ToLowerInvariant();
                 if (
                     !newest.TryGetValue(key, out IPackage? current)
                     || !IsOlderVersion(package.VersionString, current.VersionString)
@@ -819,7 +952,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         {
             var scopeMap = new Dictionary<string, string?>();
             foreach (var package in installedPackages)
-                scopeMap[package.Id.ToLower()] = package.OverridenOptions.Scope;
+                scopeMap[package.Id.ToLowerInvariant()] = package.OverridenOptions.Scope;
             return scopeMap;
         }
 
@@ -851,7 +984,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     .Groups[1]
                     .Value;
 
-                if (!packageIdVersion.TryGetValue(id.ToLower(), out string? installedVersion))
+                if (!packageIdVersion.TryGetValue(id.ToLowerInvariant(), out string? installedVersion))
                     continue;
 
                 logger?.Log($"Found package {id} version {new_version} on source {source.Name}");
@@ -863,7 +996,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     new_version,
                     source,
                     manager,
-                    new OverridenInstallationOptions(packageIdScope.GetValueOrDefault(id.ToLower()))
+                    new OverridenInstallationOptions(packageIdScope.GetValueOrDefault(id.ToLowerInvariant()))
                 );
                 packages.Add(nativePackage);
                 Manifests[nativePackage.GetVersionedHash()] = match.Value;

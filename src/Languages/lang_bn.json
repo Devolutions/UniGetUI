@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "এখানে প্যাকেজের বিবরণ দেখাতে উইন্ডোটি আরও প্রশস্ত করুন",
   "Details panel": "বিবরণ প্যানেল",
   "Show details panel": "বিবরণ প্যানেল দেখান",
-  "Hide details panel": "বিবরণ প্যানেল লুকান"
+  "Hide details panel": "বিবরণ প্যানেল লুকান",
+  "Fit columns to the window": "উইন্ডোর সঙ্গে কলাম মানানসই করুন",
+  "How to set up {0}": "{0} কীভাবে সেট আপ করবেন",
+  "Install it with this command:": "এই কমান্ডটি দিয়ে এটি ইনস্টল করুন:",
+  "Open in a terminal": "টার্মিনালে খুলুন"
 }

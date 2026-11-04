@@ -1,4 +1,6 @@
+using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Helpers;
@@ -59,6 +61,82 @@ public sealed class PackageLoaderPipelineTests
             ["1.0.0", "2.0.0"],
             loader.GetEquivalentPackages(packageV1).Select(package => package.VersionString).Order()
         );
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task EquivalenceIgnoresTheSourceOnlyWhenInstalledPackagesDoNotKeepIt(
+        bool installedPackagesKeepTheirSource,
+        bool expectMatch
+    )
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.InstalledPackagesKeepTheirSource = installedPackagesKeepTheirSource;
+                return capabilities;
+            })
+            .Build();
+        var loader = new TestPackageLoader([manager], allowMultiplePackageVersions: false);
+        var fromFirstFeed = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(new ManagerSource(manager, "first", new Uri("https://first.example.test/")))
+            .WithId("dotnetsay")
+            .WithVersion("1.0.0")
+            .Build();
+        var fromSecondFeed = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(new ManagerSource(manager, "second", new Uri("https://second.example.test/")))
+            .WithId("DotNetSay")
+            .WithVersion("2.0.0")
+            .Build();
+
+        await loader.AddForeign(fromFirstFeed);
+
+        Assert.Equal(expectMatch, loader.GetEquivalentPackage(fromSecondFeed) is not null);
+        Assert.Equal(expectMatch ? 1 : 0, loader.GetEquivalentPackages(fromSecondFeed).Count);
+        Assert.Equal(expectMatch, fromFirstFeed.IsSamePackageAs(fromSecondFeed));
+
+        loader.Remove(fromSecondFeed);
+        Assert.Equal(expectMatch ? 0 : 1, loader.Count());
+    }
+
+    [Theory]
+    [InlineData("1.0.0", true)]
+    [InlineData("2.0.0", false)]
+    public async Task AVersionAwareLoaderRemovesTheSameVersionFromAnotherFeed(
+        string removedVersion,
+        bool expectRemoved
+    )
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.InstalledPackagesKeepTheirSource = false;
+                return capabilities;
+            })
+            .Build();
+        var loader = new TestPackageLoader([manager], allowMultiplePackageVersions: true);
+        await loader.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithSource(new ManagerSource(manager, "first", new Uri("https://first.example.test/")))
+                .WithId("dotnetsay")
+                .WithVersion("1.0.0")
+                .Build()
+        );
+
+        loader.Remove(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithSource(new ManagerSource(manager, "second", new Uri("https://second.example.test/")))
+                .WithId("dotnetsay")
+                .WithVersion(removedVersion)
+                .Build()
+        );
+
+        Assert.Equal(expectRemoved ? 0 : 1, loader.Count());
     }
 
     [Fact]

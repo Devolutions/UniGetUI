@@ -14,6 +14,8 @@ namespace UniGetUI.PackageEngine.Managers.PacmanManager;
 
 public class Pacman : PackageManager
 {
+    public override bool ExpectsInstalledPackages => true;
+
     public Pacman()
     {
         Dependencies = [];

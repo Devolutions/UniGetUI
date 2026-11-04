@@ -23,6 +23,7 @@ using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageOperations;
 
@@ -45,6 +46,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private UniGetUILogPage? UniGetUILogPage;
     private ManagerLogsPage? ManagerLogPage;
     private OperationHistoryPage? OperationHistoryPage;
+    private ManagerHealthPage? _managerHealthPage;
     private HelpPage? HelpPage;
     private ReleaseNotesPage? ReleaseNotesPage;
 
@@ -213,6 +215,8 @@ public partial class MainWindowViewModel : ViewModelBase
             UpdateSettingsSuggestions(value);
         else if (CurrentPageContent is Views.Pages.LogPages.OperationHistoryPage historyPage)
             historyPage.ApplyQuery(value);
+        else if (CurrentPageContent is ManagerHealthPage healthPage)
+            healthPage.ApplyQuery(value);
     }
 
     public void ClearAllSearchQueries()
@@ -306,6 +310,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public InfoBarViewModel WinGetWarningBanner { get; } = new() { Severity = InfoBarSeverity.Warning };
     public InfoBarViewModel TelemetryWarner { get; } = new() { Severity = InfoBarSeverity.Informational };
     public InfoBarViewModel PortableImportBanner { get; } = new() { Severity = InfoBarSeverity.Informational };
+    public InfoBarViewModel ManagerHealthBanner { get; } = new() { Severity = InfoBarSeverity.Warning };
+    private string _managerHealthBannerKey = "";
 
     // Oldest first (rendered bottom-up so the newest sits nearest the corner).
     public ObservableCollection<InfoBarViewModel> Toasts { get; } = new();
@@ -434,6 +440,7 @@ public partial class MainWindowViewModel : ViewModelBase
         RegisterBannerToast(WinGetWarningBanner);
         RegisterBannerToast(TelemetryWarner);
         RegisterBannerToast(PortableImportBanner);
+        RegisterBannerToast(ManagerHealthBanner);
 
         CatalogEditor = Sidebar.CatalogEditorEnabled ? new CatalogEditorViewModel() : null;
         DiscoverPage = new DiscoverSoftwarePage(CatalogEditor);
@@ -453,7 +460,11 @@ public partial class MainWindowViewModel : ViewModelBase
             var pt = pageType;
             loader.FinishedLoading += (_, _) =>
             {
-                Dispatcher.UIThread.Post(() => Sidebar.SetNavItemLoading(pt, false));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    Sidebar.SetNavItemLoading(pt, false);
+                    RefreshManagerHealthBanner();
+                });
                 // Return the load's memory to the OS once it settles.
                 Infrastructure.MemoryTrimmer.RequestTrimAfterIdle();
             };
@@ -581,6 +592,37 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             LoadDefaultPage();
         }
+    }
+
+    public void RefreshManagerHealthBanner()
+    {
+        var unhealthy = ManagerHealthEvaluator.ManagersNeedingAttention(PEInterface.Managers);
+        string key = string.Join("|", unhealthy.Select(report => $"{report.Manager.Name}:{report.State}"));
+        if (unhealthy.Count == 0)
+        {
+            _managerHealthBannerKey = "";
+            ManagerHealthBanner.IsOpen = false;
+            return;
+        }
+
+        if (key == _managerHealthBannerKey)
+            return;
+
+        _managerHealthBannerKey = key;
+        ManagerHealthBanner.Title = unhealthy.Count == 1
+            ? CoreTools.Translate("{0} is not working properly", unhealthy[0].Manager.DisplayName)
+            : CoreTools.Translate("{0} package managers are not working properly", unhealthy.Count);
+        ManagerHealthBanner.Message = unhealthy.Count == 1
+            ? ManagerHealthEvaluator.Describe(unhealthy[0])
+            : string.Join(", ", unhealthy.Select(report => report.Manager.DisplayName));
+        ManagerHealthBanner.ActionButtonText = CoreTools.Translate("Open Manager Health");
+        ManagerHealthBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() =>
+        {
+            ManagerHealthBanner.IsOpen = false;
+            NavigateTo(PageType.ManagerHealth);
+        });
+        ManagerHealthBanner.IsClosable = true;
+        ManagerHealthBanner.IsOpen = true;
     }
 
     private void ShowPortableImportBanner(string importableSource)
@@ -743,6 +785,7 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.OwnLog => UniGetUILogPage ??= new UniGetUILogPage(),
             PageType.ManagerLog => ManagerLogPage ??= new ManagerLogsPage(),
             PageType.OperationHistory => OperationHistoryPage ??= new OperationHistoryPage(),
+            PageType.ManagerHealth => _managerHealthPage ??= new ManagerHealthPage(),
             PageType.Help => HelpPage ??= new HelpPage(),
             PageType.ReleaseNotes => ReleaseNotesPage ??= new ReleaseNotesPage(),
             PageType.Null => throw new InvalidOperationException("Page type is Null"),
@@ -897,6 +940,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),
         PageType.ManagerLog => CoreTools.Translate("Package Manager logs"),
         PageType.OperationHistory => CoreTools.Translate("Operation history"),
+        PageType.ManagerHealth => CoreTools.Translate("Manager health"),
         PageType.Help => CoreTools.Translate("Help"),
         PageType.ReleaseNotes => CoreTools.Translate("Release notes"),
         _ => CoreTools.Translate("UniGetUI"),

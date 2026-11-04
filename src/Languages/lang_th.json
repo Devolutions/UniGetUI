@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "ขยายหน้าต่างให้กว้างขึ้นเพื่อแสดงรายละเอียดแพ็กเกจที่นี่",
   "Details panel": "แผงรายละเอียด",
   "Show details panel": "แสดงแผงรายละเอียด",
-  "Hide details panel": "ซ่อนแผงรายละเอียด"
+  "Hide details panel": "ซ่อนแผงรายละเอียด",
+  "Fit columns to the window": "ปรับคอลัมน์ให้พอดีกับหน้าต่าง",
+  "How to set up {0}": "วิธีตั้งค่า {0}",
+  "Install it with this command:": "ติดตั้งด้วยคำสั่งนี้:",
+  "Open in a terminal": "เปิดในเทอร์มินัล"
 }

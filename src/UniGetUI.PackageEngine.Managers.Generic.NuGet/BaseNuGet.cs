@@ -363,7 +363,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                         newest,
                         source,
                         this,
-                        new OverridenInstallationOptions(scopeMap.GetValueOrDefault(id.ToLower()))
+                        new OverridenInstallationOptions(scopeMap.GetValueOrDefault(id.ToLowerInvariant()))
                     )
                 );
             }
@@ -571,7 +571,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             var indexById = new Dictionary<string, int>();
             foreach (var package in installedPackages)
             {
-                string key = package.Id.ToLower();
+                string key = package.Id.ToLowerInvariant();
                 if (!indexById.TryGetValue(key, out int index))
                 {
                     indexById[key] = entries.Count;
@@ -753,7 +753,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             {
                 if (
                     !newestInstalled.TryGetValue(
-                        candidate.Id.ToLower(),
+                        candidate.Id.ToLowerInvariant(),
                         out IPackage? newestPackage
                     )
                 )
@@ -791,7 +791,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             var newest = new Dictionary<string, IPackage>();
             foreach (var package in installedPackages)
             {
-                string key = package.Id.ToLower();
+                string key = package.Id.ToLowerInvariant();
                 if (
                     !newest.TryGetValue(key, out IPackage? current)
                     || !IsOlderVersion(package.VersionString, current.VersionString)
@@ -819,7 +819,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         {
             var scopeMap = new Dictionary<string, string?>();
             foreach (var package in installedPackages)
-                scopeMap[package.Id.ToLower()] = package.OverridenOptions.Scope;
+                scopeMap[package.Id.ToLowerInvariant()] = package.OverridenOptions.Scope;
             return scopeMap;
         }
 
@@ -851,7 +851,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     .Groups[1]
                     .Value;
 
-                if (!packageIdVersion.TryGetValue(id.ToLower(), out string? installedVersion))
+                if (!packageIdVersion.TryGetValue(id.ToLowerInvariant(), out string? installedVersion))
                     continue;
 
                 logger?.Log($"Found package {id} version {new_version} on source {source.Name}");
@@ -863,7 +863,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     new_version,
                     source,
                     manager,
-                    new OverridenInstallationOptions(packageIdScope.GetValueOrDefault(id.ToLower()))
+                    new OverridenInstallationOptions(packageIdScope.GetValueOrDefault(id.ToLowerInvariant()))
                 );
                 packages.Add(nativePackage);
                 Manifests[nativePackage.GetVersionedHash()] = match.Value;

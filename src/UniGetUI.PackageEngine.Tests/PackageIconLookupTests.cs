@@ -1,3 +1,4 @@
+using System.Globalization;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.IconEngine;
 using UniGetUI.Core.SettingsEngine;
@@ -130,6 +131,27 @@ public sealed class PackageIconLookupTests : IDisposable
         string iconPath = Path.Combine(_testRoot, "icon.png");
         File.WriteAllBytes(iconPath, [0x89, 0x50, 0x4E, 0x47]);
         return iconPath;
+    }
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("tr-TR")]
+    public void GetIconId_DoesNotDependOnCurrentCulture(string culture)
+    {
+        // Under tr-TR, "I".ToLower() is "ı" (dotless i), so "Inkscape" would become "ınkscape"
+        // and never match the icon database entry.
+        var originalCulture = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+        try
+        {
+            var package = BuildPackage("Inkscape", _ => null);
+
+            Assert.Equal("inkscape", package.GetIconId());
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
     }
 
     private static Package BuildPackage(string id, Func<IPackage, CacheableIcon?> iconFactory)

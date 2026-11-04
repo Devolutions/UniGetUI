@@ -433,7 +433,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
         {
             details.ManifestUrl = new Uri(
                 "https://github.com/microsoft/winget-pkgs/tree/master/manifests/"
-                    + details.Package.Id[0].ToString().ToLower()
+                    + details.Package.Id[0].ToString().ToLowerInvariant()
                     + "/"
                     + details.Package.Id.Split('.')[0]
                     + "/"

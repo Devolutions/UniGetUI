@@ -2287,5 +2287,6 @@
   "System Python": "System Python",
   "In use": "In use",
   "Manage the Python environment at {0}": "Manage the Python environment at {0}",
-  "Unrecognized Python": "Unrecognized Python"
+  "Unrecognized Python": "Unrecognized Python",
+  "The environment variable {0} was updated": "The environment variable {0} was updated"
 }

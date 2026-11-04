@@ -912,6 +912,17 @@ public abstract partial class AbstractOperation : IDisposable
     }
 
     protected abstract void ApplyRetryAction(string retryMode);
+    protected IReadOnlyList<string> RefreshPersistedEnvironment()
+    {
+        IReadOnlyList<string> changed = PersistedEnvironment.Refresh();
+        foreach (string name in changed)
+            Line(
+                CoreTools.Translate("The environment variable {0} was updated", name),
+                LineType.Information
+            );
+        return changed;
+    }
+
     protected virtual IReadOnlyList<InnerOperation> GetAttemptPreOperations() => [];
     protected abstract Task<OperationVeredict> PerformOperation();
     public abstract Task<Uri> GetOperationIcon();

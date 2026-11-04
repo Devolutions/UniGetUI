@@ -29,6 +29,7 @@ public class PrePostOperation : AbstractOperation
 
     protected override async Task<OperationVeredict> PerformOperation()
     {
+        RefreshPersistedEnvironment();
         Line($"Running command {Payload}", LineType.Information);
         using var process = new Process
         {

@@ -162,18 +162,12 @@ public sealed class PipManagerTests : IDisposable
     }
 
     [Fact]
-    public void StandalonePipComesFromTheSelectedInterpretersDirectory()
+    public void AnEnvironmentIsRepresentedByTheFirstInterpreterFoundInIt()
     {
-        string python = Path.Combine("venv", "bin", "python3");
-        string siblingPip3 = Path.Combine("venv", "bin", "pip3");
-        string siblingPip = Path.Combine("venv", "bin", "pip");
+        string python3 = CreateFile("usr", "bin", "python3");
+        string python = CreateFile("usr", "bin", "python");
 
-        Assert.Equal(siblingPip3, Pip.ChooseStandalonePip(python, false, p => p == siblingPip3 || p == siblingPip, () => "/usr/bin/pip3"));
-        Assert.Equal(siblingPip, Pip.ChooseStandalonePip(python, true, p => p == siblingPip, () => "/usr/bin/pip3"));
-        Assert.Equal("/usr/bin/pip3", Pip.ChooseStandalonePip(python, false, _ => false, () => "/usr/bin/pip3"));
-        Assert.Null(Pip.ChooseStandalonePip(python, true, _ => false, () => "/usr/bin/pip3"));
-        Assert.Equal("/usr/bin/pip3", Pip.ChooseStandalonePip(null, false, _ => true, () => "/usr/bin/pip3"));
-        Assert.Null(Pip.ChooseStandalonePip(null, false, _ => true, () => null));
+        Assert.Equal([python3], Pip.OrderCandidates([python3, python], []));
     }
 
     [Fact]

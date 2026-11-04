@@ -626,7 +626,15 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         void Fill()
         {
             rows.Children.Clear();
-            if (ViewModel.CandidateExecutables.Count == 0)
+            List<string> interpreters = [];
+            string savedPath = CoreSettings.GetDictionaryItem<string, string>(CoreSettings.K.ManagerPaths, ViewModel.Manager.Name) ?? "";
+            foreach (string path in ViewModel.CandidateExecutables.Append(savedPath).Append(ViewModel.Manager.Status.ExecutablePath))
+            {
+                if (path.Length > 0 && File.Exists(path) && !interpreters.Any(known => Pip.IsSameEnvironment(known, path)))
+                    interpreters.Add(path);
+            }
+
+            if (interpreters.Count == 0)
             {
                 rows.Children.Add(new TextBlock
                 {
@@ -636,7 +644,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 return;
             }
 
-            foreach (string path in ViewModel.CandidateExecutables)
+            foreach (string path in interpreters)
                 rows.Children.Add(BuildPythonEnvironmentRow(path));
         }
 

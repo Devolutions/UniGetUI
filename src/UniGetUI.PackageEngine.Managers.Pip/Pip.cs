@@ -966,9 +966,9 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()
         {
-            IEnumerable<string> foundPaths = CoreTools.WhichMultiple("python");
-            if (!OperatingSystem.IsWindows())
-                foundPaths = foundPaths.Concat(CoreTools.WhichMultiple("python3"));
+            IEnumerable<string> foundPaths = OperatingSystem.IsWindows()
+                ? CoreTools.WhichMultiple("python")
+                : CoreTools.WhichMultiple("python3").Concat(CoreTools.WhichMultiple("python"));
 
             IReadOnlyList<string> installed = OperatingSystem.IsWindows()
                 ? FindInstalledPythons(GetPythonInstallRoots())
@@ -1228,39 +1228,6 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         public bool IsChosenExecutable(string path) =>
             IsUserSelectedExecutablePath(path) && CanUseSelectedExecutable(path);
 
-        private static string? FindStandalonePip() =>
-            CoreTools
-                .WhichMultiple("pip3")
-                .Concat(CoreTools.WhichMultiple("pip"))
-                .FirstOrDefault(IsEnvironmentManaged);
-
-        internal static string? ChooseStandalonePip(
-            string? python,
-            bool pythonWasChosen,
-            Func<string, bool> fileExists,
-            Func<string?> findStandalonePip
-        )
-        {
-            if (python is not null && Path.GetDirectoryName(python) is { } directory)
-            {
-                foreach (string name in new[] { "pip3", "pip" })
-                {
-                    string sibling = Path.Join(directory, name);
-                    if (fileExists(sibling))
-                        return sibling;
-                }
-
-                if (pythonWasChosen)
-                    return null;
-            }
-
-            return findStandalonePip();
-        }
-
-        public override bool HasExecutable() =>
-            base.HasExecutable()
-            || (!OperatingSystem.IsWindows() && FindStandalonePip() is not null);
-
         protected override void _loadManagerExecutableFile(
             out bool found,
             out string path,
@@ -1268,26 +1235,6 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         )
         {
             var (pythonFound, python) = GetExecutableFile();
-
-            // On non-Windows, prefer pip3/pip as standalone executables (avoids "No module named pip"
-            // errors on systems where pip is installed as a command but not as a Python module).
-            // Fall back to python/python3 + "-m pip" if no standalone pip is found.
-            if (!OperatingSystem.IsWindows())
-            {
-                string? pipPath = ChooseStandalonePip(
-                    pythonFound ? python : null,
-                    pythonFound && IsChosenExecutable(python),
-                    File.Exists,
-                    FindStandalonePip
-                );
-                if (pipPath is not null)
-                {
-                    found = true;
-                    path = pipPath;
-                    callArguments = "";
-                    return;
-                }
-            }
 
             if (!pythonFound)
             {

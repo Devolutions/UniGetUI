@@ -76,6 +76,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     {
         IsLoading = true;
         RefreshState();
+        string previousExecutable = GetEffectiveExecutable();
         ApplyProbe(await Task.Run(() =>
         {
             Manager.Initialize();
@@ -83,8 +84,15 @@ public partial class PackageManagerViewModel : ViewModelBase
         }));
         IsLoading = false;
         RefreshState(showVersion: true);
-        (MainWindow.Instance?.DataContext as MainWindowViewModel)?.ReloadPagesWithoutReadyManager();
+        var mainWindow = MainWindow.Instance?.DataContext as MainWindowViewModel;
+        if (GetEffectiveExecutable() != previousExecutable)
+            mainWindow?.ReloadPagesAfterManagerExecutableChanged();
+        else
+            mainWindow?.ReloadPagesWithoutReadyManager();
     }
+
+    private string GetEffectiveExecutable() =>
+        Manager.IsReady() ? $"{Manager.Status.ExecutablePath} {Manager.Status.ExecutableCallArgs}" : "";
 
     [RelayCommand]
     public void ShowVersion() => RefreshState(showVersion: true);

@@ -14,13 +14,18 @@ internal sealed class FakeDownloadOperation(IPackage package, string downloadPat
 {
     protected override HttpClient CreateHttpClient() => new(new FakeInstallerHandler());
 
+    internal static byte[] PlaceholderInstaller(Uri? installerUrl)
+    {
+        string body = $"UniGetUI fake-data placeholder installer.\nRequested: {installerUrl?.AbsoluteUri}\n"
+                      + "This file is not an installer and contains no executable code.\n";
+        return Encoding.UTF8.GetBytes(body + new string('.', 64 * 1024));
+    }
+
     private sealed class FakeInstallerHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            string body = $"UniGetUI fake-data placeholder installer.\nRequested: {request.RequestUri}\n"
-                          + "This file is not an installer and contains no executable code.\n";
-            byte[] payload = Encoding.UTF8.GetBytes(body + new string('.', 64 * 1024));
+            byte[] payload = PlaceholderInstaller(request.RequestUri);
             var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(payload) };
             response.Content.Headers.ContentLength = payload.Length;
             return Task.FromResult(response);

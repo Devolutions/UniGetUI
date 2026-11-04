@@ -198,7 +198,11 @@ internal sealed class FakeDetailsHelper(FakePackageManager manager) : BasePkgDet
         details.License = p.License;
         details.LicenseUrl = new Uri($"{p.Homepage}/license");
         details.InstallerUrl = new Uri($"{p.Homepage}/{p.LatestVersion}/installer.{p.InstallerType}");
-        details.InstallerHash = FakeHash(p.Id + p.LatestVersion);
+        details.InstallerHash = Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(
+                p.Id.Contains("Failing", StringComparison.OrdinalIgnoreCase)
+                    ? []
+                    : FakeDownloadOperation.PlaceholderInstaller(details.InstallerUrl)));
         details.InstallerType = p.InstallerType;
         details.InstallerSize = p.InstallerSize;
         details.ManifestUrl = new Uri($"{p.Homepage}/manifest.yaml");
@@ -219,11 +223,6 @@ internal sealed class FakeDetailsHelper(FakePackageManager manager) : BasePkgDet
 
     protected override string? GetInstallLocation_UnSafe(IPackage package) => manager.InstallDirectoryFor(package);
 
-    private static string FakeHash(string seed)
-    {
-        byte[] bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(seed));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
 }
 
 internal sealed class FakeOperationHelper(FakePackageManager manager) : BasePkgOperationHelper(manager)

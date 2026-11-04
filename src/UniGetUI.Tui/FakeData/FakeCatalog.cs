@@ -46,7 +46,8 @@ internal sealed record FakeManagerProfile(
 /// The deterministic data set behind <c>--fake-data</c>. Every name is invented (the publishers are
 /// the fictitious Contoso / Fabrikam / Northwind family) and every URL uses the reserved
 /// <c>.invalid</c> TLD, so nothing here can be mistaken for, or resolve to, a real package.
-/// Package ids that contain <c>Failing</c> always fail to install/update/uninstall, and ids that
+/// Package ids that contain <c>Failing</c> always fail to install/update/uninstall and publish an
+/// installer hash their downloaded placeholder never matches, and ids that
 /// contain <c>Slow</c> take several seconds, so failure and cancellation can be exercised.
 /// </summary>
 internal static class FakeCatalog

@@ -313,6 +313,11 @@ public sealed partial class OperationViewModel : ViewModelBase
                     OpMenu.Items.Add(Item("Retry skipping integrity checks", "checksum.svg", true,
                         () => Operation.Retry(AbstractOperation.RetryMode.Retry_SkipIntegrity)));
             }
+            else if (Operation is DownloadOperation { HashMismatched: true })
+            {
+                OpMenu.Items.Add(Item("Retry skipping integrity checks", "checksum.svg", true,
+                    () => Operation.Retry(AbstractOperation.RetryMode.Retry_SkipIntegrity)));
+            }
             else if (OperatingSystem.IsWindows() && Operation is SourceOperation srcOp && !srcOp.ForceAsAdministrator)
             {
                 OpMenu.Items.Add(Item("Retry as administrator", "uac.svg", true,

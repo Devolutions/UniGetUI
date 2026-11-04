@@ -111,7 +111,28 @@ internal readonly record struct PublishedInstallerHash(
         return false;
     }
 
-    public async Task<bool> MatchesAsync(string filePath, CancellationToken token)
+    public string AlgorithmName => Algorithm switch
+    {
+        PublishedHashAlgorithm.Md5 => "MD5",
+        PublishedHashAlgorithm.Sha1 => "SHA-1",
+        PublishedHashAlgorithm.Sha384 => "SHA-384",
+        PublishedHashAlgorithm.Sha512 => "SHA-512",
+        _ => "SHA-256",
+    };
+
+    public IncrementalHash CreateHasher() =>
+        IncrementalHash.CreateHash(
+            Algorithm switch
+            {
+                PublishedHashAlgorithm.Md5 => HashAlgorithmName.MD5,
+                PublishedHashAlgorithm.Sha1 => HashAlgorithmName.SHA1,
+                PublishedHashAlgorithm.Sha384 => HashAlgorithmName.SHA384,
+                PublishedHashAlgorithm.Sha512 => HashAlgorithmName.SHA512,
+                _ => HashAlgorithmName.SHA256,
+            }
+        );
+
+    public async Task<byte[]> ComputeAsync(string filePath, CancellationToken token)
     {
         await using FileStream stream = new(
             filePath,
@@ -122,7 +143,7 @@ internal readonly record struct PublishedInstallerHash(
             useAsync: true
         );
 
-        byte[] actual = Algorithm switch
+        return Algorithm switch
         {
             PublishedHashAlgorithm.Md5 => await MD5.HashDataAsync(stream, token),
             PublishedHashAlgorithm.Sha1 => await SHA1.HashDataAsync(stream, token),
@@ -130,7 +151,10 @@ internal readonly record struct PublishedInstallerHash(
             PublishedHashAlgorithm.Sha512 => await SHA512.HashDataAsync(stream, token),
             _ => await SHA256.HashDataAsync(stream, token),
         };
-
-        return CryptographicOperations.FixedTimeEquals(actual, Digest);
     }
+
+    public bool Matches(byte[] actual) => CryptographicOperations.FixedTimeEquals(actual, Digest);
+
+    public async Task<bool> MatchesAsync(string filePath, CancellationToken token) =>
+        Matches(await ComputeAsync(filePath, token));
 }

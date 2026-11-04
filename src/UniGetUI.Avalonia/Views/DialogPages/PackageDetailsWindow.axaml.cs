@@ -867,6 +867,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         AddRow(text, _vm.LabelInstallerType, _vm.InstallerType);
         AddRow(text, _vm.LabelInstallerUrl, _vm.InstallerUrl);
         AddRow(text, _vm.InstallerHashLabel.TrimEnd(':'), _vm.InstallerHash);
+        if (_vm.InstallerVerification is { } verification)
+            AddRow(text, _vm.LabelLastDownload, verification);
 
         AddDownloadRow(text);
 

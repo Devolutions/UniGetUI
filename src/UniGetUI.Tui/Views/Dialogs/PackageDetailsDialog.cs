@@ -5,6 +5,7 @@ using Avalonia.Media;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.Tui.Infrastructure;
 using UniGetUI.Tui.Theme;
@@ -151,6 +152,8 @@ internal sealed class PackageDetailsDialog : TuiDialog
         Field(_package.Manager.Name == "Chocolatey" ? CoreTools.Translate("Installer SHA512") : CoreTools.Translate("Installer SHA256"), d.InstallerHash);
         Field(CoreTools.Translate("Installer type"), d.InstallerType);
         Field(CoreTools.Translate("Installer URL"), d.InstallerUrl?.ToString());
+        if (InstallerVerification.Find(d.InstallerUrl, d.InstallerHash) is { } verification)
+            Field(CoreTools.Translate("Last download"), verification.Describe(), wrap: true);
         Field(CoreTools.Translate("Download size"), d.InstallerSize > 0 ? CoreTools.FormatAsSize(d.InstallerSize) : null);
         Field(CoreTools.Translate("Last updated:"), d.UpdateDate);
         Field(CoreTools.Translate("Release notes"), d.ReleaseNotes, wrap: true);

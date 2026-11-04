@@ -133,7 +133,7 @@ internal sealed class OperationsPage : UserControl, ITuiPage
                 new(CoreTools.Translate("Retry interactively"), null, () => RetryAsync(AbstractOperation.RetryMode.Retry_Interactive),
                     () => finished && pkgOp?.Package.Manager.Capabilities.CanRunInteractively == true),
                 new(CoreTools.Translate("Retry skipping integrity checks"), null, () => RetryAsync(AbstractOperation.RetryMode.Retry_SkipIntegrity),
-                    () => finished && pkgOp is not null && pkgOp.Package.Manager.Capabilities.CanSkipIntegrityChecks),
+                    () => finished && (pkgOp?.Package.Manager.Capabilities.CanSkipIntegrityChecks == true || op is DownloadOperation { HashMismatched: true })),
                 TuiAction.Separator,
                 new(CoreTools.Translate("Run now"), null, () => Queue(o => o.SkipQueue()), () => queued),
                 new(CoreTools.Translate("Run next"), null, () => Queue(o => o.RunNext()), () => queued),

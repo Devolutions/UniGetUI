@@ -70,6 +70,27 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         public List<string>? Versions { get; set; }
     }
 
+    internal sealed class V3RegistrationIndex
+    {
+        [JsonPropertyName("items")]
+        public List<V3RegistrationPage>? Items { get; set; }
+    }
+
+    internal sealed class V3RegistrationPage
+    {
+        [JsonPropertyName("@id")]
+        public string? Id { get; set; }
+
+        [JsonPropertyName("lower")]
+        public string? Lower { get; set; }
+
+        [JsonPropertyName("upper")]
+        public string? Upper { get; set; }
+
+        [JsonPropertyName("items")]
+        public List<V3RegistrationLeaf>? Items { get; set; }
+    }
+
     internal sealed class V3RegistrationLeaf
     {
         [JsonPropertyName("catalogEntry")]
@@ -201,6 +222,8 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
     [JsonSerializable(typeof(V3ServiceIndex))]
     [JsonSerializable(typeof(V3SearchResponse))]
     [JsonSerializable(typeof(V3FlatContainerIndex))]
+    [JsonSerializable(typeof(V3RegistrationIndex))]
+    [JsonSerializable(typeof(V3RegistrationPage))]
     [JsonSerializable(typeof(V3RegistrationLeaf))]
     [JsonSerializable(typeof(V3CatalogEntry))]
     internal sealed partial class NuGetV3JsonContext : JsonSerializerContext;
@@ -218,6 +241,12 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
         public static V3RegistrationLeaf? DeserializeRegistrationLeaf(string json) =>
             Deserialize<V3RegistrationLeaf>(json);
+
+        public static V3RegistrationIndex? DeserializeRegistrationIndex(string json) =>
+            Deserialize<V3RegistrationIndex>(json);
+
+        public static V3RegistrationPage? DeserializeRegistrationPage(string json) =>
+            Deserialize<V3RegistrationPage>(json);
 
         public static V3CatalogEntry? DeserializeCatalogEntry(string json) =>
             Deserialize<V3CatalogEntry>(json);

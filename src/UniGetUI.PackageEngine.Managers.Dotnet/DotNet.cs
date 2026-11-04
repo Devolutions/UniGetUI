@@ -36,6 +36,7 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
         {
             Capabilities = new ManagerCapabilities
             {
+                InstalledPackagesKeepTheirSource = false,
                 CanRunAsAdmin = true,
                 CanDownloadInstaller = true,
                 SupportsReleaseNotes = true,
@@ -49,6 +50,13 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                     Architecture.arm32,
                 ],
                 SupportsPreRelease = true,
+                SupportsCustomSources = true,
+                Sources = new SourceCapabilities
+                {
+                    KnowsPackageCount = false,
+                    KnowsUpdateDate = false,
+                    CanBeEdited = false,
+                },
                 CanListDependencies = true,
                 SupportsCustomLocations = true,
                 SupportsCustomPackageIcons = true,
@@ -88,15 +96,34 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                 ],
             };
 
+            SourcesHelper = new DotNetSourceHelper(this);
             DetailsHelper = new DotNetDetailsHelper(this);
             OperationHelper = new DotNetPkgOperationHelper(this);
         }
 
-        protected override string? V3PackageType => "DotnetTool";
+        protected override string? SearchPackageType => "DotnetTool";
+
+        protected override IReadOnlyList<IManagerSource> GetUpdateSources(
+            IManagerSource installedSource
+        ) => SourcesHelper.GetSources();
+
+        protected override bool CanResolveFromSource(string packageId, IManagerSource source) =>
+            SourcesHelper is not DotNetSourceHelper helper
+            || helper.GetConfiguration().Allows(packageId, source.Url);
+
+        internal IManagerSource GetInstalledPackagesSource()
+        {
+            var sources = SourcesHelper.GetSources();
+            if (sources.Count is 0 || sources.Any(source => source.Url == DefaultSource.Url))
+                return DefaultSource;
+
+            return sources[0];
+        }
 
         protected override IReadOnlyList<Package> _getInstalledPackages_UnSafe()
         {
             List<Package> Packages = [];
+            IManagerSource installedSource = GetInstalledPackagesSource();
             foreach (
                 var options in new OverridenInstallationOptions[]
                 {
@@ -139,7 +166,7 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                 p.WaitForExit();
                 logger.Close(p.ExitCode);
 
-                Packages.AddRange(ParseInstalledPackages(outputLines, DefaultSource, this, options));
+                Packages.AddRange(ParseInstalledPackages(outputLines, installedSource, this, options));
             }
             return Packages;
         }

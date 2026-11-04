@@ -8,12 +8,15 @@ using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.Managers.Generic.NuGet;
 using UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal;
 
 namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 {
     public abstract class BaseNuGetDetailsHelper : BasePkgDetailsHelper
     {
+        private const int MaxV2VersionPages = 50;
+
         public BaseNuGetDetailsHelper(BaseNuGet manager)
             : base(manager) { }
 
@@ -603,36 +606,43 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 return NuGetV3Client.GetVersionsDescending(index, package.Id);
             }
 
-            Uri SearchUrl = new($"{package.Source.Url}/FindPackagesById()?id='{package.Id}'");
+            Uri? SearchUrl = new($"{package.Source.Url}/FindPackagesById()?id='{package.Id}'");
             Logger.Debug(
                 $"Begin package version search with url={SearchUrl} on manager {Manager.Name}"
             );
 
             List<string> results = [];
+            HashSet<string> alreadyProcessed = [];
 
             using HttpClient client = new(CoreTools.GenericHttpClientParameters);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
-            using HttpResponseMessage response = client.Send(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                Logger.Warn(
-                    $"Failed to fetch api at Url={SearchUrl} with status code {response.StatusCode} to load versions"
-                );
-                return [];
-            }
 
-            string SearchResults = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            HashSet<string> alreadyProcessed = [];
-
-            MatchCollection matches = Regex.Matches(SearchResults, "Version='([^<>']+)'");
-            foreach (Match match in matches)
+            for (int page = 0; SearchUrl is not null && page < MaxV2VersionPages; page++)
             {
-                if (!alreadyProcessed.Contains(match.Groups[1].Value) && match.Success)
+                using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+                NuGetFeedCredentials.ApplyTo(request, package.Source.Url);
+                using HttpResponseMessage response = client.Send(request);
+                if (!response.IsSuccessStatusCode)
                 {
-                    results.Add(match.Groups[1].Value);
-                    alreadyProcessed.Add(match.Groups[1].Value);
+                    Logger.Warn(
+                        $"Failed to fetch api at Url={SearchUrl} with status code {response.StatusCode} to load versions"
+                    );
+                    return page is 0 ? [] : results;
                 }
+
+                string SearchResults = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+                MatchCollection matches = Regex.Matches(SearchResults, "Version='([^<>']+)'");
+                foreach (Match match in matches)
+                {
+                    if (!alreadyProcessed.Contains(match.Groups[1].Value) && match.Success)
+                    {
+                        results.Add(match.Groups[1].Value);
+                        alreadyProcessed.Add(match.Groups[1].Value);
+                    }
+                }
+
+                SearchUrl = BaseNuGet.FindNextPageUrl(SearchResults, SearchUrl);
             }
 
             results.Sort(StringComparer.OrdinalIgnoreCase);

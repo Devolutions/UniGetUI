@@ -772,14 +772,123 @@ public sealed class NuGetV3ClientTests
         Assert.Equal("2.0.0", result.Version);
     }
 
-    // A registration-only service index is accepted (search and details still work through it),
-    // but versions cannot be enumerated without a PackageBaseAddress. Converting that into an
-    // empty version list would report "no update available" on every check forever, so it is
-    // surfaced as a failure instead.
-    [Fact]
-    public void AFeedWithoutAPackageBaseAddressReportsAVersionEnumerationFailure()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AFeedWithoutAPackageBaseAddressEnumeratesVersionsFromItsRegistration(bool inlinePages)
     {
-        using var feed = new FakeV3Feed { AdvertisePackageBaseAddress = false };
+        using var feed = new FakeV3Feed
+        {
+            AdvertisePackageBaseAddress = false,
+            InlineRegistrationPages = inlinePages,
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+        Assert.Null(index.PackageBaseAddress);
+
+        Assert.Equal(
+            DefaultVersions.Order(),
+            NuGetV3Client.GetVersions(index, "Contoso.Tool", out bool failed).Order()
+        );
+        Assert.False(failed);
+        Assert.Equal("2.0.0", NuGetV3Client.GetUpdateCandidate(index, "Contoso.Tool", "1.0.0", false));
+        Assert.Equal(
+            $"{feed.BaseUri}flatcontainer/contoso.tool/1.2.0/contoso.tool.1.2.0.nupkg",
+            NuGetV3Client.GetPackageContentUrl(index, "Contoso.Tool", "1.2.0")?.AbsoluteUri
+        );
+    }
+
+    [Fact]
+    public void AnUpdateCheckOnARegistrationOnlyFeedSkipsPagesAtOrBelowTheInstalledVersion()
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertisePackageBaseAddress = false,
+            Versions = ["1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0", "1.5.0"],
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Equal("1.5.0", NuGetV3Client.GetUpdateCandidate(index, "Contoso.Tool", "1.3.0", false));
+
+        var pages = feed.Server.RequestPaths.Where(path => path.Contains("/page/")).ToList();
+        Assert.Equal(["/registration-gz-semver2/contoso.tool/page/2.json"], pages);
+    }
+
+    [Fact]
+    public void ARegistrationOnlyFeedReadsDetailsFromTheRegistrationPage()
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertisePackageBaseAddress = false,
+            LeafWithoutCatalogEntry = true,
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        var entry = NuGetV3Client.GetCatalogEntry(index, "Contoso.Tool", "1.2.0");
+
+        Assert.NotNull(entry);
+        Assert.Equal("1.2.0", entry.Version);
+        Assert.Equal("Registered on a page", entry.Description);
+        Assert.Equal($"{feed.BaseUri}download/contoso.tool/1.2.0", entry.PackageContent);
+        Assert.True(entry.Listed);
+    }
+
+    [Theory]
+    [InlineData("DotnetTool", true)]
+    [InlineData("Dependency", false)]
+    public void AnExactIdSearchOnARegistrationOnlyFeedChecksThePackageTypeThere(
+        string requiredType,
+        bool expectFound
+    )
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertisePackageBaseAddress = false,
+            AdvertiseSearchService = false,
+            LeafWithoutCatalogEntry = true,
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        var results = NuGetV3Client.Search(index, "Contoso.Tool", false, requiredType, 50);
+
+        Assert.Equal(expectFound, results.Any(result => result.Id == "Contoso.Tool" && result.Version == "2.0.0"));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void APackageMissingFromAFeedHasNoVersionsRatherThanAFailedCheck(bool flatContainer)
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertisePackageBaseAddress = flatContainer,
+            FlatContainerStatusCode = 404,
+            RegistrationIndexStatusCode = 404,
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Empty(NuGetV3Client.GetVersions(index, "Contoso.Tool", out bool failed));
+        Assert.False(failed);
+        Assert.Null(
+            NuGetV3Client.GetUpdateCandidate(index, "Contoso.Tool", "1.0.0", false, out bool candidateFailed)
+        );
+        Assert.False(candidateFailed);
+    }
+
+    // Converting a failed request into an empty version list would report "no update available"
+    // on every check forever, so it is surfaced as a failure instead.
+    [Fact]
+    public void AFeedWithoutAPackageBaseAddressReportsAFailedRegistrationRequest()
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertisePackageBaseAddress = false,
+            RegistrationIndexStatusCode = 500,
+        };
         var index = feed.Resolve();
         Assert.NotNull(index);
         Assert.Null(index.PackageBaseAddress);
@@ -1407,6 +1516,14 @@ public sealed class NuGetV3ClientTests
 
         public int RegistrationLeafStatusCode { get; init; } = 200;
 
+        public int RegistrationIndexStatusCode { get; init; } = 200;
+
+        public int RegistrationPageSize { get; init; } = 2;
+
+        public bool InlineRegistrationPages { get; init; }
+
+        public bool LeafWithoutCatalogEntry { get; init; }
+
         public bool AdvertiseSearchService { get; init; } = true;
 
         public bool AdvertiseRegistrations { get; init; } = true;
@@ -1457,6 +1574,26 @@ public sealed class NuGetV3ClientTests
                     return (FlatContainerStatusCode, string.Empty, "application/json");
 
                 return Json(FlatContainerBody ?? BuildFlatContainerIndex());
+            }
+
+            if (
+                path.Contains("/registration-gz-semver2/", StringComparison.OrdinalIgnoreCase)
+                && path.EndsWith("/index.json", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                if (RegistrationIndexStatusCode is not 200)
+                    return (RegistrationIndexStatusCode, string.Empty, "application/json");
+
+                return Json(BuildRegistrationIndex());
+            }
+
+            if (
+                path.Contains("/registration-gz-semver2/", StringComparison.OrdinalIgnoreCase)
+                && path.Contains("/page/", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                int pageNumber = int.Parse(Path.GetFileNameWithoutExtension(path));
+                return Json(BuildRegistrationPage(pageNumber, includeContext: true));
             }
 
             if (path.Contains("/registration-gz-semver2/", StringComparison.OrdinalIgnoreCase))
@@ -1567,6 +1704,39 @@ public sealed class NuGetV3ClientTests
             """;
         }
 
+        private List<string[]> RegistrationPages() =>
+            [
+                .. Versions
+                    .OrderBy(
+                        version => NuGetV3Client.TryParseNuGetVersion(version, out var parsed)
+                            ? parsed
+                            : default
+                    )
+                    .Chunk(RegistrationPageSize),
+            ];
+
+        private string BuildRegistrationIndex()
+        {
+            var pages = RegistrationPages();
+            IEnumerable<string> rendered = pages.Select((_, number) =>
+                BuildRegistrationPage(number, includeContext: false)
+            );
+            return $$"""{"count":{{pages.Count}},"items":[{{string.Join(",", rendered)}}]}""";
+        }
+
+        private string BuildRegistrationPage(int number, bool includeContext)
+        {
+            string[] page = RegistrationPages()[number];
+            string items = string.Join(
+                ",",
+                page.Select(version =>
+                    $$"""{"@id":"{{BaseUri}}registration-gz-semver2/contoso.tool/{{version}}.json","catalogEntry":{"id":"Contoso.Tool","version":"{{version}}","listed":true,"description":"Registered on a page","packageTypes":[{"name":"DotnetTool"}]},"packageContent":"{{BaseUri}}download/contoso.tool/{{version}}"}"""
+                )
+            );
+            string itemsProperty = InlineRegistrationPages || includeContext ? $",\"items\":[{items}]" : "";
+            return $$"""{"@id":"{{BaseUri}}registration-gz-semver2/contoso.tool/page/{{number}}.json","count":{{page.Length}},"lower":"{{page[0]}}","upper":"{{page[^1]}}"{{itemsProperty}}}""";
+        }
+
         private string BuildFlatContainerIndex() =>
             $"{{\"versions\":[{string.Join(",", Versions.Select(version => $"\"{version}\""))}]}}";
 
@@ -1584,9 +1754,13 @@ public sealed class NuGetV3ClientTests
                 ? CatalogEntry
                 : $"\"{BaseUri}catalog/contoso.tool.{version}.json\"";
 
+            string catalogEntryProperty = LeafWithoutCatalogEntry
+                ? ""
+                : $"\"catalogEntry\": {catalogEntry},";
+
             return $$"""
             {
-              "catalogEntry": {{catalogEntry}},
+              {{catalogEntryProperty}}
               "packageContent": "{{BaseUri}}flatcontainer/contoso.tool/{{version}}/contoso.tool.{{version}}.nupkg",
               "published": "2026-01-02T03:04:05Z",
               "listed": {{(listed ? "true" : "false")}}

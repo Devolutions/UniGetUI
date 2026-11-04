@@ -34,6 +34,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         public string? ReleaseNotes { get; init; }
         public string? Tags { get; init; }
         public IReadOnlyList<LocalNuGetDependency> Dependencies { get; init; } = [];
+        public IReadOnlyList<string> PackageTypes { get; init; } = [];
     }
 
     internal static class NuGetLocalFeed
@@ -451,8 +452,21 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                 ReleaseNotes = Value(metadata, "releaseNotes"),
                 Tags = Value(metadata, "tags"),
                 Dependencies = ReadDependencies(metadata),
+                PackageTypes = ReadPackageTypes(metadata),
             };
         }
+
+        private static IReadOnlyList<string> ReadPackageTypes(XElement metadata) =>
+            [
+                .. metadata
+                    .Elements()
+                    .Where(element => element.Name.LocalName is "packageTypes")
+                    .Elements()
+                    .Where(element => element.Name.LocalName is "packageType")
+                    .Select(element => element.Attribute("name")?.Value.Trim())
+                    .OfType<string>()
+                    .Where(name => name.Length > 0),
+            ];
 
         private static string? ReadLicenseExpression(XElement metadata)
         {

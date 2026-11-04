@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Tools;
 #if WINDOWS
 using UniGetUI.Interface;
 using UniGetUI.PackageEngine.Managers.InstallerFeeds;
@@ -40,6 +41,8 @@ sealed class Program
             }
         }
         catch { }
+
+        PersistedEnvironment.Initialize();
 
         if (TuiAppHost.TryRunFakeCacheCommand(args, out int fakeExitCode))
         {

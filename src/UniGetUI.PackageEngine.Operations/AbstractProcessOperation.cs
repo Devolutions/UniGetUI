@@ -27,6 +27,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
         CancelRequested += (_, _) => StopProcess();
         OperationStarting += (_, _) =>
         {
+            RefreshPersistedEnvironment();
             DisposeProcess();
             ProcessKilled = false;
             LastReturnCode = null;

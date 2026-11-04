@@ -417,7 +417,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await ReplaceTextAsync(folder);
         await Key(K.Enter);
         await WaitForOperationsToFinishAsync();
-        NAssert.That(Directory.GetFiles(folder).Where(f => !f.EndsWith(".partial")), Is.Empty);
+        NAssert.That(Directory.GetFiles(folder).Where(f => !Path.GetFileName(f).Contains(".partial")), Is.Empty);
 
         await OnUi(() => Window.NavigateTo(TuiPageIds.Operations));
         await WaitForTextAsync("Failed");
@@ -428,6 +428,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
 
         string[] files = Directory.GetFiles(folder);
         NAssert.That(files, Has.Length.EqualTo(1));
+        NAssert.That(Path.GetFileName(files[0]), Does.Not.Contain(".partial"));
         NAssert.That(File.ReadAllText(files[0]), Does.Contain("fake-data placeholder installer"));
     }
 

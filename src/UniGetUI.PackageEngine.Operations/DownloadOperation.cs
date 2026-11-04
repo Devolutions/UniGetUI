@@ -51,6 +51,13 @@ public class DownloadOperation : AbstractOperation
     public bool HashMismatched { get; private set; }
     private string? _rejectedFile;
     private byte[]? _rejectedHash;
+    private readonly string _stagingToken = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
+
+    internal static string StagingPathFor(string destination, string token) =>
+        Path.Join(
+            Path.GetDirectoryName(destination),
+            $"{Path.GetFileNameWithoutExtension(destination)}.{token}.partial{Path.GetExtension(destination)}"
+        );
 
     protected override void ApplyRetryAction(string retryMode)
     {
@@ -96,10 +103,9 @@ public class DownloadOperation : AbstractOperation
             );
             return null;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
         {
-            Line($"The signature check of {path} was skipped", LineType.Information);
-            return null;
+            throw;
         }
         catch (Exception ex)
         {
@@ -108,15 +114,18 @@ public class DownloadOperation : AbstractOperation
         }
     }
 
-    private void RecordVerification(InstallerHashStatus status, string? algorithm, SignatureCheck? signature)
-    {
-        if (_package.Details.InstallerUrl is { } installerUrl)
-            InstallerVerification.Record(
-                installerUrl,
-                _package.Details.InstallerHash,
-                new InstallerVerification(status, algorithm, signature)
-            );
-    }
+    private static void RecordVerification(
+        Uri installerUrl,
+        string? publishedHash,
+        InstallerHashStatus status,
+        string? algorithm,
+        SignatureCheck? signature
+    ) =>
+        InstallerVerification.Record(
+            installerUrl,
+            publishedHash,
+            new InstallerVerification(status, algorithm, signature)
+        );
 
     internal static bool ComesFromTheSourceFolder(Uri installerUrl, IManagerSource source)
     {
@@ -191,6 +200,7 @@ public class DownloadOperation : AbstractOperation
             await _package.Details.Load();
             CancellationToken.ThrowIfCancellationRequested();
             Uri? downloadUrl = _package.Details.InstallerUrl;
+            string? publishedHash = _package.Details.InstallerHash;
             if (downloadUrl is null)
             {
                 Line(
@@ -238,7 +248,7 @@ public class DownloadOperation : AbstractOperation
             }
 
             bool hashPublished = PublishedInstallerHash.TryParse(
-                _package.Details.InstallerHash,
+                publishedHash,
                 out PublishedInstallerHash expectedHash
             );
 
@@ -260,6 +270,8 @@ public class DownloadOperation : AbstractOperation
                         LineType.Information
                     );
                     RecordVerification(
+                        downloadUrl,
+                        publishedHash,
                         InstallerHashStatus.Verified,
                         expectedHash.AlgorithmName,
                         await ReportSignatureAsync(downloadLocation)
@@ -274,7 +286,7 @@ public class DownloadOperation : AbstractOperation
                 );
             }
 
-            partialLocation = downloadLocation + ".partial";
+            partialLocation = StagingPathFor(downloadLocation, _stagingToken);
             byte[]? actualHash = hashPublished && SkipHashCheck
                 ? await ReuseRejectedFileAsync(partialLocation, expectedHash)
                 : null;
@@ -321,11 +333,17 @@ public class DownloadOperation : AbstractOperation
                     _rejectedFile = partialLocation;
                     _rejectedHash = actualHash;
                     partialFileCreated = false;
-                    RecordVerification(InstallerHashStatus.Mismatch, expectedHash.AlgorithmName, null);
+                    RecordVerification(
+                        downloadUrl,
+                        publishedHash,
+                        InstallerHashStatus.Mismatch,
+                        expectedHash.AlgorithmName,
+                        null
+                    );
                     return OperationVeredict.Failure;
                 }
             }
-            else if (string.IsNullOrWhiteSpace(_package.Details.InstallerHash))
+            else if (string.IsNullOrWhiteSpace(publishedHash))
             {
                 Line(
                     "No hash is published for this installer, so the download could not be verified",
@@ -336,19 +354,23 @@ public class DownloadOperation : AbstractOperation
             else
             {
                 Line(
-                    $"The hash published for this installer ({_package.Details.InstallerHash}) is not in a "
+                    $"The hash published for this installer ({publishedHash}) is not in a "
                         + "format UniGetUI can check, so the download could not be verified",
                     LineType.Information
                 );
                 hashStatus = InstallerHashStatus.Unreadable;
             }
 
+            SignatureCheck? signature = await ReportSignatureAsync(partialLocation);
+            CancellationToken.ThrowIfCancellationRequested();
             File.Move(partialLocation, downloadLocation, overwrite: true);
             Line($"The file was saved to {downloadLocation}", LineType.Information);
             RecordVerification(
+                downloadUrl,
+                publishedHash,
                 hashStatus,
                 hashPublished ? expectedHash.AlgorithmName : null,
-                await ReportSignatureAsync(downloadLocation)
+                signature
             );
             return OperationVeredict.Success;
         }
@@ -403,6 +425,8 @@ public class DownloadOperation : AbstractOperation
     )
     {
         Line($"Download URL found at {downloadUrl} ", LineType.Information);
+        if (File.Exists(partialLocation))
+            File.Delete(partialLocation);
         using HttpClient? httpClient = downloadUrl.IsFile ? null : CreateHttpClient();
         using HttpResponseMessage? response =
             httpClient is null
@@ -433,7 +457,7 @@ public class DownloadOperation : AbstractOperation
         await using (var contentStream = sourceStream)
         await using (var fileStream = new FileStream(
             partialLocation,
-            FileMode.Create,
+            FileMode.CreateNew,
             FileAccess.Write,
             FileShare.None,
             8192,

@@ -546,7 +546,10 @@ public sealed class DownloadOperationProgressTests
     private static Uri UniqueInstallerUrl() => new($"http://127.0.0.1/{Guid.NewGuid():N}/payload.bin");
 
     private static string[] PartialFilesOf(string downloadPath) =>
-        Directory.GetFiles(Path.GetDirectoryName(downloadPath)!, Path.GetFileName(downloadPath) + "*.partial");
+        Directory.GetFiles(
+            Path.GetDirectoryName(downloadPath)!,
+            $"{Path.GetFileNameWithoutExtension(downloadPath)}.*.partial{Path.GetExtension(downloadPath)}"
+        );
 
     private sealed class CancelAfterFirstReadHandler(byte[] payload, CancellationTokenSource cancellation)
         : HttpMessageHandler
@@ -619,18 +622,21 @@ public sealed class DownloadOperationProgressTests
     }
 
     [Fact]
-    public async Task APartialFileLeftByAnInterruptedDownloadIsReplacedAndRemoved()
+    public async Task AnotherDownloadsStagingFileForTheSameDestinationIsLeftAlone()
     {
         byte[] payload = new byte[16 * 1024];
         new Random(127).NextBytes(payload);
+        byte[] othersBytes = new byte[8 * 1024];
+        new Random(149).NextBytes(othersBytes);
 
         IPackage package = CreatePackageWithHash(
             Convert.ToHexStringLower(SHA256.HashData(payload)),
             UniqueInstallerUrl()
         );
         var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
-        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-stale-partial-{Guid.NewGuid():N}.bin");
-        File.WriteAllBytes(downloadPath + ".partial", new byte[64 * 1024]);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-shared-target-{Guid.NewGuid():N}.bin");
+        string othersStaging = DownloadOperation.StagingPathFor(downloadPath, "0badc0de");
+        File.WriteAllBytes(othersStaging, othersBytes);
 
         try
         {
@@ -638,12 +644,106 @@ public sealed class DownloadOperationProgressTests
 
             Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
             Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Equal(othersBytes, File.ReadAllBytes(othersStaging));
+            Assert.Equal([othersStaging], PartialFilesOf(downloadPath));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+            File.Delete(othersStaging);
+        }
+    }
+
+    private sealed class ReloadDetailsDuringDownloadHandler(HttpMessageHandler inner, Action reload)
+        : DelegatingHandler(inner)
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            reload();
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task TheResultIsRecordedForTheInstallerThatWasActuallyChecked()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(163).NextBytes(payload);
+        Uri installerUrl = UniqueInstallerUrl();
+        string publishedHash = Convert.ToHexStringLower(SHA256.HashData(payload));
+        Uri reloadedUrl = UniqueInstallerUrl();
+        string reloadedHash = Convert.ToHexStringLower(SHA256.HashData([1, 2, 3]));
+
+        IPackage package = CreatePackageWithHash(publishedHash, installerUrl);
+        var handler = new ReloadDetailsDuringDownloadHandler(
+            new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null),
+            () =>
+            {
+                package.Details.InstallerUrl = reloadedUrl;
+                package.Details.InstallerHash = reloadedHash;
+            }
+        );
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-reloaded-{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(
+                InstallerHashStatus.Verified,
+                InstallerVerification.Find(installerUrl, publishedHash)?.HashStatus
+            );
+            Assert.Null(InstallerVerification.Find(reloadedUrl, reloadedHash));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public void TheStagingFileKeepsTheInstallersExtension()
+    {
+        string staging = DownloadOperation.StagingPathFor(Path.Join("C:", "dl", "setup.msix"), "1a2b3c4d");
+
+        Assert.Equal("setup.1a2b3c4d.partial.msix", Path.GetFileName(staging));
+    }
+
+    [Fact]
+    public async Task CancellingDuringTheSignatureCheckLeavesTheDestinationUntouched()
+    {
+        byte[] payload = new byte[16 * 1024];
+        new Random(151).NextBytes(payload);
+        byte[] existing = new byte[1024];
+        new Random(157).NextBytes(existing);
+
+        IPackage package = CreatePackageWithHash(null, UniqueInstallerUrl());
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-cancel-signature-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(downloadPath, existing);
+        using var cancellation = new CancellationTokenSource();
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler)
+            {
+                Signature = new SignatureCheck(0, "Example Corp"),
+                SignatureDelay = TimeSpan.FromSeconds(2),
+            };
+            operation.SetRunCancellationSourceForTests(cancellation);
+            cancellation.CancelAfter(TimeSpan.FromMilliseconds(200));
+
+            Assert.Equal(OperationVeredict.Canceled, await operation.InvokePerformOperationForTests());
+            Assert.Equal(existing, File.ReadAllBytes(downloadPath));
             Assert.Empty(PartialFilesOf(downloadPath));
         }
         finally
         {
             File.Delete(downloadPath);
-            File.Delete(downloadPath + ".partial");
         }
     }
 
@@ -723,7 +823,7 @@ public sealed class DownloadOperationProgressTests
 
             Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
             Assert.Equal(existing, File.ReadAllBytes(downloadPath));
-            Assert.Equal(payload, File.ReadAllBytes(downloadPath + ".partial"));
+            Assert.Equal(payload, File.ReadAllBytes(PartialFilesOf(downloadPath).Single()));
             Assert.Contains(
                 operation.GetOutput(),
                 line => line.Item1.Contains("does not match the SHA-512 hash")
@@ -742,7 +842,8 @@ public sealed class DownloadOperationProgressTests
         finally
         {
             File.Delete(downloadPath);
-            File.Delete(downloadPath + ".partial");
+            foreach (string staging in PartialFilesOf(downloadPath))
+                File.Delete(staging);
         }
     }
 
@@ -811,7 +912,7 @@ public sealed class DownloadOperationProgressTests
             using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
 
             Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
-            File.WriteAllBytes(downloadPath + ".partial", [1, 2, 3]);
+            File.WriteAllBytes(PartialFilesOf(downloadPath).Single(), [1, 2, 3]);
             operation.ApplyRetryActionForTests(AbstractOperation.RetryMode.Retry_SkipIntegrity);
 
             Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
@@ -821,7 +922,8 @@ public sealed class DownloadOperationProgressTests
         finally
         {
             File.Delete(downloadPath);
-            File.Delete(downloadPath + ".partial");
+            foreach (string staging in PartialFilesOf(downloadPath))
+                File.Delete(staging);
         }
     }
 

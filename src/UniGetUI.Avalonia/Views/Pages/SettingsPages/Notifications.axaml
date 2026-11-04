@@ -55,6 +55,7 @@
                 <settings:CheckboxCard x:Name="NotificationTypesCard"
                                        SettingName="DisableUpdatesNotifications"
                                        Text="{t:Translate Show a notification when there are available updates}"
+                                       StateChangedCommand="{Binding UpdateUpdatesNotificationsEnabledCommand}"
                                        CornerRadius="8,8,0,0"
                                        IsEnabled="{Binding IsNotificationsEnabled}"/>
 
@@ -77,6 +78,14 @@
                                        BorderThickness="1,0,1,1"
                                        CornerRadius="0,0,8,8"
                                        IsEnabled="{Binding IsNotificationsEnabled}"/>
+
+                <settings:CheckboxCard x:Name="PersistentUpdateNotificationsCard"
+                                       SettingName="PersistentUpdateNotifications"
+                                       Text="{t:Translate Keep update notifications on screen until they are dismissed}"
+                                       Margin="0,8,0,0"
+                                       CornerRadius="8"
+                                       IsVisible="{Binding IsPersistentNotificationsSupported}"
+                                       IsEnabled="{Binding IsPersistentUpdateNotificationsEnabled}"/>
             </StackPanel>
 
         </StackPanel>

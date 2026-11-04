@@ -107,6 +107,8 @@ internal static partial class AvaloniaAutoUpdater
     {
         var info = new UpdateStatusInfo("", "", InfoBarSeverity.Informational, IsClosable: true, IsOpen: false);
         Dispatcher.UIThread.Post(() => StatusChanged?.Invoke(info));
+        if (OperatingSystem.IsWindows())
+            WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
     }
 
     // ------------------------------------------------------------------ per-attempt log
@@ -992,6 +994,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         LogUpdateInfo($"Launching installer: {installerLocation}");
+        WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
         using Process p = new()
         {
             StartInfo = new ProcessStartInfo

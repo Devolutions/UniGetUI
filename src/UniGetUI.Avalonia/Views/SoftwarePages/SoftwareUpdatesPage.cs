@@ -54,6 +54,14 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     })
     {
         ViewModel.PackagesLoaded += reason => { _ = WhenPackagesLoaded(); };
+        if (UpgradablePackagesLoader.Instance is { } upgradableLoader)
+        {
+            upgradableLoader.PackagesChanged += (_, _) =>
+            {
+                if (OperatingSystem.IsWindows() && !upgradableLoader.Any())
+                    WindowsAppNotificationBridge.RemoveUpdatesAvailableNotification();
+            };
+        }
     }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)

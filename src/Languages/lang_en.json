@@ -973,6 +973,7 @@
   "Show a silent notification when an operation is running": "Show a silent notification when an operation is running",
   "Show a notification when an operation fails": "Show a notification when an operation fails",
   "Show a notification when an operation finishes successfully": "Show a notification when an operation finishes successfully",
+  "Keep update notifications on screen until they are dismissed": "Keep update notifications on screen until they are dismissed",
   "Concurrency and execution": "Concurrency and execution",
   "Choose how many operations should be performed in parallel": "Choose how many operations should be performed in parallel",
   "Clear successful operations from the operation list after a 5 second delay": "Clear successful operations from the operation list after a 5 second delay",

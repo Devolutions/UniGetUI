@@ -73,6 +73,7 @@ public static class SettingsSearchIndex
         new("Show a silent notification when an operation is running", ["progress notification", "silent notification"], typeof(Notifications), "ProgressNotificationCard"),
         new("Show a notification when an operation fails", ["error notification", "failure notification"], typeof(Notifications), "ErrorNotificationCard"),
         new("Show a notification when an operation finishes successfully", ["success notification"], typeof(Notifications), "SuccessNotificationCard"),
+        new("Keep update notifications on screen until they are dismissed", ["persistent notification", "reminder", "dismiss"], typeof(Notifications), "PersistentUpdateNotificationsCard", WindowsOnly: true),
         new("Notification preferences", ["notifications"], typeof(Notifications), null),
 
         // ── Updates ──────────────────────────────────────────────────────────

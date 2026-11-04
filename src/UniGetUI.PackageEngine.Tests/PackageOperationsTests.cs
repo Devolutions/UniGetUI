@@ -19,6 +19,7 @@ using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
+using UniGetUI.PackageEngine.Tests.Infrastructure;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageOperations;
@@ -600,6 +601,66 @@ public sealed class PackageOperationsTests
         Assert.Equal(OperationStatus.Succeeded, second.Status);
         Assert.True(firstFinishedWhenSecondStarted);
         Assert.True(secondWaited());
+    }
+
+    [WindowsFact]
+    public async Task AnOperationWaitingOnTheManagerGateSeesVariablesPersistedWhileItWaited()
+    {
+        string name = "UNIGETUI_GATE_ENVIRONMENT_TEST_" + Guid.NewGuid().ToString("N");
+        Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.User);
+        Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.Process);
+        try
+        {
+            var manager = new PackageManagerBuilder()
+                .WithName($"GateManager{Guid.NewGuid():N}")
+                .ConfigureCapabilities(capabilities =>
+                {
+                    capabilities.SerializesOperations = true;
+                    return capabilities;
+                })
+                .ConfigureManager(fake =>
+                {
+                    fake.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                    fake.ExecutableArguments = "/c";
+                })
+                .ConfigureOperation(helper =>
+                {
+                    helper.ParametersFactory = (package, _, _) =>
+                        package.Id == "first"
+                            ? ["ping", "-n", "3", "127.0.0.1", ">nul", "&", "setx", name, "fromfirst"]
+                            : ["echo", $"value=%{name}%"];
+                    helper.ResultFactory = (_, _, _, _) => OperationVeredict.Success;
+                })
+                .Build();
+            InitializeLoaders();
+            PersistedEnvironment.TEST_ResetBaseline();
+            using var first = new InstallPackageOperation(
+                new PackageBuilder().WithManager(manager).WithId("first").Build(),
+                new InstallOptions(),
+                IgnoreParallelInstalls: true
+            );
+            using var second = new InstallPackageOperation(
+                new PackageBuilder().WithManager(manager).WithId("second").Build(),
+                new InstallOptions(),
+                IgnoreParallelInstalls: true
+            );
+            var secondWaited = ReportsWaitingOnTheGate(second);
+
+            Task firstRun = first.MainThread();
+            await WaitForConditionAsync(() => HasLine(first, "Start Time"));
+            Task secondRun = second.MainThread();
+            await Task.WhenAll(firstRun, secondRun).WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.True(secondWaited());
+            Assert.Equal(OperationStatus.Succeeded, second.Status);
+            Assert.True(HasLine(second, "value=fromfirst"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.User);
+            Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.Process);
+            PersistedEnvironment.TEST_ResetBaseline();
+        }
     }
 
     [Fact]

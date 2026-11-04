@@ -89,6 +89,18 @@ public abstract class AbstractProcessOperation : AbstractOperation
     protected static IReadOnlyList<string> ElevatorArgumentPrefix() =>
         CoreData.ElevatorArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
+    protected void RefreshProcessEnvironment()
+    {
+        foreach (string name in RefreshPersistedEnvironment())
+        {
+            string? value = Environment.GetEnvironmentVariable(name);
+            if (value is null)
+                process.StartInfo.Environment.Remove(name);
+            else
+                process.StartInfo.Environment[name] = value;
+        }
+    }
+
     protected void RedirectWinGetTempFolder()
     {
         AppPaths.RedirectTempToElevatedDirectory(process.StartInfo);

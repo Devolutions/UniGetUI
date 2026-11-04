@@ -101,6 +101,7 @@ public static class PersistedEnvironment
     )
     {
         var accepted = new Dictionary<string, PersistedValue?>(StringComparer.OrdinalIgnoreCase);
+        var dependents = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         names.UnionWith(before.Machine.Keys);
         names.UnionWith(before.User.Keys);
@@ -112,11 +113,13 @@ public static class PersistedEnvironment
         {
             PersistedValue? oldValue = Effective(before, name);
             PersistedValue? newValue = Effective(after, name);
-            if (oldValue == newValue)
+            if (!SameValue(currentProcessValue(name), Resolve(oldValue, currentProcessValue)))
                 continue;
 
-            if (SameValue(currentProcessValue(name), Resolve(oldValue, currentProcessValue)))
+            if (oldValue != newValue)
                 accepted[name] = newValue;
+            else if (newValue is { Expandable: true } expandable)
+                dependents[name] = expandable.Raw;
         }
 
         var changes = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -142,8 +145,24 @@ public static class PersistedEnvironment
                 }
             }
 
+            foreach (var (name, raw) in dependents)
+            {
+                string resolved = Expand(raw, Staged);
+                if (!SameValue(Staged(name), resolved))
+                {
+                    changes[name] = resolved;
+                    stable = false;
+                }
+            }
+
             if (stable)
                 break;
+        }
+
+        foreach (string name in dependents.Keys)
+        {
+            if (changes.TryGetValue(name, out string? value) && SameValue(value, currentProcessValue(name)))
+                changes.Remove(name);
         }
 
         string? path = ComputePath(before, after, currentProcessValue, Staged);
@@ -165,23 +184,28 @@ public static class PersistedEnvironment
         if (oldEntries.SequenceEqual(newEntries, PathEntryComparer.Instance))
             return null;
 
-        var registryOwned = oldEntries
-            .Concat(newEntries)
+        var registryOwned = oldEntries.ToHashSet(PathEntryComparer.Instance);
+        List<string> processEntries = [.. Split(originalLookup(PathVariable))];
+        var runtimeEntries = processEntries
+            .Where(entry => !registryOwned.Contains(entry))
             .ToHashSet(PathEntryComparer.Instance);
         var emitted = new HashSet<string>(PathEntryComparer.Instance);
         var result = new List<string>();
         int next = 0;
 
-        foreach (string entry in Split(originalLookup(PathVariable)))
+        foreach (string entry in processEntries)
         {
-            if (!registryOwned.Contains(entry))
+            if (runtimeEntries.Contains(entry))
             {
                 if (emitted.Add(entry))
                     result.Add(entry);
                 continue;
             }
 
-            while (next < newEntries.Count && emitted.Contains(newEntries[next]))
+            while (
+                next < newEntries.Count
+                && (emitted.Contains(newEntries[next]) || runtimeEntries.Contains(newEntries[next]))
+            )
                 next++;
             if (next == newEntries.Count)
                 continue;
@@ -197,7 +221,7 @@ public static class PersistedEnvironment
                 result.Add(entry);
         }
 
-        return string.Join(';', result);
+        return result.SequenceEqual(processEntries, StringComparer.Ordinal) ? null : string.Join(';', result);
     }
 
     private static List<string> PathEntries(Snapshot snapshot, Func<string, string?> lookup) =>

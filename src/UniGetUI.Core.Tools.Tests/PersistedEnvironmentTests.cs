@@ -208,6 +208,69 @@ public class PersistedEnvironmentTests
     }
 
     [Fact]
+    public void AnUnchangedValueFollowsAnUpdatedReferenceAcrossRefreshes()
+    {
+        var first = Snapshot(
+            user: new() { ["CARGO_HOME"] = Text(@"C:\old"), ["RUSTUP_HOME"] = Expandable(@"%CARGO_HOME%\rustup") }
+        );
+        var second = Snapshot(
+            user: new() { ["CARGO_HOME"] = Text(@"C:\new"), ["RUSTUP_HOME"] = Expandable(@"%CARGO_HOME%\rustup") }
+        );
+        var third = Snapshot(user: new() { ["CARGO_HOME"] = Text(@"C:\new"), ["RUSTUP_HOME"] = Text(@"D:\rustup") });
+        var process = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["CARGO_HOME"] = @"C:\old",
+            ["RUSTUP_HOME"] = @"C:\old\rustup",
+        };
+
+        var changes = Changes(first, second, null, process);
+        Assert.Equal(@"C:\new", changes["CARGO_HOME"]);
+        Assert.Equal(@"C:\new\rustup", changes["RUSTUP_HOME"]);
+
+        foreach (var (name, value) in changes)
+            process[name] = value!;
+
+        Assert.Equal(@"D:\rustup", Assert.Single(Changes(second, third, null, process)).Value);
+    }
+
+    [Fact]
+    public void AnUnchangedValueTheProcessOverrodeIsNotRecomputed()
+    {
+        var changes = Changes(
+            Snapshot(user: new() { ["CARGO_HOME"] = Text(@"C:\old"), ["RUSTUP_HOME"] = Expandable(@"%CARGO_HOME%\rustup") }),
+            Snapshot(user: new() { ["CARGO_HOME"] = Text(@"C:\new"), ["RUSTUP_HOME"] = Expandable(@"%CARGO_HOME%\rustup") }),
+            null,
+            new() { ["CARGO_HOME"] = @"C:\old", ["RUSTUP_HOME"] = @"D:\from-launcher" }
+        );
+
+        Assert.Equal(@"C:\new", Assert.Single(changes).Value);
+    }
+
+    [Fact]
+    public void ARuntimePathEntryPersistedLaterKeepsItsSlot()
+    {
+        var changes = Changes(
+            Snapshot(new() { ["Path"] = Text(@"C:\Windows") }),
+            Snapshot(new() { ["Path"] = Text(@"C:\Windows;C:\Bundled") }),
+            @"C:\Bundled;C:\Windows"
+        );
+
+        Assert.Empty(changes);
+    }
+
+    [Fact]
+    public void ARuntimePathEntryPersistedWithOthersKeepsItsSlot()
+    {
+        var changes = Changes(
+            Snapshot(new() { ["Path"] = Text(@"C:\Windows") }),
+            Snapshot(new() { ["Path"] = Text(@"C:\cargo\bin;C:\Windows;C:\Bundled") }),
+            @"C:\Bundled;C:\Windows"
+        );
+
+        Assert.Equal(@"C:\Bundled;C:\cargo\bin;C:\Windows", Assert.Single(changes).Value);
+    }
+
+    [Fact]
     public void AReorderedPathIsAppliedAroundRuntimeEntries()
     {
         var changes = Changes(
@@ -285,7 +348,7 @@ public class PersistedEnvironmentTests
             @"C:\Windows;c:\cargo\bin"
         );
 
-        Assert.Equal(@"C:\Windows;c:\cargo\bin", Assert.Single(changes).Value);
+        Assert.Empty(changes);
     }
 
     [Fact]

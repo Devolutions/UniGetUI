@@ -383,6 +383,7 @@ namespace UniGetUI.PackageEngine.Operations
 
                 try
                 {
+                    RefreshProcessEnvironment();
                     return await PerformLocalOperation();
                 }
                 finally

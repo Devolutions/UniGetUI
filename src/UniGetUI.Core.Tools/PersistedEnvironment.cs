@@ -1,4 +1,5 @@
 using System.Runtime.Versioning;
+using System.Text;
 using Microsoft.Win32;
 using UniGetUI.Core.Logging;
 
@@ -24,6 +25,7 @@ public static class PersistedEnvironment
     }
 
     private const string PathVariable = "Path";
+    private const int MaxExpansionPasses = 8;
     private const string MachineEnvironmentKey =
         @"System\CurrentControlSet\Control\Session Manager\Environment";
     private const string UserEnvironmentKey = "Environment";
@@ -55,8 +57,7 @@ public static class PersistedEnvironment
             var changes = ComputeChanges(
                 _baseline,
                 current,
-                name => Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process),
-                Environment.ExpandEnvironmentVariables
+                name => Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process)
             );
             foreach (var (name, value) in changes)
                 Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.Process);
@@ -96,35 +97,58 @@ public static class PersistedEnvironment
     internal static IReadOnlyDictionary<string, string?> ComputeChanges(
         Snapshot before,
         Snapshot after,
-        Func<string, string?> currentProcessValue,
-        Func<string, string> expand
+        Func<string, string?> currentProcessValue
     )
     {
-        var changes = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var accepted = new Dictionary<string, PersistedValue?>(StringComparer.OrdinalIgnoreCase);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         names.UnionWith(before.Machine.Keys);
         names.UnionWith(before.User.Keys);
         names.UnionWith(after.Machine.Keys);
         names.UnionWith(after.User.Keys);
+        names.RemoveWhere(name => name.Equals(PathVariable, StringComparison.OrdinalIgnoreCase));
 
         foreach (string name in names)
         {
-            if (name.Equals(PathVariable, StringComparison.OrdinalIgnoreCase))
-            {
-                string? path = ComputePath(before, after, currentProcessValue(name), expand);
-                if (path is not null)
-                    changes[name] = path;
-                continue;
-            }
-
             PersistedValue? oldValue = Effective(before, name);
             PersistedValue? newValue = Effective(after, name);
             if (oldValue == newValue)
                 continue;
 
-            if (SameValue(currentProcessValue(name), Resolve(oldValue, expand)))
-                changes[name] = Resolve(newValue, expand);
+            if (SameValue(currentProcessValue(name), Resolve(oldValue, currentProcessValue)))
+                accepted[name] = newValue;
         }
+
+        var changes = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, value) in accepted)
+            changes[name] = value is { Expandable: false } text ? text.Raw : null;
+
+        string? Staged(string name) =>
+            changes.TryGetValue(name, out string? value) ? value : currentProcessValue(name);
+
+        for (int pass = 0; pass < MaxExpansionPasses; pass++)
+        {
+            bool stable = true;
+            foreach (var (name, value) in accepted)
+            {
+                if (value is not { Expandable: true } expandable)
+                    continue;
+
+                string resolved = Expand(expandable.Raw, Staged);
+                if (!string.Equals(changes[name], resolved, StringComparison.Ordinal))
+                {
+                    changes[name] = resolved;
+                    stable = false;
+                }
+            }
+
+            if (stable)
+                break;
+        }
+
+        string? path = ComputePath(before, after, currentProcessValue, Staged);
+        if (path is not null)
+            changes[PathVariable] = path;
 
         return changes;
     }
@@ -132,50 +156,56 @@ public static class PersistedEnvironment
     private static string? ComputePath(
         Snapshot before,
         Snapshot after,
-        string? current,
-        Func<string, string> expand
+        Func<string, string?> originalLookup,
+        Func<string, string?> stagedLookup
     )
     {
-        List<string> oldEntries = [.. PathEntries(before, expand)];
-        List<string> newEntries = [.. PathEntries(after, expand)];
-        var removed = oldEntries
-            .Except(newEntries, PathEntryComparer.Instance)
-            .ToHashSet(PathEntryComparer.Instance);
-        var added = newEntries.Except(oldEntries, PathEntryComparer.Instance).ToHashSet(
-            PathEntryComparer.Instance
-        );
-        if (removed.Count == 0 && added.Count == 0)
+        List<string> oldEntries = PathEntries(before, originalLookup);
+        List<string> newEntries = PathEntries(after, stagedLookup);
+        if (oldEntries.SequenceEqual(newEntries, PathEntryComparer.Instance))
             return null;
 
-        List<string> result = [.. Split(current).Where(entry => !removed.Contains(entry))];
-        for (int i = 0; i < newEntries.Count; i++)
-        {
-            string entry = newEntries[i];
-            if (!added.Contains(entry) || result.Contains(entry, PathEntryComparer.Instance))
-                continue;
+        var registryOwned = oldEntries
+            .Concat(newEntries)
+            .ToHashSet(PathEntryComparer.Instance);
+        var emitted = new HashSet<string>(PathEntryComparer.Instance);
+        var result = new List<string>();
+        int next = 0;
 
-            int insertAt = result.Count;
-            for (int j = i + 1; j < newEntries.Count; j++)
+        foreach (string entry in Split(originalLookup(PathVariable)))
+        {
+            if (!registryOwned.Contains(entry))
             {
-                int position = result.FindIndex(existing =>
-                    PathEntryComparer.Instance.Equals(existing, newEntries[j])
-                );
-                if (position >= 0)
-                {
-                    insertAt = position;
-                    break;
-                }
+                if (emitted.Add(entry))
+                    result.Add(entry);
+                continue;
             }
 
-            result.Insert(insertAt, entry);
+            while (next < newEntries.Count && emitted.Contains(newEntries[next]))
+                next++;
+            if (next == newEntries.Count)
+                continue;
+
+            string slot = newEntries[next++];
+            emitted.Add(slot);
+            result.Add(PathEntryComparer.Instance.Equals(slot, entry) ? entry : slot);
+        }
+
+        foreach (string entry in newEntries)
+        {
+            if (emitted.Add(entry))
+                result.Add(entry);
         }
 
         return string.Join(';', result);
     }
 
-    private static IEnumerable<string> PathEntries(Snapshot snapshot, Func<string, string> expand) =>
-        Split(Resolve(Lookup(snapshot.Machine, PathVariable), expand))
-            .Concat(Split(Resolve(Lookup(snapshot.User, PathVariable), expand)));
+    private static List<string> PathEntries(Snapshot snapshot, Func<string, string?> lookup) =>
+        [
+            .. Split(Resolve(Lookup(snapshot.Machine, PathVariable), lookup))
+                .Concat(Split(Resolve(Lookup(snapshot.User, PathVariable), lookup)))
+                .Distinct(PathEntryComparer.Instance),
+        ];
 
     private static PersistedValue? Lookup(
         IReadOnlyDictionary<string, PersistedValue> values,
@@ -185,10 +215,41 @@ public static class PersistedEnvironment
     private static IEnumerable<string> Split(string? value) =>
         (value ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    private static string? Resolve(PersistedValue? value, Func<string, string> expand) =>
+    private static string? Resolve(PersistedValue? value, Func<string, string?> lookup) =>
         value is not { } persisted ? null
-        : persisted.Expandable ? expand(persisted.Raw)
+        : persisted.Expandable ? Expand(persisted.Raw, lookup)
         : persisted.Raw;
+
+    internal static string Expand(string raw, Func<string, string?> lookup)
+    {
+        var result = new StringBuilder(raw.Length);
+        int position = 0;
+        while (position < raw.Length)
+        {
+            int open = raw.IndexOf('%', position);
+            int close = open < 0 ? -1 : raw.IndexOf('%', open + 1);
+            if (close < 0)
+            {
+                result.Append(raw, position, raw.Length - position);
+                break;
+            }
+
+            result.Append(raw, position, open - position);
+            string? value = close > open + 1 ? lookup(raw[(open + 1)..close]) : null;
+            if (value is null)
+            {
+                result.Append(raw, open, close - open);
+                position = close;
+            }
+            else
+            {
+                result.Append(value);
+                position = close + 1;
+            }
+        }
+
+        return result.ToString();
+    }
 
     private static bool SameValue(string? first, string? second) =>
         string.Equals(

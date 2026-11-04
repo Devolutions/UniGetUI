@@ -17,8 +17,16 @@ public class PersistedEnvironmentTests
         PersistedEnvironment.Snapshot before,
         PersistedEnvironment.Snapshot after,
         string? processValue,
-        Func<string, string>? expand = null
-    ) => PersistedEnvironment.ComputeChanges(before, after, _ => processValue, expand ?? (value => value));
+        Dictionary<string, string>? process = null
+    )
+    {
+        var environment = new Dictionary<string, string>(process ?? [], StringComparer.OrdinalIgnoreCase);
+        return PersistedEnvironment.ComputeChanges(
+            before,
+            after,
+            name => environment.TryGetValue(name, out string? value) ? value : processValue
+        );
+    }
 
     [Fact]
     public void ReportsNothingWhenTheEnvironmentIsUnchanged()
@@ -98,7 +106,12 @@ public class PersistedEnvironmentTests
         var before = Snapshot(user: new() { ["CARGO_HOME"] = Expandable(@"%USERPROFILE%\.cargo") });
         var after = Snapshot(user: new() { ["CARGO_HOME"] = Expandable(@"%USERPROFILE%\cargo") });
 
-        var changes = Changes(before, after, @"C:\Users\me\.cargo", value => value.Replace("%USERPROFILE%", @"C:\Users\me"));
+        var changes = Changes(
+            before,
+            after,
+            null,
+            new() { ["CARGO_HOME"] = @"C:\Users\me\.cargo", ["USERPROFILE"] = @"C:\Users\me" }
+        );
 
         Assert.Equal(@"C:\Users\me\cargo", Assert.Single(changes).Value);
     }
@@ -111,11 +124,113 @@ public class PersistedEnvironmentTests
         var changes = Changes(
             snapshot,
             Snapshot(new() { ["Path"] = Expandable(@"C:\Windows;%ChocolateyInstall%\bin") }),
-            @"C:\Windows;C:\ProgramData\chocolatey\bin",
-            value => value.Replace("%ChocolateyInstall%", @"C:\Tools\chocolatey")
+            null,
+            new() { ["Path"] = @"C:\Windows;C:\ProgramData\chocolatey\bin", ["ChocolateyInstall"] = @"C:\Tools\chocolatey" }
         );
 
         Assert.Empty(changes);
+    }
+
+    [Fact]
+    public void AValueReferencingAnUpdatedVariableResolvesToItsNewValue()
+    {
+        var changes = Changes(
+            Snapshot(user: new() { ["CARGO_HOME"] = Text(@"C:\old") }),
+            Snapshot(user: new() { ["CARGO_HOME"] = Text(@"C:\new"), ["RUSTUP_HOME"] = Expandable(@"%CARGO_HOME%\rustup") }),
+            null,
+            new() { ["CARGO_HOME"] = @"C:\old" }
+        );
+
+        Assert.Equal(@"C:\new", changes["CARGO_HOME"]);
+        Assert.Equal(@"C:\new\rustup", changes["RUSTUP_HOME"]);
+    }
+
+    [Fact]
+    public void ChainedReferencesResolveToTheirNewValues()
+    {
+        var changes = Changes(
+            Snapshot(user: new() { ["ROOT"] = Text(@"C:\old") }),
+            Snapshot(
+                user: new()
+                {
+                    ["OUTER"] = Expandable(@"%INNER%\outer"),
+                    ["INNER"] = Expandable(@"%ROOT%\inner"),
+                    ["ROOT"] = Text(@"C:\new"),
+                }
+            ),
+            null,
+            new() { ["ROOT"] = @"C:\old" }
+        );
+
+        Assert.Equal(@"C:\new\inner\outer", changes["OUTER"]);
+    }
+
+    [Fact]
+    public void AReferenceTheProcessKeptResolvesToTheProcessValue()
+    {
+        var changes = Changes(
+            Snapshot(user: new() { ["CARGO_HOME"] = Text(@"C:\old") }),
+            Snapshot(user: new() { ["CARGO_HOME"] = Text(@"C:\new"), ["RUSTUP_HOME"] = Expandable(@"%CARGO_HOME%\rustup") }),
+            null,
+            new() { ["CARGO_HOME"] = @"D:\from-launcher" }
+        );
+
+        Assert.Equal(@"D:\from-launcher\rustup", Assert.Single(changes).Value);
+    }
+
+    [Fact]
+    public void APathEntryReferencingAnUpdatedVariableResolvesToItsNewValue()
+    {
+        var changes = Changes(
+            Snapshot(new() { ["Path"] = Text(@"C:\Windows") }, new() { ["CARGO_HOME"] = Text(@"C:\old") }),
+            Snapshot(
+                new() { ["Path"] = Text(@"C:\Windows") },
+                new() { ["CARGO_HOME"] = Text(@"C:\new"), ["Path"] = Expandable(@"%CARGO_HOME%\bin") }
+            ),
+            null,
+            new() { ["CARGO_HOME"] = @"C:\old", ["Path"] = @"C:\Windows" }
+        );
+
+        Assert.Equal(@"C:\Windows;C:\new\bin", changes["Path"]);
+    }
+
+    [Fact]
+    public void APathEntryWhoseReferenceChangesIsReplaced()
+    {
+        var changes = Changes(
+            Snapshot(new() { ["Path"] = Expandable(@"C:\Windows;%CARGO_HOME%\bin") }, new() { ["CARGO_HOME"] = Text(@"C:\old") }),
+            Snapshot(new() { ["Path"] = Expandable(@"C:\Windows;%CARGO_HOME%\bin") }, new() { ["CARGO_HOME"] = Text(@"C:\new") }),
+            null,
+            new() { ["CARGO_HOME"] = @"C:\old", ["Path"] = @"C:\Bundled;C:\Windows;C:\old\bin" }
+        );
+
+        Assert.Equal(@"C:\Bundled;C:\Windows;C:\new\bin", changes["Path"]);
+    }
+
+    [Fact]
+    public void AReorderedPathIsAppliedAroundRuntimeEntries()
+    {
+        var changes = Changes(
+            Snapshot(user: new() { ["Path"] = Text(@"C:\old-cargo\bin;C:\cargo\bin") }),
+            Snapshot(user: new() { ["Path"] = Text(@"C:\cargo\bin;C:\old-cargo\bin") }),
+            @"C:\Bundled;C:\old-cargo\bin;C:\Tools;C:\cargo\bin"
+        );
+
+        Assert.Equal(@"C:\Bundled;C:\cargo\bin;C:\Tools;C:\old-cargo\bin", Assert.Single(changes).Value);
+    }
+
+    [Theory]
+    [InlineData(@"%HOME%\bin", @"C:\me\bin")]
+    [InlineData(@"%home%;%MISSING%;%HOME%", @"C:\me;%MISSING%;C:\me")]
+    [InlineData("100% done", "100% done")]
+    [InlineData("%%HOME%", @"%C:\me")]
+    [InlineData("%MISSING%HOME%", @"%MISSINGC:\me")]
+    [InlineData("", "")]
+    public void ExpandSubstitutesKnownVariablesAndKeepsUnknownOnes(string raw, string expected)
+    {
+        var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["HOME"] = @"C:\me" };
+
+        Assert.Equal(expected, PersistedEnvironment.Expand(raw, name => environment.GetValueOrDefault(name)));
     }
 
     [Fact]

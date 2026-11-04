@@ -63,6 +63,7 @@
 
     <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+        <Compile Include="..\UniGetUI.Core.Tools.Tests\PlatformFacts.cs" Link="PlatformFacts.cs" />
         <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyReplacementExecutor.cs"
                  Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
                  Link="PolicyWriteElevation\PolicyReplacementExecutor.cs" />

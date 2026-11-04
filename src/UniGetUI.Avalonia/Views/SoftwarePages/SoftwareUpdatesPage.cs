@@ -489,7 +489,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             if (upgradable.Count == 0)
             {
                 if (OperatingSystem.IsWindows()
-                    && UpgradablePackagesLoader.Instance is { IsLoaded: true, LastLoadReportedFailures: false })
+                    && UpgradablePackagesLoader.Instance is { IsLoaded: true, LastLoadReportedFailures: false, AnyManagerReady: true })
                     WindowsAppNotificationBridge.RemoveUpdatesAvailableNotification();
                 return;
             }

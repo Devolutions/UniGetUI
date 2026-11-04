@@ -996,7 +996,6 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         LogUpdateInfo($"Launching installer: {installerLocation}");
-        WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
         using Process p = new()
         {
             StartInfo = new ProcessStartInfo
@@ -1043,6 +1042,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         LogUpdateInfo($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
+        WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
         InstallerHandoffs.Complete(handoff);
 
         RaiseStatus(

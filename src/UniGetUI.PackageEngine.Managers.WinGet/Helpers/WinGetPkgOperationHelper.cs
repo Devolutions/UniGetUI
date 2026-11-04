@@ -241,7 +241,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             }
         }
 
-        ApplyElevationRequirements(package, options, operation, portableEntry);
+        ApplyInstallerElevationRequirements(package, options, operation);
+        if (!standalone)
+            ApplyPortableLinkElevation(package, operation, portableEntry);
 
         if (!usePinget)
         {
@@ -285,25 +287,16 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         IPackage package,
         InstallOptions options,
         OperationType operation
-    ) =>
-        ApplyElevationRequirements(
+    )
+    {
+        ApplyInstallerElevationRequirements(package, options, operation);
+        ApplyPortableLinkElevation(
             package,
-            options,
             operation,
             operation is OperationType.Uninstall || OperationIsBrokered(package)
                 ? null
                 : ReadPortableArpEntry(package)
         );
-
-    private static void ApplyElevationRequirements(
-        IPackage package,
-        InstallOptions options,
-        OperationType operation,
-        PortableArpEntry? portableEntry
-    )
-    {
-        ApplyInstallerElevationRequirements(package, options, operation);
-        ApplyPortableLinkElevation(package, operation, portableEntry);
     }
 
     internal static void ApplyPortableLinkElevation(

@@ -3384,6 +3384,36 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Theory]
+    [InlineData(OperationType.Update, false, true)]
+    [InlineData(OperationType.Update, true, null)]
+    [InlineData(OperationType.Install, false, true)]
+    [InlineData(OperationType.Install, true, null)]
+    public void WinGetCommandPreviewsDoNotDecidePortableLinkElevation(
+        OperationType operation,
+        bool standalone,
+        bool? expected
+    )
+    {
+        var manager = new WinGet();
+        var package = CreatePortablePackage(manager);
+        var options = new InstallOptions();
+
+        WithPortableLinkSeams(
+            canElevate: true,
+            canCreateSymlinks: false,
+            () =>
+            {
+                if (standalone)
+                    manager.OperationHelper.GetStandaloneParameters(package, options, operation);
+                else
+                    manager.OperationHelper.GetParameters(package, options, operation);
+            }
+        );
+
+        Assert.Equal(expected, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void WinGetPortableLinkElevationNeverOverridesAnEarlierDecision(bool earlierDecision)

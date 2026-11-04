@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "ಪ್ಯಾಕೇಜ್ ವಿವರಗಳನ್ನು ಇಲ್ಲಿ ತೋರಿಸಲು ವಿಂಡೋವನ್ನು ಇನ್ನಷ್ಟು ಅಗಲಗೊಳಿಸಿ",
   "Details panel": "ವಿವರಗಳ ಫಲಕ",
   "Show details panel": "ವಿವರಗಳ ಫಲಕವನ್ನು ತೋರಿಸಿ",
-  "Hide details panel": "ವಿವರಗಳ ಫಲಕವನ್ನು ಮರೆಮಾಡಿ"
+  "Hide details panel": "ವಿವರಗಳ ಫಲಕವನ್ನು ಮರೆಮಾಡಿ",
+  "Fit columns to the window": "ವಿಂಡೋಗೆ ಹೊಂದುವಂತೆ ಕಾಲಮ್‌ಗಳನ್ನು ಹೊಂದಿಸಿ",
+  "How to set up {0}": "{0} ಅನ್ನು ಹೇಗೆ ಹೊಂದಿಸುವುದು",
+  "Install it with this command:": "ಈ ಕಮಾಂಡ್ ಬಳಸಿ ಅದನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ:",
+  "Open in a terminal": "ಟರ್ಮಿನಲ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ"
 }

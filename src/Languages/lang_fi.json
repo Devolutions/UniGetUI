@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Levennä ikkunaa, jotta paketin tiedot näkyvät tässä",
   "Details panel": "Tietopaneeli",
   "Show details panel": "Näytä tietopaneeli",
-  "Hide details panel": "Piilota tietopaneeli"
+  "Hide details panel": "Piilota tietopaneeli",
+  "Fit columns to the window": "Sovita sarakkeet ikkunaan",
+  "How to set up {0}": "Näin määrität kohteen {0}",
+  "Install it with this command:": "Asenna se tällä komennolla:",
+  "Open in a terminal": "Avaa päätteessä"
 }

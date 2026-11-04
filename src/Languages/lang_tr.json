@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Paket ayrıntılarını burada göstermek için pencereyi genişletin",
   "Details panel": "Ayrıntılar paneli",
   "Show details panel": "Ayrıntılar panelini göster",
-  "Hide details panel": "Ayrıntılar panelini gizle"
+  "Hide details panel": "Ayrıntılar panelini gizle",
+  "Fit columns to the window": "Sütunları pencereye sığdır",
+  "How to set up {0}": "{0} nasıl kurulur",
+  "Install it with this command:": "Şu komutla yükleyin:",
+  "Open in a terminal": "Terminalde aç"
 }

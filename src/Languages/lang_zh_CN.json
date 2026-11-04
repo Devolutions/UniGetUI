@@ -2247,5 +2247,9 @@
   "Make the window wider to show package details here": "请加宽窗口以在此处显示软件包详细信息",
   "Details panel": "详细信息面板",
   "Show details panel": "显示详细信息面板",
-  "Hide details panel": "隐藏详细信息面板"
+  "Hide details panel": "隐藏详细信息面板",
+  "Fit columns to the window": "调整列宽以适应窗口",
+  "How to set up {0}": "如何设置 {0}",
+  "Install it with this command:": "使用以下命令安装：",
+  "Open in a terminal": "在终端中打开"
 }

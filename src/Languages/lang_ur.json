@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "پیکیج کی تفصیلات یہاں دیکھنے کے لیے ونڈو کو چوڑا کریں",
   "Details panel": "تفصیلات کا پینل",
   "Show details panel": "تفصیلات کا پینل دکھائیں",
-  "Hide details panel": "تفصیلات کا پینل چھپائیں"
+  "Hide details panel": "تفصیلات کا پینل چھپائیں",
+  "Fit columns to the window": "کالموں کو ونڈو کے مطابق فٹ کریں",
+  "How to set up {0}": "{0} کو کیسے سیٹ اپ کریں",
+  "Install it with this command:": "اسے اس کمانڈ کے ذریعے انسٹال کریں:",
+  "Open in a terminal": "ٹرمینل میں کھولیں"
 }

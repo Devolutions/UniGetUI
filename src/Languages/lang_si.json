@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "මෙහි පැකේජ විස්තර පෙන්වීමට කවුළුව පුළුල් කරන්න",
   "Details panel": "විස්තර පැනලය",
   "Show details panel": "විස්තර පැනලය පෙන්වන්න",
-  "Hide details panel": "විස්තර පැනලය සඟවන්න"
+  "Hide details panel": "විස්තර පැනලය සඟවන්න",
+  "Fit columns to the window": "කවුළුවට තීරු ගළපන්න",
+  "How to set up {0}": "{0} සකසන ආකාරය",
+  "Install it with this command:": "මෙම විධානයෙන් එය ස්ථාපනය කරන්න:",
+  "Open in a terminal": "ටර්මිනලයක විවෘත කරන්න"
 }

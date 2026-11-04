@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Zvětšete šířku okna, aby se zde zobrazily podrobnosti o balíčku",
   "Details panel": "Panel podrobností",
   "Show details panel": "Zobrazit panel podrobností",
-  "Hide details panel": "Skrýt panel podrobností"
+  "Hide details panel": "Skrýt panel podrobností",
+  "Fit columns to the window": "Přizpůsobit sloupce šířce okna",
+  "How to set up {0}": "Jak nastavit {0}",
+  "Install it with this command:": "Nainstalujte pomocí tohoto příkazu:",
+  "Open in a terminal": "Otevřít v terminálu"
 }

@@ -2216,5 +2216,9 @@
   "Make the window wider to show package details here": "Növelje az ablak szélességét a csomag részleteinek megjelenítéséhez",
   "Details panel": "Részletek panel",
   "Show details panel": "Részletek panel megjelenítése",
-  "Hide details panel": "Részletek panel elrejtése"
+  "Hide details panel": "Részletek panel elrejtése",
+  "Fit columns to the window": "Oszlopok igazítása az ablakhoz",
+  "How to set up {0}": "{0} beállítása",
+  "Install it with this command:": "Telepítse ezzel a paranccsal:",
+  "Open in a terminal": "Megnyitás terminálban"
 }

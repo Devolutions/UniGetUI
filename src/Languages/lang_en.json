@@ -2261,5 +2261,16 @@
   "WinGet is not available on this system": "WinGet is not available on this system",
   "Kill the processes of any search, package listing or maintenance command {0} is still running": "Kill the processes of any search, package listing or maintenance command {0} is still running",
   "{0} is still loading.": "{0} is still loading.",
-  "No package manager matches your search": "No package manager matches your search"
+  "No package manager matches your search": "No package manager matches your search",
+  "UniGetUI only manages the Python environments checked below. Virtual environments, conda environments and embedded Pythons usually belong to other apps, so they are not managed unless you check them.": "UniGetUI only manages the Python environments checked below. Virtual environments, conda environments and embedded Pythons usually belong to other apps, so they are not managed unless you check them.",
+  "No Python interpreters were found": "No Python interpreters were found",
+  "Python environments": "Python environments",
+  "Virtual environment": "Virtual environment",
+  "Conda environment": "Conda environment",
+  "Embedded Python": "Embedded Python",
+  "Microsoft Store alias": "Microsoft Store alias",
+  "System Python": "System Python",
+  "In use": "In use",
+  "Manage the Python environment at {0}": "Manage the Python environment at {0}",
+  "Unrecognized Python": "Unrecognized Python"
 }

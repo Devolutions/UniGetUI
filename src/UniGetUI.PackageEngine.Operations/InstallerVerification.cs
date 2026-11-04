@@ -23,7 +23,7 @@ public sealed record InstallerVerification(
     private static readonly ConcurrentQueue<string> _recordOrder = new();
 
     public static InstallerVerification? Find(Uri? installerUrl, string? installerHash) =>
-        installerUrl is not null && _results.TryGetValue(Key(installerUrl, installerHash), out var result)
+        installerUrl is { IsAbsoluteUri: true } && _results.TryGetValue(Key(installerUrl, installerHash), out var result)
             ? result
             : null;
 
@@ -44,6 +44,9 @@ public sealed record InstallerVerification(
 
     internal static void Record(Uri installerUrl, string? installerHash, InstallerVerification result)
     {
+        if (!installerUrl.IsAbsoluteUri)
+            return;
+
         string key = Key(installerUrl, installerHash);
         lock (_recordOrder)
         {

@@ -548,7 +548,7 @@ public sealed class DownloadOperationProgressTests
     private static string[] PartialFilesOf(string downloadPath) =>
         Directory.GetFiles(
             Path.GetDirectoryName(downloadPath)!,
-            $"{Path.GetFileNameWithoutExtension(downloadPath)}.*.partial{Path.GetExtension(downloadPath)}"
+            Path.GetFileName(DownloadOperation.StagingPathFor(downloadPath, "*"))
         );
 
     private sealed class CancelAfterFirstReadHandler(byte[] payload, CancellationTokenSource cancellation)
@@ -754,6 +754,112 @@ public sealed class DownloadOperationProgressTests
             foreach (string staging in PartialFilesOf(downloadPath))
                 File.Delete(staging);
         }
+    }
+
+    private sealed class EncodedResponseHandler(byte[] body, string contentEncoding) : HttpMessageHandler
+    {
+        public string? AcceptEncoding { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            AcceptEncoding = request.Headers.AcceptEncoding.ToString();
+            var content = new ByteArrayContent(body);
+            content.Headers.ContentEncoding.Add(contentEncoding);
+            content.Headers.ContentLength = body.Length;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        }
+    }
+
+    private static byte[] Gzip(byte[] data)
+    {
+        using var buffer = new MemoryStream();
+        using (var gzip = new System.IO.Compression.GZipStream(buffer, System.IO.Compression.CompressionLevel.Fastest))
+            gzip.Write(data);
+        return buffer.ToArray();
+    }
+
+    [Fact]
+    public async Task ATransferCompressedByTheServerIsDecodedBeforeItIsVerified()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(173).NextBytes(payload);
+        IPackage package = CreatePackageWithHash(
+            Convert.ToHexStringLower(SHA256.HashData(payload)),
+            UniqueInstallerUrl()
+        );
+        var handler = new EncodedResponseHandler(Gzip(payload), "gzip");
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-transport-gzip-{Guid.NewGuid():N}.exe");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal("identity", handler.AcceptEncoding);
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("the file was decoded"));
+            Assert.Empty(PartialFilesOf(downloadPath));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task AnArchiveServedWithAContentEncodingIsKeptWhenItsBytesMatch()
+    {
+        byte[] tar = new byte[64 * 1024];
+        new Random(179).NextBytes(tar);
+        byte[] archive = Gzip(tar);
+        IPackage package = CreatePackageWithHash(
+            Convert.ToHexStringLower(SHA256.HashData(archive)),
+            UniqueInstallerUrl()
+        );
+        var handler = new EncodedResponseHandler(archive, "gzip");
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-archive-{Guid.NewGuid():N}.tgz");
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(OperationVeredict.Success, await operation.InvokePerformOperationForTests());
+            Assert.Equal(archive, File.ReadAllBytes(downloadPath));
+            Assert.DoesNotContain(operation.GetOutput(), line => line.Item1.Contains("the file was decoded"));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task ARelativeInstallerAddressFailsCleanlyAndIsNeverLookedUp()
+    {
+        Uri relative = new("", UriKind.Relative);
+        IPackage package = CreatePackageWithHash(null, relative);
+        string downloadPath = Path.Join(Path.GetTempPath(), $"unigetui-relative-{Guid.NewGuid():N}.bin");
+
+        using var operation = new ProbeDownloadOperation(package, downloadPath, new UnreachableHandler());
+
+        Assert.Equal(OperationVeredict.Failure, await operation.InvokePerformOperationForTests());
+        Assert.Contains(operation.GetOutput(), line => line.Item1.Contains("is not a complete address"));
+        Assert.DoesNotContain(operation.GetOutput(), line => line.Item1.Contains("InvalidOperationException"));
+        Assert.Null(InstallerVerification.Find(relative, null));
+        Assert.False(File.Exists(downloadPath));
+    }
+
+    [Fact]
+    public void ALongDestinationNameGetsAShortStagingNameThatKeepsTheExtension()
+    {
+        string destination = Path.Join("C:", "dl", new string('a', 240) + ".exe");
+
+        string staging = Path.GetFileName(DownloadOperation.StagingPathFor(destination, "1a2b3c4d"));
+
+        Assert.Equal(new string('a', DownloadOperation.MaxStagingStemLength) + ".1a2b3c4d.partial.exe", staging);
     }
 
     [Fact]

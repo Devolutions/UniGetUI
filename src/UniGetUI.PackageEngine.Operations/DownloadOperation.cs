@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
@@ -55,11 +57,20 @@ public class DownloadOperation : AbstractOperation
     private string? _rejectedPublishedHash;
     private readonly string _stagingToken = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
 
-    internal static string StagingPathFor(string destination, string token) =>
-        Path.Join(
-            Path.GetDirectoryName(destination),
-            $"{Path.GetFileNameWithoutExtension(destination)}.{token}.partial{Path.GetExtension(destination)}"
-        );
+    internal const int MaxStagingStemLength = 32;
+    internal const int MaxStagingExtensionLength = 16;
+    private const long MaxTransportDecodingRatio = 64;
+
+    internal static string StagingPathFor(string destination, string token)
+    {
+        string stem = Path.GetFileNameWithoutExtension(destination);
+        string extension = Path.GetExtension(destination);
+        if (stem.Length > MaxStagingStemLength)
+            stem = stem[..MaxStagingStemLength];
+        if (extension.Length > MaxStagingExtensionLength)
+            extension = "";
+        return Path.Join(Path.GetDirectoryName(destination), $"{stem}.{token}.partial{extension}");
+    }
 
     protected override void ApplyRetryAction(string retryMode)
     {
@@ -213,6 +224,15 @@ public class DownloadOperation : AbstractOperation
                 return OperationVeredict.Failure;
             }
 
+            if (!downloadUrl.IsAbsoluteUri)
+            {
+                Line(
+                    $"The installer address \"{downloadUrl}\" published for this package is not a complete address",
+                    LineType.Error
+                );
+                return OperationVeredict.Failure;
+            }
+
             if (Directory.Exists(downloadLocation))
             {
                 string? fileName = await _package.GetInstallerFileName();
@@ -295,7 +315,23 @@ public class DownloadOperation : AbstractOperation
             if (actualHash is not null)
                 partialFileCreated = true;
             else
-                actualHash = await DownloadToAsync(downloadUrl, partialLocation, hashPublished ? expectedHash : null, () => partialFileCreated = true);
+            {
+                (actualHash, string? transportEncoding) = await DownloadToAsync(
+                    downloadUrl,
+                    partialLocation,
+                    hashPublished ? expectedHash : null,
+                    () => partialFileCreated = true
+                );
+                if (transportEncoding is not null && !(hashPublished && expectedHash.Matches(actualHash)))
+                {
+                    actualHash = await DecodeTransportEncodingAsync(
+                        partialLocation,
+                        StagingPathFor(downloadLocation, _stagingToken + "d"),
+                        transportEncoding,
+                        hashPublished ? expectedHash : null
+                    ) ?? actualHash;
+                }
+            }
 
             CancellationToken.ThrowIfCancellationRequested();
 
@@ -444,7 +480,7 @@ public class DownloadOperation : AbstractOperation
         _rejectedPublishedHash = null;
     }
 
-    private async Task<byte[]> DownloadToAsync(
+    private async Task<(byte[] Hash, string? TransportEncoding)> DownloadToAsync(
         Uri downloadUrl,
         string partialLocation,
         PublishedInstallerHash? expectedHash,
@@ -455,15 +491,21 @@ public class DownloadOperation : AbstractOperation
         if (File.Exists(partialLocation))
             File.Delete(partialLocation);
         using HttpClient? httpClient = downloadUrl.IsFile ? null : CreateHttpClient();
+        using HttpRequestMessage? request = httpClient is null ? null : new(HttpMethod.Get, downloadUrl);
+        request?.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("identity"));
         using HttpResponseMessage? response =
             httpClient is null
                 ? null
-                : await httpClient.GetAsync(
-                    downloadUrl,
+                : await httpClient.SendAsync(
+                    request!,
                     HttpCompletionOption.ResponseHeadersRead,
                     CancellationToken
                 );
         response?.EnsureSuccessStatusCode();
+        string[] codings = response?.Content.Headers.ContentEncoding
+            .Where(e => !e.Equals("identity", StringComparison.OrdinalIgnoreCase))
+            .ToArray() ?? [];
+        string? transportEncoding = codings.Length == 0 ? null : string.Join(", ", codings);
 
         long totalBytes;
         Stream sourceStream;
@@ -529,7 +571,65 @@ public class DownloadOperation : AbstractOperation
             }
         }
 
-        return hasher?.GetHashAndReset() ?? [];
+        return (hasher?.GetHashAndReset() ?? [], transportEncoding);
+    }
+
+    private async Task<byte[]?> DecodeTransportEncodingAsync(
+        string partialLocation,
+        string decodedLocation,
+        string transportEncoding,
+        PublishedInstallerHash? expectedHash
+    )
+    {
+        try
+        {
+            long limit = Math.Max(new FileInfo(partialLocation).Length, 1) * MaxTransportDecodingRatio;
+            using IncrementalHash? hasher = expectedHash?.CreateHasher();
+            await using (var source = new FileStream(partialLocation, FileMode.Open, FileAccess.Read, FileShare.Read, 8192, useAsync: true))
+            await using (Stream decoder = transportEncoding.ToLowerInvariant() switch
+            {
+                "gzip" or "x-gzip" => new GZipStream(source, CompressionMode.Decompress),
+                "deflate" => new ZLibStream(source, CompressionMode.Decompress),
+                "br" => new BrotliStream(source, CompressionMode.Decompress),
+                _ => throw new NotSupportedException($"Content-Encoding \"{transportEncoding}\" is not supported"),
+            })
+            await using (var target = new FileStream(decodedLocation, FileMode.CreateNew, FileAccess.Write, FileShare.None, 8192, useAsync: true))
+            {
+                var buffer = new byte[1024 * 1024];
+                long written = 0;
+                int read;
+                while ((read = await decoder.ReadAsync(buffer.AsMemory(), CancellationToken)) > 0)
+                {
+                    written += read;
+                    if (written > limit)
+                        throw new InvalidDataException("the decoded file is implausibly larger than the transfer");
+                    await target.WriteAsync(buffer.AsMemory(0, read), CancellationToken);
+                    hasher?.AppendData(buffer, 0, read);
+                }
+            }
+
+            byte[] decodedHash = hasher?.GetHashAndReset() ?? [];
+            File.Move(decodedLocation, partialLocation, overwrite: true);
+            Line(
+                $"The server compressed the transfer (Content-Encoding: {transportEncoding}), the file was decoded",
+                LineType.Information
+            );
+            return decodedHash;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Line(
+                $"The server compressed the transfer (Content-Encoding: {transportEncoding}), but it could not be "
+                    + $"decoded: {ex.Message}. The file was kept as received",
+                LineType.Information
+            );
+            return null;
+        }
+        finally
+        {
+            if (File.Exists(decodedLocation))
+                TryDelete(decodedLocation);
+        }
     }
 
     protected override void Dispose(bool disposing)

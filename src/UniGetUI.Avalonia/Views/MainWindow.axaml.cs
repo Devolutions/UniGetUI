@@ -47,6 +47,7 @@ public enum PageType
     Catalog,
     CatalogEditor,
     GitRepositories,
+    ManagerHealth,
 }
 
 public partial class MainWindow : Window

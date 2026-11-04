@@ -106,7 +106,6 @@ internal sealed class ScoopMaintenanceOperation : AbstractProcessOperation
         scoop cleanup --all
         scoop cleanup --all --global
         scoop cache rm --all
-        scoop cache rm --all --global
         Write-Output "Done!"
         exit 0
         """;

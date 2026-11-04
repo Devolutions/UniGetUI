@@ -1,6 +1,7 @@
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.PackageClasses;
 
@@ -18,6 +19,10 @@ public sealed class TestPackageManager : PackageManager
 
     public TestPackageManager(string name = "TestManager", string? displayName = null)
     {
+        ManagerHealthStore.TestPathOverride ??= Path.Combine(
+            AppContext.BaseDirectory,
+            "ManagerHealth.test.json"
+        );
         Capabilities = new ManagerCapabilities
         {
             CanRunAsAdmin = true,
@@ -110,6 +115,17 @@ public sealed class TestPackageManager : PackageManager
     {
         _getInstalledPackages = getInstalledPackages;
     }
+
+    public bool ExpectsInstalled { get; set; }
+
+    public override bool ExpectsInstalledPackages => ExpectsInstalled;
+
+    public TimeSpan MaintenanceTimeout { get; set; } = TimeSpan.FromMinutes(15);
+
+    protected override TimeSpan MaintenanceCommandTimeout => MaintenanceTimeout;
+
+    public Task RunMaintenanceCommandForTestAsync(string fileName, string arguments) =>
+        RunMaintenanceCommandAsync(fileName, arguments);
 
     public override bool InstallerUrlFollowsPackageVersion => _installerUrlFollowsPackageVersion;
 

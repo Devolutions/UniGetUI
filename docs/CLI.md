@@ -201,16 +201,47 @@ symbolic links and junctions are not followed.
 
 | Command | Required options | Optional options | Notes |
 | --- | --- | --- | --- |
-| `manager list` | None | None | Lists managers and their automation-relevant capability flags. |
-| `manager maintenance` | `--manager <id>` | None | Returns maintenance metadata for one manager. |
+| `manager list` | None | None | Lists managers, their automation-relevant capability flags and their listing health (see below). |
+| `manager maintenance` | `--manager <id>` | None | Returns maintenance metadata for one manager, including the actions it supports in `supportedActions` and its listing health. |
 | `manager reload` | `--manager <id>` | None | Reloads one manager. |
 | `manager set-executable` | `--manager <id>`, `--path <path>` | None | Sets a custom executable override, then reloads the manager. |
 | `manager clear-executable` | `--manager <id>` | None | Clears the custom executable override, then reloads the manager. |
-| `manager action` | `--manager <id>`, `--action <action>` | `--confirm` | Runs a manager-specific maintenance action. |
+| `manager action` | `--manager <id>`, `--action <action>` | `--confirm` | Runs one of the actions the manager lists in `supportedActions`. Every action except `reload` requires `--confirm`. |
 | `manager enable` | `--manager <id>` | None | Enables the manager. |
 | `manager disable` | `--manager <id>` | None | Disables the manager. |
 | `manager notifications enable` | `--manager <id>` | None | Enables update notifications for the manager. |
 | `manager notifications disable` | `--manager <id>` | None | Disables update notifications for the manager. |
+
+Maintenance actions, as `manager action --action` accepts them:
+
+| Action | Managers | Notes |
+| --- | --- | --- |
+| `reload` | All | Looks for the manager again and reloads its configuration. |
+| `stop-stuck-listings` | All | Kills the processes of any search, package listing or maintenance command the manager is still running. |
+| `repair-winget` | WinGet (Windows) | Clears WinGet's temp folder, resets its sources, repairs it through `Microsoft.WinGet.Client` and resets App Installer. Elevated. |
+| `reset-sources` | WinGet (Windows) | Runs `winget source reset --force`. Elevated. |
+| `install-scoop`, `uninstall-scoop` | Scoop (Windows) | Installs Scoop (elevated), or removes it with every package it installed. |
+| `cleanup-scoop` | Scoop (Windows) | Removes old app versions, per user and machine-wide (the machine-wide half is elevated), then empties Scoop's download cache, which both scopes share. |
+| `clear-cache` | Chocolatey, Pip, Npm, Bun, .NET Tool, Homebrew | Runs the manager's own cache-cleaning command. |
+
+Actions that need the manager's own executable are only listed once the manager has been found. `repair-winget`, `reset-sources` and `install-scoop` are listed even when it has not. A maintenance command that runs for more than 15 minutes is stopped and reported as failed.
+
+#### Manager health
+
+`manager list` and `manager maintenance` include a `health` object built from a record UniGetUI keeps
+for each manager across restarts, in `ManagerHealth.json` in its data folder:
+
+| Field | Meaning |
+| --- | --- |
+| `state` | `loading` (still starting), `unknown` (nothing listed yet), `healthy`, `failing`, `malfunctioning`, `not-found` or `disabled`. |
+| `needsAttention` | `true` when the app shows its health banner: a malfunction, or a listing that failed at least twice in a row with its last failure in the past 24 hours. For WinGet, Apt, Dnf and Pacman a single failed installed listing is enough. |
+| `failingListing` | `search`, `installed` or `updates`: the listing that failed most recently, or `installed` for a malfunction. |
+| `reason`, `consecutiveFailures` | The failing listing's last error and how many times in a row it failed. |
+| `search`, `installed`, `updates` | Per listing: `lastSuccessUtc`, `lastFailureUtc`, `lastFailureReason`, `lastFailureWasTimeout`, `consecutiveFailures`, `lastPackageCount`, `lastFastRepairUtc`, `lastFastRepairReason` (a first attempt that failed and was retried) and `recentDurationsMs` (the last ten). |
+
+A manager is `malfunctioning` when it is ready, its installed listing succeeded and returned no package
+at all, and a working installation of it always lists something (WinGet, Apt, Dnf and Pacman). The
+`DisableWinGetMalfunctionDetector` setting still turns this off for WinGet.
 
 ### Sources
 

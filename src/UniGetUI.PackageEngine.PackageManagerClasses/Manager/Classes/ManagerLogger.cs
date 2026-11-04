@@ -8,6 +8,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
     public class ManagerLogger : IManagerLogger
     {
         private readonly IPackageManager Manager;
+        private readonly Action<LoggableTaskType, Process>? ProcessCreated;
 
         // Keep only recent operations; retained unbounded, each holds its full output and grows forever.
         private const int MAX_RETAINED_OPERATIONS = 100;
@@ -17,9 +18,13 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             get { lock (operations) return operations.ToArray(); }
         }
 
-        public ManagerLogger(IPackageManager manager)
+        public ManagerLogger(
+            IPackageManager manager,
+            Action<LoggableTaskType, Process>? processCreated = null
+        )
         {
             Manager = manager;
+            ProcessCreated = processCreated;
         }
 
         private void Register(TaskLogger operation)
@@ -48,6 +53,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 process.StartInfo.Arguments
             );
             Register(operation);
+            ProcessCreated?.Invoke(type, process);
             return operation;
         }
 

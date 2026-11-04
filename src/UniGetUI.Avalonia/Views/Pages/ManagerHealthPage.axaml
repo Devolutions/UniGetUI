@@ -1,0 +1,136 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.ManagerHealthPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:DataType="vm:ManagerHealthViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.health-card">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="Border.state">
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Border.state.ok">
+            <Setter Property="Background" Value="{DynamicResource StatusSuccessBackground}"/>
+        </Style>
+        <Style Selector="Border.state.ok TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusSuccessForeground}"/>
+        </Style>
+        <Style Selector="Border.state.warning">
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+        </Style>
+        <Style Selector="Border.state.error">
+            <Setter Property="Background" Value="{DynamicResource StatusErrorBackground}"/>
+        </Style>
+        <Style Selector="Border.state.error TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForeground}"/>
+        </Style>
+        <Style Selector="#HealthToolbar Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="8,6,8,8" RowDefinitions="Auto,Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="80,*" ColumnSpacing="8" Margin="0,0,0,8">
+            <controls:SvgIcon Width="40" Height="40" Margin="0,0,4,0"
+                              automation:AutomationProperties.AccessibilityView="Raw"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"
+                              Path="avares://UniGetUI/Assets/Symbols/package_managers.svg"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{t:Translate Manager health}"
+                           FontSize="28" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.6" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
+
+        <WrapPanel Grid.Row="1" Name="HealthToolbar" Orientation="Horizontal" ItemSpacing="4" Margin="0,0,0,8">
+            <Button Command="{Binding CheckAgainCommand}"
+                    ToolTip.Tip="{t:Translate Text='Reload the installed packages and updates of every package manager'}"
+                    automation:AutomationProperties.Name="{t:Translate Check again}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg" Width="20" Height="20"/>
+                    <TextBlock Text="{t:Translate Check again}" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </WrapPanel>
+
+        <TextBlock Grid.Row="2" Text="{t:Translate No package manager matches your search}"
+                   IsVisible="{Binding HasNoMatches}" Opacity="0.6"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"/>
+
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Managers}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ManagerHealthRowViewModel">
+                        <Border Classes="health-card" IsVisible="{Binding IsShown}">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                    <TextBlock Grid.Column="0" Text="{Binding DisplayName}" FontSize="16"
+                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Classes="state"
+                                            Classes.ok="{Binding IsHealthy}"
+                                            Classes.error="{Binding NeedsAttention}"
+                                            Classes.warning="{Binding IsWarning}">
+                                        <TextBlock Text="{Binding StateLabel}" FontSize="12"/>
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Opacity="0.85"/>
+                                <ItemsControl ItemsSource="{Binding Listings}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ManagerListingHealthViewModel">
+                                            <Grid ColumnDefinitions="140,*" ColumnSpacing="8" Margin="0,2">
+                                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
+                                                           FontWeight="SemiBold" Opacity="0.8"/>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap">
+                                                        <Run Text="{Binding LastSuccess}"/>
+                                                        <Run Text="  "/>
+                                                        <Run Text="{Binding Duration}"/>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding LastFailure}" FontSize="12" Opacity="0.7"
+                                                               TextWrapping="Wrap" IsVisible="{Binding HasFailure}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <ItemsControl ItemsSource="{Binding Actions}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ManagerHealthActionViewModel">
+                                            <Button Content="{Binding Title}" Command="{Binding RunCommand}"
+                                                    ToolTip.Tip="{Binding Description}"
+                                                    automation:AutomationProperties.Name="{Binding Title}"
+                                                    automation:AutomationProperties.HelpText="{Binding Description}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

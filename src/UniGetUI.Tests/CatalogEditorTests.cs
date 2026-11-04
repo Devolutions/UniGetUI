@@ -692,6 +692,15 @@ public class CatalogEditorTests : IDisposable
             if (Failure is not null) throw Failure;
             return Results;
         }
+        public IReadOnlyList<IPackage> FindPackages(string query, out bool failed)
+        {
+            failed = false;
+            return FindPackages(query);
+        }
+        public ManagerHealthRecord GetHealthRecord() => new();
+        public bool ExpectsInstalledPackages => false;
+        public bool IsInitializing => false;
+        public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() => [];
         public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotSupportedException();
         public IReadOnlyList<IPackage> GetInstalledPackages() => throw new NotSupportedException();
         public void RefreshPackageIndexes() => throw new NotSupportedException();

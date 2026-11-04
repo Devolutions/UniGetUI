@@ -14,6 +14,8 @@ namespace UniGetUI.PackageEngine.Managers.DnfManager;
 
 public class Dnf : PackageManager
 {
+    public override bool ExpectsInstalledPackages => true;
+
     // Known RPM architectures — used to strip the trailing .<arch> from package names.
     private static readonly HashSet<string> _knownArches =
         ["x86_64", "aarch64", "noarch", "i686", "i386", "ppc64le", "s390x", "src"];

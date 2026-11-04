@@ -261,6 +261,9 @@
                         <MenuItem Header="{t:Translate Operation history}" Command="{Binding RequestNavigationCommand}" CommandParameter="OperationHistory">
                             <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/history.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
+                        <MenuItem Header="{t:Translate Manager health}" Command="{Binding RequestNavigationCommand}" CommandParameter="ManagerHealth">
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package_managers.svg" Width="16" Height="16"/></MenuItem.Icon>
+                        </MenuItem>
                         <Separator/>
                         <MenuItem Header="{Binding VersionLabel}" IsEnabled="False">
                             <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/info_round.svg" Width="16" Height="16"/></MenuItem.Icon>

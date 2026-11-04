@@ -107,6 +107,17 @@ namespace UniGetUI.PackageEngine.Classes.Manager
         public IReadOnlyList<IPackage> FindPackages(string query) =>
             throw new NotImplementedException();
 
+        public IReadOnlyList<IPackage> FindPackages(string query, out bool failed) =>
+            throw new NotImplementedException();
+
+        public ManagerHealthRecord GetHealthRecord() => new();
+
+        public bool ExpectsInstalledPackages => false;
+
+        public bool IsInitializing => false;
+
+        public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() => [];
+
         public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotImplementedException();
 
         public IReadOnlyList<IPackage> GetInstalledPackages() =>

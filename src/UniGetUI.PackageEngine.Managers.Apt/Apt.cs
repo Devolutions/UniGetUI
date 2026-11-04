@@ -15,6 +15,8 @@ namespace UniGetUI.PackageEngine.Managers.AptManager;
 
 public class Apt : PackageManager
 {
+    public override bool ExpectsInstalledPackages => true;
+
     public Apt()
     {
         Dependencies = [];

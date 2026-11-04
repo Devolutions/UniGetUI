@@ -1,8 +1,7 @@
-using System.Diagnostics;
-using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 
 namespace UniGetUI.Interface;
@@ -18,6 +17,7 @@ public sealed class IpcManagerMaintenanceInfo
     public string EffectiveExecutablePath { get; set; } = "";
     public IReadOnlyList<string> CandidateExecutablePaths { get; set; } = [];
     public IReadOnlyList<string> SupportedActions { get; set; } = [];
+    public IpcManagerHealthInfo Health { get; set; } = new();
     public bool? UseBundledWinGet { get; set; }
     public bool? UseSystemChocolatey { get; set; }
     public bool? ScoopCleanupOnLaunch { get; set; }
@@ -118,123 +118,25 @@ public static class IpcManagerMaintenanceApi
         string action = request.Action?.Trim().ToLowerInvariant()
             ?? throw new InvalidOperationException("The action field is required.");
 
-        switch (action)
+        ManagerMaintenanceAction maintenanceAction = manager.FindAction(action)
+            ?? throw new InvalidOperationException(
+                $"The manager action \"{request.Action}\" is not supported."
+            );
+
+        if (maintenanceAction.RequiresConfirmation)
         {
-            case "repair-winget":
-                EnsureConfirmed(request, action);
-                EnsureManager(manager, "WinGet");
-                EnsureWindowsOnly(action);
-                await RunWindowsProcessAsync(
-                    CoreData.PowerShell5,
-                    "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {"
-                    + "cmd.exe /C \"\"rmdir /Q /S `\"%temp%\\WinGet`\"\"\"; "
-                    + "cmd.exe /C \"\"`\"%localappdata%\\Microsoft\\WindowsApps\\winget.exe`\" source reset --force\"\"; "
-                    + "taskkill /im winget.exe /f; "
-                    + "taskkill /im WindowsPackageManagerServer.exe /f; "
-                    + "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force; "
-                    + "Install-Module Microsoft.WinGet.Client -Force -AllowClobber; "
-                    + "Import-Module Microsoft.WinGet.Client; "
-                    + "Repair-WinGetPackageManager -Force -Latest; "
-                    + "Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' | Reset-AppxPackage; "
-                    + "}\"",
-                    runAsAdmin: true
-                );
-                Settings.SetValue(Settings.K.WinGetCliToolPreference, "default");
-                await ReloadManagerAsync(manager);
-                return Success(
-                    "run-manager-action",
-                    manager,
-                    action,
-                    "completed",
-                    "WinGet repair completed."
-                );
-
-            case "install-scoop":
-                EnsureConfirmed(request, action);
-                EnsureManager(manager, "Scoop");
-                EnsureWindowsOnly(action);
-                string installScriptPath = Path.Join(
-                    CoreData.UniGetUIExecutableDirectory,
-                    "Assets",
-                    "Utilities",
-                    "install_scoop.ps1"
-                );
-                await RunWindowsProcessAsync(
-                    CoreData.PowerShell5,
-                    $"-ExecutionPolicy Bypass -File \"{installScriptPath}\"",
-                    runAsAdmin: true
-                );
-                await ReloadManagerAsync(manager);
-                return Success(
-                    "run-manager-action",
-                    manager,
-                    action,
-                    "completed",
-                    "Scoop installation completed."
-                );
-
-            case "uninstall-scoop":
-                EnsureConfirmed(request, action);
-                EnsureManager(manager, "Scoop");
-                EnsureWindowsOnly(action);
-                await RunWindowsProcessAsync(
-                    CoreData.PowerShell5,
-                    "-ExecutionPolicy Bypass -Command \"scoop uninstall -p scoop\""
-                );
-                await ReloadManagerAsync(manager);
-                return Success(
-                    "run-manager-action",
-                    manager,
-                    action,
-                    "completed",
-                    "Scoop uninstall completed."
-                );
-
-            case "cleanup-scoop":
-                EnsureConfirmed(request, action);
-                EnsureManager(manager, "Scoop");
-                EnsureWindowsOnly(action);
-                if (string.IsNullOrWhiteSpace(manager.Status.ExecutablePath))
-                {
-                    throw new InvalidOperationException("Scoop is not ready.");
-                }
-
-                // Clean old app versions (user scope)
-                await RunWindowsProcessAsync(
-                    manager.Status.ExecutablePath,
-                    manager.Status.ExecutableCallArgs + " cleanup --all"
-                );
-                // Clean old app versions (global scope, needs admin)
-                await RunWindowsProcessAsync(
-                    manager.Status.ExecutablePath,
-                    manager.Status.ExecutableCallArgs + " cleanup --all --global",
-                    runAsAdmin: true
-                );
-                // Clear download cache (user scope)
-                await RunWindowsProcessAsync(
-                    manager.Status.ExecutablePath,
-                    manager.Status.ExecutableCallArgs + " cache rm --all"
-                );
-                // Clear download cache (global scope, needs admin)
-                await RunWindowsProcessAsync(
-                    manager.Status.ExecutablePath,
-                    manager.Status.ExecutableCallArgs + " cache rm --all --global",
-                    runAsAdmin: true
-                );
-                await ReloadManagerAsync(manager);
-                return Success(
-                    "run-manager-action",
-                    manager,
-                    action,
-                    "completed",
-                    "Scoop cleanup completed."
-                );
-
-            default:
-                throw new InvalidOperationException(
-                    $"The manager action \"{request.Action}\" is not supported."
-                );
+            EnsureConfirmed(request, action);
         }
+
+        await manager.RunAsync(maintenanceAction);
+
+        return Success(
+            "run-manager-action",
+            manager,
+            action,
+            "completed",
+            $"The {action} action completed for {manager.DisplayName}."
+        );
     }
 
     private static IpcManagerMaintenanceInfo ToMaintenanceInfo(IPackageManager manager)
@@ -243,22 +145,6 @@ public static class IpcManagerMaintenanceApi
             Settings.K.ManagerPaths,
             manager.Name
         );
-
-        List<string> supportedActions =
-        [
-            "reload",
-        ];
-
-        if (manager.Name.Equals("WinGet", StringComparison.OrdinalIgnoreCase))
-        {
-            supportedActions.Add("repair-winget");
-        }
-        else if (manager.Name.Equals("Scoop", StringComparison.OrdinalIgnoreCase))
-        {
-            supportedActions.Add("install-scoop");
-            supportedActions.Add("uninstall-scoop");
-            supportedActions.Add("cleanup-scoop");
-        }
 
         IReadOnlyList<string> triplets = manager.Name.Equals("vcpkg", StringComparison.OrdinalIgnoreCase)
             ? Vcpkg.GetSystemTriplets().ToArray()
@@ -281,7 +167,8 @@ public static class IpcManagerMaintenanceApi
                 : configuredExecutablePath,
             EffectiveExecutablePath = manager.Status.ExecutablePath,
             CandidateExecutablePaths = manager.FindCandidateExecutableFiles().ToArray(),
-            SupportedActions = supportedActions,
+            SupportedActions = manager.GetMaintenanceActions().Select(candidate => candidate.Id).ToArray(),
+            Health = IpcManagerHealthInfo.From(manager),
             UseBundledWinGet = manager.Name.Equals("WinGet", StringComparison.OrdinalIgnoreCase)
                 ? string.Equals(
                     Settings.GetValue(Settings.K.WinGetCliToolPreference),
@@ -312,59 +199,12 @@ public static class IpcManagerMaintenanceApi
         await Task.Run(manager.Initialize);
     }
 
-    private static async Task RunWindowsProcessAsync(
-        string fileName,
-        string arguments,
-        bool runAsAdmin = false
-    )
-    {
-        using Process process = new()
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                Arguments = arguments,
-                UseShellExecute = runAsAdmin,
-                Verb = runAsAdmin ? "runas" : string.Empty,
-                CreateNoWindow = !runAsAdmin,
-            },
-        };
-        process.Start();
-        await process.WaitForExitAsync();
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException(
-                $"The maintenance command exited with code {process.ExitCode}."
-            );
-        }
-    }
-
     private static void EnsureConfirmed(IpcManagerMaintenanceRequest request, string action)
     {
         if (!request.Confirm)
         {
             throw new InvalidOperationException(
                 $"The manager action \"{action}\" requires confirm=true."
-            );
-        }
-    }
-
-    private static void EnsureManager(IPackageManager manager, string expectedName)
-    {
-        if (!manager.Name.Equals(expectedName, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(
-                $"{expectedName} maintenance actions can only run against the {expectedName} manager."
-            );
-        }
-    }
-
-    private static void EnsureWindowsOnly(string action)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            throw new InvalidOperationException(
-                $"The manager action \"{action}\" is only supported on Windows."
             );
         }
     }

@@ -808,6 +808,138 @@ public sealed class PackageOperationsTests
     }
 
     [Theory]
+    [InlineData(false, 1)]
+    [InlineData(true, 0)]
+    public async Task ARetriedReinstallMatchesTheInstalledPackageAcrossFeedsBeforeSkippingTheUninstall(
+        bool installedPackagesKeepTheirSource,
+        int expectedUninstalls
+    )
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.InstalledPackagesKeepTheirSource = installedPackagesKeepTheirSource;
+                return capabilities;
+            })
+            .Build();
+        var otherFeed = new ManagerSource(manager, "other", new Uri("https://example.test/other"));
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithSource(otherFeed)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.0.0")
+                .Build()
+        );
+        var isLoaded = typeof(AbstractPackageLoader).GetProperty(nameof(AbstractPackageLoader.IsLoaded))!;
+        isLoaded.SetValue(InstalledPackagesLoader.Instance, true);
+        try
+        {
+            using var operation = new InspectableUpdatePackageOperation(
+                package,
+                new InstallOptions { UninstallBeforeUpdate = true }
+            );
+
+            Assert.Equal(expectedUninstalls, operation.AttemptPreOperationsForTests().Count);
+        }
+        finally
+        {
+            isLoaded.SetValue(InstalledPackagesLoader.Instance, false);
+        }
+    }
+
+    [Fact]
+    public void AFailedInstalledListingIsNotTakenAsProofThePackageWasUninstalled()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        manager.SetInstalledPackages(() => throw new InvalidOperationException("listing failed"));
+        manager.GetInstalledPackages();
+        Assert.True(manager.LastInstalledListingFailed);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        var isLoaded = typeof(AbstractPackageLoader).GetProperty(nameof(AbstractPackageLoader.IsLoaded))!;
+        isLoaded.SetValue(InstalledPackagesLoader.Instance, true);
+        try
+        {
+            using var operation = new InspectableUpdatePackageOperation(
+                package,
+                new InstallOptions { UninstallBeforeUpdate = true }
+            );
+
+            Assert.Single(operation.AttemptPreOperationsForTests());
+        }
+        finally
+        {
+            isLoaded.SetValue(InstalledPackagesLoader.Instance, false);
+        }
+    }
+
+    [Fact]
+    public async Task TheReinstallUninstallRemovesTheInstalledEntryListedUnderAnotherFeed()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = new PackageManagerBuilder()
+            .WithName($"CrossFeedManager{Guid.NewGuid():N}")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.InstalledPackagesKeepTheirSource = false;
+                return capabilities;
+            })
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (_, _, operation) => ["echo", operation.ToString()];
+                helper.ResultFactory = (_, operation, _, _) =>
+                    operation is OperationType.Install ? OperationVeredict.Failure : OperationVeredict.Success;
+            })
+            .Build();
+        var otherFeed = new ManagerSource(manager, "other", new Uri("https://example.test/other"));
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        var listed = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(otherFeed)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(listed);
+        Assert.NotNull(InstalledPackagesLoader.Instance.GetEquivalentPackage(package));
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Null(InstalledPackagesLoader.Instance.GetEquivalentPackage(package));
+    }
+
+    [Theory]
     [InlineData(AbstractOperation.RetryMode.Retry_AsAdmin, true, false)]
     [InlineData(AbstractOperation.RetryMode.Retry_Interactive, false, true)]
     public void RetryingAFailedReinstallUninstallAppliesTheRetryChoiceToTheUninstall(

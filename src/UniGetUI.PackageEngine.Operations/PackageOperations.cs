@@ -1577,7 +1577,9 @@ namespace UniGetUI.PackageEngine.Operations
         {
             if (InstalledPackagesLoader.Instance is not { IsLoaded: true } installed)
                 return false;
-            if (installed.Contains(package))
+            if (package.Manager.LastInstalledListingFailed)
+                return false;
+            if (installed.GetEquivalentPackage(package) is not null)
                 return false;
             Logger.Info(
                 $"{package} is no longer installed; the update will install it without uninstalling it first"
@@ -1899,7 +1901,8 @@ namespace UniGetUI.PackageEngine.Operations
         {
             if (IsReinstallStep)
             {
-                InstalledPackagesLoader.Instance.Remove(Package);
+                if (InstalledPackagesLoader.Instance.GetEquivalentPackage(Package) is { } listed)
+                    InstalledPackagesLoader.Instance.Remove(listed);
                 return Task.CompletedTask;
             }
 

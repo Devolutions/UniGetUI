@@ -7,21 +7,38 @@ namespace UniGetUI.PackageEngine.Classes.Manager
     {
         private readonly IPackageManager __manager;
         private readonly ConcurrentDictionary<string, IManagerSource> __reference;
-        private readonly ConcurrentDictionary<string, IManagerSource> __placeholders;
         private readonly Uri __default_uri = new("https://devolutions.net/unigetui");
 
         public SourceFactory(IPackageManager manager)
         {
             __reference = [];
-            __placeholders = [];
             __manager = manager;
         }
 
         public bool IsPlaceholder(IManagerSource source) => source.Url == __default_uri;
 
-        public void Reset()
+        public void ReplaceSources(IEnumerable<IManagerSource> sources)
         {
-            __reference.Clear();
+            IManagerSource[] loaded = sources.ToArray();
+            HashSet<string> loadedNames = loaded.Select(source => source.Name).ToHashSet();
+
+            foreach (KeyValuePair<string, IManagerSource> entry in __reference)
+            {
+                if (!loadedNames.Contains(entry.Key) && !IsPlaceholder(entry.Value))
+                {
+                    __reference.TryRemove(entry);
+                }
+            }
+
+            foreach (IManagerSource source in loaded)
+            {
+                IManagerSource existing_source = __reference.GetOrAdd(source.Name, source);
+                if (!ReferenceEquals(existing_source, source))
+                {
+                    RepairPlaceholder(existing_source, source);
+                    __reference[source.Name] = source;
+                }
+            }
         }
 
         /// <summary>
@@ -36,14 +53,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager
                 return source;
             }
 
-            ManagerSource new_source = new(__manager, name, __default_uri);
-            IManagerSource registered = __reference.GetOrAdd(name, new_source);
-            if (ReferenceEquals(registered, new_source))
-            {
-                __placeholders.TryAdd(name, new_source);
-            }
-
-            return registered;
+            return __reference.GetOrAdd(name, new ManagerSource(__manager, name, __default_uri));
         }
 
         /// <summary>
@@ -61,28 +71,24 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
         public void AddSource(IManagerSource source)
         {
-            if (
-                source.Url != __default_uri
-                && __placeholders.TryRemove(source.Name, out IManagerSource? placeholder)
-                && placeholder.Url == __default_uri
-            )
+            IManagerSource existing_source = __reference.GetOrAdd(source.Name, source);
+            if (!ReferenceEquals(existing_source, source))
             {
-                placeholder.ReplaceUrl(source.Url);
-            }
-
-            if (!__reference.TryAdd(source.Name, source))
-            {
-                IManagerSource existing_source = __reference[source.Name];
-                if (existing_source.Url == __default_uri)
-                {
-                    existing_source.ReplaceUrl(source.Url);
-                }
+                RepairPlaceholder(existing_source, source);
             }
         }
 
         public IManagerSource[] GetAvailableSources()
         {
             return __reference.Values.ToArray();
+        }
+
+        private void RepairPlaceholder(IManagerSource existing_source, IManagerSource source)
+        {
+            if (IsPlaceholder(existing_source) && !IsPlaceholder(source))
+            {
+                existing_source.ReplaceUrl(source.Url);
+            }
         }
     }
 }

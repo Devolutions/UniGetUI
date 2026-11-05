@@ -698,6 +698,41 @@ public sealed class ScoopManagerTests : IDisposable
             )
         );
 
+    [Theory]
+    [InlineData("https://example.test/manifests/app.json", "https://example.test/manifests/app.json")]
+    [InlineData(@"C:\manifests\app.json", "file:///C:/manifests/app.json")]
+    public void ManifestUrlComesFromTheSourceNameForUrlAndPathInstalls(string sourceName, string expected)
+    {
+        var manager = new Scoop();
+        IManagerSource source = manager.SourcesHelper.Factory.GetSourceOrDefault(sourceName);
+        var package = new PackageBuilder().WithManager(manager).WithSource(source).WithId("app").Build();
+
+        Assert.Equal(new Uri(expected), ScoopPkgDetailsHelper.GetManifestUrl(package, manager.SourcesHelper.Factory));
+    }
+
+    [Fact]
+    public void ManifestUrlIsOmittedForABucketWhoseUrlIsStillUnknown()
+    {
+        var manager = new Scoop();
+        IManagerSource source = manager.SourcesHelper.Factory.GetSourceOrDefault("extras");
+        var package = new PackageBuilder().WithManager(manager).WithSource(source).WithId("notepadplusplus").Build();
+
+        Assert.Null(ScoopPkgDetailsHelper.GetManifestUrl(package, manager.SourcesHelper.Factory));
+    }
+
+    [Fact]
+    public void ManifestUrlPointsIntoTheBucketRepository()
+    {
+        var manager = CreateManagerWithKnownSources("extras");
+        IManagerSource source = manager.SourcesHelper.Factory.GetSourceOrDefault("extras");
+        var package = new PackageBuilder().WithManager(manager).WithSource(source).WithId("notepadplusplus").Build();
+
+        Assert.Equal(
+            new Uri(source.Url + "/blob/master/bucket/notepadplusplus.json"),
+            ScoopPkgDetailsHelper.GetManifestUrl(package, manager.SourcesHelper.Factory)
+        );
+    }
+
     private static Scoop CreateManagerWithKnownSources(params string[] sourceNames)
     {
         var manager = new Scoop();

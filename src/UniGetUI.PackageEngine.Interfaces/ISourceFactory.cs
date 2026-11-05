@@ -26,9 +26,6 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public IManagerSource[] GetAvailableSources();
 
-        /// <summary>
-        /// Resets the current state of the SourceFactory. All sources are lost
-        /// </summary>
-        public void Reset();
+        public void ReplaceSources(IEnumerable<IManagerSource> sources);
     }
 }

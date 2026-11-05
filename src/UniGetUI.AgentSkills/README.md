@@ -5,10 +5,11 @@ with a `SKILL.md` that coding agents such as Claude Code, Codex, Cursor and
 GitHub Copilot (about 75 others too) load as extra instructions.
 
 It is compiled directly into UniGetUI as `UniGetUI.AgentSkills`. Its public API
-remains in the `Devolutions.AgentSkills` namespace. The companion
-`UniGetUI.AgentSkills.Cli` project references this library directly and exposes
+remains in the `Devolutions.AgentSkills` namespace. The
+`UniGetUI.AgentSkills.Cli` library references this project and exposes
 `UniGetUI.AgentSkills.Cli.SkillsCli.RunAsync(string[] args)` for in-process CLI
-commands; it returns an exit code without terminating the host process.
+commands; it returns an exit code without terminating the host process. It is
+not a standalone executable; UniGetUI invokes it for `unigetui skills`.
 Pass only the arguments after `skills` (for example, `["list", "--json"]`).
 `update` runs its nested `add` commands in-process rather than relaunching
 the host executable.

@@ -383,6 +383,4 @@ internal static class Program
             return exitCode;
         }
     }
-
-    public static int Main(string[] args) => RunCommand(args);
 }

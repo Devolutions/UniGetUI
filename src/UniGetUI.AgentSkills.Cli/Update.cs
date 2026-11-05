@@ -191,8 +191,7 @@ internal static class UpdateCommand
         Term.OutLine($"    {Dim}To install: {Text}skills add {baseUrl} --skill {string.Join(" ", names)}{(isGlobal ? " -g" : "")}{Reset}");
     }
 
-    /// Reinstall with stdin inherited and the add command's output hidden,
-    /// as when the standalone CLI captures its subprocess's stdout and stderr.
+    /// Reinstall with stdin inherited and the nested add command's output hidden.
     private static bool SpawnAdd(List<string> args, bool githubPin)
     {
         var previousExitCode = Term.ExitCode;

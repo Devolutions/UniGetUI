@@ -1,8 +1,10 @@
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.PackageEngine.Operations
@@ -32,6 +34,76 @@ namespace UniGetUI.PackageEngine.Operations
         protected bool RequiresAdminRights() =>
             !Settings.Get(Settings.K.ProhibitElevation)
             && (ForceAsAdministrator || Source.Manager.Capabilities.Sources.MustBeInstalledAsAdmin);
+
+        /// <summary>
+        /// The manager's in-process sources helper when it adds and removes sources inside UniGetUI
+        /// instead of launching an executable, or null for executable-based managers.
+        /// </summary>
+        protected IInProcessSourceHelper? InProcessHelper =>
+            Source.Manager.SourcesHelper as IInProcessSourceHelper;
+
+        /// <summary>
+        /// The command-line parameters that perform this operation with the manager's executable.
+        /// </summary>
+        protected abstract IReadOnlyList<string> GetSourceParameters();
+
+        /// <summary>
+        /// Performs this operation through the manager's in-process sources helper.
+        /// </summary>
+        protected abstract Task<OperationVeredict> PerformInProcessAsync(
+            IInProcessSourceHelper helper,
+            IOperationOutput output,
+            CancellationToken cancellationToken
+        );
+
+        protected sealed override void PrepareProcessStartInfo()
+        {
+            if (InProcessHelper is not null)
+            {
+                // The manager performs this operation inside UniGetUI: there is no process to prepare.
+                ApplyCapabilities(CoreTools.IsAdministrator(), false, false, null);
+                return;
+            }
+
+            PrepareSourceProcessStartInfo(GetSourceParameters());
+        }
+
+        protected override async Task<OperationVeredict> PerformOperation()
+        {
+            if (InProcessHelper is not { } helper)
+            {
+                return await base.PerformOperation();
+            }
+
+            Line(
+                $"Performing the operation inside UniGetUI with {Source.Manager.DisplayName}",
+                LineType.VerboseDetails
+            );
+            try
+            {
+                OperationVeredict veredict = await PerformInProcessAsync(
+                    helper,
+                    new InProcessOperationOutput(Line, Metadata),
+                    CancellationToken
+                );
+                return CancellationToken.IsCancellationRequested
+                    ? OperationVeredict.Canceled
+                    : veredict;
+            }
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                return OperationVeredict.Canceled;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(
+                    $"{Source.Manager.Name} could not perform the operation on source {Source.Name}"
+                );
+                Logger.Error(ex);
+                Line(ex.Message, LineType.Error);
+                return OperationVeredict.Failure;
+            }
+        }
 
         protected override void ApplyRetryAction(string retryMode)
         {
@@ -156,12 +228,14 @@ namespace UniGetUI.PackageEngine.Operations
         public AddSourceOperation(IManagerSource source)
             : base(source, []) { }
 
-        protected override void PrepareProcessStartInfo()
-        {
-            PrepareSourceProcessStartInfo(
-                Source.Manager.SourcesHelper.GetAddSourceParameters(Source)
-            );
-        }
+        protected override IReadOnlyList<string> GetSourceParameters() =>
+            Source.Manager.SourcesHelper.GetAddSourceParameters(Source);
+
+        protected override Task<OperationVeredict> PerformInProcessAsync(
+            IInProcessSourceHelper helper,
+            IOperationOutput output,
+            CancellationToken cancellationToken
+        ) => helper.AddSourceAsync(Source, output, cancellationToken);
 
         protected override Task<OperationVeredict> GetProcessVeredict(
             int ReturnCode,
@@ -224,12 +298,14 @@ namespace UniGetUI.PackageEngine.Operations
         public RemoveSourceOperation(IManagerSource source)
             : base(source, []) { }
 
-        protected override void PrepareProcessStartInfo()
-        {
-            PrepareSourceProcessStartInfo(
-                Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source)
-            );
-        }
+        protected override IReadOnlyList<string> GetSourceParameters() =>
+            Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source);
+
+        protected override Task<OperationVeredict> PerformInProcessAsync(
+            IInProcessSourceHelper helper,
+            IOperationOutput output,
+            CancellationToken cancellationToken
+        ) => helper.RemoveSourceAsync(Source, output, cancellationToken);
 
         protected override Task<OperationVeredict> GetProcessVeredict(
             int ReturnCode,

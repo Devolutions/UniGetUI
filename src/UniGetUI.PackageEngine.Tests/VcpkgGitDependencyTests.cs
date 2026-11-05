@@ -47,7 +47,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         }
     }
 
-    private static ManagerDependency GitDependency() =>
+    private static ManagerDependency VcpkgGit() =>
         Assert.Single(new Vcpkg().Dependencies, dep => dep.Name == "Git");
 
     private string PlantFakeGit()
@@ -80,7 +80,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
     {
         Assert.Equal(
             OperatingSystem.IsWindows() ? "git.exe" : "git",
-            VcpkgGitDependency.ExecutableName
+            GitDependency.ExecutableName
         );
     }
 
@@ -96,7 +96,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
             EnvironmentVariableTarget.Process
         );
 
-        Assert.True(await GitDependency().IsInstalled());
+        Assert.True(await VcpkgGit().IsInstalled());
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         Directory.CreateDirectory(emptyDirectory);
         Environment.SetEnvironmentVariable("PATH", emptyDirectory, EnvironmentVariableTarget.Process);
 
-        Assert.False(await GitDependency().IsInstalled());
+        Assert.False(await VcpkgGit().IsInstalled());
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
             return;
         }
 
-        ManagerDependency dep = GitDependency();
+        ManagerDependency dep = VcpkgGit();
 
         Assert.Equal(WingetManualCommand, dep.FancyInstallCommand);
         Assert.Equal(
@@ -144,7 +144,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
             return;
         }
 
-        ManagerDependency dep = GitDependency();
+        ManagerDependency dep = VcpkgGit();
 
         Assert.DoesNotContain("winget", dep.FancyInstallCommand);
         Assert.DoesNotContain("winget", dep.InstallArguments);
@@ -163,7 +163,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         Directory.CreateDirectory(emptyDirectory);
         Environment.SetEnvironmentVariable("PATH", emptyDirectory, EnvironmentVariableTarget.Process);
 
-        ManagerDependency dep = GitDependency();
+        ManagerDependency dep = VcpkgGit();
 
         var exception = Assert.Throws<InvalidOperationException>(() => dep.GetInstallCommand());
         Assert.Contains("Git", exception.Message);
@@ -173,7 +173,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
     [Fact]
     public void Resolve_OnMacOs_UsesHomebrewFromPath()
     {
-        var command = VcpkgGitDependency.Resolve(
+        var command = GitDependency.Resolve(
             isMacOS: true,
             OnPath("brew"),
             Existing(),
@@ -182,7 +182,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         );
 
         Assert.Equal(
-            new VcpkgGitDependency.InstallCommand("brew", "install git", "brew install git"),
+            new GitDependency.InstallCommand("brew", "install git", "brew install git"),
             command
         );
     }
@@ -190,7 +190,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
     [Fact]
     public void Resolve_OnMacOs_FindsHomebrewOutsideThePathOfAGuiProcess()
     {
-        var command = VcpkgGitDependency.Resolve(
+        var command = GitDependency.Resolve(
             isMacOS: true,
             OnPath(),
             Existing("/opt/homebrew/bin/brew"),
@@ -199,7 +199,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         );
 
         Assert.Equal(
-            new VcpkgGitDependency.InstallCommand(
+            new GitDependency.InstallCommand(
                 "/opt/homebrew/bin/brew",
                 "install git",
                 "/opt/homebrew/bin/brew install git"
@@ -211,7 +211,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
     [Fact]
     public void Resolve_OnMacOs_FallsBackToTheCommandLineTools()
     {
-        var command = VcpkgGitDependency.Resolve(
+        var command = GitDependency.Resolve(
             isMacOS: true,
             OnPath(),
             Existing(),
@@ -220,7 +220,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         );
 
         Assert.Equal(
-            new VcpkgGitDependency.InstallCommand(
+            new GitDependency.InstallCommand(
                 "xcode-select",
                 "--install",
                 "xcode-select --install"
@@ -243,7 +243,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         string expectedManualCommand
     )
     {
-        var command = VcpkgGitDependency.Resolve(
+        var command = GitDependency.Resolve(
             isMacOS: false,
             OnPath(packageManager),
             Existing(),
@@ -252,7 +252,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
         );
 
         Assert.Equal(
-            new VcpkgGitDependency.InstallCommand(
+            new GitDependency.InstallCommand(
                 expectedFileName,
                 expectedArguments,
                 expectedManualCommand
@@ -264,7 +264,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
     [Fact]
     public void Resolve_OnLinux_PrefersAptGetWhenSeveralPackageManagersExist()
     {
-        var command = VcpkgGitDependency.Resolve(
+        var command = GitDependency.Resolve(
             isMacOS: false,
             OnPath("zypper", "dnf", "apt-get"),
             Existing(),
@@ -278,7 +278,7 @@ public sealed class VcpkgGitDependencyTests : IDisposable
     [Fact]
     public void Resolve_OnLinux_IgnoresHomebrewAndReturnsNullWithoutADistributionPackageManager()
     {
-        var command = VcpkgGitDependency.Resolve(
+        var command = GitDependency.Resolve(
             isMacOS: false,
             OnPath("brew"),
             Existing("/home/linuxbrew/.linuxbrew/bin/brew"),

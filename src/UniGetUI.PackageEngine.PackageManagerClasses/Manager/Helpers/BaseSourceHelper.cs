@@ -16,10 +16,23 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Providers
         protected IPackageManager Manager;
 
         public BaseSourceHelper(IPackageManager manager)
+            : this(manager, new SourceFactory(manager)) { }
+
+        /// <summary>
+        /// For managers that resolve source names with their own rules instead of the default
+        /// <see cref="SourceFactory"/>.
+        /// </summary>
+        protected BaseSourceHelper(IPackageManager manager, ISourceFactory factory)
         {
             Manager = manager;
-            Factory = new SourceFactory(manager);
+            Factory = factory;
         }
+
+        /// <summary>
+        /// Drops the cached source list, so the next <see cref="GetSources"/> call loads it again.
+        /// </summary>
+        protected void InvalidateSourcesCache() =>
+            TaskRecycler<IReadOnlyList<IManagerSource>>.RemoveFromCache(_getSources);
 
         public abstract string[] GetAddSourceParameters(IManagerSource source);
         public abstract string[] GetRemoveSourceParameters(IManagerSource source);
@@ -40,7 +53,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Providers
             string[] Output
         )
         {
-            TaskRecycler<IReadOnlyList<IManagerSource>>.RemoveFromCache(_getSources);
+            InvalidateSourcesCache();
             if (
                 ReturnCode is 999
                 && Output.Last() == "Error: The operation was canceled by the user."
@@ -60,7 +73,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Providers
             string[] Output
         )
         {
-            TaskRecycler<IReadOnlyList<IManagerSource>>.RemoveFromCache(_getSources);
+            InvalidateSourcesCache();
             if (
                 ReturnCode is 999
                 && Output.Last() == "Error: The operation was canceled by the user."

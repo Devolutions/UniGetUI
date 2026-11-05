@@ -118,6 +118,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
         public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() => [];
 
+        public IReadOnlyList<IManagerSource> GetBrowsableSources() => [];
+
         public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotImplementedException();
 
         public IReadOnlyList<IPackage> GetInstalledPackages() =>

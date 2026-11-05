@@ -31,6 +31,7 @@ The commands below assume PowerShell is in the installation directory on Windows
 .\uniget.exe package search --manager dotnet-tool --query dotnetsay
 .\uniget.exe package install --manager dotnet-tool --id dotnetsay --version 2.1.4 --scope Global
 .\uniget.exe operation wait --id 123 --timeout 300
+.\uniget.exe skills --help
 ```
 
 For a silent Windows installation, include `ADDTOPATH=0` to opt out, or `ADDTOPATH=1` to
@@ -60,6 +61,95 @@ Use `uniget tui --help` for its options, or `uniget tui --fake-data` to try it w
 calling real package managers. See [TUI.md](TUI.md) for keyboard controls and more options.
 This command runs locally, independently of the desktop window or an IPC daemon, and is
 included in the same application package; no separate TUI executable is installed.
+
+## Agent Skills
+
+`unigetui skills [args...]` runs the bundled Agent Skills CLI in the current directory without
+starting the GUI or connecting to the UniGetUI IPC API. For example, `unigetui skills list`
+lists installed agent skills, and `unigetui skills add <source>` installs skills from a source.
+On Windows PowerShell, use `.\uniget.exe skills [args...]` to wait for completion and return its exit code.
+Skill discovery searches your configured repositories, websites and Notion databases by default.
+Enable the optional desktop extension under **Settings > Extensions > Agent Skills & Plugins** to use its
+dedicated sidebar page. It is off by default and independent of the bundled CLI. Skills are not
+package managers: `package search/install/update/uninstall`, package bundles and the TUI do not
+include them.
+The optional **Settings > Extensions > Agent Skills & Plugins > Online discovery > Search skills.sh** switch enables
+explicit public-catalog searches of at least two characters in **Skills > Discover**. It is off by default;
+submitting **Search skills.sh** sends search text to skills.sh. Local filtering and **Refresh sources** do not.
+This applies only to discovery on the Agent Skills
+extension page; the bundled `skills` CLI does not provide a public-catalog `find` command.
+Arguments and exit codes after `skills` belong to that CLI, not to the UniGetUI automation
+commands documented below.
+
+The extension's separate **Plugins** section has Browse/Installed views and full-page item details.
+Its **Claude Code** provider invokes the installed native CLI to manage whole plugins in user scope.
+Choose **Add marketplace** and paste `/plugin marketplace add
+Devolutions/ux-prototypes`, then use **Install by identifier** with `/plugin install
+ux-design-agents@devolutions-ux` or `/plugin install ux-skills@devolutions-ux` into its
+plugin field. These are recognized input formats, not arbitrary shell commands.
+The bundled `unigetui skills` CLI still installs individual cross-agent skills; it
+does not interpret `/plugin` commands or manage native plugin enablement.
+For terminal plugin management use `claude plugin marketplace add <source>` and
+`claude plugin install <name>@<marketplace> --scope user` directly. UniGetUI does not
+silently install Claude Code or approve marketplace-provided commands.
+
+Select **Codex** in that section to use its native marketplace and plugin commands.
+For example:
+
+```shell
+codex plugin marketplace add awakecoding/copilot-resources
+codex plugin add copilot@copilot-resources
+codex plugin marketplace upgrade copilot-resources
+codex plugin remove copilot@copilot-resources
+```
+
+Codex requires a recent CLI exposing these commands. UniGetUI uses its native executable
+(including the Windows binary shipped by npm), not a shell command string. Codex owns
+configuration and authentication; enable/disable plugins in Codex itself.
+
+The **Cursor** provider imports complete compatible bundles into Cursor's documented
+`~/.cursor/plugins/local` directory using UniGetUI-managed source snapshots. Add
+`awakecoding/copilot-resources`, then select `copilot@copilot-resources` to install.
+Reload Cursor and check **Customize** afterward. This is local import, not a Cursor
+CLI marketplace command or a hosted/team marketplace; Enterprise policy can block it.
+Only managed local imports can be updated/uninstalled here, and existing local plugins
+are not overwritten. The bundled `unigetui skills` CLI remains independent of these
+plugin providers.
+
+The **GitHub Copilot** plugin provider uses the installed native `copilot` executable, not an npm
+shell launcher. It loads installed plugins separately, browses one selected marketplace at a time,
+and only searches all marketplaces when explicitly requested. Marketplace results are cached for
+seven days and reused until you refresh them. It requires the current flat-array JSON inventory
+commands (verified with 1.0.105), respects `COPILOT_HOME`, and leaves authentication and policy to
+Copilot. For example:
+
+```shell
+copilot plugin marketplace add OWNER/REPO
+copilot plugin marketplace browse MARKETPLACE --json
+copilot plugin install NAME@MARKETPLACE
+copilot plugin update NAME@MARKETPLACE
+copilot plugin enable NAME@MARKETPLACE
+copilot plugin disable NAME@MARKETPLACE
+copilot plugin uninstall NAME@MARKETPLACE
+```
+
+In the extension, installed plugins load independently from marketplace Browse. Browse one
+marketplace on demand or explicitly search all marketplaces; results are cached and paged.
+**Update all N** confirms and updates only the shown installed plugins, not the CLI's broader
+`plugin update --all` scope. Built-in/external plugins are read-only; marketplace removal does
+not use `--force`. GitHub documents using the CLI to install desktop-app extensions, and the
+local CLI inventory is the profile shown by the app. Repository settings and managed policy may
+change effective enablement; active app sessions may need to reload after changes.
+
+Use **Open in Copilot app** as an optional fallback to open official confirmation forms through
+`ghapp://plugins/install?source=...` and `ghapp://plugins/marketplace/add?source=...`, wrapped
+in GitHub's HTTPS app launcher. Complete the confirmation in Copilot; opening a form is not
+reported as an installation.
+
+The desktop Skills library reuses saved repository/website metadata across restarts.
+**Refresh sources** explicitly refetches it; installs and previews still retrieve source content.
+**Update all N** applies only the known skill updates shown by the current filters.
+These desktop behaviors do not change the bundled `unigetui skills` CLI.
 
 ## Global transport options
 
@@ -168,7 +258,7 @@ other hosts; this does not substitute for their native lock-contention tests.
 | --- | --- | --- | --- |
 | `app status` | None | None | Returns app/session state such as headless mode, page, and supported UI actions. |
 | `app show` | None | None | Shows and focuses the window when a GUI session exists. |
-| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` requires the Git Repositories extension to be turned on in Settings, under Extensions; no restart is needed. |
+| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `agent-skills`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` and `agent-skills` require their respective extensions to be turned on in Settings, under Extensions; no restart is needed. |
 | `app quit` | None | None | Gracefully shuts down the selected session, including headless daemons. |
 
 The **Git Repositories** page fetches the remote even when the main clone is on a feature

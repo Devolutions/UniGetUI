@@ -1,16 +1,16 @@
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
-using UniGetUI.PackageEngine.Classes.Manager.Classes;
 
-namespace UniGetUI.PackageEngine.Managers.VcpkgManager
+namespace UniGetUI.PackageEngine.Classes.Manager.Classes
 {
     /// <summary>
-    /// The Git dependency of the vcpkg manager. vcpkg needs git to refresh its port registry, so a
-    /// missing git is surfaced through the missing-dependency dialog with an install command that
-    /// fits the platform: winget on Windows, Homebrew (or the Xcode command line tools) on macOS,
-    /// and the distribution's package manager through the configured elevator on Linux.
+    /// The Git dependency of managers that need git: vcpkg refreshes its port registry with it, and
+    /// Agent Skills clones skill repositories. A missing git is surfaced through the
+    /// missing-dependency dialog with an install command that fits the platform: winget on Windows,
+    /// Homebrew (or the Xcode command line tools) on macOS, and the distribution's package manager
+    /// through the configured elevator on Linux.
     /// </summary>
-    internal static class VcpkgGitDependency
+    public static class GitDependency
     {
         internal readonly record struct InstallCommand(
             string FileName,
@@ -18,9 +18,9 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
             string ManualCommand
         );
 
-        internal const string Name = "Git";
+        public const string Name = "Git";
 
-        internal static string ExecutableName => OperatingSystem.IsWindows() ? "git.exe" : "git";
+        public static string ExecutableName => OperatingSystem.IsWindows() ? "git.exe" : "git";
 
         private const string WindowsInstallArguments =
             "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {winget install --id Git.Git --exact "

@@ -702,6 +702,7 @@ public class CatalogEditorTests : IDisposable
         public bool IsInitializing => false;
         public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() => [];
         public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotSupportedException();
+        public IReadOnlyList<IManagerSource> GetBrowsableSources() => [];
         public IReadOnlyList<IPackage> GetInstalledPackages() => throw new NotSupportedException();
         public void RefreshPackageIndexes() => throw new NotSupportedException();
         public void AttemptFastRepair() => throw new NotSupportedException();

@@ -107,6 +107,7 @@ public static partial class Settings
         EnableSoftwareCatalog,
         EnableCatalogEditor,
         EnableGitRepositories,
+        EnableAgentSkills,
         GitRepositories,
         GitRepositoryBranches,
         GitRepositoriesCheckInterval,
@@ -152,6 +153,11 @@ public static partial class Settings
         // NOTE: Set this to true to delegate package operations to Devolutions Agent broker
         // instead of using local UAC elevation. Change default here when ready for production.
         UseAgentBroker,
+        SkillsDefaultEnablementApplied,
+        SkillsSources,
+        SkillsTargetAgents,
+        SkillsNotionCliVersion,
+        SkillsShDiscoveryEnabled,
 
         Test1,
         Test2,
@@ -270,6 +276,7 @@ public static partial class Settings
             K.EnableSoftwareCatalog => "EnableSoftwareCatalog",
             K.EnableCatalogEditor => "EnableCatalogEditor",
             K.EnableGitRepositories => "EnableGitRepositories",
+            K.EnableAgentSkills => "EnableAgentSkills",
             K.GitRepositories => "GitRepositories",
             K.GitRepositoryBranches => "GitRepositoryBranches",
             K.GitRepositoriesCheckInterval => "GitRepositoriesCheckInterval",
@@ -313,6 +320,11 @@ public static partial class Settings
             K.QuitAfterAutomaticUpdates => "QuitAfterAutomaticUpdates",
             K.InstallUniGetUIUpdatesWhenIdle => "InstallUniGetUIUpdatesWhenIdle",
             K.UseAgentBroker => "UseAgentBroker",
+            K.SkillsDefaultEnablementApplied => "SkillsDefaultEnablementApplied",
+            K.SkillsSources => "SkillsSources",
+            K.SkillsTargetAgents => "SkillsTargetAgents",
+            K.SkillsNotionCliVersion => "SkillsNotionCliVersion",
+            K.SkillsShDiscoveryEnabled => "SkillsShDiscoveryEnabled",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

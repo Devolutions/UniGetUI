@@ -1,5 +1,6 @@
 using System;
 using Avalonia;
+using UniGetUI.AgentSkills.Cli;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
@@ -10,15 +11,15 @@ using UniGetUI.PackageEngine.Managers.WinInstallerManager;
 #else
 using UniGetUI.PackageEngine.Managers.MacPkgManager;
 #endif
+using UniGetUI.Interface;
 using UniGetUI.Tui;
 
 namespace UniGetUI.Avalonia;
 
 sealed class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
+    // Do not initialize Avalonia or other GUI services before AppMain.
+    // The skills command runs independently of the GUI.
     [STAThread]
     public static void Main(string[] args)
     {
@@ -31,7 +32,7 @@ sealed class Program
         }
 #endif
 
-        // Both front-ends must wait while the installer replaces their shared files.
+        // All front-ends must wait while the installer replaces their shared files.
         try
         {
             if (UpdateInProgressGuard.IsUpdateInProgress())
@@ -43,6 +44,13 @@ sealed class Program
         catch { }
 
         PersistedEnvironment.Initialize();
+
+        if (args.Length > 0 && args[0] == "skills")
+        {
+            WindowsConsoleHost.PrepareCliIO();
+            Environment.ExitCode = SkillsCli.RunAsync(args[1..]).GetAwaiter().GetResult();
+            return;
+        }
 
         if (TuiAppHost.TryRunFakeCacheCommand(args, out int fakeExitCode))
         {

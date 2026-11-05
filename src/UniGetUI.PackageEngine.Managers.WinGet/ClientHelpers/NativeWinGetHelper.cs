@@ -221,6 +221,81 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         return selected;
     }
 
+    internal sealed record ResolvedSearchMatch<TPackage>(
+        int FirstIndex,
+        string Id,
+        NativeSearchResult Result,
+        TPackage Package
+    );
+
+    internal sealed record SearchMatchResolution<TPackage>(
+        IReadOnlyList<ResolvedSearchMatch<TPackage>> Matches,
+        IReadOnlyList<Exception> Errors,
+        int ResultCount
+    );
+
+    internal static SearchMatchResolution<TPackage> ResolveSearchMatches<TPackage>(
+        IReadOnlyList<(string CatalogName, TPackage Package)> matches,
+        Func<TPackage, string> readId,
+        Func<TPackage, NativeSearchResult> readResult,
+        int parallelism,
+        CancellationToken cancellationToken
+    )
+    {
+        var ids = new NativeSearchMatchId[matches.Count];
+        var resolved = new NativeSearchResult?[matches.Count];
+        var errors = new Exception?[matches.Count];
+        ConcurrentDictionary<(string, string), int> resolvingIndex = new();
+        Parallel.For(
+            0,
+            matches.Count,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = parallelism,
+                CancellationToken = cancellationToken,
+            },
+            index =>
+            {
+                var (catalogName, package) = matches[index];
+                try
+                {
+                    string id = readId(package);
+                    ids[index] = new(catalogName, id);
+                    if (resolvingIndex.TryAdd((catalogName, id), index))
+                    {
+                        resolved[index] = readResult(package);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (ids[index].Id is null)
+                    {
+                        ids[index] = new(catalogName, null);
+                    }
+
+                    errors[index] = e;
+                }
+            }
+        );
+
+        List<ResolvedSearchMatch<TPackage>> results = [];
+        foreach (int firstIndex in SelectUniqueSearchMatches(ids))
+        {
+            NativeSearchMatchId match = ids[firstIndex];
+            int index = resolvingIndex[(match.CatalogName, match.Id!)];
+            if (resolved[index] is { } result)
+            {
+                results.Add(new(firstIndex, match.Id!, result, matches[index].Package));
+            }
+        }
+
+        return new(
+            results,
+            [.. errors.OfType<Exception>()],
+            resolvingIndex.Count + ids.Count(match => match.Id is null)
+        );
+    }
+
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
         List<Package> packages = [];
@@ -332,45 +407,16 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             }
         }
 
-        var ids = new NativeSearchMatchId[matches.Count];
-        var resolved = new NativeSearchResult?[matches.Count];
-        var errors = new Exception?[matches.Count];
-        ConcurrentDictionary<(string, string), int> resolvingIndex = new();
+        SearchMatchResolution<CatalogPackage> resolution;
         try
         {
-            Parallel.For(
-                0,
-                matches.Count,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = SearchVersionResolutionParallelism,
-                    CancellationToken = Manager.CurrentListingCancellation,
-                },
-                index =>
-                {
-                    var (source, nativePackage) = matches[index];
-                    try
-                    {
-                        string id = nativePackage.Id;
-                        ids[index] = new(source.Name, id);
-                        if (resolvingIndex.TryAdd((source.Name, id), index))
-                        {
-                            resolved[index] = new(
-                                nativePackage.Name,
-                                nativePackage.DefaultInstallVersion.Version
-                            );
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        if (ids[index].Id is null)
-                        {
-                            ids[index] = new(source.Name, null);
-                        }
-
-                        errors[index] = e;
-                    }
-                }
+            resolution = ResolveSearchMatches(
+                [.. matches.Select(match => (match.Source.Name, match.NativePackage))],
+                nativePackage => nativePackage.Id,
+                nativePackage =>
+                    new(nativePackage.Name, nativePackage.DefaultInstallVersion.Version),
+                SearchVersionResolutionParallelism,
+                Manager.CurrentListingCancellation
             );
         }
         catch (OperationCanceledException)
@@ -380,43 +426,34 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             throw;
         }
 
-        int failedCount = errors.Count(error => error is not null);
-        int resultCount = resolvingIndex.Count + ids.Count(match => match.Id is null);
-        if (failedCount > 0)
+        if (resolution.Errors.Count > 0)
         {
             logger.Error(
-                $"WinGet: {failedCount} of {resultCount} search results could not be read. First error:"
+                $"WinGet: {resolution.Errors.Count} of {resolution.ResultCount} search results could not be read. First error:"
             );
-            logger.Error(errors.First(error => error is not null)!);
+            logger.Error(resolution.Errors[0]);
         }
 
-        foreach (int firstIndex in SelectUniqueSearchMatches(ids))
+        foreach (var match in resolution.Matches)
         {
-            NativeSearchMatchId match = ids[firstIndex];
-            int index = resolvingIndex[(match.CatalogName, match.Id!)];
-            if (resolved[index] is not { } result)
-            {
-                continue;
-            }
-
-            IManagerSource source = matches[firstIndex].Source;
+            IManagerSource source = matches[match.FirstIndex].Source;
             logger.Log(
-                $"Found package: {result.Name}|{match.Id}|{result.Version} on catalog {source.Name}"
+                $"Found package: {match.Result.Name}|{match.Id}|{match.Result.Version} on catalog {source.Name}"
             );
 
             var UniGetUIPackage = new Package(
-                result.Name,
-                match.Id!,
-                result.Version,
+                match.Result.Name,
+                match.Id,
+                match.Result.Version,
                 source,
                 Manager,
                 new OverridenInstallationOptions()
             );
-            NativePackageHandler.AddPackage(UniGetUIPackage, matches[index].NativePackage);
+            NativePackageHandler.AddPackage(UniGetUIPackage, match.Package);
             packages.Add(UniGetUIPackage);
         }
 
-        logger.Close(packages.Count == 0 && failedCount > 0 ? 1 : 0);
+        logger.Close(packages.Count == 0 && resolution.Errors.Count > 0 ? 1 : 0);
         return packages;
     }
 

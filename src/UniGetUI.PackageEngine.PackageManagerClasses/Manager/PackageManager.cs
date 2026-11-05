@@ -433,12 +433,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             List<Process>[] active;
             lock (_activeListingProcesses)
                 active = [.. _activeListingProcesses];
-
-            Interlocked.Exchange(ref _lastStopTimestamp, Stopwatch.GetTimestamp());
-            int killed = active.Sum(KillListingProcesses);
             CancellationTokenSource[] cancellations;
             lock (_activeListingCancellations)
                 cancellations = [.. _activeListingCancellations];
+
+            Interlocked.Exchange(ref _lastStopTimestamp, Stopwatch.GetTimestamp());
+            int killed = active.Sum(KillListingProcesses);
             foreach (CancellationTokenSource cancellation in cancellations)
                 CancelListing(cancellation);
             Logger.Warn($"Stopped {killed} running process(es) of manager {Name}");

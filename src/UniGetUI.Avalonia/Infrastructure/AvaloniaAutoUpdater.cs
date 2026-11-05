@@ -107,6 +107,8 @@ internal static partial class AvaloniaAutoUpdater
     {
         var info = new UpdateStatusInfo("", "", InfoBarSeverity.Informational, IsClosable: true, IsOpen: false);
         Dispatcher.UIThread.Post(() => StatusChanged?.Invoke(info));
+        if (OperatingSystem.IsWindows())
+            WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
     }
 
     // ------------------------------------------------------------------ per-attempt log
@@ -541,6 +543,8 @@ internal static partial class AvaloniaAutoUpdater
                         InfoBarSeverity.Success,
                         isClosable: true);
                 }
+                if (OperatingSystem.IsWindows())
+                    WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
                 MarkAttemptFinished("no update available");
                 return true;
             }
@@ -1038,6 +1042,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         LogUpdateInfo($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
+        WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
         InstallerHandoffs.Complete(handoff);
 
         RaiseStatus(

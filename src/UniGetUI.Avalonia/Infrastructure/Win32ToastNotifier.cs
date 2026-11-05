@@ -2,6 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.Tools;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
@@ -23,6 +24,8 @@ internal static class Win32ToastNotifier
 {
     /// <summary>Stable AUMID for UniGetUI. Must match the one stamped on the Start Menu shortcut.</summary>
     public const string AppUserModelId = "Devolutions.UniGetUI";
+
+    private const string ToastGroup = "UniGetUI";
 
     private static bool _availabilityChecked;
     private static bool _isAvailable;
@@ -80,19 +83,24 @@ internal static class Win32ToastNotifier
     /// forwarded to the app when the user clicks the toast. Returns <c>false</c> if the
     /// toast could not be shown (caller should fall back to an in-app banner).
     /// </summary>
-    public static bool Show(string title, string message, string launchArgument)
+    public static bool Show(string title, string message, string launchArgument, string? tag = null, bool untilDismissed = false)
     {
         if (!OperatingSystem.IsWindows())
             return false;
 
         try
         {
-            string xml = BuildToastXml(title, message, launchArgument);
+            string xml = BuildToastXml(title, message, launchArgument, untilDismissed);
 
             var xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(xml);
 
             var notification = new ToastNotification(xmlDoc);
+            if (tag is not null)
+            {
+                notification.Tag = tag;
+                notification.Group = ToastGroup;
+            }
             ToastNotificationManager.CreateToastNotifier(AppUserModelId).Show(notification);
             return true;
         }
@@ -104,20 +112,41 @@ internal static class Win32ToastNotifier
         }
     }
 
-    private static string BuildToastXml(string title, string message, string launchArgument)
+    public static void Remove(string tag)
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        try
+        {
+            ToastNotificationManager.History.Remove(tag, ToastGroup, AppUserModelId);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not remove Windows toast notification '{tag}'");
+            Logger.Warn(ex);
+        }
+    }
+
+    internal static string BuildToastXml(string title, string message, string launchArgument, bool untilDismissed = false)
     {
         string titleEsc = XmlEscape(title);
         string messageEsc = XmlEscape(message);
         string launchEsc = XmlEscape(launchArgument);
+        string scenario = untilDismissed ? "reminder" : "default";
+        string actions = untilDismissed
+            ? $"""<actions><action content="{XmlEscape(CoreTools.Translate("Open UniGetUI"))}" activationType="protocol" arguments="{launchEsc}"/><action content="" activationType="system" arguments="dismiss"/></actions>"""
+            : "";
 
         return $"""
-                <toast activationType="protocol" launch="{launchEsc}" scenario="default">
+                <toast activationType="protocol" launch="{launchEsc}" scenario="{scenario}">
                     <visual>
                         <binding template="ToastGeneric">
                             <text>{titleEsc}</text>
                             <text>{messageEsc}</text>
                         </binding>
                     </visual>
+                    {actions}
                     <audio silent="true"/>
                 </toast>
                 """;

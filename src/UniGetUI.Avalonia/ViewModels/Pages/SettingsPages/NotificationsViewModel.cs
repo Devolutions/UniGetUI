@@ -8,7 +8,15 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 public partial class NotificationsViewModel : ViewModelBase
 {
     [ObservableProperty] private bool _isBackgroundModeEnabled;
-    [ObservableProperty] private bool _isNotificationsEnabled;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPersistentUpdateNotificationsEnabled))]
+    private bool _isNotificationsEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPersistentUpdateNotificationsEnabled))]
+    private bool _isUpdatesNotificationsEnabled;
+
+    public bool IsPersistentUpdateNotificationsEnabled => IsNotificationsEnabled && IsUpdatesNotificationsEnabled;
 
     /// <summary>True when closing the window quits UniGetUI, which turns notifications off.</summary>
     public bool IsSystemTrayWarningVisible => !IsBackgroundModeEnabled;
@@ -18,15 +26,24 @@ public partial class NotificationsViewModel : ViewModelBase
     public bool AreNotificationTypesSupported { get; } =
         OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
 
+    public bool IsPersistentNotificationsSupported { get; } = OperatingSystem.IsWindows();
+
     public NotificationsViewModel()
     {
         _isBackgroundModeEnabled = !CoreSettings.Get(CoreSettings.K.DisableSystemTray);
         _isNotificationsEnabled = !CoreSettings.Get(CoreSettings.K.DisableNotifications);
+        _isUpdatesNotificationsEnabled = !CoreSettings.Get(CoreSettings.K.DisableUpdatesNotifications);
     }
 
     [RelayCommand]
     private void UpdateNotificationsEnabled()
     {
         IsNotificationsEnabled = !CoreSettings.Get(CoreSettings.K.DisableNotifications);
+    }
+
+    [RelayCommand]
+    private void UpdateUpdatesNotificationsEnabled()
+    {
+        IsUpdatesNotificationsEnabled = !CoreSettings.Get(CoreSettings.K.DisableUpdatesNotifications);
     }
 }

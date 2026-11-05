@@ -54,6 +54,14 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     })
     {
         ViewModel.PackagesLoaded += reason => { _ = WhenPackagesLoaded(); };
+        if (UpgradablePackagesLoader.Instance is { } upgradableLoader)
+        {
+            upgradableLoader.PackagesChanged += (_, e) =>
+            {
+                if (OperatingSystem.IsWindows() && e.RemovedPackages.Count > 0 && !upgradableLoader.IsLoading && !upgradableLoader.Any())
+                    WindowsAppNotificationBridge.RemoveUpdatesAvailableNotification();
+            };
+        }
     }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)
@@ -478,7 +486,13 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
                 .ToList();
 
-            if (upgradable.Count == 0) return;
+            if (upgradable.Count == 0)
+            {
+                if (OperatingSystem.IsWindows()
+                    && UpgradablePackagesLoader.Instance is { IsLoaded: true, LastLoadReportedFailures: false, AnyManagerReady: true })
+                    WindowsAppNotificationBridge.RemoveUpdatesAvailableNotification();
+                return;
+            }
 
             if (Settings.Get(Settings.K.DisableAUPOnBattery) && PowerConditions.IsOnBattery())
             {

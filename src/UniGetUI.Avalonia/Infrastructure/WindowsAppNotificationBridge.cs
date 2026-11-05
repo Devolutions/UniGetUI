@@ -101,6 +101,26 @@ internal static class WindowsAppNotificationBridge
 
     // ── updates-available notification ───────────────────────────────────────
 
+    internal const string UpdatesToastTag = "updates-available";
+    internal const string SelfUpdateToastTag = "self-update-available";
+
+    internal static bool KeepsUntilDismissed(string? tag, bool persistentUpdateNotifications)
+        => persistentUpdateNotifications && tag is (UpdatesToastTag or SelfUpdateToastTag);
+
+    public static void RemoveUpdatesAvailableNotification()
+    {
+#if WINDOWS
+        Win32ToastNotifier.Remove(UpdatesToastTag);
+#endif
+    }
+
+    public static void RemoveSelfUpdateAvailableNotification()
+    {
+#if WINDOWS
+        Win32ToastNotifier.Remove(SelfUpdateToastTag);
+#endif
+    }
+
     /// <summary>
     /// Shows a Windows toast notification listing available package updates. No-op on
     /// non-Windows or when notifications are disabled (mirrors the previous bridge's
@@ -125,7 +145,8 @@ internal static class WindowsAppNotificationBridge
                     CoreTools.Translate("{0} can be updated to version {1}",
                         upgradable[0].Name, upgradable[0].NewVersionString),
                     MainWindow.RuntimeNotificationLevel.Success,
-                    launchAction: NotificationArguments.ShowOnUpdatesTab);
+                    launchAction: NotificationArguments.ShowOnUpdatesTab,
+                    tag: UpdatesToastTag);
             }
             else
             {
@@ -133,7 +154,8 @@ internal static class WindowsAppNotificationBridge
                     CoreTools.Translate("Updates found!"),
                     CoreTools.Translate("{0} packages can be updated", upgradable.Count),
                     MainWindow.RuntimeNotificationLevel.Success,
-                    launchAction: NotificationArguments.ShowOnUpdatesTab);
+                    launchAction: NotificationArguments.ShowOnUpdatesTab,
+                    tag: UpdatesToastTag);
             }
         }
         catch (Exception ex)
@@ -200,7 +222,8 @@ internal static class WindowsAppNotificationBridge
                 CoreTools.Translate("{0} can be updated to version {1}", "UniGetUI", newVersion),
                 CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName),
                 MainWindow.RuntimeNotificationLevel.Success,
-                launchAction: NotificationArguments.Show);
+                launchAction: NotificationArguments.Show,
+                tag: SelfUpdateToastTag);
         }
         catch (Exception ex)
         {
@@ -223,7 +246,8 @@ internal static class WindowsAppNotificationBridge
         string message,
         MainWindow.RuntimeNotificationLevel level,
         string launchAction,
-        bool allowInAppFallback = true)
+        bool allowInAppFallback = true,
+        string? tag = null)
     {
 #if WINDOWS
         // Only fire an OS toast when the app is out of sight (minimized or hidden to the tray).
@@ -232,7 +256,8 @@ internal static class WindowsAppNotificationBridge
         if (OperatingSystem.IsWindows() && !MainWindow.IsWindowOnScreen && Win32ToastNotifier.IsAvailable())
         {
             string launchArg = BuildLaunchArgument(launchAction);
-            if (Win32ToastNotifier.Show(title, message, launchArg))
+            bool untilDismissed = KeepsUntilDismissed(tag, Settings.Get(Settings.K.PersistentUpdateNotifications));
+            if (Win32ToastNotifier.Show(title, message, launchArg, tag, untilDismissed))
             {
                 // Show-only: the launch action fires only when the user clicks the toast, routed via
                 // the unigetui:// deep-link through the single-instance handler. Raising it on show

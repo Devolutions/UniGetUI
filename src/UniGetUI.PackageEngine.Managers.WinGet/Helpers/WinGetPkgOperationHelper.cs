@@ -188,6 +188,10 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             parameters.Add(options.InteractiveInstallation ? "--interactive" : "--silent");
         }
 
+        PortableArpEntry? portableEntry = operation is OperationType.Uninstall
+            ? null
+            : ReadPortableArpEntry(package);
+
         if (operation is OperationType.Update)
         {
             ApplyOperationOverrides(package, options, operation);
@@ -195,7 +199,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
             if (!usePinget)
             {
-                var effectiveLocation = GetEffectiveUpdateLocation(package, options);
+                var effectiveLocation = GetEffectiveUpdateLocation(package, options, portableEntry);
                 if (effectiveLocation is not null)
                 {
                     parameters.AddRange(["--location", CoreTools.EscapeCommandLineArgument(effectiveLocation)]);
@@ -237,7 +241,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             }
         }
 
-        ApplyElevationRequirements(package, options, operation);
+        ApplyInstallerElevationRequirements(package, options, operation);
+        if (!standalone)
+            ApplyPortableLinkElevation(package, operation, portableEntry);
 
         if (!usePinget)
         {
@@ -278,6 +284,60 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     }
 
     public override void ApplyElevationRequirements(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation
+    )
+    {
+        ApplyInstallerElevationRequirements(package, options, operation);
+        ApplyPortableLinkElevation(
+            package,
+            operation,
+            operation is OperationType.Uninstall || OperationIsBrokered(package)
+                ? null
+                : ReadPortableArpEntry(package)
+        );
+    }
+
+    internal static void ApplyPortableLinkElevation(
+        IPackage package,
+        OperationType operation,
+        PortableArpEntry? portableEntry
+    )
+    {
+        if (
+            operation is OperationType.Uninstall
+            || package.OverridenOptions.RunAsAdministrator is not null
+            || OperationIsBrokered(package)
+        )
+            return;
+
+        try
+        {
+            if (
+                !PortableUpdateNeedsElevation(
+                    portableEntry,
+                    FindPortableLinksDirectory,
+                    CanCreateSymlinksIn,
+                    CanElevateAsCurrentAccount
+                )
+            )
+                return;
+
+            Logger.Info(
+                $"WinGet portable package {package.Id} has command aliases in the WinGet Links folder, which "
+                    + "this process cannot recreate without elevation; forcing administrator rights so the "
+                    + "aliases are kept"
+            );
+            package.OverridenOptions.RunAsAdministrator = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not check the command aliases of portable package {package.Id}: {ex.Message}");
+        }
+    }
+
+    private static void ApplyInstallerElevationRequirements(
         IPackage package,
         InstallOptions options,
         OperationType operation
@@ -751,12 +811,21 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     /// location inherited from the manager-wide default stays opt-in behind
     /// WinGetForceLocationOnUpdate so updates don't relocate existing installs (issue #4210).
     /// </summary>
-    internal static string? GetEffectiveUpdateLocation(IPackage package, InstallOptions options)
+    internal static string? GetEffectiveUpdateLocation(IPackage package, InstallOptions options) =>
+        GetEffectiveUpdateLocation(package, options, ReadPortableArpEntry(package));
+
+    private static string? GetEffectiveUpdateLocation(
+        IPackage package,
+        InstallOptions options,
+        PortableArpEntry? portableEntry
+    )
     {
-        var detectedLocation = TryGetPortableInstallLocation(package);
-        if (detectedLocation is not null)
+        if (portableEntry is not null)
         {
-            return detectedLocation;
+            Logger.Info(
+                $"Auto-detected portable install location for {package.Id}: {portableEntry.InstallLocation}"
+            );
+            return portableEntry.InstallLocation;
         }
 
         if (
@@ -773,12 +842,117 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         return null;
     }
 
+    internal sealed record PortableArpEntry(string InstallLocation, bool MachineScope);
+
+    internal static bool PortableUpdateNeedsElevation(
+        PortableArpEntry? entry,
+        Func<PortableArpEntry, string?> findLinksDirectory,
+        Func<string, bool> canCreateSymlinksIn,
+        Func<bool> canElevateAsCurrentAccount
+    ) =>
+        entry is not null
+        && canElevateAsCurrentAccount()
+        && findLinksDirectory(entry) is { } linksDirectory
+        && !canCreateSymlinksIn(linksDirectory);
+
+    internal static Func<IPackage, PortableArpEntry?> ReadPortableArpEntry { get; set; } = FindPortableArpEntry;
+
+    internal static Func<PortableArpEntry, string?> FindPortableLinksDirectory { get; set; } =
+        entry => FindLinksDirectoryPointingInto(entry, PortableLinksDirectories(entry.MachineScope));
+
+    internal static Func<string, bool> CanCreateSymlinksIn { get; set; } = ProbeSymlinkCreation;
+
+    internal static Func<bool> CanElevateAsCurrentAccount { get; set; } = TokenElevation.CanElevateAsCurrentAccount;
+
+    private static IEnumerable<string> PortableLinksDirectories(bool machineScope)
+    {
+        if (!machineScope)
+        {
+            yield return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Microsoft",
+                "WinGet",
+                "Links"
+            );
+            yield break;
+        }
+
+        yield return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "WinGet",
+            "Links"
+        );
+        yield return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            "WinGet",
+            "Links"
+        );
+    }
+
+    internal static string? FindLinksDirectoryPointingInto(
+        PortableArpEntry entry,
+        IEnumerable<string> linksDirectories
+    )
+    {
+        string installLocation = Path.TrimEndingDirectorySeparator(Path.GetFullPath(entry.InstallLocation))
+            + Path.DirectorySeparatorChar;
+
+        foreach (string linksDirectory in linksDirectories)
+        {
+            if (!Directory.Exists(linksDirectory))
+                continue;
+
+            foreach (string link in Directory.EnumerateFiles(linksDirectory))
+            {
+                if (new FileInfo(link).LinkTarget is not { Length: > 0 } target)
+                    continue;
+
+                string resolved = Path.GetFullPath(Path.Combine(linksDirectory, target));
+                if (resolved.StartsWith(installLocation, StringComparison.OrdinalIgnoreCase))
+                    return linksDirectory;
+            }
+        }
+
+        return null;
+    }
+
+    internal static bool ProbeSymlinkCreation(string linksDirectory)
+    {
+        string probeRoot = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(linksDirectory)) ?? linksDirectory;
+        string directory = Path.Combine(probeRoot, $"UniGetUI-symlink-probe-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(directory);
+            string target = Path.Combine(directory, "target");
+            File.WriteAllText(target, "");
+            File.CreateSymbolicLink(Path.Combine(directory, "link"), target);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Info($"This process cannot create symbolic links next to {linksDirectory}: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(directory))
+                    Directory.Delete(directory, recursive: true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not delete the symbolic link probe folder {directory}: {ex.Message}");
+            }
+        }
+    }
+
     /// <summary>
     /// For portable WinGet packages, reads the current install location from the Windows registry
     /// ARP entry (written by WinGet at install time). Returns null if the package is not portable
     /// or the location cannot be determined.
     /// </summary>
-    private static string? TryGetPortableInstallLocation(IPackage package)
+    private static PortableArpEntry? FindPortableArpEntry(IPackage package)
     {
         try
         {
@@ -814,23 +988,17 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                     )
                         return null;
 
-                    if (
-                        entry.GetValue("InstallLocation") is string location
-                        && location.Length > 0
-                    )
-                    {
-                        Logger.Info(
-                            $"Auto-detected portable install location for {package.Id}: {location}"
-                        );
-                        return location;
-                    }
+                    if (entry.GetValue("InstallLocation") is not string { Length: > 0 } location)
+                        continue;
+
+                    return new PortableArpEntry(location, hive == Registry.LocalMachine);
                 }
             }
         }
         catch (Exception ex)
         {
             Logger.Warn(
-                $"Failed to auto-detect portable install location for {package.Id}: {ex.Message}"
+                $"Failed to read the portable install entry for {package.Id}: {ex.Message}"
             );
         }
 

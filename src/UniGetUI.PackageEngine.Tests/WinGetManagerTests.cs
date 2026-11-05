@@ -3315,6 +3315,261 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    private static readonly WinGetPkgOperationHelper.PortableArpEntry FfmpegPortableEntry = new(
+        @"C:\Users\test\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg",
+        MachineScope: false
+    );
+
+    private const string FfmpegLinksDirectory = @"C:\Users\test\AppData\Local\Microsoft\WinGet\Links";
+
+    [Theory]
+    [InlineData(true, true, false, true)]
+    [InlineData(true, true, true, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(false, true, false, false)]
+    public void WinGetElevatesPortablesOnlyWhenTheirLinksCannotBeRecreatedByTheSameAccount(
+        bool canElevateAsCurrentAccount,
+        bool hasLinks,
+        bool canCreateSymlinks,
+        bool expected
+    )
+    {
+        Assert.Equal(
+            expected,
+            WinGetPkgOperationHelper.PortableUpdateNeedsElevation(
+                FfmpegPortableEntry,
+                _ => hasLinks ? FfmpegLinksDirectory : null,
+                directory =>
+                {
+                    Assert.Equal(FfmpegLinksDirectory, directory);
+                    return canCreateSymlinks;
+                },
+                () => canElevateAsCurrentAccount
+            )
+        );
+    }
+
+    [Fact]
+    public void WinGetDoesNotProbeAnythingForPackagesThatAreNotPortable()
+    {
+        Assert.False(
+            WinGetPkgOperationHelper.PortableUpdateNeedsElevation(
+                null,
+                _ => throw new InvalidOperationException("The links folder must not be scanned"),
+                _ => throw new InvalidOperationException("The symlink probe must not run"),
+                () => throw new InvalidOperationException("The token must not be read")
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, true)]
+    [InlineData(OperationType.Install, true)]
+    [InlineData(OperationType.Uninstall, null)]
+    public void WinGetElevationRequirementsKeepPortableLinksEvenWithoutTheComApi(
+        OperationType operation,
+        bool? expected
+    )
+    {
+        var manager = new WinGet();
+        var package = CreatePortablePackage(manager);
+
+        WithPortableLinkSeams(
+            canElevate: true,
+            canCreateSymlinks: false,
+            () => manager.OperationHelper.ApplyElevationRequirements(package, new InstallOptions(), operation)
+        );
+
+        Assert.Equal(expected, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, false, true)]
+    [InlineData(OperationType.Update, true, null)]
+    [InlineData(OperationType.Install, false, true)]
+    [InlineData(OperationType.Install, true, null)]
+    public void WinGetCommandPreviewsDoNotDecidePortableLinkElevation(
+        OperationType operation,
+        bool standalone,
+        bool? expected
+    )
+    {
+        var manager = new WinGet();
+        var package = CreatePortablePackage(manager);
+        var options = new InstallOptions();
+
+        WithPortableLinkSeams(
+            canElevate: true,
+            canCreateSymlinks: false,
+            () =>
+            {
+                if (standalone)
+                    manager.OperationHelper.GetStandaloneParameters(package, options, operation);
+                else
+                    manager.OperationHelper.GetParameters(package, options, operation);
+            }
+        );
+
+        Assert.Equal(expected, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WinGetPortableLinkElevationNeverOverridesAnEarlierDecision(bool earlierDecision)
+    {
+        var package = CreatePortablePackage(new WinGet());
+        package.OverridenOptions.RunAsAdministrator = earlierDecision;
+
+        WithPortableLinkSeams(
+            canElevate: true,
+            canCreateSymlinks: false,
+            () => WinGetPkgOperationHelper.ApplyPortableLinkElevation(
+                package,
+                OperationType.Update,
+                FfmpegPortableEntry
+            )
+        );
+
+        Assert.Equal(earlierDecision, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void WinGetPortableLinkElevationIsNotAppliedToBrokeredOperations()
+    {
+        var package = CreatePortablePackage(new WinGet());
+        Settings.Set(Settings.K.UseAgentBroker, true);
+
+        WithPortableLinkSeams(
+            canElevate: true,
+            canCreateSymlinks: false,
+            () => WinGetPkgOperationHelper.ApplyPortableLinkElevation(
+                package,
+                OperationType.Update,
+                FfmpegPortableEntry
+            )
+        );
+
+        Assert.Null(package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void WinGetPortableLinkElevationSurvivesAFailingLinksScan()
+    {
+        var package = CreatePortablePackage(new WinGet());
+        var originalFind = WinGetPkgOperationHelper.FindPortableLinksDirectory;
+        WinGetPkgOperationHelper.FindPortableLinksDirectory = _ => throw new IOException("Access denied");
+        try
+        {
+            WithPortableLinkSeams(
+                canElevate: true,
+                canCreateSymlinks: false,
+                () => WinGetPkgOperationHelper.ApplyPortableLinkElevation(
+                    package,
+                    OperationType.Update,
+                    FfmpegPortableEntry
+                ),
+                replaceLinksScan: false
+            );
+        }
+        finally
+        {
+            WinGetPkgOperationHelper.FindPortableLinksDirectory = originalFind;
+        }
+
+        Assert.Null(package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void WinGetFindsTheLinksFolderOnlyWhenALinkPointsIntoTheInstallLocation()
+    {
+        string installLocation = Path.Combine(_testRoot, "Packages", "Gyan.FFmpeg");
+        string otherLocation = Path.Combine(_testRoot, "Packages", "Gyan.FFmpegPlus");
+        string linksDirectory = Path.Combine(_testRoot, "Links");
+        Directory.CreateDirectory(Path.Combine(installLocation, "bin"));
+        Directory.CreateDirectory(otherLocation);
+        Directory.CreateDirectory(linksDirectory);
+        File.WriteAllText(Path.Combine(installLocation, "bin", "ffmpeg.exe"), "");
+        File.WriteAllText(Path.Combine(otherLocation, "ffmpeg.exe"), "");
+        File.WriteAllText(Path.Combine(linksDirectory, "notalink.exe"), "");
+        var entry = new WinGetPkgOperationHelper.PortableArpEntry(installLocation, MachineScope: false);
+
+        Assert.Null(WinGetPkgOperationHelper.FindLinksDirectoryPointingInto(entry, [linksDirectory]));
+        Assert.Null(
+            WinGetPkgOperationHelper.FindLinksDirectoryPointingInto(
+                entry,
+                [Path.Combine(_testRoot, "Missing")]
+            )
+        );
+
+        if (!WinGetPkgOperationHelper.ProbeSymlinkCreation(linksDirectory))
+            return;
+
+        File.CreateSymbolicLink(
+            Path.Combine(linksDirectory, "ffmpegplus.exe"),
+            Path.Combine(otherLocation, "ffmpeg.exe")
+        );
+        Assert.Null(WinGetPkgOperationHelper.FindLinksDirectoryPointingInto(entry, [linksDirectory]));
+
+        File.CreateSymbolicLink(
+            Path.Combine(linksDirectory, "ffmpeg.exe"),
+            Path.Combine(installLocation, "bin", "ffmpeg.exe")
+        );
+        Assert.Equal(
+            linksDirectory,
+            WinGetPkgOperationHelper.FindLinksDirectoryPointingInto(entry, [linksDirectory])
+        );
+    }
+
+    [Fact]
+    public void WinGetSymlinkProbeLeavesNothingBehind()
+    {
+        string linksDirectory = Path.Combine(_testRoot, "ProbeRoot", "Links");
+        Directory.CreateDirectory(linksDirectory);
+
+        WinGetPkgOperationHelper.ProbeSymlinkCreation(linksDirectory);
+
+        Assert.Equal([linksDirectory], Directory.GetDirectories(Path.Combine(_testRoot, "ProbeRoot")));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(linksDirectory));
+    }
+
+    private static Package CreatePortablePackage(WinGet manager) =>
+        new PackageBuilder()
+            .WithManager(manager)
+            .WithName("FFmpeg")
+            .WithId("Gyan.FFmpeg")
+            .WithVersion("8.0")
+            .Build();
+
+    private static void WithPortableLinkSeams(
+        bool canElevate,
+        bool canCreateSymlinks,
+        Action run,
+        bool replaceLinksScan = true
+    )
+    {
+        var originalRead = WinGetPkgOperationHelper.ReadPortableArpEntry;
+        var originalFind = WinGetPkgOperationHelper.FindPortableLinksDirectory;
+        var originalProbe = WinGetPkgOperationHelper.CanCreateSymlinksIn;
+        var originalElevate = WinGetPkgOperationHelper.CanElevateAsCurrentAccount;
+        WinGetPkgOperationHelper.ReadPortableArpEntry = _ => FfmpegPortableEntry;
+        if (replaceLinksScan)
+            WinGetPkgOperationHelper.FindPortableLinksDirectory = _ => FfmpegLinksDirectory;
+        WinGetPkgOperationHelper.CanCreateSymlinksIn = _ => canCreateSymlinks;
+        WinGetPkgOperationHelper.CanElevateAsCurrentAccount = () => canElevate;
+        try
+        {
+            run();
+        }
+        finally
+        {
+            WinGetPkgOperationHelper.ReadPortableArpEntry = originalRead;
+            WinGetPkgOperationHelper.FindPortableLinksDirectory = originalFind;
+            WinGetPkgOperationHelper.CanCreateSymlinksIn = originalProbe;
+            WinGetPkgOperationHelper.CanElevateAsCurrentAccount = originalElevate;
+        }
+    }
+
     [Fact]
     public void WinGetDoesNotTreatRawInstallerExitCode26AsAnApplicationInUse()
     {

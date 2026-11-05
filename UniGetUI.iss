@@ -261,6 +261,16 @@ begin
   Result := CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall or PreserveAutostartDisabled;
 end;
 
+function ShouldRegisterAutostartForAllUsers: Boolean;
+begin
+  Result := IsAdminInstallMode and not (CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall);
+end;
+
+function ShouldUnregisterAutostartForAllUsers: Boolean;
+begin
+  Result := IsAdminInstallMode and not ShouldRegisterAutostartForAllUsers;
+end;
+
 var CustomExitCode: integer;
 
 procedure ExitProcess(exitCode:integer);
@@ -336,6 +346,11 @@ Name: "regularinstall\addtopath"; Description: "{cm:RegAddToPath}";
 [Registry]
 Root: HKCU; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "WingetUI"; ValueData: """{app}\UniGetUI.exe"" --daemon"; Flags: uninsdeletevalue noerror; Tasks: regularinstall;
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: binary; ValueName: "WingetUI"; ValueData: "03"; Flags: uninsdeletevalue; Tasks: regularinstall; Check: ShouldSuppressRunOnStartup;
+Root: HKLM64; Subkey: "Software\Microsoft\Active Setup\Installed Components\Devolutions.UniGetUI.Autostart"; ValueType: none; Flags: deletekey; Tasks: regularinstall; Check: ShouldUnregisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "Software\Microsoft\Active Setup\Installed Components\Devolutions.UniGetUI.Autostart"; ValueType: string; ValueData: "{#MyAppName}"; Flags: uninsdeletekey; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "Software\Microsoft\Active Setup\Installed Components\Devolutions.UniGetUI.Autostart"; ValueType: string; ValueName: "Version"; ValueData: "{#StringChange(MyAppVersion, '.', ',')}"; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "Software\Microsoft\Active Setup\Installed Components\Devolutions.UniGetUI.Autostart"; ValueType: dword; ValueName: "IsInstalled"; ValueData: 1; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "Software\Microsoft\Active Setup\Installed Components\Devolutions.UniGetUI.Autostart"; ValueType: string; ValueName: "StubPath"; ValueData: """{win}\System32\reg.exe"" add ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v WingetUI /t REG_SZ /d ""\""{app}\{#MyAppExeName}\"" --daemon"" /f"; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
 
 // Register the unigetui:// deep link
 Root: HKA; Subkey: "Software\Classes\unigetui"; ValueType: "string"; ValueData: "URL:UniGetUI Protocol"; Flags: uninsdeletekey; Tasks: regularinstall;

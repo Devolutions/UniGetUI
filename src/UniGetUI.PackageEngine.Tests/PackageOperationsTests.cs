@@ -419,6 +419,111 @@ public sealed class PackageOperationsTests
         Assert.Equal("2.0.0", uninstall.Package.VersionString);
     }
 
+    private static TestPackageManager CreateRecordingProcessManager(
+        List<string> executed,
+        Func<OperationType, bool> succeeds
+    ) =>
+        new PackageManagerBuilder()
+            .WithName($"RecordingManager{Guid.NewGuid():N}")
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (package, options, operation) =>
+                    ["echo", $"RAN-{operation}-{package.Id}-{options.Version}"];
+                helper.ResultFactory = (_, operation, output, _) =>
+                {
+                    lock (executed)
+                        executed.Add(
+                            $"{operation}|"
+                                + (
+                                    output.LastOrDefault(line => line.StartsWith("RAN-", StringComparison.Ordinal))?.Trim()
+                                    ?? "NO-OUTPUT"
+                                )
+                        );
+                    return succeeds(operation) ? OperationVeredict.Success : OperationVeredict.Failure;
+                };
+            })
+            .Build();
+
+    [Fact]
+    public async Task ReinstallingUpdateRunsTheUninstallThenTheInstallOfTheNewVersion()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var manager = CreateRecordingProcessManager(executed, _ => true);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await UpgradablePackagesLoader.Instance.AddForeign(package);
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        Assert.Equal(["Uninstall|RAN-Uninstall-Contoso.Tool-", "Install|RAN-Install-Contoso.Tool-3.0.0"], executed);
+        Assert.False(UpgradablePackagesLoader.Instance.Contains(package));
+    }
+
+    [Fact]
+    public async Task RetryingAReinstallAfterAFailedInstallOnlyRunsTheInstall()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        bool installSucceeds = false;
+        var manager = CreateRecordingProcessManager(
+            executed,
+            operation => operation is not OperationType.Install || installSucceeds
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await UpgradablePackagesLoader.Instance.AddForeign(package);
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true, RemoveDataOnUninstall = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Equal(["Uninstall|RAN-Uninstall-Contoso.Tool-", "Install|RAN-Install-Contoso.Tool-3.0.0"], executed);
+        Assert.True(UpgradablePackagesLoader.Instance.Contains(package));
+
+        installSucceeds = true;
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+        await WaitForConditionAsync(() => operation.Status is OperationStatus.Succeeded);
+
+        Assert.Equal(
+            [
+                "Uninstall|RAN-Uninstall-Contoso.Tool-",
+                "Install|RAN-Install-Contoso.Tool-3.0.0",
+                "Install|RAN-Install-Contoso.Tool-3.0.0",
+            ],
+            executed
+        );
+    }
+
     // UninstallPreviousVersionsOnUpdate is the one destructive consumer of the per-manager
     // version comparison: it queues every installed copy it considers superseded for removal.
     // On a SemVer registry the pre-release IS superseded by its stable release and must be

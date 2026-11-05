@@ -12,8 +12,10 @@ using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
+using UniGetUI.PackageEngine.Managers.SnapManager;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -344,7 +346,7 @@ public sealed class PackageOperationsTests
 
         Assert.False(uninstall.Options.RemoveDataOnUninstall);
         Assert.Empty(uninstall.Options.KillBeforeOperation);
-        Assert.True(uninstall.KeepsPackageListed);
+        Assert.True(uninstall.IsReinstallStep);
         Assert.True(options.RemoveDataOnUninstall);
         Assert.Equal(["contoso.exe"], options.KillBeforeOperation);
     }
@@ -522,6 +524,217 @@ public sealed class PackageOperationsTests
             ],
             executed
         );
+    }
+
+    [Fact]
+    public async Task ReinstallDoesNotCarryTheUninstallRetryStateIntoTheInstall()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var installSawLocalIdentifier = new List<bool>();
+        var manager = new PackageManagerBuilder()
+            .WithName($"LocalIdManager{Guid.NewGuid():N}")
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (package, _, operation) =>
+                {
+                    if (operation is OperationType.Install)
+                        installSawLocalIdentifier.Add(package.OverridenOptions.WinGet_UseLocalIdentifier);
+                    return ["echo", operation.ToString()];
+                };
+                helper.ResultFactory = (package, operation, _, _) =>
+                {
+                    if (operation is not OperationType.Uninstall || package.OverridenOptions.WinGet_UseLocalIdentifier)
+                        return OperationVeredict.Success;
+                    package.OverridenOptions.WinGet_UseLocalIdentifier = true;
+                    return OperationVeredict.AutoRetry;
+                };
+            })
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        Assert.Equal([false], installSawLocalIdentifier);
+    }
+
+    [Fact]
+    public async Task ReinstallUninstallRefusesToRunThroughTheBrokerEnabledAfterQueueing()
+    {
+        bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
+        var originalFactory = PackageOperation.BrokerTransportFactory;
+        bool brokerContacted = false;
+        var manager = new PackageManagerBuilder().WithName("Chocolatey").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        try
+        {
+            Settings.Set(Settings.K.UseAgentBroker, false);
+            using var operation = new InspectableUpdatePackageOperation(
+                package,
+                new InstallOptions { UninstallBeforeUpdate = true }
+            );
+            var uninstall = Assert.Single(operation.AttemptPreOperationsForTests()).Operation;
+            PackageOperation.BrokerTransportFactory = () =>
+            {
+                brokerContacted = true;
+                throw new InvalidOperationException("The broker must not be contacted");
+            };
+            Settings.Set(Settings.K.UseAgentBroker, true);
+
+            await uninstall.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.Equal(OperationStatus.Failed, uninstall.Status);
+            Assert.False(brokerContacted);
+        }
+        finally
+        {
+            PackageOperation.BrokerTransportFactory = originalFactory;
+            Settings.Set(Settings.K.UseAgentBroker, originalSetting);
+        }
+    }
+
+    [Fact]
+    public void ReinstallSendsAnInstallOnceTheUninstallHasRunEvenIfTheBrokerIsEnabledLater()
+    {
+        bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
+        var manager = new PackageManagerBuilder()
+            .WithName("Chocolatey")
+            .ConfigureManager(manager => manager.ExecutablePath = "C:\\tools\\choco.exe")
+            .ConfigureOperation(helper =>
+                helper.ParametersFactory = (_, _, operation) => [operation.ToString().ToLowerInvariant()])
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        try
+        {
+            Settings.Set(Settings.K.UseAgentBroker, false);
+            using var operation = new InspectableUpdatePackageOperation(
+                package,
+                new InstallOptions { UninstallBeforeUpdate = true }
+            );
+            var uninstall = Assert.Single(operation.AttemptPreOperationsForTests()).Operation;
+            uninstall.Status = OperationStatus.Succeeded;
+            Settings.Set(Settings.K.UseAgentBroker, true);
+
+            Assert.Empty(operation.AttemptPreOperationsForTests());
+            Assert.Equal("install", operation.PrepareProcessStartInfoForTests().Arguments.Trim());
+        }
+        finally
+        {
+            Settings.Set(Settings.K.UseAgentBroker, originalSetting);
+        }
+    }
+
+    [Fact]
+    public void ReinstallIsUnavailableWhenTheManagerCannotUninstallWithoutRemovingData()
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.CanUninstallWithoutRemovingData = false;
+                return capabilities;
+            })
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+
+        using var operation = new InspectableUpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true }
+        );
+
+        Assert.False(new Snap().Capabilities.CanUninstallWithoutRemovingData);
+        Assert.False(PackageOperation.SupportsUninstallBeforeUpdate(package));
+        Assert.Empty(operation.AttemptPreOperationsForTests());
+    }
+
+    [Fact]
+    public void ReinstallOnNpmAndBunInstallsTheUpdateTargetRatherThanASavedVersion()
+    {
+        foreach (IPackageManager manager in new IPackageManager[] { new Npm(), new Bun() })
+        {
+            Assert.False(manager.Capabilities.SupportsCustomVersionsOnUpdate);
+            var package = new PackageBuilder()
+                .WithManager(manager)
+                .WithId("contoso-tool")
+                .WithVersion("1.0.0")
+                .WithNewVersion("3.0.0")
+                .Build();
+
+            using var operation = new UpdatePackageOperation(
+                package,
+                new InstallOptions { UninstallBeforeUpdate = true, Version = "1.0.0" }
+            );
+            var parameters = string.Join(
+                " ",
+                manager.OperationHelper.GetParameters(package, operation.Options, OperationType.Install)
+            );
+
+            Assert.Contains("contoso-tool@3.0.0", parameters);
+            Assert.DoesNotContain("@1.0.0", parameters);
+        }
+    }
+
+    [Theory]
+    [InlineData(AbstractOperation.RetryMode.Retry_AsAdmin, true, false)]
+    [InlineData(AbstractOperation.RetryMode.Retry_Interactive, false, true)]
+    public void RetryingAFailedReinstallUninstallAppliesTheRetryChoiceToTheUninstall(
+        string retryMode,
+        bool expectAdmin,
+        bool expectInteractive
+    )
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        using var operation = new InspectableUpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true }
+        );
+        var uninstall = Assert.IsType<UninstallPackageOperation>(
+            Assert.Single(operation.AttemptPreOperationsForTests()).Operation
+        );
+        uninstall.Status = OperationStatus.Failed;
+
+        operation.ApplyRetryActionForTests(retryMode);
+
+        Assert.Equal(expectAdmin, uninstall.Options.RunAsAdministrator);
+        Assert.Equal(expectInteractive, uninstall.Options.InteractiveInstallation);
     }
 
     // UninstallPreviousVersionsOnUpdate is the one destructive consumer of the per-manager
@@ -3006,6 +3219,8 @@ public sealed class PackageOperationsTests
 
         public IReadOnlyList<InnerOperation> AttemptPreOperationsForTests() =>
             GetAttemptPreOperations();
+
+        public void ApplyRetryActionForTests(string retryMode) => ApplyRetryAction(retryMode);
     }
 
     private class InspectableInstallPackageOperation : InstallPackageOperation

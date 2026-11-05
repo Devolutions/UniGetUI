@@ -35,6 +35,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             {
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
+                SupportsCustomVersionsOnUpdate = false,
                 CanDownloadInstaller = true,
                 SupportsCustomScopes = false,
                 CanListDependencies = true,

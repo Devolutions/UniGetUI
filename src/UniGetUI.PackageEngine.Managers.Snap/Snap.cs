@@ -27,6 +27,7 @@ public partial class Snap : PackageManager
 
         Capabilities = new ManagerCapabilities
         {
+            CanUninstallWithoutRemovingData = false,
             CanRunAsAdmin = true,
             CanSkipIntegrityChecks = true,
             SupportsCustomSources = false,

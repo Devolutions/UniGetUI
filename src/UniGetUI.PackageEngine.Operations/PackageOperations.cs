@@ -16,6 +16,7 @@ using UniGetUI.PackageEngine.Operations.Reboot;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
+using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageOperations;
 using BrokerClient = Devolutions.Now.Policy.Client.BrokerClient;
 using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
@@ -84,8 +85,9 @@ namespace UniGetUI.PackageEngine.Operations
         public readonly InstallOptions Options;
         public readonly OperationType Role;
         private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
-        private OperationType CommandRole =>
-            _uninstallBeforeReinstall is null ? Role : OperationType.Install;
+        private bool _reinstallsThisAttempt;
+        private OperationType CommandRole => _reinstallsThisAttempt ? OperationType.Install : Role;
+        internal bool IsReinstallStep { get; init; }
         public bool FailedBecauseApplicationRunning { get; private set; }
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
@@ -137,8 +139,17 @@ namespace UniGetUI.PackageEngine.Operations
                     uninstallOptions
                 )
                 {
-                    KeepsPackageListed = true,
+                    IsReinstallStep = true,
                 };
+                OverridenInstallationOptions? overridesBeforeUninstall = null;
+                _uninstallBeforeReinstall.OperationStarting += (_, _) =>
+                    overridesBeforeUninstall ??= package.OverridenOptions;
+                _uninstallBeforeReinstall.OperationSucceeded += (_, _) =>
+                {
+                    if (overridesBeforeUninstall is { } overrides)
+                        package.OverridenOptions = overrides;
+                };
+                _reinstallsThisAttempt = true;
             }
             else
             {
@@ -260,6 +271,15 @@ namespace UniGetUI.PackageEngine.Operations
                         $"Retry mode {retryMode} is not supported in this context"
                     );
             }
+            if (
+                _uninstallBeforeReinstall is not null
+                && _uninstallBeforeReinstall.Status is not OperationStatus.Succeeded
+            )
+            {
+                _uninstallBeforeReinstall.Options.RunAsAdministrator |= Options.RunAsAdministrator;
+                _uninstallBeforeReinstall.Options.InteractiveInstallation |=
+                    Options.InteractiveInstallation;
+            }
             Metadata.OperationInformation =
                 "Retried package operation for Package="
                 + Package.Id
@@ -371,6 +391,15 @@ namespace UniGetUI.PackageEngine.Operations
                 }
             );
 
+            if (IsReinstallStep && ShouldUseAgentBroker())
+            {
+                Line(
+                    "The Devolutions Agent was enabled after this update was queued; the package was left installed. Retry the update to run it through the Agent.",
+                    LineType.Error
+                );
+                return OperationVeredict.Failure;
+            }
+
             if (!ShouldUseAgentBroker())
             {
                 if (!Package.Manager.Capabilities.SerializesOperations)
@@ -481,7 +510,7 @@ namespace UniGetUI.PackageEngine.Operations
             _brokerStreamedOutput = null;
             Line("Routing operation through Devolutions Agent broker...", LineType.Information);
 
-            if (BrokerRequestBuilder.IsUnsupportedAllowClobberRetry(Package, Role))
+            if (BrokerRequestBuilder.IsUnsupportedAllowClobberRetry(Package, CommandRole))
             {
                 Line("The module conflicts with commands that are already installed; the broker cannot retry with -AllowClobber.", LineType.Error);
                 return FailWith(new BrokerFailureDescription(
@@ -495,8 +524,8 @@ namespace UniGetUI.PackageEngine.Operations
             // machine-scope or elevation-requiring installers) before deciding the requested
             // elevation, mirroring the local execution path where this runs as part of
             // building the process parameters.
-            Package.Manager.OperationHelper.ApplyElevationRequirements(Package, Options, Role);
-            Package.Manager.OperationHelper.ApplyOperationOverrides(Package, Options, Role);
+            Package.Manager.OperationHelper.ApplyElevationRequirements(Package, Options, CommandRole);
+            Package.Manager.OperationHelper.ApplyOperationOverrides(Package, Options, CommandRole);
 
             bool requestElevated = RequiresAdminRights();
             _ranElevated = requestElevated ? 1 : 0;
@@ -525,7 +554,7 @@ namespace UniGetUI.PackageEngine.Operations
             PackageOperationRequest request;
             try
             {
-                request = BrokerRequestBuilder.Build(Package, Options, Role, effectiveInstallLocation);
+                request = BrokerRequestBuilder.Build(Package, Options, CommandRole, effectiveInstallLocation);
             }
             catch (BrokerRequestValidationException ex)
             {
@@ -1295,12 +1324,13 @@ namespace UniGetUI.PackageEngine.Operations
                     )
                 );
             }
-            if (
-                _uninstallBeforeReinstall is not null
-                && _uninstallBeforeReinstall.Status is not OperationStatus.Succeeded
-                && !IsBrokerEligible(Package)
-            )
-                ops.Add(new InnerOperation(_uninstallBeforeReinstall, mustSucceed: true));
+            if (_uninstallBeforeReinstall is not null)
+            {
+                bool uninstalled = _uninstallBeforeReinstall.Status is OperationStatus.Succeeded;
+                _reinstallsThisAttempt = uninstalled || !IsBrokerEligible(Package);
+                if (_reinstallsThisAttempt && !uninstalled)
+                    ops.Add(new InnerOperation(_uninstallBeforeReinstall, mustSucceed: true));
+            }
             return ops;
         }
 
@@ -1391,7 +1421,7 @@ namespace UniGetUI.PackageEngine.Operations
         /// uninstalls nothing.
         /// </summary>
         private string? GetBrokerEffectiveInstallLocation() =>
-            GetBrokerInstallLocation(Package, Options, Role);
+            GetBrokerInstallLocation(Package, Options, CommandRole);
 
         /// <summary>
         /// The install location a brokered operation sends for the given package, options and role.
@@ -1524,7 +1554,9 @@ namespace UniGetUI.PackageEngine.Operations
         }
 
         public static bool SupportsUninstallBeforeUpdate(IPackage package) =>
-            package.Manager.Capabilities.CanUninstall && !IsBrokerEligible(package);
+            package.Manager.Capabilities.CanUninstall
+            && package.Manager.Capabilities.CanUninstallWithoutRemovingData
+            && !IsBrokerEligible(package);
 
         private static bool ReinstallsOnUpdate(
             IPackage package,
@@ -1822,8 +1854,6 @@ namespace UniGetUI.PackageEngine.Operations
         )
             : base(package, options, OperationType.Uninstall, IgnoreParallelInstalls, req) { }
 
-        internal bool KeepsPackageListed { get; init; }
-
         protected override Task HandleFailure()
         {
             Package.SetTag(PackageTag.Failed);
@@ -1832,7 +1862,7 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected override Task HandleSuccess()
         {
-            if (KeepsPackageListed)
+            if (IsReinstallStep)
                 return Task.CompletedTask;
 
             Package.SetTag(PackageTag.Default);

@@ -158,6 +158,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 CanSkipIntegrityChecks = true,
                 CanRunInteractively = true,
                 SupportsCustomVersions = true,
+                SupportsCustomVersionsOnUpdate = false,
                 CanDownloadInstaller = true,
                 SupportsReleaseNotes = true,
                 CanListDependencies = true,

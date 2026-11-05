@@ -36,6 +36,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             {
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
+                SupportsCustomVersionsOnUpdate = false,
                 CanDownloadInstaller = true,
                 SupportsCustomScopes = true,
                 CanListDependencies = true,

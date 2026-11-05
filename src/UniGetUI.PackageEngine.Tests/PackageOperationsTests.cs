@@ -855,6 +855,45 @@ public sealed class PackageOperationsTests
         }
     }
 
+    [Theory]
+    [InlineData("1.0.0")]
+    [InlineData("2.0.0")]
+    public async Task ARetriedReinstallKeepsTheUninstallWhenAnyVersionOfThePackageIsStillInstalled(
+        string installedVersion
+    )
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion(installedVersion)
+                .Build()
+        );
+        var isLoaded = typeof(AbstractPackageLoader).GetProperty(nameof(AbstractPackageLoader.IsLoaded))!;
+        isLoaded.SetValue(InstalledPackagesLoader.Instance, true);
+        try
+        {
+            using var operation = new InspectableUpdatePackageOperation(
+                package,
+                new InstallOptions { UninstallBeforeUpdate = true }
+            );
+
+            Assert.Single(operation.AttemptPreOperationsForTests());
+        }
+        finally
+        {
+            isLoaded.SetValue(InstalledPackagesLoader.Instance, false);
+        }
+    }
+
     [Fact]
     public void AFailedInstalledListingIsNotTakenAsProofThePackageWasUninstalled()
     {

@@ -1579,7 +1579,7 @@ namespace UniGetUI.PackageEngine.Operations
                 return false;
             if (package.Manager.LastInstalledListingFailed)
                 return false;
-            if (installed.GetEquivalentPackage(package) is not null)
+            if (installed.GetEquivalentPackages(package).Count > 0)
                 return false;
             Logger.Info(
                 $"{package} is no longer installed; the update will install it without uninstalling it first"

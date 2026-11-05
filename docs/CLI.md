@@ -465,7 +465,7 @@ The installer is Inno Setup based. It supports the standard [Inno Setup command-
 | Parameter | Meaning |
 | --- | --- |
 | `/NoAutoStart` | Do not launch UniGetUI after installation. |
-| `/NoRunOnStartup` | Do not register UniGetUI to start minimized at login. On a per-machine install this applies to every user and removes an earlier all-users registration. |
+| `/NoRunOnStartup` | Do not register UniGetUI to start minimized at login. On a per-machine install this applies to every user: an earlier all-users registration is removed, and each user's entry from it is deleted at their next logon. |
 | `/NoVCRedist` | Skip installation of the MSVC x64 runtime. |
 | `/NoEdgeWebView` | Skip installation of the Microsoft Edge WebView runtime. |
 | `/NoChocolatey` | Deprecated no-op kept for compatibility. |

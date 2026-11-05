@@ -57,6 +57,7 @@ public partial class Homebrew : PackageManager
 
         Capabilities = new ManagerCapabilities
         {
+            CanReinstallOnUpdate = true,
             CanRunAsAdmin = false,
             CanDownloadInstaller = false,
             SupportsCustomSources = true,

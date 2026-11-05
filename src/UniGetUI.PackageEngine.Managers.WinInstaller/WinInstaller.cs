@@ -21,6 +21,7 @@ public sealed class WinInstaller : PackageManager
 
         Capabilities = new ManagerCapabilities
         {
+            CanReinstallOnUpdate = true,
             CanRunAsAdmin = false,
             CanUninstall = true,
             InstalledPackagesKeepTheirSource = false,
@@ -29,6 +30,7 @@ public sealed class WinInstaller : PackageManager
             SupportsEmptySearchQuery = true,
             SupportsCustomPackageIcons = true,
             SupportsCustomVersions = true,
+            SupportsCustomVersionsOnUpdate = false,
             SerializesOperations = true,
             Sources = new SourceCapabilities
             {

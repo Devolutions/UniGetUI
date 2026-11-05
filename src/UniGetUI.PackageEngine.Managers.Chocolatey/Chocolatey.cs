@@ -104,6 +104,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
         {
             Capabilities = new ManagerCapabilities
             {
+                CanReinstallOnUpdate = true,
                 InstalledPackagesKeepTheirSource = false,
                 CanRunAsAdmin = true,
                 CanDownloadInstaller = true,

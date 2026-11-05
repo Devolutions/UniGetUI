@@ -171,7 +171,7 @@ internal sealed class InstallOptionsDialog : FormDialog
             v => Set(() => _o.UninstallPreviousVersionsOnUpdate = v), () => Unlocked() && caps.CanUninstallPreviousVersionsAfterUpdate);
         Form.AddCheck(CoreTools.Translate("Uninstall, then reinstall when updated"), () => _o.UninstallBeforeUpdate,
             v => Set(() => _o.UninstallBeforeUpdate = v),
-            () => Unlocked() && (_package is null ? caps.CanUninstall : PackageOperation.SupportsUninstallBeforeUpdate(_package)));
+            () => Unlocked() && (_package is null ? caps.CanUninstall && caps.CanReinstallOnUpdate : PackageOperation.SupportsUninstallBeforeUpdate(_package)));
         Form.AddCheck(CoreTools.Translate("Remove data on uninstall"), () => _o.RemoveDataOnUninstall,
             v => Set(() => _o.RemoveDataOnUninstall = v), () => Unlocked() && caps.CanRemoveDataOnUninstall);
 

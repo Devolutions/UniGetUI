@@ -25,6 +25,7 @@ public partial class Flatpak : PackageManager
 
         Capabilities = new ManagerCapabilities
         {
+            CanReinstallOnUpdate = true,
             CanRunAsAdmin = true,
             CanSkipIntegrityChecks = true,
             SupportsCustomSources = true,

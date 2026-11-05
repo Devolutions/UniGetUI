@@ -15,7 +15,6 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
-using UniGetUI.PackageEngine.Managers.SnapManager;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -653,12 +652,12 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
-    public void ReinstallIsUnavailableWhenTheManagerCannotUninstallWithoutRemovingData()
+    public void ReinstallIsUnavailableWhenTheManagerDoesNotOfferIt()
     {
         var manager = new PackageManagerBuilder()
             .ConfigureCapabilities(capabilities =>
             {
-                capabilities.CanUninstallWithoutRemovingData = false;
+                capabilities.CanReinstallOnUpdate = false;
                 return capabilities;
             })
             .Build();
@@ -674,7 +673,6 @@ public sealed class PackageOperationsTests
             new InstallOptions { UninstallBeforeUpdate = true }
         );
 
-        Assert.False(new Snap().Capabilities.CanUninstallWithoutRemovingData);
         Assert.False(PackageOperation.SupportsUninstallBeforeUpdate(package));
         Assert.Empty(operation.AttemptPreOperationsForTests());
     }
@@ -704,6 +702,35 @@ public sealed class PackageOperationsTests
             Assert.Contains("contoso-tool@3.0.0", parameters);
             Assert.DoesNotContain("@1.0.0", parameters);
         }
+    }
+
+    [Fact]
+    public void AFailedReinstallUninstallBecauseTheAppIsRunningOffersTheCloseAppRetryOnTheUpdate()
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        using var operation = new InspectableUpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true }
+        );
+        var uninstall = Assert.IsType<UninstallPackageOperation>(
+            Assert.Single(operation.AttemptPreOperationsForTests()).Operation
+        );
+        typeof(PackageOperation)
+            .GetProperty(nameof(PackageOperation.FailedBecauseApplicationRunning))!
+            .SetValue(uninstall, true);
+        uninstall.Metadata.FailureMessage = "Contoso Tool is currently running";
+
+        Assert.False(operation.FailedBecauseApplicationRunning);
+        operation.AdoptReinstallStepFailure();
+
+        Assert.True(operation.FailedBecauseApplicationRunning);
+        Assert.Equal("Contoso Tool is currently running", operation.Metadata.FailureMessage);
     }
 
     [Theory]

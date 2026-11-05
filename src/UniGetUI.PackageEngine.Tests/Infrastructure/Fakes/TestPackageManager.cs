@@ -31,6 +31,7 @@ public sealed class TestPackageManager : PackageManager
             CanRemoveDataOnUninstall = true,
             CanDownloadInstaller = true,
             CanUninstallPreviousVersionsAfterUpdate = true,
+            CanReinstallOnUpdate = true,
             CanListDependencies = true,
             SupportsCustomVersions = true,
             SupportsCustomArchitectures = true,

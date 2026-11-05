@@ -87,6 +87,14 @@ namespace UniGetUI.PackageEngine.Operations
         private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
         private bool _reinstallsThisAttempt;
         private OperationType CommandRole => _reinstallsThisAttempt ? OperationType.Install : Role;
+
+        internal void AdoptReinstallStepFailure()
+        {
+            if (_uninstallBeforeReinstall?.FailedBecauseApplicationRunning is not true)
+                return;
+            FailedBecauseApplicationRunning = true;
+            Metadata.FailureMessage = _uninstallBeforeReinstall.Metadata.FailureMessage;
+        }
         internal bool IsReinstallStep { get; init; }
         public bool FailedBecauseApplicationRunning { get; private set; }
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
@@ -149,6 +157,7 @@ namespace UniGetUI.PackageEngine.Operations
                     if (overridesBeforeUninstall is { } overrides)
                         package.OverridenOptions = overrides;
                 };
+                _uninstallBeforeReinstall.OperationFailed += (_, _) => AdoptReinstallStepFailure();
                 _reinstallsThisAttempt = true;
             }
             else
@@ -1555,7 +1564,7 @@ namespace UniGetUI.PackageEngine.Operations
 
         public static bool SupportsUninstallBeforeUpdate(IPackage package) =>
             package.Manager.Capabilities.CanUninstall
-            && package.Manager.Capabilities.CanUninstallWithoutRemovingData
+            && package.Manager.Capabilities.CanReinstallOnUpdate
             && !IsBrokerEligible(package);
 
         private static bool ReinstallsOnUpdate(
@@ -1571,6 +1580,8 @@ namespace UniGetUI.PackageEngine.Operations
         {
             var capabilities = package.Manager.Capabilities;
             var pinned = opts.Copy();
+            pinned.CustomInstallLocation =
+                GetBrokerInstallLocation(package, opts, OperationType.Update) ?? "";
             if (pinned.Version.Length > 0 && capabilities.SupportsCustomVersionsOnUpdate)
                 return pinned;
             pinned.Version =

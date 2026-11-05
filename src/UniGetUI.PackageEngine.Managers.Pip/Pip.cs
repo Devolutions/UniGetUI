@@ -72,6 +72,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
             Capabilities = new ManagerCapabilities
             {
+                CanReinstallOnUpdate = true,
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
                 SupportsCustomScopes = true,

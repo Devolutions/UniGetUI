@@ -33,6 +33,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
         {
             Capabilities = new ManagerCapabilities
             {
+                CanReinstallOnUpdate = true,
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
                 SupportsCustomVersionsOnUpdate = false,

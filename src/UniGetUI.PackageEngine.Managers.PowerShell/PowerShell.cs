@@ -22,7 +22,6 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         {
             Capabilities = new ManagerCapabilities
             {
-                CanReinstallOnUpdate = true,
                 CanRunAsAdmin = true,
                 CanSkipIntegrityChecks = true,
                 SupportsCustomVersions = true,

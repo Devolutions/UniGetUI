@@ -35,6 +35,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             Capabilities = new ManagerCapabilities
             {
                 CanReinstallOnUpdate = true,
+                ReinstallsOnUpdateOnlyGlobalPackages = true,
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
                 SupportsCustomVersionsOnUpdate = false,

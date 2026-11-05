@@ -1335,7 +1335,9 @@ namespace UniGetUI.PackageEngine.Operations
             }
             if (_uninstallBeforeReinstall is not null)
             {
-                bool uninstalled = _uninstallBeforeReinstall.Status is OperationStatus.Succeeded;
+                bool uninstalled =
+                    _uninstallBeforeReinstall.Status is OperationStatus.Succeeded
+                    || IsKnownToBeUninstalled(Package);
                 _reinstallsThisAttempt = uninstalled || !IsBrokerEligible(Package);
                 if (_reinstallsThisAttempt && !uninstalled)
                     ops.Add(new InnerOperation(_uninstallBeforeReinstall, mustSucceed: true));
@@ -1565,7 +1567,23 @@ namespace UniGetUI.PackageEngine.Operations
         public static bool SupportsUninstallBeforeUpdate(IPackage package) =>
             package.Manager.Capabilities.CanUninstall
             && package.Manager.Capabilities.CanReinstallOnUpdate
+            && (
+                !package.Manager.Capabilities.ReinstallsOnUpdateOnlyGlobalPackages
+                || package.OverridenOptions.Scope == PackageScope.Global
+            )
             && !IsBrokerEligible(package);
+
+        private static bool IsKnownToBeUninstalled(IPackage package)
+        {
+            if (InstalledPackagesLoader.Instance is not { IsLoaded: true } installed)
+                return false;
+            if (installed.Contains(package))
+                return false;
+            Logger.Info(
+                $"{package} is no longer installed; the update will install it without uninstalling it first"
+            );
+            return true;
+        }
 
         private static bool ReinstallsOnUpdate(
             IPackage package,
@@ -1574,6 +1592,7 @@ namespace UniGetUI.PackageEngine.Operations
         ) =>
             role is OperationType.Update
             && opts.UninstallBeforeUpdate
+            && package.IsUpgradable
             && SupportsUninstallBeforeUpdate(package);
 
         private static InstallOptions PinReinstallVersion(IPackage package, InstallOptions opts)
@@ -1582,6 +1601,11 @@ namespace UniGetUI.PackageEngine.Operations
             var pinned = opts.Copy();
             pinned.CustomInstallLocation =
                 GetBrokerInstallLocation(package, opts, OperationType.Update) ?? "";
+            package.Manager.OperationHelper.ApplyOperationOverrides(
+                package,
+                pinned,
+                OperationType.Update
+            );
             if (pinned.Version.Length > 0 && capabilities.SupportsCustomVersionsOnUpdate)
                 return pinned;
             pinned.Version =
@@ -1874,7 +1898,10 @@ namespace UniGetUI.PackageEngine.Operations
         protected override Task HandleSuccess()
         {
             if (IsReinstallStep)
+            {
+                InstalledPackagesLoader.Instance.Remove(Package);
                 return Task.CompletedTask;
+            }
 
             Package.SetTag(PackageTag.Default);
             Package.GetAvailablePackage()?.SetTag(PackageTag.Default);

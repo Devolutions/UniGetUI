@@ -1,4 +1,5 @@
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.AptManager;
 using UniGetUI.PackageEngine.Managers.BunManager;
@@ -15,6 +16,7 @@ using UniGetUI.PackageEngine.Managers.SnapManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Serializable;
+using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 #if WINDOWS
 using UniGetUI.PackageEngine.Managers.ChocolateyManager;
@@ -39,7 +41,7 @@ public class ReinstallOnUpdateManagerTests
             { nameof(DotNet), true },
             { nameof(Homebrew), true },
             { nameof(Pacman), true },
-            { nameof(Flatpak), true },
+            { nameof(Flatpak), false },
             { nameof(Cargo), false },
             { nameof(Vcpkg), false },
             { nameof(Apt), false },
@@ -52,8 +54,8 @@ public class ReinstallOnUpdateManagerTests
         data.Add(nameof(Scoop), true);
         data.Add(nameof(Chocolatey), true);
         data.Add(nameof(WinInstaller), true);
-        data.Add(nameof(PowerShell), true);
-        data.Add(nameof(PowerShell7), true);
+        data.Add(nameof(PowerShell), false);
+        data.Add(nameof(PowerShell7), false);
 #endif
         return data;
     }
@@ -97,7 +99,48 @@ public class ReinstallOnUpdateManagerTests
         Assert.Equal(expected, manager.Capabilities.CanReinstallOnUpdate);
     }
 
+    [Theory]
+    [InlineData(nameof(Npm), PackageScope.Global, true)]
+    [InlineData(nameof(Npm), PackageScope.Local, false)]
+    [InlineData(nameof(Bun), PackageScope.Global, true)]
+    [InlineData(nameof(Bun), PackageScope.Local, false)]
+    public void NpmAndBunOfferReinstallOnlyForGlobalPackages(
+        string managerName,
+        string scope,
+        bool expected
+    )
+    {
+        var package = new PackageBuilder()
+            .WithManager(Create(managerName))
+            .WithId("contoso-tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .WithOptions(new OverridenInstallationOptions(scope))
+            .Build();
+
+        Assert.Equal(expected, PackageOperation.SupportsUninstallBeforeUpdate(package));
+    }
+
 #if WINDOWS
+    [Fact]
+    public void WinGetReinstallKeepsTheArchitectureANormalUpdateWouldUse()
+    {
+        var package = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId("Contoso.Tool")
+            .WithName("Contoso Tool 32-bit")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true, Architecture = Architecture.x64 }
+        );
+
+        Assert.Equal(Architecture.x86, operation.Options.Architecture);
+    }
+
     [Fact]
     public void WinInstallerReinstallInstallsTheUpdateTargetRatherThanASavedVersion()
     {

@@ -1,3 +1,4 @@
+using Microsoft.Win32;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
@@ -43,6 +44,9 @@ internal static class SharedPreUiCommandDispatcher
     internal const string MigrateWingetUIToUniGetUIArgument = "--migrate-wingetui-to-unigetui";
     internal const string UninstallWingetUIArgument = "--uninstall-wingetui";
     internal const string UninstallUniGetUIArgument = "--uninstall-unigetui";
+    internal const string RegisterAutostartArgument = "--register-autostart";
+    internal const string AutostartRunSubKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    internal const string AutostartValueName = "WingetUI";
 
     private const string EnableSecureSettingForUserArgument = SecureSettings.Args.ENABLE_FOR_USER;
     private const string DisableSecureSettingForUserArgument = SecureSettings.Args.DISABLE_FOR_USER;
@@ -129,6 +133,11 @@ internal static class SharedPreUiCommandDispatcher
         if (args.Contains(MigrateWingetUIToUniGetUIArgument))
         {
             return MigrateWingetUIToUniGetUI();
+        }
+
+        if (args.Contains(RegisterAutostartArgument))
+        {
+            return RegisterAutostart(exitCodes);
         }
 
         if (args.Contains(UninstallWingetUIArgument) || args.Contains(UninstallUniGetUIArgument))
@@ -342,6 +351,40 @@ internal static class SharedPreUiCommandDispatcher
             return ShortcutFileRemover.DeleteAsElevatedInstance(shortcutPaths) is 0
                 ? exitCodes.Success
                 : exitCodes.Failed;
+        }
+        catch (Exception ex)
+        {
+            return ex.HResult;
+        }
+    }
+
+    public static int RegisterAutostart(SharedPreUiCommandExitCodes exitCodes)
+    {
+        if (!OperatingSystem.IsWindows() || Environment.ProcessPath is not { Length: > 0 } executablePath)
+        {
+            return exitCodes.Failed;
+        }
+
+        return RegisterAutostart(Registry.CurrentUser, AutostartRunSubKey, executablePath, exitCodes);
+    }
+
+    internal static int RegisterAutostart(
+        RegistryKey root,
+        string runSubKey,
+        string executablePath,
+        SharedPreUiCommandExitCodes exitCodes
+    )
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return exitCodes.Failed;
+        }
+
+        try
+        {
+            using RegistryKey runKey = root.CreateSubKey(runSubKey);
+            runKey.SetValue(AutostartValueName, $"\"{executablePath}\" --daemon", RegistryValueKind.String);
+            return exitCodes.Success;
         }
         catch (Exception ex)
         {

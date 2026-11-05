@@ -353,6 +353,81 @@ public sealed class CLIHandlerTests : IDisposable
         );
     }
 
+    [Fact]
+    public void RegisterAutostart_WritesTheQuotedDaemonCommandForTheGivenExecutable()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string testRoot = $@"Software\UniGetUI.Tests\{Guid.NewGuid():N}";
+        string runSubKey = $@"{testRoot}\Run";
+        try
+        {
+            Assert.Equal(
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes.Success,
+                SharedPreUiCommandDispatcher.RegisterAutostart(
+                    Microsoft.Win32.Registry.CurrentUser,
+                    runSubKey,
+                    @"C:\Program Files\UniGetUI\UniGetUI.exe",
+                    SharedPreUiCommandDispatcher.WindowsCliExitCodes
+                )
+            );
+
+            using Microsoft.Win32.RegistryKey? runKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(runSubKey);
+            Assert.NotNull(runKey);
+            Assert.Equal(
+                Microsoft.Win32.RegistryValueKind.String,
+                runKey.GetValueKind(SharedPreUiCommandDispatcher.AutostartValueName)
+            );
+            Assert.Equal(
+                "\"C:\\Program Files\\UniGetUI\\UniGetUI.exe\" --daemon",
+                runKey.GetValue(SharedPreUiCommandDispatcher.AutostartValueName)
+            );
+        }
+        finally
+        {
+            Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(testRoot, throwOnMissingSubKey: false);
+        }
+    }
+
+    [Fact]
+    public void RegisterAutostart_OverwritesAStaleEntry()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string testRoot = $@"Software\UniGetUI.Tests\{Guid.NewGuid():N}";
+        string runSubKey = $@"{testRoot}\Run";
+        try
+        {
+            using (Microsoft.Win32.RegistryKey stale = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(runSubKey))
+            {
+                stale.SetValue(SharedPreUiCommandDispatcher.AutostartValueName, @"C:\Old\WingetUI.exe");
+            }
+
+            SharedPreUiCommandDispatcher.RegisterAutostart(
+                Microsoft.Win32.Registry.CurrentUser,
+                runSubKey,
+                @"D:\Apps\UniGetUI\UniGetUI.exe",
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            );
+
+            using Microsoft.Win32.RegistryKey? runKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(runSubKey);
+            Assert.Equal(
+                "\"D:\\Apps\\UniGetUI\\UniGetUI.exe\" --daemon",
+                runKey?.GetValue(SharedPreUiCommandDispatcher.AutostartValueName)
+            );
+        }
+        finally
+        {
+            Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(testRoot, throwOnMissingSubKey: false);
+        }
+    }
+
     [Theory]
     [InlineData("--help")]
     [InlineData("-h")]

@@ -16,7 +16,14 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
         protected override void GetDetails_UnSafe(IPackageDetails details)
         {
-            if (details.Package.Source.Url is not null)
+            ISourceFactory factory = Manager.SourcesHelper.Factory;
+            if (factory.IsPlaceholder(details.Package.Source))
+                Manager.SourcesHelper.GetSources();
+
+            if (
+                details.Package.Source.Url is not null
+                && !factory.IsPlaceholder(details.Package.Source)
+            )
             {
                 try
                 {

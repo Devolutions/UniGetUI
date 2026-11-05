@@ -14,6 +14,8 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public IManagerSource? GetSourceIfExists(string name);
 
+        public bool IsPlaceholder(IManagerSource source);
+
         /// <summary>
         /// Adds a source to the factory, if the given source does not exist
         /// </summary>

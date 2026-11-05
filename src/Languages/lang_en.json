@@ -481,6 +481,7 @@
   "Interactive installation": "Interactive installation",
   "Skip hash check": "Skip hash check",
   "Uninstall previous versions when updated": "Uninstall previous versions when updated",
+  "Uninstall, then reinstall when updated": "Uninstall, then reinstall when updated",
   "Skip minor updates for this package": "Skip minor updates for this package",
   "Ignore changes after the first": "Ignore changes after the first",
   "version numbers": "version numbers",

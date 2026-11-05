@@ -83,6 +83,9 @@ namespace UniGetUI.PackageEngine.Operations
         public readonly IPackage Package;
         public readonly InstallOptions Options;
         public readonly OperationType Role;
+        private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
+        private OperationType CommandRole =>
+            _uninstallBeforeReinstall is null ? Role : OperationType.Install;
         public bool FailedBecauseApplicationRunning { get; private set; }
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
@@ -119,8 +122,28 @@ namespace UniGetUI.PackageEngine.Operations
             )
         {
             Package = package;
-            Options = options;
             Role = role;
+            if (ReinstallsOnUpdate(package, options, role))
+            {
+                Options = PinReinstallVersion(package, options);
+                Logger.Info(
+                    $"Queuing {package} version {package.VersionString} for uninstall before it is reinstalled as version {package.NewVersionString}..."
+                );
+                var uninstallOptions = options.Copy();
+                uninstallOptions.RemoveDataOnUninstall = false;
+                uninstallOptions.KillBeforeOperation = [];
+                _uninstallBeforeReinstall = new UninstallPackageOperation(
+                    package,
+                    uninstallOptions
+                )
+                {
+                    KeepsPackageListed = true,
+                };
+            }
+            else
+            {
+                Options = options;
+            }
 
             Initialize();
 
@@ -255,7 +278,7 @@ namespace UniGetUI.PackageEngine.Operations
             var operationParameters = Package.Manager.OperationHelper.GetParameters(
                 Package,
                 Options,
-                Role
+                CommandRole
             );
             var callVector = Package.Manager.Status.OperationCallArgs;
 
@@ -401,7 +424,7 @@ namespace UniGetUI.PackageEngine.Operations
             {
                 try
                 {
-                    var result = await managed.TryPerformAsync(Package, Options, Role,
+                    var result = await managed.TryPerformAsync(Package, Options, CommandRole,
                         message => Line(message, LineType.Information), ReportProgress, CancellationToken);
                     if (result is not null)
                         return result.Value;
@@ -1139,7 +1162,7 @@ namespace UniGetUI.PackageEngine.Operations
         {
             var veredict = Package.Manager.OperationHelper.GetResult(
                 Package,
-                Role,
+                CommandRole,
                 Output,
                 ReturnCode
             );
@@ -1147,7 +1170,7 @@ namespace UniGetUI.PackageEngine.Operations
             FailedBecauseApplicationRunning = false;
             if (veredict is OperationVeredict.Failure)
             {
-                if (Role is OperationType.Update)
+                if (CommandRole is OperationType.Update)
                     ExplainNotApplicableUpdate(Output, ReturnCode);
                 ExplainInstallerHashMismatch(ReturnCode);
                 ExplainApplicationCurrentlyRunning(Output, ReturnCode);
@@ -1272,6 +1295,12 @@ namespace UniGetUI.PackageEngine.Operations
                     )
                 );
             }
+            if (
+                _uninstallBeforeReinstall is not null
+                && _uninstallBeforeReinstall.Status is not OperationStatus.Succeeded
+                && !IsBrokerEligible(Package)
+            )
+                ops.Add(new InnerOperation(_uninstallBeforeReinstall, mustSucceed: true));
             return ops;
         }
 
@@ -1494,6 +1523,31 @@ namespace UniGetUI.PackageEngine.Operations
             return l;
         }
 
+        public static bool SupportsUninstallBeforeUpdate(IPackage package) =>
+            package.Manager.Capabilities.CanUninstall && !IsBrokerEligible(package);
+
+        private static bool ReinstallsOnUpdate(
+            IPackage package,
+            InstallOptions opts,
+            OperationType role
+        ) =>
+            role is OperationType.Update
+            && opts.UninstallBeforeUpdate
+            && SupportsUninstallBeforeUpdate(package);
+
+        private static InstallOptions PinReinstallVersion(IPackage package, InstallOptions opts)
+        {
+            var capabilities = package.Manager.Capabilities;
+            var pinned = opts.Copy();
+            if (pinned.Version.Length > 0 && capabilities.SupportsCustomVersionsOnUpdate)
+                return pinned;
+            pinned.Version =
+                package.IsUpgradable && capabilities.SupportsCustomVersions
+                    ? package.NewVersionString
+                    : "";
+            return pinned;
+        }
+
         private static IReadOnlyList<InnerOperation> _getPostInstallOps(
             IPackage package,
             InstallOptions opts,
@@ -1530,8 +1584,10 @@ namespace UniGetUI.PackageEngine.Operations
                         ? opts.InstallationScope
                         : package.OverridenOptions.Scope;
 
+                bool reinstalls = ReinstallsOnUpdate(package, opts, role);
                 var matches = InstalledPackagesLoader.Instance.Packages.Where(p =>
                     p.IsSamePackageAs(package)
+                    && !(reinstalls && p.VersionString == package.VersionString)
                     && (
                         string.IsNullOrEmpty(p.OverridenOptions.Scope)
                         || string.IsNullOrEmpty(updatedScope)
@@ -1766,6 +1822,8 @@ namespace UniGetUI.PackageEngine.Operations
         )
             : base(package, options, OperationType.Uninstall, IgnoreParallelInstalls, req) { }
 
+        internal bool KeepsPackageListed { get; init; }
+
         protected override Task HandleFailure()
         {
             Package.SetTag(PackageTag.Failed);
@@ -1774,6 +1832,9 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected override Task HandleSuccess()
         {
+            if (KeepsPackageListed)
+                return Task.CompletedTask;
+
             Package.SetTag(PackageTag.Default);
             Package.GetAvailablePackage()?.SetTag(PackageTag.Default);
             UpgradablePackagesLoader.Instance.Remove(Package);

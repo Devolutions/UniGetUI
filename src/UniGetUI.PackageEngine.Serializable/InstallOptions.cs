@@ -15,6 +15,7 @@ namespace UniGetUI.PackageEngine.Serializable
         private const string SKIP_MINOR_LEVEL = "SkipMinorUpdatesLevel";
         private const string REMOVE_DATA_UNINST = "RemoveDataOnUninstall";
         private const string CLEAR_PREV_VER = "UninstallPreviousVersionsOnUpdate";
+        private const string UNINST_BEFORE_UPD = "UninstallBeforeUpdate";
         private const string ABORT_PRE_INST_FAIL = "AbortOnPreInstallFail";
         private const string ABORT_PRE_UPD_FAIL = "AbortOnPreUpdateFail";
         private const string ABORT_PRE_UNINST_FAIL = "AbortOnPreUninstallFail";
@@ -48,6 +49,7 @@ namespace UniGetUI.PackageEngine.Serializable
             { SKIP_MINOR, false },
             { REMOVE_DATA_UNINST, false },
             { CLEAR_PREV_VER, false },
+            { UNINST_BEFORE_UPD, false },
             { ABORT_PRE_INST_FAIL, true },
             { ABORT_PRE_UPD_FAIL, true },
             { ABORT_PRE_UNINST_FAIL, true },
@@ -124,6 +126,11 @@ namespace UniGetUI.PackageEngine.Serializable
         {
             get => _boolVal[CLEAR_PREV_VER];
             set => _boolVal[CLEAR_PREV_VER] = value;
+        }
+        public bool UninstallBeforeUpdate
+        {
+            get => _boolVal[UNINST_BEFORE_UPD];
+            set => _boolVal[UNINST_BEFORE_UPD] = value;
         }
         public bool AbortOnPreInstallFail
         {

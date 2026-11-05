@@ -150,6 +150,8 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
         internal static void MarkSourceIndexRefreshed() =>
             Interlocked.Increment(ref _sourceIndexGeneration);
 
+        internal CancellationToken CurrentListingCancellation => ListingCancellationToken;
+
         public WinGet()
         {
             Capabilities = new ManagerCapabilities

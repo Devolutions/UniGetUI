@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using UniGetUI.Core.Data;
@@ -346,6 +347,91 @@ public sealed class PackageManagerTests : IDisposable
         Assert.Equal("Contoso.Search", package.Id);
         Assert.Equal("Contoso", manager.LastQuery);
         Assert.Equal(1, manager.AttemptFastRepairCalls);
+    }
+
+    [Fact]
+    public void ListingCancellationIsNotCancellableOutsideAListing()
+    {
+        var manager = CreateReadyManager();
+
+        Assert.False(manager.CurrentListingCancellation.CanBeCanceled);
+    }
+
+    [Fact]
+    public void StopRunningListingsCancelsTheRunningSearch()
+    {
+        var manager = CreateReadyManager();
+        using var started = new ManualResetEventSlim();
+        CancellationToken observed = default;
+        manager.SetFindPackages(_ =>
+        {
+            observed = manager.CurrentListingCancellation;
+            started.Set();
+            observed.WaitHandle.WaitOne(TimeSpan.FromSeconds(30));
+            observed.ThrowIfCancellationRequested();
+            return [CreatePackage(manager, "Contoso.Search", "Contoso Search")];
+        });
+
+        Task<IReadOnlyList<IPackage>> search = Task.Run(() => manager.FindPackages("Contoso"));
+        Assert.True(started.Wait(TimeSpan.FromSeconds(10)));
+        manager.StopRunningListings();
+
+        Assert.True(search.Wait(TimeSpan.FromSeconds(10)));
+        Assert.True(observed.IsCancellationRequested);
+        Assert.Empty(search.Result);
+        Assert.Equal(0, manager.AttemptFastRepairCalls);
+    }
+
+    [Fact]
+    public void ListingTimeoutCancelsTheAbandonedSearch()
+    {
+        var manager = CreateReadyManager();
+        manager.ListingTimeout = TimeSpan.FromMilliseconds(200);
+        ConcurrentQueue<CancellationToken> observed = new();
+        using var finished = new CountdownEvent(2);
+        manager.SetFindPackages(_ =>
+        {
+            CancellationToken token = manager.CurrentListingCancellation;
+            observed.Enqueue(token);
+            try
+            {
+                token.WaitHandle.WaitOne(TimeSpan.FromSeconds(30));
+                token.ThrowIfCancellationRequested();
+                return [CreatePackage(manager, "Contoso.Search", "Contoso Search")];
+            }
+            finally
+            {
+                finished.Signal();
+            }
+        });
+
+        var packages = manager.FindPackages("Contoso");
+
+        Assert.Empty(packages);
+        Assert.Equal(1, manager.AttemptFastRepairCalls);
+        Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+        Assert.Equal(2, observed.Count);
+        Assert.All(observed, token => Assert.True(token.IsCancellationRequested));
+    }
+
+    [Fact]
+    public void EachListingGetsItsOwnCancellation()
+    {
+        var manager = CreateReadyManager();
+        List<CancellationToken> observed = [];
+        manager.SetFindPackages(_ =>
+        {
+            observed.Add(manager.CurrentListingCancellation);
+            return [];
+        });
+
+        manager.FindPackages("first");
+        manager.FindPackages("second");
+
+        Assert.Equal(2, observed.Count);
+        Assert.All(observed, token => Assert.True(token.CanBeCanceled));
+        Assert.All(observed, token => Assert.False(token.IsCancellationRequested));
+        Assert.NotEqual(observed[0], observed[1]);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Microsoft.Management.Deployment;
@@ -199,6 +200,27 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 new(PackageMatchField.Moniker, false, null),
             ];
 
+    internal readonly record struct NativeSearchMatchId(string CatalogName, string? Id);
+
+    internal readonly record struct NativeSearchResult(string Name, string Version);
+
+    internal static IReadOnlyList<int> SelectUniqueSearchMatches(
+        IReadOnlyList<NativeSearchMatchId> matches
+    )
+    {
+        List<int> selected = [];
+        HashSet<(string, string)> seen = [];
+        for (int index = 0; index < matches.Count; index++)
+        {
+            if (matches[index].Id is { } id && seen.Add((matches[index].CatalogName, id)))
+            {
+                selected.Add(index);
+            }
+        }
+
+        return selected;
+    }
+
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
         List<Package> packages = [];
@@ -281,6 +303,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         Task.WhenAll(FindPackageTasks.Values.ToArray()).GetAwaiter().GetResult();
         logger.Log($"All catalogs fetched. Fetching results for query piece {query}");
 
+        List<(IManagerSource Source, CatalogPackage NativePackage)> matches = [];
         foreach (var CatalogTaskPair in FindPackageTasks)
         {
             try
@@ -295,24 +318,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     MatchResult matchResult in NativeWinGetCollection.Copy(FoundPackages.Matches)
                 )
                 {
-                    CatalogPackage nativePackage = matchResult.CatalogPackage;
-                    // Create the Package item and add it to the list
-                    logger.Log(
-                        $"Found package: {nativePackage.Name}|{nativePackage.Id}|{nativePackage.DefaultInstallVersion.Version} on catalog {source.Name}"
-                    );
-
-                    var overriden_options = new OverridenInstallationOptions();
-
-                    var UniGetUIPackage = new Package(
-                        nativePackage.Name,
-                        nativePackage.Id,
-                        nativePackage.DefaultInstallVersion.Version,
-                        source,
-                        Manager,
-                        overriden_options
-                    );
-                    NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
-                    packages.Add(UniGetUIPackage);
+                    matches.Add((source, matchResult.CatalogPackage));
                 }
             }
             catch (Exception e)
@@ -326,9 +332,95 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             }
         }
 
-        logger.Close(0);
+        var ids = new NativeSearchMatchId[matches.Count];
+        var resolved = new NativeSearchResult?[matches.Count];
+        var errors = new Exception?[matches.Count];
+        ConcurrentDictionary<(string, string), int> resolvingIndex = new();
+        try
+        {
+            Parallel.For(
+                0,
+                matches.Count,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = SearchVersionResolutionParallelism,
+                    CancellationToken = Manager.CurrentListingCancellation,
+                },
+                index =>
+                {
+                    var (source, nativePackage) = matches[index];
+                    try
+                    {
+                        string id = nativePackage.Id;
+                        ids[index] = new(source.Name, id);
+                        if (resolvingIndex.TryAdd((source.Name, id), index))
+                        {
+                            resolved[index] = new(
+                                nativePackage.Name,
+                                nativePackage.DefaultInstallVersion.Version
+                            );
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (ids[index].Id is null)
+                        {
+                            ids[index] = new(source.Name, null);
+                        }
+
+                        errors[index] = e;
+                    }
+                }
+            );
+        }
+        catch (OperationCanceledException)
+        {
+            logger.Error("WinGet: The search was cancelled before its results were read.");
+            logger.Close(1);
+            throw;
+        }
+
+        int failedCount = errors.Count(error => error is not null);
+        int resultCount = resolvingIndex.Count + ids.Count(match => match.Id is null);
+        if (failedCount > 0)
+        {
+            logger.Error(
+                $"WinGet: {failedCount} of {resultCount} search results could not be read. First error:"
+            );
+            logger.Error(errors.First(error => error is not null)!);
+        }
+
+        foreach (int firstIndex in SelectUniqueSearchMatches(ids))
+        {
+            NativeSearchMatchId match = ids[firstIndex];
+            int index = resolvingIndex[(match.CatalogName, match.Id!)];
+            if (resolved[index] is not { } result)
+            {
+                continue;
+            }
+
+            IManagerSource source = matches[firstIndex].Source;
+            logger.Log(
+                $"Found package: {result.Name}|{match.Id}|{result.Version} on catalog {source.Name}"
+            );
+
+            var UniGetUIPackage = new Package(
+                result.Name,
+                match.Id!,
+                result.Version,
+                source,
+                Manager,
+                new OverridenInstallationOptions()
+            );
+            NativePackageHandler.AddPackage(UniGetUIPackage, matches[index].NativePackage);
+            packages.Add(UniGetUIPackage);
+        }
+
+        logger.Close(packages.Count == 0 && failedCount > 0 ? 1 : 0);
         return packages;
     }
+
+    private const int SearchVersionResolutionParallelism = 8;
 
     public IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {

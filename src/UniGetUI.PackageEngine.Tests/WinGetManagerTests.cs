@@ -179,6 +179,53 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void SelectUniqueSearchMatchesKeepsTheFirstMatchOfEachPackageInOrder()
+    {
+        NativeWinGetHelper.NativeSearchMatchId[] matches =
+        [
+            new("winget", "Mozilla.Firefox"),
+            new("winget", "Contoso.Tool"),
+            new("winget", "Mozilla.Firefox"),
+            new("msstore", "Mozilla.Firefox"),
+            new("winget", "Contoso.Tool"),
+        ];
+
+        Assert.Equal([0, 1, 3], NativeWinGetHelper.SelectUniqueSearchMatches(matches));
+    }
+
+    [Fact]
+    public void SelectUniqueSearchMatchesSkipsUnreadableMatches()
+    {
+        NativeWinGetHelper.NativeSearchMatchId[] matches =
+        [
+            new("winget", null),
+            new("winget", "Contoso.Tool"),
+            new("winget", null),
+            new("winget", "Contoso.Other"),
+        ];
+
+        Assert.Equal([1, 3], NativeWinGetHelper.SelectUniqueSearchMatches(matches));
+    }
+
+    [Fact]
+    public void SelectUniqueSearchMatchesTreatsIdsWithDifferentCaseAsDifferentPackages()
+    {
+        NativeWinGetHelper.NativeSearchMatchId[] matches =
+        [
+            new("winget", "Contoso.Tool"),
+            new("winget", "contoso.tool"),
+        ];
+
+        Assert.Equal([0, 1], NativeWinGetHelper.SelectUniqueSearchMatches(matches));
+    }
+
+    [Fact]
+    public void SelectUniqueSearchMatchesReturnsNothingForNoMatches()
+    {
+        Assert.Empty(NativeWinGetHelper.SelectUniqueSearchMatches([]));
+    }
+
+    [Fact]
     public void NativeWinGetCollectionCopiesWithoutEnumeratingWinRtCollections()
     {
         IReadOnlyList<string> nativeCollection = new EnumeratorThrowingReadOnlyList<string>(

@@ -29,6 +29,8 @@ public partial class MacAppStore : PackageManager
 
     internal AppStoreCatalog Catalog { get; }
 
+    public static Task<string> ConfigureTouchIdAsync(bool enable) => NativeMas.ConfigureAsync(enable);
+
     private readonly ConcurrentDictionary<string, string> _installPaths = new();
     private readonly Lock _storefrontLock = new();
     private string? _storefront;
@@ -73,7 +75,7 @@ public partial class MacAppStore : PackageManager
             Description = CoreTools.Translate(
                 "Apple's app store for macOS, through the mas command-line tool.<br>Contains: <b>Apps from the Mac App Store</b>"
             ),
-            IconId = IconType.MsStore,
+            IconId = IconType.MacAppStore,
             ColorIconId = "mas_color",
             ExecutableFriendlyName = "mas",
             InstallVerb = "get",

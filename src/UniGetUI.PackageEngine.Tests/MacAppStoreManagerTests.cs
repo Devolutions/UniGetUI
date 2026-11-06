@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json.Nodes;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
@@ -39,6 +40,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
     private readonly Func<bool> _isRoot = MacAppStorePkgOperationHelper.IsRoot;
     private readonly Func<(uint UserId, uint GroupId)> _userIds = ElevatedMas.UserIds;
     private readonly Func<bool> _touchIdSudoEnabled = ElevatedMas.TouchIdSudoEnabled;
+    private readonly Func<string?> _nativeHelperPath = NativeMas.HelperPath;
 
     public MacAppStoreManagerTests()
     {
@@ -49,6 +51,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
         ElevatedMas.RunProcess = (_, _, _) => throw new InvalidOperationException("No process may run in this test.");
         ElevatedMas.UserIds = () => (501, 20);
         ElevatedMas.TouchIdSudoEnabled = () => false;
+        NativeMas.HelperPath = () => null;
     }
 
     public void Dispose()
@@ -56,6 +59,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
         ElevatedMas.RunProcess = _runProcess;
         ElevatedMas.UserIds = _userIds;
         ElevatedMas.TouchIdSudoEnabled = _touchIdSudoEnabled;
+        NativeMas.HelperPath = _nativeHelperPath;
         MacAppStorePkgOperationHelper.IsRoot = _isRoot;
         Settings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
@@ -93,6 +97,16 @@ public sealed class MacAppStoreManagerTests : IDisposable
 
     private static Package App(MacAppStore manager, string id = Amphetamine, string name = "Amphetamine") =>
         new PackageBuilder().WithManager(manager).WithId(id).WithName(name).WithVersion("5.3.2").Build();
+
+    [Fact]
+    public void ManagerAndSourcesUseTheMacAppStoreIcon()
+    {
+        var (manager, _) = NewManager();
+        Assert.Equal(IconType.MacAppStore, manager.Properties.IconId);
+        Assert.Equal("mas_color", manager.Properties.ColorIconId);
+        Assert.Equal(IconType.MacAppStore, manager.Properties.DefaultSource.IconId);
+        Assert.All(manager.Properties.KnownSources, source => Assert.Equal(IconType.MacAppStore, source.IconId));
+    }
 
     // ── mas output ─────────────────────────────────────────────────────────
 
@@ -506,6 +520,92 @@ public sealed class MacAppStoreManagerTests : IDisposable
     }
 
     [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(70, 70)]
+    [InlineData(128, -128)]
+    public async Task NativeHelperResultsNeverRepeatAnOperation(int helperExit, int expected)
+    {
+        NativeMas.HelperPath = () => "/app/UniGetUIMasHelper";
+        ElevatedMas.TouchIdSudoEnabled = () => true;
+        int calls = 0;
+        ElevatedMas.RunProcess = (info, onLine, token) =>
+        {
+            calls++;
+            Assert.False(token.CanBeCanceled);
+            Assert.Equal("/app/UniGetUIMasHelper", info.FileName);
+            Assert.Equal(["run", MasPath, "get", Amphetamine, "Install app"], info.ArgumentList);
+            Assert.True(info.RedirectStandardInput);
+            Assert.False(info.UseShellExecute);
+            onLine("native output");
+            return Task.FromResult(helperExit);
+        };
+        var result = await ElevatedMas.RunAsync(MasPath, ["get", Amphetamine], "Install app", _ => { }, CancellationToken.None);
+        Assert.Equal(expected, result.ExitCode);
+        Assert.Equal(["native output"], result.Output);
+        Assert.Equal(1, calls);
+    }
+
+    [Theory]
+    [InlineData(NativeMas.Unavailable)]
+    [InlineData(NativeMas.SigningRequired)]
+    public async Task NativeHelperFallsBackOnlyWhenItExplicitlyDidNotStartMas(int nativeExit)
+    {
+        NativeMas.HelperPath = () => "/app/UniGetUIMasHelper";
+        List<string> calls = [];
+        ElevatedMas.RunProcess = (info, _, _) =>
+        {
+            calls.Add(info.FileName);
+            return Task.FromResult(info.FileName == "/app/UniGetUIMasHelper" ? nativeExit : 0);
+        };
+        var result = await ElevatedMas.RunAsync(MasPath, ["get", Amphetamine], "Install app", _ => { }, CancellationToken.None);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(["/app/UniGetUIMasHelper", ElevatedMas.OsaScriptPath], calls);
+    }
+
+    [Fact]
+    public async Task NativeHelperCancellationPreventsPasswordFallback()
+    {
+        NativeMas.HelperPath = () => "/app/UniGetUIMasHelper";
+        using var cancel = new CancellationTokenSource();
+        int calls = 0;
+        ElevatedMas.RunProcess = (_, _, _) =>
+        {
+            calls++;
+            cancel.Cancel();
+            return Task.FromResult(NativeMas.Unavailable);
+        };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            ElevatedMas.RunAsync(MasPath, ["get", Amphetamine], "Install app", _ => { }, cancel.Token));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public void NativeHelperDoesNotReceiveCustomCommandLineSwitches()
+    {
+        NativeMas.HelperPath = () => "/app/UniGetUIMasHelper";
+        Assert.Null(NativeMas.StartInfo(MasPath, ["install", Amphetamine, "--anything"], "Install app"));
+        Assert.Null(NativeMas.StartInfo(MasPath, [], "Install app"));
+    }
+
+    [Fact]
+    public async Task NativeHelperPolicyAndStagingAreChecked()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+        using var process = Process.Start(new ProcessStartInfo(Path.Join(AppContext.BaseDirectory, "MasHelperNativeTests"))
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        })!;
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        Assert.True(process.ExitCode == 0, await stdout + "\n" + await stderr);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(7)]
     [InlineData(127)]
@@ -705,6 +805,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Assert.Contains("Apple Account", log[0]);
         log.Clear();
         Assert.Equal(OperationVeredict.Failure, operations.Verdict(128, ["Command failed (128)"], log.Add));
+        Assert.Equal(OperationVeredict.Canceled, operations.Verdict(NativeMas.CancellationResult, [], log.Add));
         Assert.Empty(log);
     }
 

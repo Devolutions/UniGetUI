@@ -82,4 +82,10 @@
              does at runtime, which is what lets the real managers be exercised here. -->
         <Content Include="..\SharedAssets\Assets\Utilities\*.ps1" Link="Assets\Utilities\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
+
+    <Target Name="BuildNativeMasHelperTests" AfterTargets="Build"
+            Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(TargetFramework)' == '$(PortableTargetFramework)'">
+        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -mmacosx-version-min=12.0 -framework Foundation -framework LocalAuthentication -framework Security -framework ServiceManagement -framework SystemConfiguration '$(MSBuildProjectDirectory)/../../scripts/macos/MasHelperTests.m' -o '$(TargetDir)MasHelperNativeTests'" />
+        <Exec Command="codesign --force --options runtime --sign - '$(TargetDir)MasHelperNativeTests'" />
+    </Target>
 </Project>

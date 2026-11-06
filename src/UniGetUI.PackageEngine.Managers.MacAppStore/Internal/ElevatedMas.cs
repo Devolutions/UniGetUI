@@ -6,7 +6,7 @@ using UniGetUI.Core.Tools;
 
 namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager.Internal;
 
-/// <summary>Uses configured sudo Touch ID support, otherwise the native administrator-password dialog.</summary>
+/// <summary>Uses the opt-in native helper, configured sudo Touch ID, or the administrator-password dialog.</summary>
 internal static partial class ElevatedMas
 {
     internal const string OsaScriptPath = "/usr/bin/osascript";
@@ -126,6 +126,23 @@ internal static partial class ElevatedMas
             lock (output)
                 output.Add(line);
             log(line);
+        }
+
+        if (NativeMas.StartInfo(masPath, arguments, prompt) is { } native)
+        {
+            log(CoreTools.Translate("Checking native Touch ID authorization for the Mac App Store."));
+            cancellationToken.ThrowIfCancellationRequested();
+            int nativeExit = await RunProcess(native, OnLine, CancellationToken.None);
+            if (nativeExit == NativeMas.Canceled)
+                return (NativeMas.CancellationResult, output.ToArray());
+            // Both fallback outcomes are emitted only before mas starts. Transport errors or a
+            // failed mas command never trigger a retry.
+            if (nativeExit is not (NativeMas.Unavailable or NativeMas.SigningRequired))
+                return (nativeExit, output.ToArray());
+            cancellationToken.ThrowIfCancellationRequested();
+            log(nativeExit == NativeMas.SigningRequired
+                ? CoreTools.Translate("Native Touch ID requires a UniGetUI build signed with an Apple-issued certificate. This ad-hoc development build can use password authorization instead.")
+                : CoreTools.Translate("Native Touch ID is not available. Enable its helper in the Mac App Store manager settings, or authorize with a password."));
         }
 
         if (TouchIdSudoEnabled())

@@ -294,8 +294,20 @@ UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/
   already owns it. A paid app must first be bought in the App Store app; UniGetUI then downloads it
   with `mas install`.
 - **Administrator authorization.** mas 4 and later need administrator rights to install and update apps,
-  and every release needs them to uninstall one. If Apple's Touch ID module is enabled for `sudo`,
-  UniGetUI uses it; otherwise it uses the native macOS administrator-password dialog. That AppleScript
+  and every release needs them to uninstall one. On macOS 13 or later, use **Settings > Package
+  managers > Mac App Store > Touch ID authorization > Set up Touch ID** to register UniGetUI's
+  bundled helper, then approve UniGetUI in **System Settings > General > Login Items & Extensions**.
+  macOS requires this one-time administrator approval before the helper can run. Subsequent
+  ordinary Mac App Store operations use a native Touch ID prompt, without editing sudo or PAM.
+  The helper requires an Apple-signed build: Developer ID for distribution, or Apple Development
+  for local testing. Ad-hoc development builds use the existing sudo/password path instead;
+  setup reports the signing requirement rather than registering a helper macOS cannot launch.
+  **Remove helper** unregisters it; you can also disable its background permission in System Settings.
+  If the helper is not approved, or the current user is not the active, locally signed-in
+  administrator, UniGetUI uses the existing sudo/password path. Custom command-line switches
+  also use that path: the helper accepts only an operation and a numeric App Store ID.
+  If Apple's Touch ID module is enabled for `sudo`, UniGetUI uses it; otherwise it uses
+  the native macOS administrator-password dialog. That AppleScript
   dialog is not a reliable way to request Touch ID. UniGetUI never receives your password and does
   not change the system's `sudo` or Touch ID settings.
   The App Store still uses the account of the user running UniGetUI, even if another administrator
@@ -303,6 +315,16 @@ UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/
   Elevation via UniGetUI Elevator or GSudo** is turned on, under **Settings > Administrator rights
   and other dangerous settings**, those operations fail instead. Uninstalling moves the app to the
   Trash.
+- **Native helper safety.** The helper validates the client's code signature against its own
+  using the XPC message's audit identity, verifies that the requesting user is the active
+  administrator, and performs biometric authentication in its own per-operation worker.
+  It does not trust a client-supplied authentication result. The prompt includes the actual
+  `mas` command and executable path. Before authentication, the helper copies itself and the
+  native mas binary into a private, root-owned staging directory and validates their signatures;
+  mas must have only absolute system-library imports. Homebrew's native executable beneath
+  its shell wrapper is supported. Script-only or externally linked mas builds fall back to
+  password authorization. No passwords, biometric data, or reusable authorization tokens
+  are collected or saved. The helper is hardened independently of the desktop app.
 - **Enabling Touch ID for sudo (optional, system-wide).** On macOS Sonoma and later, an administrator
   can create `/etc/pam.d/sudo_local` from Apple's `/etc/pam.d/sudo_local.template` and uncomment
   `auth sufficient pam_tid.so`. Preserve any existing local rules rather than overwriting the file;
@@ -311,13 +333,17 @@ UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/
   `pam_tid.so` rule directly in `/etc/pam.d/sudo` on older systems. An enrolled fingerprint and a
   local graphical login session are needed; macOS can still require a password. UniGetUI avoids
   `sudo -A`, because Apple's Touch ID module explicitly disables its UI in askpass mode.
-- **Progress and cancellation.** The sudo path streams output; AppleScript's password path buffers
-  it until mas finishes. If Touch ID is unavailable or declined, UniGetUI falls back to the native
+- **Progress and cancellation.** The native helper and sudo paths stream output; AppleScript's
+  password path buffers it until mas finishes. Canceling the native helper's Touch ID prompt
+  cancels the operation, without opening another prompt. Choosing **Use Password**, or unavailable
+  or locked-out biometrics, permits password fallback only before mas starts.
+  If sudo's Touch ID is unavailable or declined, UniGetUI falls back to the native
   password dialog, where you can cancel. sudo does not distinguish a Touch ID cancellation from
   other authentication failures. Once the command has started, even a failure never retries it
   through the other path. UniGetUI waits for a submitted privileged operation to finish even if
   cancellation is requested, rather than leave an installer running untracked. Check the App Store
-  for its live download state.
+  for its live download state. A lost helper connection is an error, never a reason to run the
+  installation a second time. Do not remove the helper while an operation is running.
 - **No downloads initiated / Redownload unavailable.** This is a store-side failure after
   authorization, not a rejection of your macOS password. Open the app in the App Store and try there.
   Check which Apple Account acquired it and whether it is still available in your region.

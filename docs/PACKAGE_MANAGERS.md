@@ -290,12 +290,23 @@ UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/
 - **Free and paid apps.** UniGetUI gets a free app with `mas get`, whether or not the account
   already owns it. A paid app must first be bought in the App Store app; UniGetUI then downloads it
   with `mas install`.
-- **Your password.** mas 4 and later need administrator rights to install and update apps, and every
-  release needs them to uninstall one. UniGetUI then runs mas through `sudo` and asks for your macOS
-  password in a dialog, so only an administrator account can do this. When **Prohibit any kind of
+- **Administrator authorization.** mas 4 and later need administrator rights to install and update apps,
+  and every release needs them to uninstall one. UniGetUI uses the native macOS authorization dialog:
+  macOS offers Touch ID when it is available and permitted, or administrator credentials otherwise.
+  UniGetUI never receives your password and does not change the system's `sudo` or Touch ID settings.
+  The App Store still uses the account of the user running UniGetUI, even if another administrator
+  authorizes the operation. When **Prohibit any kind of
   Elevation via UniGetUI Elevator or GSudo** is turned on, under **Settings > Administrator rights
   and other dangerous settings**, those operations fail instead. Uninstalling moves the app to the
   Trash.
+- **Progress and cancellation.** Native authorization buffers command output until mas finishes.
+  You can cancel the system authorization dialog. Once the operation has been authorized, UniGetUI
+  waits for it to finish even if cancellation is requested, rather than leave an installer running
+  untracked. Check the App Store for its live download state.
+- **No downloads initiated / Redownload unavailable.** This is a store-side failure after
+  authorization, not a rejection of your macOS password. Open the app in the App Store and try there.
+  Check which Apple Account acquired it and whether it is still available in your region.
+  UniGetUI does not automatically uninstall, buy, or reacquire apps to bypass this error.
 - **Versions.** The App Store only offers the latest version of an app, so UniGetUI cannot install
   a specific version.
 - **Details.** Descriptions, icons and screenshots come from Apple's public lookup service

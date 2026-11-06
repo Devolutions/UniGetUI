@@ -1,3 +1,4 @@
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
@@ -11,7 +12,7 @@ namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 
 /// <summary>
 /// mas 4 and later need root to install and update apps, and every release needs it to uninstall
-/// one, so those operations run through sudo, which asks for the password in a dialog
+/// one, so those operations use the native macOS authorization dialog
 /// (<see cref="ElevatedMas"/>). The others (mas 3 and earlier, or UniGetUI already running as root)
 /// run as an ordinary process.
 /// </summary>
@@ -65,7 +66,7 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode) =>
-        returnCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure;
+        Verdict(returnCode, processOutput, message => Logger.Warn(message));
 
     public Task<OperationVeredict?> TryPerformAsync(IPackage package, InstallOptions options,
         OperationType operation, Action<string> log, Action<OperationProgress> progress,
@@ -106,21 +107,20 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
             return OperationVeredict.Success;
         }
 
-        // sudo exits like this when the password dialog is cancelled.
-        if (output.Any(line => line.Contains("no password was provided", StringComparison.OrdinalIgnoreCase)))
+        if (output.Any(line => line.TrimEnd().EndsWith("(-128)", StringComparison.Ordinal)))
             return OperationVeredict.Canceled;
 
-        if (output.Any(line => line.Contains("sudoers", StringComparison.OrdinalIgnoreCase)
-                || line.Contains("not allowed to run sudo", StringComparison.OrdinalIgnoreCase)))
-            log(CoreTools.Translate("Only an administrator account can install, update or uninstall Mac App Store apps."));
+        if (output.Any(line => line.Contains("No downloads initiated", StringComparison.OrdinalIgnoreCase)))
+            log(CoreTools.Translate(
+                "The Mac App Store did not start a download. Open the App Store and try this app there. Check that the signed-in Apple Account owns it and that it is available in your region."));
 
         return OperationVeredict.Failure;
     }
 
     internal static string Prompt(IPackage package, OperationType operation) => operation switch
     {
-        OperationType.Uninstall => CoreTools.Translate("UniGetUI needs your password to uninstall {0}.", package.Name),
-        OperationType.Update => CoreTools.Translate("UniGetUI needs your password to update {0} from the Mac App Store.", package.Name),
-        _ => CoreTools.Translate("UniGetUI needs your password to install {0} from the Mac App Store.", package.Name),
+        OperationType.Uninstall => CoreTools.Translate("UniGetUI wants to uninstall {0}.", package.Name),
+        OperationType.Update => CoreTools.Translate("UniGetUI wants to update {0} from the Mac App Store.", package.Name),
+        _ => CoreTools.Translate("UniGetUI wants to install {0} from the Mac App Store.", package.Name),
     };
 }

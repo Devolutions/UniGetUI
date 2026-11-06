@@ -2610,9 +2610,11 @@
   "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.",
   "Mac App Store": "Mac App Store",
   "Apple's app store for macOS, through the mas command-line tool.<br>Contains: <b>Apps from the Mac App Store</b>": "Apple's app store for macOS, through the mas command-line tool.<br>Contains: <b>Apps from the Mac App Store</b>",
-  "UniGetUI needs your password to install {0} from the Mac App Store.": "UniGetUI needs your password to install {0} from the Mac App Store.",
-  "UniGetUI needs your password to update {0} from the Mac App Store.": "UniGetUI needs your password to update {0} from the Mac App Store.",
-  "UniGetUI needs your password to uninstall {0}.": "UniGetUI needs your password to uninstall {0}.",
+  "UniGetUI wants to install {0} from the Mac App Store.": "UniGetUI wants to install {0} from the Mac App Store.",
+  "UniGetUI wants to update {0} from the Mac App Store.": "UniGetUI wants to update {0} from the Mac App Store.",
+  "UniGetUI wants to uninstall {0}.": "UniGetUI wants to uninstall {0}.",
   "The Mac App Store needs administrator rights for this operation, but elevation is prohibited in UniGetUI's settings.": "The Mac App Store needs administrator rights for this operation, but elevation is prohibited in UniGetUI's settings.",
-  "Only an administrator account can install, update or uninstall Mac App Store apps.": "Only an administrator account can install, update or uninstall Mac App Store apps."
+  "Waiting for macOS authorization and the Mac App Store. Command output will appear when the operation finishes.": "Waiting for macOS authorization and the Mac App Store. Command output will appear when the operation finishes.",
+  "Cancellation was requested. Waiting for the authorized Mac App Store operation to finish; check its state in the App Store.": "Cancellation was requested. Waiting for the authorized Mac App Store operation to finish; check its state in the App Store.",
+  "The Mac App Store did not start a download. Open the App Store and try this app there. Check that the signed-in Apple Account owns it and that it is available in your region.": "The Mac App Store did not start a download. Open the App Store and try this app there. Check that the signed-in Apple Account owns it and that it is available in your region."
 }

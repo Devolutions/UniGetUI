@@ -1,14 +1,21 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager.Internal;
 
-/// <summary>Authorizes mas with the system administrator dialog; UniGetUI never handles a password.</summary>
+/// <summary>Uses configured sudo Touch ID support, otherwise the native administrator-password dialog.</summary>
 internal static partial class ElevatedMas
 {
     internal const string OsaScriptPath = "/usr/bin/osascript";
+    internal const string SudoPath = "/usr/bin/sudo";
+    internal const string SudoCommandScript = """
+        printf '%s\n' "$1" || exit
+        shift
+        exec "$@"
+        """;
     internal const string AuthorizationScript = """
         on run argv
             return do shell script (item 1 of argv) with prompt (item 2 of argv) with administrator privileges without altering line endings
@@ -19,6 +26,7 @@ internal static partial class ElevatedMas
         RunAndReadAsync;
 
     internal static Func<(uint UserId, uint GroupId)> UserIds { get; set; } = GetUserIds;
+    internal static Func<bool> TouchIdSudoEnabled { get; set; } = ReadTouchIdConfiguration;
 
     [LibraryImport("/usr/lib/libSystem.B.dylib", EntryPoint = "getuid")]
     private static partial uint GetUid();
@@ -33,11 +41,42 @@ internal static partial class ElevatedMas
         return (GetUid(), GetGid());
     }
 
-    internal static string Command(string masPath, IEnumerable<string> arguments, uint userId, uint groupId)
+    private static bool ReadTouchIdConfiguration()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return false;
+        try
+        {
+            return HasTouchIdConfiguration(File.ReadAllText("/etc/pam.d/sudo"),
+                File.Exists("/etc/pam.d/sudo_local") ? File.ReadAllText("/etc/pam.d/sudo_local") : "");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Logger.Warn($"Could not read sudo's Touch ID configuration; using native password authorization: {ex.Message}");
+            return false;
+        }
+    }
+
+    internal static bool HasTouchIdConfiguration(string sudoConfiguration, string localConfiguration)
+    {
+        static IEnumerable<string[]> Rows(string text) => text.Split('\n')
+            .Select(line => line.Split('#', 2)[0].Split([' ', '\t', '\r'], StringSplitOptions.RemoveEmptyEntries));
+
+        static bool HasModule(IEnumerable<string[]> rows) => rows.Any(row =>
+            row.Length >= 3 && row[0] == "auth" && row[1] == "sufficient"
+            && Path.GetFileName(row[2]) == "pam_tid.so");
+
+        var sudo = Rows(sudoConfiguration).ToArray();
+        return HasModule(sudo) || (sudo.Any(row =>
+            row.Length >= 3 && row[0] == "auth" && row[1] == "include" && row[2] == "sudo_local")
+            && HasModule(Rows(localConfiguration)));
+    }
+
+    private static string[] CommandArguments(string masPath, IEnumerable<string> arguments, uint userId, uint groupId)
     {
         // mas drops its effective identity to SUDO_UID/GID for Store services. Authorization
         // Services does not set these; preserve the requesting user, not the authorizing admin.
-        string[] command =
+        return
         [
             "/usr/bin/env",
             "SUDO_UID=" + userId.ToString(CultureInfo.InvariantCulture),
@@ -45,8 +84,19 @@ internal static partial class ElevatedMas
             masPath,
             .. arguments,
         ];
-        return string.Join(' ', command.Select(CoreTools.QuoteForPosixShell)) + " 2>&1";
     }
+
+    internal static string Command(string masPath, IEnumerable<string> arguments, uint userId, uint groupId) =>
+        string.Join(' ', CommandArguments(masPath, arguments, userId, groupId).Select(CoreTools.QuoteForPosixShell)) + " 2>&1";
+
+    private static ProcessStartInfo StartInfo(string executable) => new(executable)
+    {
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        RedirectStandardInput = true,
+        CreateNoWindow = true,
+    };
 
     public static async Task<(int ExitCode, IReadOnlyList<string> Output)> RunAsync(
         string masPath,
@@ -57,33 +107,69 @@ internal static partial class ElevatedMas
     {
         cancellationToken.ThrowIfCancellationRequested();
         var (userId, groupId) = UserIds();
-        ProcessStartInfo startInfo = new(OsaScriptPath)
-        {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            CreateNoWindow = true,
-        };
-        foreach (string argument in new[] { "-e", AuthorizationScript, "--", Command(masPath, masArguments, userId, groupId), prompt })
-            startInfo.ArgumentList.Add(argument);
+        string[] arguments = masArguments.ToArray();
 
-        log(CoreTools.Translate(
-            "Waiting for macOS authorization and the Mac App Store. Command output will appear when the operation finishes."));
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Killing osascript does not stop its privileged child. Keep waiting (and hold the manager
-        // gate) rather than orphan an installer or report cancellation while it is still running.
+        // Killing an elevation process does not reliably stop its privileged child. Hold the manager
+        // gate rather than orphan an installer or report cancellation while it is still running.
         // Cancel in the system authorization dialog itself is returned as AppleScript error -128.
         using var registration = cancellationToken.Register(() => log(CoreTools.Translate(
             "Cancellation was requested. Waiting for the authorized Mac App Store operation to finish; check its state in the App Store.")));
         List<string> output = [];
-        int exitCode = await RunProcess(startInfo, line =>
+        void OnLine(string line)
         {
             lock (output)
                 output.Add(line);
             log(line);
-        }, CancellationToken.None);
+        }
+
+        if (TouchIdSudoEnabled())
+        {
+            log(prompt);
+            log(CoreTools.Translate("Waiting for sudo authorization. macOS can offer Touch ID if it is available."));
+            string marker = "unigetui-mas-start-" + Guid.NewGuid().ToString("N");
+            bool commandStarted = false;
+            ProcessStartInfo sudo = StartInfo(SudoPath);
+            // pam_tid explicitly disables its UI in askpass (-A) mode. -S with closed stdin lets
+            // PAM offer Touch ID but never asks UniGetUI to collect or send a password.
+            sudo.Environment.Remove("SUDO_ASKPASS");
+            string[] sudoArguments =
+            [
+                "-S", "-p", "", "--", "/bin/sh", "-c", SudoCommandScript, "unigetui-mas", marker,
+                .. CommandArguments(masPath, arguments, userId, groupId),
+            ];
+            foreach (string argument in sudoArguments)
+                sudo.ArgumentList.Add(argument);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            int sudoExit = await RunProcess(sudo, line =>
+            {
+                if (line == marker)
+                    commandStarted = true;
+                else
+                    OnLine(line);
+            }, CancellationToken.None);
+            // An installer failure must never cause a second install through the password path.
+            // The root shell emits this marker before exec, including when exec itself fails.
+            if (commandStarted)
+            {
+                lock (output)
+                    return (sudoExit, output.ToArray());
+            }
+            if (sudoExit == 0)
+                throw new InvalidOperationException("sudo exited successfully without confirming that the Mac App Store command started.");
+
+            cancellationToken.ThrowIfCancellationRequested();
+            log(CoreTools.Translate(
+                "Touch ID did not authorize the operation. Falling back to the macOS administrator-password dialog."));
+        }
+
+        ProcessStartInfo startInfo = StartInfo(OsaScriptPath);
+        foreach (string argument in new[] { "-e", AuthorizationScript, "--", Command(masPath, arguments, userId, groupId), prompt })
+            startInfo.ArgumentList.Add(argument);
+        log(CoreTools.Translate(
+            "Waiting for the macOS administrator-password dialog and the Mac App Store. Command output will appear when the operation finishes."));
+        cancellationToken.ThrowIfCancellationRequested();
+        int exitCode = await RunProcess(startInfo, OnLine, CancellationToken.None);
         lock (output)
             return (exitCode, output.ToArray());
     }

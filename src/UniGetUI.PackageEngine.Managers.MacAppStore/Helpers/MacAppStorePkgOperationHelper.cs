@@ -12,7 +12,7 @@ namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 
 /// <summary>
 /// mas 4 and later need root to install and update apps, and every release needs it to uninstall
-/// one, so those operations use the native macOS authorization dialog
+/// one, so those operations use configured sudo Touch ID support or the native password dialog
 /// (<see cref="ElevatedMas"/>). The others (mas 3 and earlier, or UniGetUI already running as root)
 /// run as an ordinary process.
 /// </summary>

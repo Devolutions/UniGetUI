@@ -686,7 +686,7 @@ public sealed class XcodeTests : IDisposable
 
             await vm.SelectCommand.ExecuteAsync(vm.Installed[1]);
 
-            AssertCommands(fake.TerminalCommands, "select 26.2");
+            AssertCommands(fake.TerminalCommands, "select /Applications/Xcode-26.2.app");
             AssertCommands(fake.Commands, "installed", "list");
             Assert.False(vm.HasOperation);
             Assert.False(vm.IsOperationRunning);

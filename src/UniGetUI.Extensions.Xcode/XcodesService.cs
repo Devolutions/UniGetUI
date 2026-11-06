@@ -125,6 +125,17 @@ public sealed class XcodesService
         CancellationToken cancellationToken = default)
         => await RunToCompletionAsync(["select", RequireVersion(version)], prompts, output, cancellationToken);
 
+    /// <summary>Makes this specific installed Xcode the one command line tools use.</summary>
+    public async Task SelectAsync(
+        InstalledXcode xcode,
+        XcodesPromptHandler? prompts,
+        Action<XcodesOutputLine>? output = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(xcode);
+        await RunToCompletionAsync(["select", RequireInstalledPath(xcode.Path)], prompts, output, cancellationToken);
+    }
+
     /// <summary>Moves an installed Xcode to the Trash, or deletes it.</summary>
     public async Task UninstallAsync(string version, bool deleteCompletely, CancellationToken cancellationToken = default)
     {
@@ -197,6 +208,14 @@ public sealed class XcodesService
         string trimmed = version?.Trim() ?? "";
         if (!XcodeVersion.TryParse(trimmed, out _))
             throw new ArgumentException($"'{version}' is not an Xcode version.", nameof(version));
+        return trimmed;
+    }
+
+    private static string RequireInstalledPath(string path)
+    {
+        string trimmed = path?.Trim() ?? "";
+        if (!Path.IsPathFullyQualified(trimmed) || !trimmed.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"'{path}' is not an installed Xcode app path.", nameof(path));
         return trimmed;
     }
 

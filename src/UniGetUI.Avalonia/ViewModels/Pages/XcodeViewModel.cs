@@ -485,7 +485,7 @@ public partial class XcodeViewModel : ViewModelBase
                 CoreTools.Translate("Selecting Xcode {0}", item.Version),
                 CoreTools.Translate("Could not select Xcode {0}", item.Version),
                 CoreTools.Translate("Selecting Xcode {0} was cancelled", item.Version),
-                (prompts, output, cancellation) => _xcodes.SelectAsync(item.Version, prompts, output, cancellation));
+                (prompts, output, cancellation) => _xcodes.SelectAsync(item.Xcode, prompts, output, cancellation));
 
             await LoadAsync(refresh: false, announce: false);
             if (selected)

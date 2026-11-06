@@ -288,6 +288,34 @@ public sealed class XcodesServiceTests
     }
 
     [Fact]
+    public async Task SelectAsync_UsesTheInstalledAppPathToSelectTheSpecificXcode()
+    {
+        var xcodes = new Harness();
+        var installed = new InstalledXcode(
+            "26.4", "17E192", XcodeArchitecture.AppleSilicon, false, "/Applications/Xcode 26.4.app");
+
+        await xcodes.Service.SelectAsync(installed, prompts: null);
+
+        Assert.Equal(["select", "/Applications/Xcode 26.4.app"], Assert.Single(xcodes.TerminalCommands));
+        Assert.Empty(xcodes.Commands);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Xcode.app")]
+    [InlineData("--help")]
+    [InlineData("/Applications/not-xcode")]
+    public async Task SelectAsync_RefusesAPathThatIsNotAnAbsoluteAppPath(string path)
+    {
+        var xcodes = new Harness();
+        var installed = new InstalledXcode("26.4", null, XcodeArchitecture.AppleSilicon, false, path);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => xcodes.Service.SelectAsync(installed, prompts: null));
+
+        Assert.Empty(xcodes.TerminalCommands);
+    }
+
+    [Fact]
     public async Task SelectAsync_RefusesAnythingThatIsNotAVersion()
     {
         var xcodes = new Harness();

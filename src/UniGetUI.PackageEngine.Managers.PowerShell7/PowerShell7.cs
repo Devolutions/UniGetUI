@@ -26,6 +26,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
             {
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
+                SupportsCustomVersionsOnUpdate = false,
                 SupportsCustomScopes = true,
                 // Uninstall-PSResource targets the scope the package was detected in, so the selector is a no-op there
                 SupportsCustomScopesOnUninstall = false,

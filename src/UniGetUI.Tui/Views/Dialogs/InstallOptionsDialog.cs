@@ -7,6 +7,7 @@ using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.Tui.Infrastructure;
@@ -168,6 +169,9 @@ internal sealed class InstallOptionsDialog : FormDialog
             () => Unlocked() && caps.CanSkipIntegrityChecks && _profile != OperationType.Uninstall);
         Form.AddCheck(CoreTools.Translate("Uninstall previous versions when updated"), () => _o.UninstallPreviousVersionsOnUpdate,
             v => Set(() => _o.UninstallPreviousVersionsOnUpdate = v), () => Unlocked() && caps.CanUninstallPreviousVersionsAfterUpdate);
+        Form.AddCheck(CoreTools.Translate("Uninstall, then reinstall when updated"), () => _o.UninstallBeforeUpdate,
+            v => Set(() => _o.UninstallBeforeUpdate = v),
+            () => Unlocked() && (_package is null ? caps.CanUninstall && caps.CanReinstallOnUpdate : PackageOperation.SupportsUninstallBeforeUpdate(_package)));
         Form.AddCheck(CoreTools.Translate("Remove data on uninstall"), () => _o.RemoveDataOnUninstall,
             v => Set(() => _o.RemoveDataOnUninstall = v), () => Unlocked() && caps.CanRemoveDataOnUninstall);
 
@@ -357,6 +361,7 @@ internal sealed class InstallOptionsDialog : FormDialog
         to.InteractiveInstallation = from.InteractiveInstallation;
         to.SkipHashCheck = from.SkipHashCheck;
         to.UninstallPreviousVersionsOnUpdate = from.UninstallPreviousVersionsOnUpdate;
+        to.UninstallBeforeUpdate = from.UninstallBeforeUpdate;
         to.RemoveDataOnUninstall = from.RemoveDataOnUninstall;
         to.SkipMinorUpdates = from.SkipMinorUpdates;
         to.SkipMinorUpdatesLevel = from.SkipMinorUpdatesLevel;

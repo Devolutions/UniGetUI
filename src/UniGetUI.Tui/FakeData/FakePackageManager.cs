@@ -35,6 +35,7 @@ internal sealed class FakePackageManager : PackageManager
             CanRemoveDataOnUninstall = true,
             CanDownloadInstaller = profile.CanDownloadInstaller,
             CanUninstallPreviousVersionsAfterUpdate = true,
+            CanReinstallOnUpdate = true,
             CanListDependencies = true,
             SupportsCustomVersions = profile.SupportsVersions,
             CanListVersions = !profile.TypedVersions,

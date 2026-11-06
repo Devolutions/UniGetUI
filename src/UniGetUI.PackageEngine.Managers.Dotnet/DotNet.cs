@@ -36,6 +36,7 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
         {
             Capabilities = new ManagerCapabilities
             {
+                CanReinstallOnUpdate = true,
                 InstalledPackagesKeepTheirSource = false,
                 CanRunAsAdmin = true,
                 CanDownloadInstaller = true,

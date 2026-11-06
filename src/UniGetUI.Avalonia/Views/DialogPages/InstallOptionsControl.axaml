@@ -303,6 +303,12 @@
                                       IsVisible="{Binding CanUninstallPrev}"
                                       automation:AutomationProperties.Name="{Binding UninstallPrevCheckBox_Content}"
                                       Margin="0,0,16,4"/>
+                            <CheckBox Content="{Binding UninstallBeforeUpdateCheckBox_Content, FallbackValue='Uninstall, then reinstall when updated'}"
+                                      IsChecked="{Binding UninstallBeforeUpdateChecked}"
+                                      IsEnabled="{Binding CanUninstallBeforeUpdate}"
+                                      IsVisible="{Binding CanUninstallBeforeUpdate}"
+                                      automation:AutomationProperties.Name="{Binding UninstallBeforeUpdateCheckBox_Content}"
+                                      Margin="0,0,16,4"/>
                         </WrapPanel>
 
                         <Border Height="1" Background="{DynamicResource AppBorderBrush}"

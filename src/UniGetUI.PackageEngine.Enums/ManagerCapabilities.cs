@@ -35,6 +35,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool CanRemoveDataOnUninstall = false;
         // False for managers that install but cannot remove, such as macOS .pkg files.
         public bool CanUninstall = true;
+        public bool CanReinstallOnUpdate = false;
+        public bool ReinstallsOnUpdateOnlyGlobalPackages = false;
         // False when the installed inventory cannot tell which source a package came from (Chocolatey
         // assigns its default source; a macOS .pkg receipt or app records no feed).
         public bool InstalledPackagesKeepTheirSource = true;

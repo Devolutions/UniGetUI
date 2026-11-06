@@ -22,6 +22,7 @@ public class Pacman : PackageManager
 
         Capabilities = new ManagerCapabilities
         {
+            CanReinstallOnUpdate = true,
             CanRunAsAdmin = true,
             CanSkipIntegrityChecks = false,
             SupportsCustomSources = false,

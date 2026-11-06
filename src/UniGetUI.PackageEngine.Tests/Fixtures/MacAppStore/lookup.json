@@ -1,0 +1,7 @@
+{
+ "resultCount": 2,
+ "results": [
+  {"wrapperType": "software", "kind": "mac-software", "trackId": 937984704, "trackName": "Amphetamine", "trackViewUrl": "https://apps.apple.com/ca/app/amphetamine/id937984704?mt=12&uo=4", "artistName": "William Gustafson", "sellerName": "William Gustafson", "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/amphetamine/60x60bb.png", "artworkUrl512": "https://is1-ssl.mzstatic.com/image/thumb/amphetamine/512x512bb.png", "screenshotUrls": ["https://is1-ssl.mzstatic.com/image/thumb/amphetamine/shot1.jpg"], "genres": ["Utilities", "Productivity"], "price": 0.00, "formattedPrice": "Free", "fileSizeBytes": "6671277", "currentVersionReleaseDate": "2023-11-10T00:52:30Z", "releaseNotes": "Adds Power Protect.", "description": "Keeps your Mac awake.", "version": "5.3.2"},
+  {"wrapperType": "software", "kind": "mac-software", "trackId": 409183694, "trackName": "Keynote", "trackViewUrl": "https://apps.apple.com/ca/app/keynote/id409183694?mt=12&uo=4", "artistName": "Apple", "sellerName": "Apple Inc.", "sellerUrl": "https://www.apple.com/keynote/", "artworkUrl512": "https://is1-ssl.mzstatic.com/image/thumb/keynote/512x512bb.png", "screenshotUrls": [], "genres": ["Productivity"], "price": 0.00, "formattedPrice": "Free", "fileSizeBytes": "642351104", "currentVersionReleaseDate": "2026-09-15T17:00:00Z", "description": "Build stunning presentations.", "version": "14.4"}
+ ]
+}

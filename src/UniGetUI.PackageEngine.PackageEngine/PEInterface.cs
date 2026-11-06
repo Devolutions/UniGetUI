@@ -20,6 +20,7 @@ using UniGetUI.PackageEngine.Managers.WinInstallerManager;
 using UniGetUI.PackageEngine.Managers.AptManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
+using UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 using UniGetUI.PackageEngine.Managers.MacPkgManager;
 using UniGetUI.PackageEngine.Managers.PacmanManager;
 using UniGetUI.PackageEngine.Managers.SnapManager;
@@ -56,6 +57,7 @@ namespace UniGetUI.PackageEngine
         public static readonly Pacman? Pacman = Create(() => new Pacman());
         public static readonly Homebrew? Homebrew = Create(() => new Homebrew());
         public static readonly MacPkg? MacPkg = Create(() => new MacPkg());
+        public static readonly MacAppStore? MacAppStore = Create(() => new MacAppStore());
         public static readonly Snap? Snap = Create(() => new Snap());
         public static readonly Flatpak? Flatpak = Create(() => new Flatpak());
 #endif
@@ -95,7 +97,10 @@ namespace UniGetUI.PackageEngine
 #else
             candidates.Insert(0, Homebrew);
             if (OperatingSystem.IsMacOS())
+            {
                 candidates.Insert(1, MacPkg);
+                candidates.Insert(2, MacAppStore);
+            }
             if (OperatingSystem.IsLinux())
             {
                 var families = ReadLinuxDistroFamilies();

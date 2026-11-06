@@ -3033,7 +3033,9 @@
   "UniGetUI wants to update {0} from the Mac App Store.": "UniGetUI wants to update {0} from the Mac App Store.",
   "UniGetUI wants to uninstall {0}.": "UniGetUI wants to uninstall {0}.",
   "The Mac App Store needs administrator rights for this operation, but elevation is prohibited in UniGetUI's settings.": "The Mac App Store needs administrator rights for this operation, but elevation is prohibited in UniGetUI's settings.",
-  "Waiting for macOS authorization and the Mac App Store. Command output will appear when the operation finishes.": "Waiting for macOS authorization and the Mac App Store. Command output will appear when the operation finishes.",
+  "Waiting for the macOS administrator-password dialog and the Mac App Store. Command output will appear when the operation finishes.": "Waiting for the macOS administrator-password dialog and the Mac App Store. Command output will appear when the operation finishes.",
+  "Waiting for sudo authorization. macOS can offer Touch ID if it is available.": "Waiting for sudo authorization. macOS can offer Touch ID if it is available.",
+  "Touch ID did not authorize the operation. Falling back to the macOS administrator-password dialog.": "Touch ID did not authorize the operation. Falling back to the macOS administrator-password dialog.",
   "Cancellation was requested. Waiting for the authorized Mac App Store operation to finish; check its state in the App Store.": "Cancellation was requested. Waiting for the authorized Mac App Store operation to finish; check its state in the App Store.",
   "The Mac App Store did not start a download. Open the App Store and try this app there. Check that the signed-in Apple Account owns it and that it is available in your region.": "The Mac App Store did not start a download. Open the App Store and try this app there. Check that the signed-in Apple Account owns it and that it is available in your region."
 }

@@ -194,13 +194,18 @@ Its format-agnostic parts live in the shared feed project described in the next 
 - A free app is installed with `get`, which acquires it for the account; one with a price must
   already be owned and is downloaded with `install`.
 - mas 4 and later need root to install and update, and every release to uninstall. The operation
-  helper is an `IManagedPackageOperationHelper` using `osascript`'s native administrator authorization
-  (`ElevatedMas`), allowing Touch ID where macOS permits it. It explicitly passes the requesting
+  helper is an `IManagedPackageOperationHelper` using `ElevatedMas`: when Apple's `pam_tid.so` is
+  configured for sudo, use `sudo -S` with closed stdin, never `-A` (Apple suppresses Touch ID in
+  askpass mode). Otherwise, or if sudo cannot authenticate, use `osascript`'s native password dialog;
+  AppleScript alone does not reliably offer Touch ID. Never change system PAM configuration.
+  A per-operation marker emitted by the root shell before exec distinguishes an authentication
+  failure from a command failure: once it appears, never retry the command through the other path.
+  Both paths explicitly pass the requesting
   user's uid/gid as `SUDO_UID`/`SUDO_GID`, which mas needs to use that user's App Store session.
   Native authorization buffers output; after submission, wait for its privileged child rather than
   killing osascript and orphaning the installer. Cancellation in the dialog returns error -128.
   The helper returns null (the ordinary process path) when no root is needed or UniGetUI already runs
-  as root. Tests swap `ElevatedMas.RunProcess`, `ElevatedMas.UserIds`,
+  as root. Tests swap `ElevatedMas.RunProcess`, `ElevatedMas.UserIds`, `ElevatedMas.TouchIdSudoEnabled`,
   `MacAppStorePkgOperationHelper.IsRoot` and `AppStoreCatalog.Download`.
 
 ## Installer feeds shared by macOS and Windows

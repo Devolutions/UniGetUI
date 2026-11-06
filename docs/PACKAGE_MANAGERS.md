@@ -291,18 +291,30 @@ UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/
   already owns it. A paid app must first be bought in the App Store app; UniGetUI then downloads it
   with `mas install`.
 - **Administrator authorization.** mas 4 and later need administrator rights to install and update apps,
-  and every release needs them to uninstall one. UniGetUI uses the native macOS authorization dialog:
-  macOS offers Touch ID when it is available and permitted, or administrator credentials otherwise.
-  UniGetUI never receives your password and does not change the system's `sudo` or Touch ID settings.
+  and every release needs them to uninstall one. If Apple's Touch ID module is enabled for `sudo`,
+  UniGetUI uses it; otherwise it uses the native macOS administrator-password dialog. That AppleScript
+  dialog is not a reliable way to request Touch ID. UniGetUI never receives your password and does
+  not change the system's `sudo` or Touch ID settings.
   The App Store still uses the account of the user running UniGetUI, even if another administrator
   authorizes the operation. When **Prohibit any kind of
   Elevation via UniGetUI Elevator or GSudo** is turned on, under **Settings > Administrator rights
   and other dangerous settings**, those operations fail instead. Uninstalling moves the app to the
   Trash.
-- **Progress and cancellation.** Native authorization buffers command output until mas finishes.
-  You can cancel the system authorization dialog. Once the operation has been authorized, UniGetUI
-  waits for it to finish even if cancellation is requested, rather than leave an installer running
-  untracked. Check the App Store for its live download state.
+- **Enabling Touch ID for sudo (optional, system-wide).** On macOS Sonoma and later, an administrator
+  can create `/etc/pam.d/sudo_local` from Apple's `/etc/pam.d/sudo_local.template` and uncomment
+  `auth sufficient pam_tid.so`. Preserve any existing local rules rather than overwriting the file;
+  `/etc/pam.d/sudo` must include `sudo_local`. This changes authentication for **all sudo commands**,
+  not just UniGetUI, and retains the standard password fallback. UniGetUI also recognizes the
+  `pam_tid.so` rule directly in `/etc/pam.d/sudo` on older systems. An enrolled fingerprint and a
+  local graphical login session are needed; macOS can still require a password. UniGetUI avoids
+  `sudo -A`, because Apple's Touch ID module explicitly disables its UI in askpass mode.
+- **Progress and cancellation.** The sudo path streams output; AppleScript's password path buffers
+  it until mas finishes. If Touch ID is unavailable or declined, UniGetUI falls back to the native
+  password dialog, where you can cancel. sudo does not distinguish a Touch ID cancellation from
+  other authentication failures. Once the command has started, even a failure never retries it
+  through the other path. UniGetUI waits for a submitted privileged operation to finish even if
+  cancellation is requested, rather than leave an installer running untracked. Check the App Store
+  for its live download state.
 - **No downloads initiated / Redownload unavailable.** This is a store-side failure after
   authorization, not a rejection of your macOS password. Open the app in the App Store and try there.
   Check which Apple Account acquired it and whether it is still available in your region.

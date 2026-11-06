@@ -38,6 +38,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
         ElevatedMas.RunProcess;
     private readonly Func<bool> _isRoot = MacAppStorePkgOperationHelper.IsRoot;
     private readonly Func<(uint UserId, uint GroupId)> _userIds = ElevatedMas.UserIds;
+    private readonly Func<bool> _touchIdSudoEnabled = ElevatedMas.TouchIdSudoEnabled;
 
     public MacAppStoreManagerTests()
     {
@@ -47,12 +48,14 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Settings.ResetSettings();
         ElevatedMas.RunProcess = (_, _, _) => throw new InvalidOperationException("No process may run in this test.");
         ElevatedMas.UserIds = () => (501, 20);
+        ElevatedMas.TouchIdSudoEnabled = () => false;
     }
 
     public void Dispose()
     {
         ElevatedMas.RunProcess = _runProcess;
         ElevatedMas.UserIds = _userIds;
+        ElevatedMas.TouchIdSudoEnabled = _touchIdSudoEnabled;
         MacAppStorePkgOperationHelper.IsRoot = _isRoot;
         Settings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
@@ -485,6 +488,149 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Assert.False(File.Exists(Path.Combine(CoreData.UniGetUIDataDirectory, "mac-askpass.sh")));
     }
 
+    [Theory]
+    [InlineData("auth include sudo_local", "auth sufficient pam_tid.so", true)]
+    [InlineData("auth include sudo_local", "#auth sufficient pam_tid.so", false)]
+    [InlineData("#auth include sudo_local", "auth sufficient pam_tid.so", false)]
+    [InlineData("auth required pam_opendirectory.so", "auth sufficient pam_tid.so", false)]
+    [InlineData("auth sufficient pam_tid.so", "", true)]
+    [InlineData("auth\tsufficient\t/usr/lib/pam/pam_tid.so # comment\r\n", "", true)]
+    [InlineData(" auth include sudo_local # comment", "\n# comment\n auth sufficient pam_tid.so\n", true)]
+    [InlineData("auth include sudo_local", "auth required pam_tid.so", false)]
+    [InlineData("auth include sudo_local", "account sufficient pam_tid.so", false)]
+    [InlineData("auth include sudo_local", "auth sufficient not_pam_tid.so", false)]
+    [InlineData("", "", false)]
+    public void DetectsOnlyActiveStandardSudoTouchIdConfiguration(string sudo, string local, bool expected)
+    {
+        Assert.Equal(expected, ElevatedMas.HasTouchIdConfiguration(sudo, local));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(7)]
+    [InlineData(127)]
+    public async Task TouchIdRunsTheCommandOnlyOnceEvenWhenMasFails(int exitCode)
+    {
+        ElevatedMas.TouchIdSudoEnabled = () => true;
+        ProcessStartInfo? started = null;
+        int calls = 0;
+        ElevatedMas.RunProcess = (info, onLine, token) =>
+        {
+            calls++;
+            started = info;
+            Assert.False(token.CanBeCanceled);
+            onLine(info.ArgumentList[8]);
+            onLine("mas output");
+            return Task.FromResult(exitCode);
+        };
+        List<string> log = [];
+
+        var result = await ElevatedMas.RunAsync(MasPath, ["update", Amphetamine], "Update app", log.Add, CancellationToken.None);
+
+        Assert.Equal(1, calls);
+        Assert.NotNull(started);
+        Assert.Equal(ElevatedMas.SudoPath, started.FileName);
+        Assert.Equal(["-S", "-p", "", "--", "/bin/sh", "-c", ElevatedMas.SudoCommandScript, "unigetui-mas"],
+            started.ArgumentList.Take(8));
+        Assert.StartsWith("unigetui-mas-start-", started.ArgumentList[8]);
+        Assert.Equal(["/usr/bin/env", "SUDO_UID=501", "SUDO_GID=20", MasPath, "update", Amphetamine],
+            started.ArgumentList.Skip(9));
+        Assert.True(started.RedirectStandardInput);
+        Assert.False(started.UseShellExecute);
+        Assert.False(started.Environment.ContainsKey("SUDO_ASKPASS"));
+        Assert.Equal(exitCode, result.ExitCode);
+        Assert.Equal(["mas output"], result.Output);
+        Assert.Contains("Update app", log);
+        Assert.DoesNotContain(log, line => line.Contains("unigetui-mas-start-"));
+    }
+
+    [Fact]
+    public async Task UnavailableTouchIdFallsBackOnlyBeforeTheCommandStarts()
+    {
+        ElevatedMas.TouchIdSudoEnabled = () => true;
+        List<string> processes = [];
+        ElevatedMas.RunProcess = (info, onLine, _) =>
+        {
+            processes.Add(info.FileName);
+            if (info.FileName == ElevatedMas.SudoPath)
+            {
+                onLine("sudo: a password is required");
+                return Task.FromResult(1);
+            }
+            Assert.Equal(ElevatedMas.OsaScriptPath, info.FileName);
+            Assert.Contains("'SUDO_UID=501' 'SUDO_GID=20'", info.ArgumentList[3]);
+            onLine("installed");
+            return Task.FromResult(0);
+        };
+        List<string> log = [];
+
+        var result = await ElevatedMas.RunAsync(MasPath, ["get", Amphetamine], "Install app", log.Add, CancellationToken.None);
+
+        Assert.Equal([ElevatedMas.SudoPath, ElevatedMas.OsaScriptPath], processes);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("installed", result.Output[^1]);
+        Assert.Contains(log, line => line.Contains("Falling back"));
+    }
+
+    [Fact]
+    public async Task CancellationAfterTouchIdFailureDoesNotOpenAnotherDialog()
+    {
+        ElevatedMas.TouchIdSudoEnabled = () => true;
+        using var cancellation = new CancellationTokenSource();
+        int calls = 0;
+        ElevatedMas.RunProcess = (info, _, _) =>
+        {
+            calls++;
+            Assert.Equal(ElevatedMas.SudoPath, info.FileName);
+            cancellation.Cancel();
+            return Task.FromResult(1);
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            ElevatedMas.RunAsync(MasPath, ["update", Amphetamine], "Update app", _ => { }, cancellation.Token));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task SudoWithoutAStartMarkerCannotReportSuccess()
+    {
+        ElevatedMas.TouchIdSudoEnabled = () => true;
+        ElevatedMas.RunProcess = (_, _, _) => Task.FromResult(0);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ElevatedMas.RunAsync(MasPath, ["update", Amphetamine], "Update app", _ => { }, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(7)]
+    public async Task SudoWrapperPreservesLiteralArgumentsIdentityAndExitCode(int exitCode)
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+        ElevatedMas.TouchIdSudoEnabled = () => true;
+        ElevatedMas.RunProcess = (info, onLine, token) =>
+        {
+            // Run the exact wrapper without sudo or privileges; no policy changes or auth prompt.
+            Assert.Equal(ElevatedMas.SudoPath, info.FileName);
+            info.FileName = "/bin/sh";
+            for (int i = 0; i < 5; i++)
+                info.ArgumentList.RemoveAt(0);
+            return _runProcess(info, onLine, token);
+        };
+        const string literal = "$(exit 99); \"quoted\" & 'single'\nsecond line";
+        var result = await ElevatedMas.RunAsync("/bin/sh",
+            ["-c", "printf '%s\\n' \"$SUDO_UID:$SUDO_GID\" \"$1\"; printf 'stderr\\n' >&2; exit \"$2\"",
+                "test", literal, exitCode.ToString(System.Globalization.CultureInfo.InvariantCulture)],
+            "A \"quoted\" prompt", _ => { }, CancellationToken.None);
+
+        Assert.Equal(exitCode, result.ExitCode);
+        Assert.Contains("501:20", result.Output);
+        Assert.Contains("$(exit 99); \"quoted\" & 'single'", result.Output);
+        Assert.Contains("second line", result.Output);
+        Assert.Contains("stderr", result.Output);
+        Assert.Equal(4, result.Output.Count);
+    }
+
     [Fact]
     public async Task ElevationCanBeProhibited()
     {
@@ -512,15 +658,20 @@ public sealed class MacAppStoreManagerTests : IDisposable
             new InstallOptions(), OperationType.Uninstall, _ => { }, _ => { }, cancellation.Token));
     }
 
-    [Fact]
-    public async Task CancellationDoesNotAbandonAnAuthorizedInstaller()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CancellationDoesNotAbandonAnAuthorizedInstaller(bool touchId)
     {
+        ElevatedMas.TouchIdSudoEnabled = () => touchId;
         using var cancellation = new CancellationTokenSource();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var finished = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        ElevatedMas.RunProcess = (_, _, token) =>
+        ElevatedMas.RunProcess = (info, onLine, token) =>
         {
             Assert.False(token.CanBeCanceled);
+            if (touchId)
+                onLine(info.ArgumentList[8]);
             started.SetResult();
             return finished.Task;
         };

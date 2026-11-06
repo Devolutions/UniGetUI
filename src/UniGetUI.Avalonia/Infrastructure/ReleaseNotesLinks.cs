@@ -26,7 +26,7 @@ internal static class ReleaseNotesLinks
     public static string BrowserDownloadUrl(string versionName, string installerDownloadUrl, bool isWindows) =>
         isWindows && !string.IsNullOrWhiteSpace(installerDownloadUrl)
             ? installerDownloadUrl
-            : CoreData.GetGitHubReleasePageUrlFromTag(CoreData.GetGitHubReleaseTag(versionName));
+            : CoreData.GetGitHubReleasePageUrlFromTag(CoreData.GetGitHubReleaseTag(ShortVersion(versionName)));
 
     public static string ShortVersion(string versionName)
     {

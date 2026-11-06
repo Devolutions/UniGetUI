@@ -964,7 +964,6 @@ internal static partial class AvaloniaAutoUpdater
                 installingInBackground = false;
                 canInstallInBackground = false;
                 _installRequested = false;
-                _installOnQuitRequested = false;
                 ReleaseLockForAutoupdate_Notification = false;
                 InstallerHandoffs.Complete(handoff);
                 handoff = InstallerHandoffs.Begin();

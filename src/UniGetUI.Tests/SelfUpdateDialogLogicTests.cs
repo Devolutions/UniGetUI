@@ -128,4 +128,13 @@ public sealed class SelfUpdateDialogLogicTests
             CoreData.GetGitHubReleasePageUrlFromTag(CoreData.GetGitHubReleaseTag("2026.3.4")),
             ReleaseNotesLinks.BrowserDownloadUrl("2026.3.4", "", isWindows: true));
     }
+
+    [Theory]
+    [InlineData("2026.3.3.0", "https://github.com/Devolutions/UniGetUI/releases/tag/v2026.3.3")]
+    [InlineData("2026.3.3", "https://github.com/Devolutions/UniGetUI/releases/tag/v2026.3.3")]
+    [InlineData("2026.3.3.1", "https://github.com/Devolutions/UniGetUI/releases/tag/v2026.3.3.1")]
+    public void BrowserDownload_ReleasePageUsesThePublishedTag(string feedVersion, string expected)
+    {
+        Assert.Equal(expected, ReleaseNotesLinks.BrowserDownloadUrl(feedVersion, "", isWindows: false));
+    }
 }

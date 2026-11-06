@@ -585,10 +585,30 @@ public static class IpcPackageApi
         try
         {
             await operation.MainThread();
+            await RefreshPackageSnapshotsAsync();
         }
         finally
         {
             operation.Dispose();
+        }
+    }
+
+    // The installed loader keeps multiple versions, so a downgrade or reinstall leaves the old entry cached.
+    private static async Task RefreshPackageSnapshotsAsync()
+    {
+        try
+        {
+            if (InstalledPackagesLoader.Instance is { IsLoading: false } installedLoader)
+            {
+                await installedLoader.ReloadPackages();
+            }
+
+            await RefreshUpgradablePackagesSnapshotAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Could not refresh package snapshots after an IPC operation");
+            Logger.Warn(ex);
         }
     }
 

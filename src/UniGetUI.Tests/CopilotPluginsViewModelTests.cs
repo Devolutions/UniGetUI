@@ -1,9 +1,5 @@
-using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
-using Avalonia.VisualTree;
 using UniGetUI.Avalonia.ViewModels.Pages;
-using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Extensions.AgentSkills;
 
 namespace UniGetUI.Tests;
@@ -20,7 +16,7 @@ public sealed class CopilotPluginsViewModelTests
         HeadlessUnitTestSession.GetOrStartForAssembly(typeof(CopilotPluginsViewModelTests).Assembly);
 
     [Fact]
-    public Task DefaultProvidersExposeCopilotAsOneSelectableLibrary() =>
+    public Task DefaultProvidersExposeCopilotAsSingleProvider() =>
         _session.Dispatch<bool>(async () =>
         {
             using var fixture = new AgentSkillsSettingsTestFixture();
@@ -30,17 +26,14 @@ public sealed class CopilotPluginsViewModelTests
             Assert.Equal("GitHub Copilot", copilot.Name);
             Assert.IsType<CopilotPluginService>(copilot);
             Assert.DoesNotContain(vm.Providers, provider => provider is CopilotAppPluginService);
-            vm.SelectedProvider = copilot;
-            Assert.Equal(PluginLibraryView.Installed, vm.View);
             vm.Stop();
             return true;
         }, CancellationToken.None);
 
     [Fact]
-    public Task AttachedAppHandoffHidesInventoryAndOpensTwoProgressiveConfirmationForms() =>
+    public Task AppHandoffOpensConfirmationFormsWithoutClaimingInstallation() =>
         _session.Dispatch<bool>(async () =>
         {
-            using var fixture = new AgentSkillsSettingsTestFixture();
             List<Uri> opened = [];
             List<string> prompts = [];
             var service = new CopilotAppPluginService(opened.Add);
@@ -49,53 +42,18 @@ public sealed class CopilotPluginsViewModelTests
                 prompts.Add(message);
                 return Task.FromResult(true);
             });
-            var control = new AgentPluginsControl { DataContext = vm };
-            AgentLibraryTestEvidence.AddApplicationResources(control);
-            using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
             await vm.LoadAsync();
-            host.Pump();
-            Assert.False(vm.HasError); // GetCatalogAsync throws; app loading must never call it.
-            Assert.False(control.FindControl<TabStrip>("PluginViews")!.IsEffectivelyVisible);
-            Assert.False(control.FindControl<ListBox>("PluginList")!.IsEffectivelyVisible);
-            Assert.False(control.FindControl<TextBox>("PluginSearch")!.IsEffectivelyVisible);
-            Assert.False(control.FindControl<Button>("UpdateAllPluginsButton")!.IsEffectivelyVisible);
-            Assert.DoesNotContain(control.GetVisualDescendants().OfType<TextBlock>(),
-                text => text.IsEffectivelyVisible && text.Text == "0 plugins");
-            Assert.False(vm.ShowEmpty);
-            Assert.False(control.FindControl<TextBox>("MarketplaceInput")!.IsEffectivelyVisible);
-            Assert.False(control.FindControl<TextBox>("PluginInput")!.IsEffectivelyVisible);
+            Assert.False(vm.HasError);
             Assert.Empty(opened);
-            AgentLibraryTestEvidence.Capture(host, "copilot-app-start");
-
-            var add = control.GetVisualDescendants().OfType<Button>().Single(button => button.Command == vm.ShowAddMarketplaceCommand);
-            host.Click(add);
-            Assert.True(vm.AddingMarketplace);
-            Assert.False(vm.AddingPlugin);
-            host.EnterText(control.FindControl<TextBox>("MarketplaceInput")!, "owner/repo");
-            var openMarket = control.GetVisualDescendants().OfType<Button>().Single(button => button.Command == vm.AddMarketplaceCommand);
-            Assert.Equal("Open in Copilot app", openMarket.Content);
-            host.Click(openMarket);
-            if (vm.AddMarketplaceCommand.ExecutionTask is { } adding) await adding;
-            host.Pump();
+            vm.MarketplaceInput = "owner/repo";
+            await vm.AddMarketplaceCommand.ExecuteAsync(null);
             Assert.EndsWith("ghapp%3A%2F%2Fplugins%2Fmarketplace%2Fadd%3Fsource%3Downer%252Frepo", Assert.Single(opened).AbsoluteUri);
             Assert.Contains("owner/repo", Assert.Single(prompts));
             Assert.Equal("Opened the Copilot app confirmation form. Nothing is installed or added until you confirm in Copilot.", vm.Status);
             Assert.False(vm.NeedsRefresh);
             Assert.False(vm.ShowRestartNotice);
-            AgentLibraryTestEvidence.Capture(host, "copilot-app-marketplace");
-
-            var more = control.FindControl<DropDownButton>("PluginMoreActions")!;
-            host.Click(more);
-            var menu = Assert.IsType<MenuFlyout>(more.Flyout);
-            host.Enter(menu.Items.Cast<MenuItem>().Single(item => item.Command == vm.ShowInstallIdentifierCommand));
-            Assert.True(vm.AddingPlugin);
-            Assert.False(vm.AddingMarketplace);
-            host.EnterText(control.FindControl<TextBox>("PluginInput")!, "/plugin install review@team");
-            var openPlugin = control.GetVisualDescendants().OfType<Button>().Single(button => button.Command == vm.InstallByIdCommand);
-            Assert.Equal("Open in Copilot app", openPlugin.Content);
-            host.Click(openPlugin);
-            if (vm.InstallByIdCommand.ExecutionTask is { } installing) await installing;
-            host.Pump();
+            vm.PluginInput = "/plugin install review@team";
+            await vm.InstallByIdCommand.ExecuteAsync(null);
             Assert.Equal(2, opened.Count);
             Assert.EndsWith("ghapp%3A%2F%2Fplugins%2Finstall%3Fsource%3Dreview%2540team", opened[1].AbsoluteUri);
             Assert.Equal(2, prompts.Count);
@@ -107,7 +65,6 @@ public sealed class CopilotPluginsViewModelTests
             Assert.Empty(vm.Marketplaces);
             Assert.False(vm.HasError);
             Assert.False(vm.ShowRestartNotice);
-            AgentLibraryTestEvidence.Capture(host, "copilot-app-install");
             vm.Stop();
             return true;
         }, CancellationToken.None);

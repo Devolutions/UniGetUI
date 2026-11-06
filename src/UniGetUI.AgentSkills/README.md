@@ -30,22 +30,22 @@ using Devolutions.AgentSkills;
 var skills = new SkillsManager();
 
 // Install one skill globally, for the detected agents
-var result = await skills.InstallAsync(new SkillInstallRequest
+var result = skills.Install(new SkillInstallRequest
 {
     Source = @"C:\skills\my-skills",
     Skills = ["sample-skill"],
 });
 
 // Installed skills, with their source and content hash
-foreach (var s in await skills.GetInstalledSkillsAsync(SkillScope.Global))
+foreach (var s in skills.GetInstalledSkills(SkillScope.Global))
     Console.WriteLine($"{s.Name} [{string.Join(", ", s.Agents)}] from {s.Source ?? "local"}");
 
 // Updates
-var check = await skills.CheckForUpdatesAsync(SkillScope.Global);
-await skills.UpdateAsync(check.Updates);
+var check = skills.CheckForUpdates(SkillScope.Global);
+skills.Update(check.Updates);
 
 // Remove
-await skills.RemoveAsync(["sample-skill"], SkillScope.Global);
+skills.Remove(["sample-skill"], SkillScope.Global);
 ```
 
 ## API
@@ -60,8 +60,9 @@ await skills.RemoveAsync(["sample-skill"], SkillScope.Global);
 | `CheckForUpdates(scope, names)` | `skills update` (check part) | Read-only; lists skills that can't be checked, with the reason |
 | `Update(updates)` / `Update(scope, names)` | `skills update -y` | Reinstalls each skill for the agents that have it |
 
-Every method has an `Async` variant that runs it on the thread pool. Long
-operations take an `IProgress<string>`, which receives progress lines and
+Methods are synchronous and may block on the network, `git` and the file
+system, so call them off the UI thread. Long operations take an
+`IProgress<string>`, which receives progress lines and
 warnings such as a skipped invalid SKILL.md, and a `CancellationToken`.
 Cancelling aborts HTTP requests and kills a running `git`. A source that
 can't be fetched, or has none of the requested skills, throws

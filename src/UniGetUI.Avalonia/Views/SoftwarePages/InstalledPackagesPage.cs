@@ -277,7 +277,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         bool isLocal = package.Source.IsVirtualManager;
         var caps = package.Manager.Capabilities;
 
-        _menuManual.IsEnabled = !isLocal && !caps.RunsInProcess;
+        _menuManual.IsEnabled = !isLocal;
         _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
         _menuInteractive.IsEnabled = caps.CanRunInteractively;
         _menuRemoveData.IsEnabled = caps.CanRemoveDataOnUninstall;

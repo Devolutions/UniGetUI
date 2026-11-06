@@ -71,17 +71,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             _ = ViewModel.ReloadManagerCommand.ExecuteAsync(null);
         };
 
-        if (manager.Capabilities.RunsInProcess)
-        {
-            // Managers that run inside UniGetUI have no executable to choose or show
-            ExecutableHolder.IsVisible = false;
-            PathHolder.IsVisible = false;
-            StatusBar.CornerRadius = new CornerRadius(8);
-        }
-        else
-        {
-            BuildExecutableCards(manager);
-        }
+        BuildExecutableCards(manager);
 
         {
             // ── Install options panel

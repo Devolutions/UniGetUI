@@ -36,7 +36,7 @@ public sealed class SkillsManagerOptions
 /// </summary>
 /// <remarks>
 /// Methods are synchronous and may block on the network, <c>git</c> and the file system; call them off the UI
-/// thread, or use the <c>Async</c> variants, which run them on the thread pool. Cancellation stops between steps,
+/// thread. Cancellation stops between steps,
 /// aborts HTTP requests and kills a running <c>git</c>. Instances are thread-safe. Cloning needs <c>git</c> on
 /// <c>PATH</c>; direct downloads and supported external providers may not.
 /// </remarks>
@@ -95,10 +95,6 @@ public sealed class SkillsManager
     public IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(SkillScope? scope = null, CancellationToken cancellationToken = default) =>
         Run(_ => Inventory.List(scope), null, cancellationToken);
 
-    /// <inheritdoc cref="GetInstalledSkills"/>
-    public Task<IReadOnlyList<InstalledSkillInfo>> GetInstalledSkillsAsync(SkillScope? scope = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => GetInstalledSkills(scope, cancellationToken), cancellationToken);
-
     // ─── Sources ───
 
     /// <summary>The skills a source offers, without installing anything (<c>skills add --list</c>).</summary>
@@ -113,10 +109,6 @@ public sealed class SkillsManager
         return Run(log => InstallEngine.ListAvailable(source, fullDepth, log), progress, cancellationToken);
     }
 
-    /// <inheritdoc cref="GetAvailableSkills"/>
-    public Task<IReadOnlyList<AvailableSkill>> GetAvailableSkillsAsync(string source, bool fullDepth = false, IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => GetAvailableSkills(source, fullDepth, progress, cancellationToken), cancellationToken);
-
     /// <summary>Reads one skill's instructions and file inventory without installing it.</summary>
     /// <param name="source">A source accepted by <see cref="GetAvailableSkills"/>.</param>
     /// <param name="skillName">The skill name returned by <see cref="GetAvailableSkills"/>.</param>
@@ -128,10 +120,6 @@ public sealed class SkillsManager
         ArgumentException.ThrowIfNullOrWhiteSpace(skillName);
         return Run(log => InstallEngine.Preview(source, skillName, log), null, cancellationToken);
     }
-
-    /// <inheritdoc cref="PreviewSkill"/>
-    public Task<SkillPreview> PreviewSkillAsync(string source, string skillName, CancellationToken cancellationToken = default) =>
-        Task.Run(() => PreviewSkill(source, skillName, cancellationToken), cancellationToken);
 
     // ─── Install ───
 
@@ -148,10 +136,6 @@ public sealed class SkillsManager
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Source);
         return Run(log => InstallEngine.Install(request, log), progress, cancellationToken);
     }
-
-    /// <inheritdoc cref="Install"/>
-    public Task<SkillInstallResult> InstallAsync(SkillInstallRequest request, IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => Install(request, progress, cancellationToken), cancellationToken);
 
     // ─── Remove ───
 
@@ -174,11 +158,6 @@ public sealed class SkillsManager
         return Run(log => Inventory.Remove(names, scope, agentList, log), progress, cancellationToken);
     }
 
-    /// <inheritdoc cref="Remove"/>
-    public Task<SkillRemoveResult> RemoveAsync(IEnumerable<string> skillNames, SkillScope scope = SkillScope.Global, IEnumerable<string>? agents = null,
-        IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => Remove(skillNames, scope, agents, progress, cancellationToken), cancellationToken);
-
     // ─── Updates ───
 
     /// <summary>
@@ -196,11 +175,6 @@ public sealed class SkillsManager
         return Run(log => UpdateEngine.Check(Scopes(scope), filter, log), progress, cancellationToken);
     }
 
-    /// <inheritdoc cref="CheckForUpdates"/>
-    public Task<SkillUpdateCheckResult> CheckForUpdatesAsync(SkillScope? scope = null, IEnumerable<string>? skillNames = null,
-        IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => CheckForUpdates(scope, skillNames, progress, cancellationToken), cancellationToken);
-
     /// <summary>Apply updates found by <see cref="CheckForUpdates"/> by reinstalling each skill from its source.</summary>
     /// <param name="updates">Updates returned by <see cref="CheckForUpdates"/>.</param>
     /// <param name="progress">Receives progress and warning lines.</param>
@@ -211,10 +185,6 @@ public sealed class SkillsManager
         var list = updates.ToList();
         return Run(log => UpdateEngine.Update(list, log), progress, cancellationToken);
     }
-
-    /// <inheritdoc cref="Update(IEnumerable{SkillUpdate}, IProgress{string}?, CancellationToken)"/>
-    public Task<SkillUpdateResult> UpdateAsync(IEnumerable<SkillUpdate> updates, IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => Update(updates, progress, cancellationToken), cancellationToken);
 
     /// <summary>Check the given skills (or all) for updates and apply the ones found (<c>skills update -y</c>).</summary>
     /// <param name="scope">Scope to update, or both when null.</param>
@@ -228,11 +198,6 @@ public sealed class SkillsManager
         return Run(log => UpdateEngine.Update(UpdateEngine.Check(Scopes(scope), filter, log).Updates, log), progress, cancellationToken);
     }
 
-    /// <inheritdoc cref="Update(SkillScope?, IEnumerable{string}?, IProgress{string}?, CancellationToken)"/>
-    public Task<SkillUpdateResult> UpdateAsync(SkillScope? scope = null, IEnumerable<string>? skillNames = null,
-        IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => Update(scope, skillNames, progress, cancellationToken), cancellationToken);
-
     // ─── Notion ───
 
     /// <summary>
@@ -243,10 +208,6 @@ public sealed class SkillsManager
     public NotionStatus GetNotionStatus(CancellationToken cancellationToken = default) =>
         Run(_ => NotionCli.GetStatus(), null, cancellationToken);
 
-    /// <inheritdoc cref="GetNotionStatus"/>
-    public Task<NotionStatus> GetNotionStatusAsync(CancellationToken cancellationToken = default) =>
-        Task.Run(() => GetNotionStatus(cancellationToken), cancellationToken);
-
     /// <summary>
     /// Start signing the Notion CLI in: returns the Notion page to open in the user's browser and the code it shows.
     /// Call <see cref="CompleteNotionSignIn"/> next, which waits for the user to approve.
@@ -256,10 +217,6 @@ public sealed class SkillsManager
     public NotionSignIn BeginNotionSignIn(CancellationToken cancellationToken = default) =>
         Run(_ => NotionCall(NotionCli.BeginSignIn), null, cancellationToken);
 
-    /// <inheritdoc cref="BeginNotionSignIn"/>
-    public Task<NotionSignIn> BeginNotionSignInAsync(CancellationToken cancellationToken = default) =>
-        Task.Run(() => BeginNotionSignIn(cancellationToken), cancellationToken);
-
     /// <summary>
     /// Wait, up to 15 minutes, for the user to approve the sign-in started by <see cref="BeginNotionSignIn"/>.
     /// Cancelling stops waiting.
@@ -268,10 +225,6 @@ public sealed class SkillsManager
     /// <exception cref="SkillsException">The sign-in was refused, expired or failed.</exception>
     public void CompleteNotionSignIn(CancellationToken cancellationToken = default) =>
         Run(_ => NotionCall(() => { NotionCli.CompleteSignIn(); return true; }), null, cancellationToken);
-
-    /// <inheritdoc cref="CompleteNotionSignIn"/>
-    public Task CompleteNotionSignInAsync(CancellationToken cancellationToken = default) =>
-        Task.Run(() => CompleteNotionSignIn(cancellationToken), cancellationToken);
 
     /// <summary>Sign the Notion CLI out of its workspace, deleting the token it keeps.</summary>
     /// <param name="cancellationToken">Cancels the request.</param>

@@ -1,11 +1,5 @@
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
-using Avalonia.Styling;
-using Avalonia.VisualTree;
 using UniGetUI.Avalonia.ViewModels.Pages;
-using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Extensions.AgentSkills;
 
 namespace UniGetUI.Tests;
@@ -35,16 +29,11 @@ public sealed class AgentPluginsMultiHostViewModelTests
         vm.SelectedPlugin = vm.Plugins.Single();
         vm.SelectedMarketplace = vm.Marketplaces.Single();
         vm.Query = "Claude";
-        vm.InstalledOnly = true;
-        vm.PluginInput = "stale-plugin";
-        vm.MarketplaceInput = "stale-marketplace";
         vm.Status = "stale status";
         vm.HasError = true;
         vm.Activity = "old host output";
         vm.ShowRestartNotice = true;
         vm.NeedsRefresh = true;
-        vm.Page = PluginPage.Details;
-        vm.AddMode = PluginAddMode.Identifier;
 
         vm.SelectedProvider = codex;
 
@@ -54,16 +43,11 @@ public sealed class AgentPluginsMultiHostViewModelTests
         Assert.Null(vm.SelectedPlugin);
         Assert.Null(vm.SelectedMarketplace);
         Assert.Equal("", vm.Query);
-        Assert.False(vm.InstalledOnly);
-        Assert.Equal("", vm.PluginInput);
-        Assert.Equal("", vm.MarketplaceInput);
         Assert.Equal("", vm.Status);
         Assert.False(vm.HasError);
         Assert.False(vm.NeedsRefresh);
         Assert.False(vm.ShowRestartNotice);
         Assert.Equal("", vm.Activity);
-        Assert.Equal(PluginPage.Library, vm.Page);
-        Assert.Equal(PluginAddMode.None, vm.AddMode);
         Assert.Equal("Codex guidance", vm.Guidance);
         Assert.Equal("Codex restart", vm.RestartNotice);
         Assert.False(vm.SupportsUpdate);
@@ -240,7 +224,6 @@ public sealed class AgentPluginsMultiHostViewModelTests
             Assert.True(vm.IsLoadingCatalog);
             Assert.True(vm.IsWorking);
             Assert.False(vm.CanChange);
-            Assert.False(vm.ShowEmpty);
             Assert.Equal(["selected"], requestedSources);
             Assert.Equal(1, provider.MarketplaceCatalogReads);
             Assert.Equal(0, otherProvider.InstalledCatalogReads);
@@ -253,7 +236,6 @@ public sealed class AgentPluginsMultiHostViewModelTests
             Assert.True(vm.HasError);
             Assert.Contains("fixture source unavailable", vm.Status);
             Assert.Empty(vm.Plugins);
-            Assert.False(vm.ShowEmpty);
             Assert.True(vm.CanRetry);
 
             await vm.BrowseSelectedMarketplaceCommand.ExecuteAsync(null);
@@ -341,7 +323,7 @@ public sealed class AgentPluginsMultiHostViewModelTests
             Assert.True(vm.HasMarketplaceFilter);
             Assert.False(vm.CanRefreshMarketplace);
             Assert.True(vm.CanWork);
-            vm.AllMarketplacesCommand.Execute(null);
+            vm.SelectedMarketplace = null;
             Assert.Null(vm.SelectedMarketplace);
             Assert.False(vm.HasMarketplaceFilter);
             Assert.Equal(2, vm.Plugins.Count);
@@ -486,165 +468,6 @@ public sealed class AgentPluginsMultiHostViewModelTests
             return true;
         }, CancellationToken.None);
 
-    [Fact]
-    public Task Control_DoesNotLoadAProviderWhileHiddenAndLoadsTheSelectedHostWhenAttached() =>
-        _session.Dispatch<bool>(() =>
-        {
-            var claude = new ProviderStub("Claude", supportsUpdate: true, supportsToggle: true);
-            var codex = new ProviderStub("Codex", supportsUpdate: false, supportsToggle: false)
-            {
-                Catalog = new([new("codex@market", "Codex catalog", "1", false, false)], []),
-            };
-            var vm = new AgentPluginsViewModel([claude, codex], _ => Task.FromResult(true));
-            var control = new AgentPluginsControl { DataContext = vm };
-
-            Assert.Equal(0, claude.CatalogReads);
-            Assert.Equal(0, codex.CatalogReads);
-
-            control.IsVisible = false;
-            using var host = new AgentSkillsSettingsTestWindow(control);
-            ComboBox provider = control.FindControl<ComboBox>("PluginProvider")!;
-            provider.SelectedItem = codex;
-            host.Pump();
-            Assert.Equal(0, codex.CatalogReads);
-            Assert.Equal(0, claude.CatalogReads);
-            provider.SelectedItem = claude;
-            control.IsVisible = true;
-            host.Pump();
-            provider.SelectedItem = codex;
-            host.Pump();
-
-            Assert.Same(codex, vm.SelectedProvider);
-            Assert.Equal(1, codex.CatalogReads);
-            Assert.Equal("codex@market", Assert.Single(vm.Plugins).Id);
-            Assert.Equal("Codex", provider.SelectedItem is IAgentPluginService selected ? selected.Name : "");
-            return Task.FromResult(true);
-        }, CancellationToken.None);
-
-    [Theory]
-    [InlineData(700, 500, false)]
-    [InlineData(999, 700, false)]
-    [InlineData(1000, 700, false)]
-    [InlineData(1450, 900, false)]
-    [InlineData(700, 500, true)]
-    [InlineData(1000, 700, true)]
-    [InlineData(1450, 900, true)]
-    public Task PluginDetailsAdaptToWindowWidthWithPinnedActionsInBothThemes(int width, int height, bool dark) =>
-        _session.Dispatch<bool>(async () =>
-        {
-            using var fixture = new AgentSkillsSettingsTestFixture();
-            var provider = new ProviderStub("Claude Code", true, true)
-            {
-                Catalog = new(
-                    [
-                        new("design-agents@ux", string.Join("\n", Enumerable.Repeat("Long plugin description with install instructions.", 100)), "1.2", false, false),
-                        new("design-skills@ux", "Skills for reviewing interface design.", "2.0", true, true),
-                        new("blocked@ux", "Unavailable under enterprise policy.", "1", false, false) { CanInstall = false, Notice = "Blocked by policy." },
-                    ],
-                    [new("ux", "https://github.com/contoso/ux")]),
-            };
-            var vm = new AgentPluginsViewModel(provider, _ => Task.FromResult(true));
-            await vm.LoadAsync();
-            var control = new AgentPluginsControl { DataContext = vm };
-            AgentLibraryTestEvidence.AddApplicationResources(control);
-            using var host = new AgentSkillsSettingsTestWindow(control, width, dark ? ThemeVariant.Dark : ThemeVariant.Light, height);
-            Assert.Equal(["Browse", "Installed (1)"], control.FindControl<TabStrip>("PluginViews")!.Items.Cast<TabStripItem>().Select(item => item.Content));
-            vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "design-agents@ux");
-            host.Pump();
-            Assert.False(vm.ShowDetails);
-            string size = $"{width}x{height}-{(dark ? "dark" : "light")}";
-            AgentLibraryTestEvidence.Capture(host, "plugins-list-" + size);
-            vm.OpenDetailsCommand.Execute(vm.SelectedPlugin);
-            host.Pump();
-            var details = control.FindControl<Grid>("PluginDetails")!;
-            var pane = control.FindControl<Border>("PluginDetailsPane")!;
-            var library = control.FindControl<Grid>("PluginLibrary")!;
-            var install = control.FindControl<Button>("InstallPluginButton")!;
-            Assert.True(details.IsEffectivelyVisible && install.IsEffectivelyVisible);
-            double expectedWidth = width >= 1000 ? 360 : control.Bounds.Width;
-            Assert.InRange(pane.Bounds.Width, expectedWidth - 2, expectedWidth);
-            Assert.Equal(width >= 1000, library.IsEffectivelyVisible);
-            if (width >= 1000)
-                Assert.True(library.Bounds.Right < pane.Bounds.Left);
-            var scroll = Assert.Single(details.GetVisualDescendants().OfType<ScrollViewer>());
-            Assert.DoesNotContain(scroll, install.GetVisualAncestors());
-            Point before = install.TranslatePoint(default, control)!.Value;
-            Assert.InRange(before.Y + install.Bounds.Height, 1, height);
-            Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
-            AgentLibraryTestEvidence.Capture(host, "plugins-details-" + size);
-            scroll.Offset = new Vector(0, scroll.Extent.Height);
-            host.Pump();
-            Assert.Equal(before, install.TranslatePoint(default, control)!.Value);
-            var pendingMutation = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-            provider.PerformResult = (_, _, token) => pendingMutation.Task.WaitAsync(token);
-            Task installing = vm.InstallCommand.ExecuteAsync(null);
-            host.Pump();
-            Assert.True(install.IsEffectivelyVisible);
-            Assert.False(install.IsEnabled);
-            Assert.False(control.FindControl<ComboBox>("PluginProvider")!.IsEnabled);
-            vm.CancelCommand.Execute(null);
-            await installing.WaitAsync(TimeSpan.FromSeconds(30));
-            Assert.True(vm.NeedsRefresh);
-            host.Click(control.FindControl<Button>("PluginBackButton")!);
-            Assert.Equal(PluginPage.Library, vm.Page);
-            Assert.Equal("design-agents@ux", vm.SelectedPlugin?.Id);
-            Assert.Equal(("design-agents@ux", AgentPluginAction.Install), Assert.Single(provider.Actions));
-            return true;
-        }, CancellationToken.None);
-
-    [Fact]
-    public Task DetailsPaneKeepsListContextWhileSelectingAndResizing() => _session.Dispatch<bool>(async () =>
-    {
-        var provider = new ProviderStub("Claude Code", true, true)
-        {
-            Catalog = new(Enumerable.Range(0, 40).Select(i =>
-                new AgentPluginItem($"plugin-{i:D2}@ux", "Design tooling", "1", true, true)).ToArray(),
-                [new("ux", "contoso/ux")]),
-        };
-        var vm = new AgentPluginsViewModel(provider, _ => Task.FromResult(true));
-        await vm.LoadAsync();
-        vm.View = PluginLibraryView.Installed;
-        vm.Query = "plugin";
-        vm.SelectedMarketplace = vm.Marketplaces.Single();
-        var control = new AgentPluginsControl { DataContext = vm };
-        using var host = new AgentSkillsSettingsTestWindow(control, 1200, height: 700);
-        var list = control.FindControl<ListBox>("PluginList")!;
-        var items = vm.Plugins;
-        vm.OpenDetailsCommand.Execute(items.Single(item => item.Id == "plugin-20@ux"));
-        list.ScrollIntoView(Assert.IsType<AgentPluginItem>(vm.SelectedPlugin));
-        host.Pump();
-        Assert.True(list.IsEffectivelyVisible);
-        Assert.True(control.FindControl<Control>("PluginDetails")!.IsEffectivelyVisible);
-        Assert.True(control.FindControl<Button>("UpdateAllPluginsButton")!.IsEffectivelyVisible);
-        vm.OpenDetailsCommand.Execute(items.Single(item => item.Id == "plugin-21@ux"));
-        list.ScrollIntoView(Assert.IsType<AgentPluginItem>(vm.SelectedPlugin));
-        host.Pump();
-        var scroll = list.GetVisualDescendants().OfType<ScrollViewer>().First();
-        Vector offset = scroll.Offset;
-        Assert.True(offset.Y > 0);
-
-        host.Window.Width = 700;
-        host.Pump();
-        Assert.False(list.IsEffectivelyVisible);
-        Assert.True(control.FindControl<Control>("PluginDetails")!.IsEffectivelyVisible);
-        host.Window.Width = 1200;
-        host.Pump();
-        Assert.True(list.IsEffectivelyVisible);
-        Assert.Same(items, vm.Plugins);
-        Assert.Equal("plugin-21@ux", vm.SelectedPlugin?.Id);
-        Assert.Equal("plugin", vm.Query);
-        Assert.Equal("ux", vm.SelectedMarketplace?.Name);
-        Assert.Equal(PluginLibraryView.Installed, vm.View);
-        vm.BackCommand.Execute(null);
-        host.Pump();
-        Assert.False(control.FindControl<Control>("PluginDetails")!.IsEffectivelyVisible);
-        Assert.InRange(Math.Abs(scroll.Offset.Y - offset.Y), 0, 1);
-        Assert.True(list.ContainerFromItem(Assert.IsType<AgentPluginItem>(vm.SelectedPlugin))!.GetVisualDescendants().OfType<Button>().First().IsFocused);
-        Assert.Equal(1, provider.CatalogReads);
-        vm.Stop();
-        return true;
-    }, CancellationToken.None);
-
     [Theory]
     [InlineData(AgentPluginAction.Install)]
     [InlineData(AgentPluginAction.Update)]
@@ -683,31 +506,20 @@ public sealed class AgentPluginsMultiHostViewModelTests
                 return Task.FromResult("changed");
             };
             await vm.LoadAsync();
-            var control = new AgentPluginsControl { DataContext = vm };
-            using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-            var list = control.FindControl<ListBox>("PluginList")!;
             vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "other@ux");
-            var row = list.ContainerFromItem(vm.Plugins.Single(item => item.Id == "target@ux"))!;
-            if (action is AgentPluginAction.Enable or AgentPluginAction.Disable)
-                host.Space(row.GetVisualDescendants().OfType<ToggleSwitch>().Single());
-            else
+            var target = vm.Plugins.Single(item => item.Id == "target@ux");
+            var command = action switch
             {
-                var command = action switch
-                {
-                    AgentPluginAction.Install => vm.InstallItemCommand,
-                    AgentPluginAction.Update => vm.UpdateItemCommand,
-                    _ => vm.UninstallItemCommand,
-                };
-                host.Click(row.GetVisualDescendants().OfType<Button>().Single(button => button.Command == command));
-                if (command.ExecutionTask is { } operation) await operation;
-            }
-            if (vm.ToggleItemCommand.ExecutionTask is { } toggleOperation) await toggleOperation;
-            host.Pump();
+                AgentPluginAction.Install => vm.InstallItemCommand,
+                AgentPluginAction.Update => vm.UpdateItemCommand,
+                AgentPluginAction.Enable or AgentPluginAction.Disable => vm.ToggleItemCommand,
+                _ => vm.UninstallItemCommand,
+            };
+            await command.ExecuteAsync(target);
 
             Assert.Equal([("target@ux", action)], provider.Actions);
             Assert.Contains("target@ux", Assert.Single(prompts));
             Assert.DoesNotContain("other@ux", prompts[0]);
-            Assert.Equal(PluginPage.Library, vm.Page);
             Assert.Equal(2, provider.CatalogReads);
             var result = vm.Plugins.Single(item => item.Id == "target@ux");
             Assert.Equal(action != AgentPluginAction.Uninstall, result.IsInstalled);
@@ -733,19 +545,12 @@ public sealed class AgentPluginsMultiHostViewModelTests
         var confirmation = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var vm = new AgentPluginsViewModel(provider, _ => confirmation.Task);
         await vm.LoadAsync();
-        var control = new AgentPluginsControl { DataContext = vm };
-        using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-        var toggle = control.FindControl<ListBox>("PluginList")!.GetVisualDescendants().OfType<ToggleSwitch>().Single();
-        host.Space(toggle);
-        Assert.True(toggle.IsChecked);
+        Task toggling = vm.ToggleItemCommand.ExecuteAsync(vm.Plugins[0]);
         Assert.True(vm.IsBusy);
-        Assert.False(toggle.IsEffectivelyEnabled);
         await vm.UninstallItemCommand.ExecuteAsync(vm.Plugins[0]);
         Assert.Empty(provider.Actions);
         confirmation.SetResult(fail);
-        await vm.ToggleItemCommand.ExecutionTask!;
-        host.Pump();
-        Assert.True(toggle.IsChecked);
+        await toggling;
         Assert.True(vm.Plugins[0].Enabled);
         Assert.Equal(fail, vm.HasError);
         Assert.Equal(fail, vm.NeedsRefresh);
@@ -774,14 +579,10 @@ public sealed class AgentPluginsMultiHostViewModelTests
             return Task.FromResult(false);
         });
         await vm.LoadAsync();
-        var control = new AgentPluginsControl { DataContext = vm };
-        using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-        var row = control.FindControl<ListBox>("PluginList")!.ContainerFromItem(vm.Plugins[0])!;
-        Assert.Equal(supportsToggle && canToggle, row.GetVisualDescendants().OfType<ToggleSwitch>().Single().IsEffectivelyVisible);
-        Assert.Equal(supportsUpdate && canManage,
-            row.GetVisualDescendants().OfType<Button>().Single(button => button.Command == vm.UpdateItemCommand).IsEffectivelyVisible);
-        Assert.Equal(canManage,
-            row.GetVisualDescendants().OfType<Button>().Single(button => button.Command == vm.UninstallItemCommand).IsEffectivelyVisible);
+        vm.SelectedPlugin = vm.Plugins[0];
+        Assert.Equal(supportsToggle && canToggle, vm.CanDisable);
+        Assert.Equal(supportsUpdate && canManage, vm.CanUpdate);
+        Assert.Equal(canManage, vm.CanManage);
         if (!supportsUpdate || !canManage) await vm.UpdateItemCommand.ExecuteAsync(vm.Plugins[0]);
         if (!supportsToggle || !canToggle) await vm.ToggleItemCommand.ExecuteAsync(vm.Plugins[0]);
         if (!canManage) await vm.UninstallItemCommand.ExecuteAsync(vm.Plugins[0]);
@@ -799,81 +600,7 @@ public sealed class AgentPluginsMultiHostViewModelTests
     }, CancellationToken.None);
 
     [Fact]
-    public Task MoreActionsKeepsMarketplaceAndIdentifierFlowsAccessible() => _session.Dispatch<bool>(async () =>
-    {
-        var vm = new AgentPluginsViewModel(new ProviderStub("Agent", true, true), _ => Task.FromResult(true));
-        await vm.LoadAsync();
-        var control = new AgentPluginsControl { DataContext = vm };
-        using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-        var more = control.FindControl<DropDownButton>("PluginMoreActions")!;
-        host.Click(more);
-        var menu = Assert.IsType<MenuFlyout>(more.Flyout);
-        var identifier = menu.Items.Cast<MenuItem>().Single(item => Equals(item.Header, "Install by identifier"));
-        var marketplaces = menu.Items.Cast<MenuItem>().Single(item => Equals(item.Header, "Marketplaces"));
-        Assert.Same(vm.ShowInstallIdentifierCommand, identifier.Command);
-        Assert.Same(vm.ManageMarketplacesCommand, marketplaces.Command);
-        host.Enter(identifier);
-        host.Pump();
-        Assert.True(vm.AddingPlugin);
-        Assert.True(control.FindControl<TextBox>("PluginInput")!.IsEffectivelyVisible);
-        Assert.True(control.FindControl<TextBox>("PluginInput")!.IsFocused);
-        host.Click(more);
-        host.Enter(marketplaces);
-        host.Pump();
-        Assert.True(vm.ShowMarketplaces);
-        Assert.True(control.FindControl<Button>("MarketplacesBackButton")!.IsFocused);
-        vm.BackCommand.Execute(null);
-        host.Pump();
-        Assert.True(more.IsEffectivelyVisible);
-        vm.Stop();
-        return true;
-    }, CancellationToken.None);
-
-    [Fact]
-    public Task PluginDetailsBackRestoresMarketplaceQueryViewIdentityScrollAndFocus() => _session.Dispatch<bool>(async () =>
-    {
-        var provider = new ProviderStub("Claude Code", true, true)
-        {
-            Catalog = new(Enumerable.Range(0, 50).Select(i =>
-                new AgentPluginItem($"plugin-{i:D2}@ux", "Design tooling", "1", true, true))
-                .Append(new("plugin-20@other", "Other source", "1", true, true)).ToArray(),
-                [new("ux", "contoso/ux"), new("other", "other/ux")]),
-        };
-        var vm = new AgentPluginsViewModel(provider, _ => Task.FromResult(true));
-        await vm.LoadAsync();
-        var control = new AgentPluginsControl { DataContext = vm };
-        using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-        vm.View = PluginLibraryView.Installed;
-        vm.Query = "plugin";
-        vm.SelectedMarketplace = vm.Marketplaces.Single(item => item.Name == "ux");
-        vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "plugin-20@ux");
-        var list = control.FindControl<ListBox>("PluginList")!;
-        list.ScrollIntoView(vm.SelectedPlugin);
-        host.Pump();
-        var scroll = list.GetVisualDescendants().OfType<ScrollViewer>().First();
-        Vector offset = scroll.Offset;
-        Assert.True(offset.Y > 0);
-        vm.OpenDetailsCommand.Execute(vm.SelectedPlugin);
-        host.Pump();
-        Assert.True(control.FindControl<Button>("PluginBackButton")!.IsFocused);
-        host.Click(control.FindControl<Button>("PluginBackButton")!);
-        Assert.Equal(PluginLibraryView.Installed, vm.View);
-        Assert.Equal("plugin", vm.Query);
-        Assert.Equal("ux", vm.SelectedMarketplace?.Name);
-        Assert.Equal("plugin-20@ux", vm.SelectedPlugin?.Id);
-        Assert.InRange(Math.Abs(scroll.Offset.Y - offset.Y), 0, 1);
-        Assert.True(list.ContainerFromItem(vm.SelectedPlugin)!.GetVisualDescendants().OfType<Button>().First().IsFocused);
-        vm.ManageMarketplacesCommand.Execute(null);
-        host.Pump();
-        Assert.True(control.FindControl<Button>("MarketplacesBackButton")!.IsFocused);
-        host.Click(control.FindControl<Button>("MarketplacesBackButton")!);
-        Assert.Equal("plugin-20@ux", vm.SelectedPlugin?.Id);
-        Assert.Equal(1, provider.CatalogReads);
-        return true;
-    }, CancellationToken.None);
-
-    [Fact]
-    public Task TenThousandPluginCatalogVirtualizesAndFiltersLocallyWithoutBackendCalls() => _session.Dispatch<bool>(async () =>
+    public Task TenThousandPluginCatalogFiltersAndPagesLocallyWithoutBackendCalls() => _session.Dispatch<bool>(async () =>
     {
         var provider = new ProviderStub("Codex", false, false)
         {
@@ -883,24 +610,15 @@ public sealed class AgentPluginsMultiHostViewModelTests
         };
         var vm = new AgentPluginsViewModel(provider, _ => throw new Xunit.Sdk.XunitException("Filtering must not prompt"));
         await vm.LoadAsync();
-        var control = new AgentPluginsControl { DataContext = vm };
-        using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-        var list = control.FindControl<ListBox>("PluginList")!;
-        Assert.Equal(100, list.ItemCount);
-        Assert.InRange(list.GetVisualDescendants().OfType<ListBoxItem>().Count(), 1, 100);
-        vm.Query = "plugin-09999";
-        host.Pump();
-        Assert.Equal("plugin-09999@catalog", Assert.Single(vm.Plugins).Id);
-        Assert.Equal(1, list.ItemCount);
-        vm.Query = "";
-        vm.View = PluginLibraryView.Installed;
-        host.Pump();
         Assert.Equal(100, vm.Plugins.Count);
-        Assert.Equal("Showing 100 of 5000 plugins", vm.ResultCount);
+        vm.Query = "plugin-09999";
+        Assert.Equal("plugin-09999@catalog", Assert.Single(vm.Plugins).Id);
+        vm.Query = "";
+        Assert.Equal(100, vm.Plugins.Count);
+        Assert.True(vm.CanLoadMore);
         vm.LoadMoreCommand.Execute(null);
         Assert.Equal(200, vm.Plugins.Count);
-        Assert.Equal("plugin-00398@catalog", vm.Plugins[^1].Id);
-        host.Pump();
+        Assert.Equal("plugin-00199@catalog", vm.Plugins[^1].Id);
         Assert.Equal(1, provider.CatalogReads);
         Assert.Empty(provider.Actions);
         return true;
@@ -932,34 +650,6 @@ public sealed class AgentPluginsMultiHostViewModelTests
             Assert.Equal(100, vm.Plugins.Count);
             vm.LoadMoreCommand.Execute(null);
             Assert.Equal(200, vm.Plugins.Count);
-            vm.Stop();
-            return true;
-        }, CancellationToken.None);
-
-    [Fact]
-    public Task BrowseAllKeepsSuccessfulMarketplaceResultsAndActionsAvailableWhenAnotherFails() =>
-        _session.Dispatch<bool>(async () =>
-        {
-            var provider = new ProviderStub("Codex", false, false)
-            {
-                SupportsScopedBrowse = true,
-                InstalledCatalog = new([], [new("working", "owner/working"), new("offline", "owner/offline")]),
-                MarketplaceCatalogRead = (name, _) => name == "working"
-                    ? Task.FromResult(new AgentPluginCatalog([new("review@working", "Review tools", "1", false, false)], []))
-                    : Task.FromException<AgentPluginCatalog>(new InvalidOperationException("fixture marketplace unavailable")),
-            };
-            var vm = new AgentPluginsViewModel(provider, _ => throw new Xunit.Sdk.XunitException("Browsing must not prompt"));
-            await vm.LoadAsync();
-            vm.View = PluginLibraryView.Browse;
-
-            await vm.BrowseAllMarketplacesCommand.ExecuteAsync(null);
-
-            Assert.True(vm.HasError);
-            Assert.Contains("offline", vm.Status);
-            Assert.Equal("review@working", Assert.Single(vm.Plugins).Id);
-            vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "review@working");
-            Assert.True(vm.CanInstall);
-            Assert.Equal(2, provider.MarketplaceCatalogReads);
             vm.Stop();
             return true;
         }, CancellationToken.None);
@@ -1037,7 +727,6 @@ public sealed class AgentPluginsMultiHostViewModelTests
         Assert.Equal(("target@ux", AgentPluginAction.Install), Assert.Single(provider.Actions));
         Assert.False(vm.Plugins.Single(item => item.Id == "first@ux").IsInstalled);
         Assert.True(vm.Plugins.Single(item => item.Id == "target@ux").IsInstalled);
-        Assert.Equal("Installed (1)", vm.InstalledHeader);
         Assert.True(vm.ShowRestartNotice);
         Assert.False(vm.NeedsRefresh);
         Assert.Equal(2, provider.CatalogReads);
@@ -1067,8 +756,13 @@ public sealed class AgentPluginsMultiHostViewModelTests
             };
             var vm = new AgentPluginsViewModel(provider, _ => Task.FromResult(true));
             await vm.LoadAsync();
-            vm.InstalledOnly = false;
-            await vm.BrowseAllMarketplacesCommand.ExecuteAsync(null);
+            vm.View = PluginLibraryView.Browse;
+            foreach (var marketplace in vm.Marketplaces.ToArray())
+            {
+                vm.SelectedMarketplace = marketplace;
+                await vm.BrowseSelectedMarketplaceCommand.ExecuteAsync(null);
+            }
+            vm.SelectedMarketplace = null;
             vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "managed@selected");
 
             await vm.InstallCommand.ExecuteAsync(null);
@@ -1097,11 +791,7 @@ public sealed class AgentPluginsMultiHostViewModelTests
         await vm.UpdateCommand.ExecuteAsync(null);
         await vm.EnableCommand.ExecuteAsync(null);
         await vm.DisableCommand.ExecuteAsync(null);
-        Assert.False(vm.ShowUpdateAction);
-        Assert.False(vm.ShowEnableAction);
-        Assert.False(vm.ShowDisableAction);
         vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "installed@builtin");
-        Assert.True(vm.ShowUninstallAction);
         await vm.InstallItemCommand.ExecuteAsync(vm.Plugins[1]);
         vm.SelectedMarketplace = vm.Marketplaces[0];
         await vm.RefreshMarketplaceCommand.ExecuteAsync(null);
@@ -1174,8 +864,6 @@ public sealed class AgentPluginsMultiHostViewModelTests
             await vm.LoadAsync();
             vm.SelectedMarketplace = vm.Marketplaces.Single(item => item.Name == "team");
             vm.Query = "matching";
-            vm.InstalledOnly = true;
-            Assert.Equal("Update all 2", vm.UpdateAllLabel);
             provider.PerformResult = (id, _, _) =>
             {
                 if (id != "first@team") return Task.FromResult("updated second");
@@ -1324,11 +1012,7 @@ public sealed class AgentPluginsMultiHostViewModelTests
             });
             await vm.LoadAsync();
 
-            vm.OpenDetailsCommand.Execute(vm.Plugins.Single(item => item.Id == "browser@openai-bundled"));
-            Assert.False(vm.ShowUninstallAction);
-            Assert.False(vm.ShowUpdateAction);
-            Assert.False(vm.ShowEnableAction);
-            Assert.True(vm.ShowDisableAction);
+            vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "browser@openai-bundled");
             Assert.True(vm.CanDisable);
             await vm.UninstallCommand.ExecuteAsync(null);
             await vm.UpdateCommand.ExecuteAsync(null);
@@ -1336,8 +1020,6 @@ public sealed class AgentPluginsMultiHostViewModelTests
             Assert.Equal([("browser@openai-bundled", AgentPluginAction.Disable)], host.Actions);
             Assert.Single(prompts);
 
-            vm.BackCommand.Execute(null);
-            Assert.Equal("Update all 1", vm.UpdateAllLabel);
             await vm.UpdateAllCommand.ExecuteAsync(null);
             Assert.Equal(("tool@market", AgentPluginAction.Update), host.Actions[^1]);
             Assert.DoesNotContain(("browser@openai-bundled", AgentPluginAction.Update), host.Actions);
@@ -1346,7 +1028,7 @@ public sealed class AgentPluginsMultiHostViewModelTests
         }, CancellationToken.None);
 
     [Fact]
-    public Task UnsupportedBulkAndReadOnlyLifecycleActionsAreHiddenWhileBuiltinMarketplaceCanRefresh() =>
+    public Task UnsupportedBulkAndReadOnlyLifecycleActionsAreBlockedWhileBuiltinMarketplaceCanRefresh() =>
         _session.Dispatch<bool>(async () =>
         {
             var codex = new ProviderStub("Codex", false, false) { Catalog = BulkProvider().Catalog };
@@ -1357,27 +1039,15 @@ public sealed class AgentPluginsMultiHostViewModelTests
             };
             var vm = new AgentPluginsViewModel([codex, copilot], _ => throw new Xunit.Sdk.XunitException("Read-only actions must not prompt"));
             await vm.LoadAsync();
-            Assert.False(vm.ShowUpdateAll);
+            Assert.False(vm.CanUpdateAll);
             await vm.UpdateAllCommand.ExecuteAsync(null);
             Assert.Empty(codex.Actions);
             vm.SelectedProvider = copilot;
             await vm.LoadAsync();
-            var control = new AgentPluginsControl { DataContext = vm };
-            using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-            vm.OpenDetailsCommand.Execute(vm.Plugins[0]);
-            host.Pump();
-            Assert.False(vm.ShowUpdateAll);
-            Assert.False(vm.ShowInstallAction);
-            Assert.False(vm.ShowUninstallAction);
-            Assert.False(vm.ShowUpdateAction);
-            Assert.False(vm.ShowEnableAction);
-            Assert.False(vm.ShowDisableAction);
+            vm.SelectedPlugin = vm.Plugins[0];
             foreach (var command in new[] { vm.UpdateCommand, vm.EnableCommand, vm.DisableCommand, vm.UninstallCommand })
                 await command.ExecuteAsync(null);
             Assert.Empty(copilot.Actions);
-            Assert.DoesNotContain(control.FindControl<Control>("PluginDetails")!.GetVisualDescendants().OfType<Button>(),
-                button => button.IsEffectivelyVisible && button.Command != vm.BackCommand);
-            vm.BackCommand.Execute(null);
             vm.SelectedMarketplace = vm.Marketplaces[0];
             Assert.True(vm.CanRefreshMarketplace);
             Assert.False(vm.CanRemoveMarketplace);
@@ -1392,31 +1062,20 @@ public sealed class AgentPluginsMultiHostViewModelTests
         }, CancellationToken.None);
 
     [Fact]
-    public Task AttachedBulkButtonTracksFiltersAndRetainsSelectedPluginAfterReread() => _session.Dispatch<bool>(async () =>
+    public Task UpdateAllTracksFiltersAndRetainsSelectionAfterReread() => _session.Dispatch<bool>(async () =>
     {
         var provider = BulkProvider();
         var vm = new AgentPluginsViewModel(provider, _ => Task.FromResult(true));
         await vm.LoadAsync();
         vm.SelectedMarketplace = vm.Marketplaces.Single(item => item.Name == "team");
         vm.Query = "matching";
-        var control = new AgentPluginsControl { DataContext = vm };
-        AgentLibraryTestEvidence.AddApplicationResources(control);
-        using var host = new AgentSkillsSettingsTestWindow(control, 1000, height: 700);
-        var list = control.FindControl<ListBox>("PluginList")!;
-        list.SelectedItem = vm.Plugins.Single(item => item.Id == "second@team");
-        var button = control.FindControl<Button>("UpdateAllPluginsButton")!;
-        Assert.True(button.IsEffectivelyVisible);
-        Assert.Equal("Update all 2", button.Content);
-        AgentLibraryTestEvidence.Capture(host, "plugins-update-all");
-        host.Click(button);
-        if (vm.UpdateAllCommand.ExecutionTask is { } task) await task;
-        host.Pump();
+        vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == "second@team");
+        Assert.True(vm.CanUpdateAll);
+        await vm.UpdateAllCommand.ExecuteAsync(null);
         Assert.Equal(2, provider.Actions.Count);
         Assert.Equal("second@team", vm.SelectedPlugin?.Id);
-        Assert.Equal("second@team", Assert.IsType<AgentPluginItem>(list.SelectedItem).Id);
         vm.Query = "available";
-        host.Pump();
-        Assert.False(button.IsEffectivelyVisible);
+        Assert.False(vm.CanUpdateAll);
         Assert.DoesNotContain(provider.Actions, action => action.Action != AgentPluginAction.Update);
         vm.Stop();
         return true;

@@ -308,7 +308,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         }
 
         var caps = package.Manager.Capabilities;
-        _menuManual.IsEnabled = !caps.RunsInProcess;
         _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
         _menuInteractive.IsEnabled = caps.CanRunInteractively;
         _menuSkipHash.IsEnabled = caps.CanSkipIntegrityChecks;

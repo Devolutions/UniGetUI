@@ -118,7 +118,7 @@ public sealed class ClaudePluginsViewModelTests
     }, CancellationToken.None);
 
     [Fact]
-    public Task Filters_IntersectMarketplaceQueryAndInstalledStateAndResetWithoutCli() => _session.Dispatch<bool>(async () =>
+    public Task SelectedMarketplaceAndQueryFiltersIntersectWithoutAnotherCatalogRead() => _session.Dispatch<bool>(async () =>
     {
         var runner = new FakeRunner();
         var vm = Create(runner);
@@ -127,11 +127,16 @@ public sealed class ClaudePluginsViewModelTests
         Assert.Equal(2, runner.Calls.Count);
         Assert.True(vm.InstalledOnly);
         Assert.Equal([SkillsId, "ux-skills@official"], vm.Plugins.Select(item => item.Id));
-        vm.InstalledOnly = false;
         Assert.Equal(2, vm.Plugins.Count);
         Assert.Equal(2, runner.Calls.Count);
-        await vm.BrowseAllMarketplacesCommand.ExecuteAsync(null);
-        // Both marketplaces are served by one shared --available read.
+        vm.View = PluginLibraryView.Browse;
+        foreach (var marketplace in vm.Marketplaces.ToArray())
+        {
+            vm.SelectedMarketplace = marketplace;
+            await vm.BrowseSelectedMarketplaceCommand.ExecuteAsync(null);
+        }
+        vm.SelectedMarketplace = null;
+        // Selecting each marketplace reuses Claude's one shared --available read.
         Assert.Equal(BrowseRead, Assert.Single(runner.Calls.Skip(2)));
         Assert.Equal(4, vm.Plugins.Count);
         vm.SelectedPlugin = vm.Plugins.Single(item => item.Id == SkillsId);
@@ -143,16 +148,14 @@ public sealed class ClaudePluginsViewModelTests
         vm.SelectedMarketplace = vm.Marketplaces.Single(item => item.Name == "official");
         Assert.Empty(vm.Plugins);
         Assert.Null(vm.SelectedPlugin);
-        Assert.True(vm.ShowEmpty);
         vm.Query = "UX-SKILLS";
         Assert.Equal("ux-skills@official", Assert.Single(vm.Plugins).Id);
-        vm.AllMarketplacesCommand.Execute(null);
+        vm.SelectedMarketplace = null;
         Assert.Null(vm.SelectedMarketplace);
         Assert.Equal([SkillsId, "ux-skills@official"], vm.Plugins.Select(item => item.Id));
         vm.Query = "";
         vm.InstalledOnly = false;
         Assert.Equal(4, vm.Plugins.Count);
-        Assert.False(vm.ShowEmpty);
         Assert.Equal(3, runner.Calls.Count);
         await vm.RefreshCommand.ExecuteAsync(null);
         Assert.Equal(5, runner.Calls.Count);
@@ -361,7 +364,6 @@ public sealed class ClaudePluginsViewModelTests
             else await vm.RefreshCommand.ExecuteAsync(null);
             Assert.True(vm.HasError);
             Assert.False(vm.IsBusy);
-            Assert.False(vm.ShowEmpty);
             Assert.True(vm.CanWork);
             Assert.Contains(point is FailurePoint.Mutation or FailurePoint.InvalidInput
                 ? "Could not manage Claude Code plugins:"
@@ -401,7 +403,6 @@ public sealed class ClaudePluginsViewModelTests
         Assert.True(vm.IsLoadingCatalog);
         Assert.True(vm.CanWork);
         Assert.False(vm.CanChange);
-        Assert.False(vm.ShowEmpty);
         Assert.True(observed.CanBeCanceled);
         vm.PluginInput = SkillsId;
         await vm.InstallByIdCommand.ExecuteAsync(null);
@@ -473,88 +474,6 @@ public sealed class ClaudePluginsViewModelTests
         return true;
     }, CancellationToken.None);
 
-    [Fact]
-    public Task Control_CompiledBindingsMaterializeAndTrackInputsSelectionActionsAndErrors() => _session.Dispatch<bool>(async () =>
-    {
-        var runner = new FakeRunner();
-        var vm = Create(runner);
-        await LoadAndBrowseAsync(vm);
-        var control = new AgentPluginsControl { DataContext = vm };
-        using var host = new AgentSkillsSettingsTestWindow(control, 1200);
-        var input = control.FindControl<TextBox>("PluginInput")!;
-        var marketplaceInput = control.FindControl<TextBox>("MarketplaceInput")!;
-        var list = control.FindControl<ListBox>("PluginList")!;
-        var install = control.FindControl<Button>("InstallPluginButton")!;
-        vm.ShowInstallIdentifierCommand.Execute(null);
-        host.Pump();
-        host.EnterText(input, "/plugin install " + AgentsId);
-        vm.ShowAddMarketplaceCommand.Execute(null);
-        host.Pump();
-        host.EnterText(marketplaceInput, "/plugin marketplace add Devolutions/ux-prototypes");
-        Assert.Equal("/plugin install " + AgentsId, vm.PluginInput);
-        Assert.Equal("/plugin marketplace add Devolutions/ux-prototypes", vm.MarketplaceInput);
-        Assert.Same(vm.Plugins, list.ItemsSource);
-        var marketplace = Assert.Single(control.GetVisualDescendants().OfType<ComboBox>(),
-            combo => ReferenceEquals(combo.ItemsSource, vm.Marketplaces));
-        marketplace.SelectedItem = vm.Marketplaces.Single(item => item.Name == "devolutions-ux");
-        host.Pump();
-        Assert.Equal("devolutions-ux", vm.SelectedMarketplace?.Name);
-        Assert.Equal([AgentsId, SkillsId], list.Items.Cast<AgentPluginItem>().Select(item => item.Id));
-        var allMarketplaces = Assert.Single(control.GetVisualDescendants().OfType<Button>(),
-            button => ReferenceEquals(button.Command, vm.AllMarketplacesCommand));
-        host.Click(allMarketplaces);
-        Assert.Null(vm.SelectedMarketplace);
-        Assert.Equal(4, list.Items.Count);
-        list.SelectedItem = vm.Plugins.Single(item => item.Id == AgentsId);
-        host.Pump();
-        Assert.Equal(AgentsId, vm.SelectedPlugin?.Id);
-        Assert.False(install.IsEffectivelyVisible);
-        vm.OpenDetailsCommand.Execute(vm.SelectedPlugin);
-        host.Pump();
-        Assert.True(install.IsEffectivelyVisible);
-        Assert.True(install.IsEnabled);
-        Assert.Same(vm.InstallCommand, install.Command);
-        Assert.Contains(control.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Design agents");
-        await vm.InstallCommand.ExecuteAsync(null);
-        host.Pump();
-        Assert.False(install.IsVisible);
-        Assert.Equal(AgentsId, vm.SelectedPlugin?.Id);
-        Assert.True(vm.CanManage);
-        // Expander content is only attached to the visual tree when opened.
-        control.GetVisualDescendants().OfType<Expander>().Single().IsExpanded = true;
-        host.Pump();
-        Assert.Contains(control.GetVisualDescendants().OfType<SelectableTextBlock>(), text => text.Text == vm.Activity);
-        Assert.Contains("fixture output", vm.Activity);
-        runner.Override = (_, _) => Task.FromException<string>(new InvalidOperationException("headless error"));
-        await vm.RefreshCommand.ExecuteAsync(null);
-        host.Pump();
-        Assert.Contains(control.GetVisualDescendants().OfType<TextBlock>(), text =>
-            text.Text == vm.Status && text.IsEffectivelyVisible
-            && text.GetVisualAncestors().OfType<Border>().Any(border => border.Classes.Contains("library-error")));
-        Assert.Contains("headless error", vm.Status);
-        vm.BackCommand.Execute(null);
-        var release = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        runner.Override = (_, token) => release.Task.WaitAsync(token);
-        Task pending = vm.RefreshCommand.ExecuteAsync(null);
-        host.Pump();
-        Assert.True(input.IsEnabled);
-        Assert.True(marketplaceInput.IsEnabled);
-        Assert.False(vm.CanChange);
-        Assert.True(Assert.Single(control.GetVisualDescendants().OfType<ProgressBar>()).IsVisible);
-        vm.CancelCommand.Execute(null);
-        await pending.WaitAsync(TimeSpan.FromSeconds(30));
-        host.Pump();
-        Assert.True(input.IsEnabled);
-        Assert.Equal("Plugin catalog loading cancelled.", vm.Status);
-        Assert.False(vm.HasError);
-        vm.Stop();
-        host.Pump();
-        Assert.False(input.IsEnabled);
-        Assert.False(marketplaceInput.IsEnabled);
-        Assert.False(vm.CanInstall);
-        return true;
-    }, CancellationToken.None);
-
     private static AgentPluginsViewModel Create(FakeRunner runner, Func<string, Task<bool>>? confirm = null) =>
         new(new ClaudePluginService(runner), confirm ?? (_ => Task.FromResult(true)));
 
@@ -581,8 +500,13 @@ public sealed class ClaudePluginsViewModelTests
     private static async Task LoadAndBrowseAsync(AgentPluginsViewModel vm)
     {
         await vm.LoadAsync();
-        vm.InstalledOnly = false;
-        await vm.BrowseAllMarketplacesCommand.ExecuteAsync(null);
+        vm.View = PluginLibraryView.Browse;
+        foreach (var marketplace in vm.Marketplaces.ToArray())
+        {
+            vm.SelectedMarketplace = marketplace;
+            await vm.BrowseSelectedMarketplaceCommand.ExecuteAsync(null);
+        }
+        vm.SelectedMarketplace = null;
         Assert.False(vm.HasError);
     }
 

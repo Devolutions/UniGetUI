@@ -11,7 +11,6 @@ using UniGetUI.Extensions.AgentSkills;
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 
 public enum PluginLibraryView { Browse, Installed }
-public enum PluginPage { Library, Details, Marketplaces }
 public enum PluginAddMode { None, Marketplace, Identifier }
 
 public partial class AgentPluginsViewModel : ViewModelBase
@@ -53,7 +52,6 @@ public partial class AgentPluginsViewModel : ViewModelBase
             SaveCurrentState();
             _service = value;
             _state = GetState(value);
-            Page = PluginPage.Library;
             AddMode = PluginAddMode.None;
             PluginInput = "";
             MarketplaceInput = "";
@@ -69,7 +67,6 @@ public partial class AgentPluginsViewModel : ViewModelBase
             OnPropertyChanged(nameof(RestartNotice));
             OnPropertyChanged(nameof(SupportsToggle));
             OnPropertyChanged(nameof(SupportsUpdate));
-            OnPropertyChanged(nameof(ProviderSummary));
             OnPropertyChanged(nameof(IsAppHandoff));
             OnPropertyChanged(nameof(IsCopilot));
             OnPropertyChanged(nameof(ShowCopilotAppFallback));
@@ -91,30 +88,15 @@ public partial class AgentPluginsViewModel : ViewModelBase
     public ObservableCollection<AgentPluginMarketplace> Marketplaces { get; } = [];
     [ObservableProperty] private bool _isLoadingCatalog;
     [ObservableProperty] private PluginLibraryView _view;
-    [ObservableProperty] private PluginPage _page;
     [ObservableProperty] private PluginAddMode _addMode;
     [ObservableProperty] private string _activity = "";
     [ObservableProperty] private bool _showRestartNotice;
-    public int ViewIndex { get => (int)View; set => View = (PluginLibraryView)value; }
     public bool InstalledOnly { get => View == PluginLibraryView.Installed; set => View = value ? PluginLibraryView.Installed : PluginLibraryView.Browse; }
-    public bool ShowLibrary => Page == PluginPage.Library;
-    public bool ShowDetails => Page == PluginPage.Details;
-    public bool ShowMarketplaces => Page == PluginPage.Marketplaces;
     public bool AddingMarketplace => AddMode == PluginAddMode.Marketplace;
     public bool AddingPlugin => AddMode == PluginAddMode.Identifier;
     public bool HasActivity => Activity.Length > 0;
     public bool IsWorking => IsBusy || IsLoadingCatalog;
-    public string ResultCount => Plugins.Count == _filteredPlugins.Count
-        ? CoreTools.Translate("{0} plugins", _filteredPlugins.Count)
-        : CoreTools.Translate("Showing {0} of {1} plugins", Plugins.Count, _filteredPlugins.Count);
-    public string InstalledHeader => _state.IsLoaded
-        ? CoreTools.Translate("Installed ({0})", _state.Installed.Count) : CoreTools.Translate("Installed");
     public string SelectedSource => Marketplaces.FirstOrDefault(source => source.Name == SelectedPlugin?.Marketplace)?.Source ?? "";
-    public string ProviderSummary => IsAppHandoff ? CoreTools.Translate("Open a plugin or marketplace confirmation form in the Copilot app.")
-        : IsCopilot ? CoreTools.Translate("Manage the local Copilot plugin inventory shared with the desktop app. Repo settings and policy can affect effective enablement.")
-        : _service is CursorPluginService
-        ? CoreTools.Translate("Local imports managed by UniGetUI. Reload Cursor after changes.")
-        : CoreTools.Translate("Native plugins for {0}. The agent controls policy and activation.", _service.Name);
     [ObservableProperty] private string _marketplaceInput = "";
     [ObservableProperty] private string _pluginInput = "";
     [ObservableProperty] private string _query = "";
@@ -141,24 +123,12 @@ public partial class AgentPluginsViewModel : ViewModelBase
     public bool CanRefreshMarketplace => CanChange && SelectedMarketplace is { CanRefresh: true };
     public bool CanRemoveMarketplace => CanChange && SelectedMarketplace is { CanManage: true };
     private AgentPluginItem[] UpdatablePlugins => Plugins.Where(item => item.IsInstalled && item.CanManage).ToArray();
-    public bool ShowUpdateAll => !IsAppHandoff && SupportsUpdate && !ShowMarketplaces && UpdatablePlugins.Length > 0;
+    public bool ShowUpdateAll => !IsAppHandoff && SupportsUpdate && UpdatablePlugins.Length > 0;
     public bool CanUpdateAll => CanChange && !HasError && ShowUpdateAll;
     public string UpdateAllLabel => CoreTools.Translate("Update all {0}", UpdatablePlugins.Length);
     public bool HasMarketplaceFilter => CanWork && SelectedMarketplace is not null;
-    public bool ShowEmpty => !IsAppHandoff && !IsBusy && !IsLoadingCatalog && !HasError && Plugins.Count == 0 && !ShowBrowsePrompt;
     public bool HasSelection => SelectedPlugin is not null;
-    public bool ShowBrowsePrompt => !IsAppHandoff && View == PluginLibraryView.Browse && !IsLoadingCatalog && !HasError
-        && Plugins.Count == 0 && (SelectedMarketplace is null
-            ? _state.BrowseCatalogs.Count == 0
-            : !_state.BrowseCatalogs.ContainsKey(SelectedMarketplace.Name));
-    public string BrowsePrompt => SelectedMarketplace is null
-        ? CoreTools.Translate("Choose a marketplace to browse, or search all marketplaces.")
-        : CoreTools.Translate("Browse the selected marketplace to load its plugins.");
     public bool ShowBrowseSelected => CanWork && !IsLoadingCatalog && View == PluginLibraryView.Browse && SelectedMarketplace is not null;
-    public bool ShowBrowseAll => CanWork && !IsLoadingCatalog && View == PluginLibraryView.Browse
-        && SelectedMarketplace is null && Marketplaces.Count > 0 && _service.SupportsScopedBrowse;
-    public string BrowseAllLabel => Marketplaces.All(marketplace => _state.BrowseCatalogs.ContainsKey(marketplace.Name))
-        ? CoreTools.Translate("Refresh all marketplaces") : CoreTools.Translate("Search all marketplaces");
     public bool CanLoadMore => _filteredPlugins.Count > Plugins.Count;
     public string LoadMoreLabel => CoreTools.Translate("Show more ({0} of {1})", Plugins.Count, _filteredPlugins.Count);
     public bool ShowOpenPluginInApp => IsCopilot && SelectedPlugin is { IsInstalled: false };
@@ -197,20 +167,13 @@ public partial class AgentPluginsViewModel : ViewModelBase
     }
     partial void OnViewChanged(PluginLibraryView value)
     {
-        Page = PluginPage.Library;
         if (!_readingCatalog)
         {
             _state.View = value;
             _state.VisibleCount = PageSize;
         }
-        OnPropertyChanged(nameof(ViewIndex));
         OnPropertyChanged(nameof(InstalledOnly));
         Filter();
-    }
-    partial void OnPageChanged(PluginPage value)
-    {
-        foreach (string name in new[] { nameof(ShowLibrary), nameof(ShowDetails), nameof(ShowMarketplaces) }) OnPropertyChanged(name);
-        NotifyActions();
     }
     partial void OnAddModeChanged(PluginAddMode value)
     {
@@ -218,7 +181,7 @@ public partial class AgentPluginsViewModel : ViewModelBase
         OnPropertyChanged(nameof(AddingPlugin));
     }
     partial void OnActivityChanged(string value) => OnPropertyChanged(nameof(HasActivity));
-    partial void OnHasErrorChanged(bool value) { OnPropertyChanged(nameof(ShowEmpty)); NotifyActions(); }
+    partial void OnHasErrorChanged(bool value) => NotifyActions();
     partial void OnNeedsRefreshChanged(bool value) => NotifyActions();
     partial void OnSelectedPluginChanged(AgentPluginItem? value)
     {
@@ -235,15 +198,11 @@ public partial class AgentPluginsViewModel : ViewModelBase
     {
         NotifyActions();
         OnPropertyChanged(nameof(IsWorking));
-        OnPropertyChanged(nameof(ShowEmpty));
     }
     partial void OnIsLoadingCatalogChanged(bool value)
     {
         NotifyActions();
         OnPropertyChanged(nameof(IsWorking));
-        OnPropertyChanged(nameof(ShowEmpty));
-        OnPropertyChanged(nameof(ShowBrowsePrompt));
-        OnPropertyChanged(nameof(InstalledHeader));
     }
     private void NotifyActions()
     {
@@ -253,8 +212,8 @@ public partial class AgentPluginsViewModel : ViewModelBase
                      nameof(CanChange), nameof(CanRetry), nameof(ShowInstallAction), nameof(ShowUninstallAction),
                      nameof(ShowUpdateAction), nameof(ShowEnableAction), nameof(ShowDisableAction), nameof(CanRemoveMarketplace),
                      nameof(ShowUpdateAll), nameof(CanUpdateAll), nameof(UpdateAllLabel), nameof(CanSelectProvider),
-                     nameof(ShowBrowseSelected), nameof(ShowBrowseAll), nameof(CanLoadMore), nameof(LoadMoreLabel),
-                     nameof(ShowOpenPluginInApp), nameof(CanOpenCopilotApp), nameof(BrowseSelectedLabel), nameof(BrowseAllLabel) })
+                     nameof(ShowBrowseSelected), nameof(CanLoadMore), nameof(LoadMoreLabel),
+                     nameof(ShowOpenPluginInApp), nameof(CanOpenCopilotApp), nameof(BrowseSelectedLabel) })
             OnPropertyChanged(name);
     }
 
@@ -271,12 +230,7 @@ public partial class AgentPluginsViewModel : ViewModelBase
         _state.VisibleCount = Math.Max(PageSize, _state.VisibleCount);
         Plugins = _filteredPlugins.Take(_state.VisibleCount).ToArray();
         SelectedPlugin = Plugins.FirstOrDefault(plugin => plugin.Id == selected);
-        OnPropertyChanged(nameof(ShowEmpty));
-        OnPropertyChanged(nameof(ShowBrowsePrompt));
-        OnPropertyChanged(nameof(ResultCount));
-        OnPropertyChanged(nameof(InstalledHeader));
         NotifyActions();
-        if (ShowDetails && SelectedPlugin is null) Page = PluginPage.Library;
     }
 
     public IReadOnlyList<(IAgentPluginService Provider, AgentPluginItem Plugin)> GetKnownPlugins() =>
@@ -369,15 +323,6 @@ public partial class AgentPluginsViewModel : ViewModelBase
         finally { _readingCatalog = false; }
     }
 
-    [RelayCommand]
-    private void OpenDetails(AgentPluginItem? item)
-    {
-        if (!CanWork || item is null || !Plugins.Contains(item)) return;
-        SelectedPlugin = item;
-        Page = PluginPage.Details;
-    }
-    [RelayCommand] private void Back() => Page = PluginPage.Library;
-    [RelayCommand] private void ManageMarketplaces() => Page = PluginPage.Marketplaces;
     [RelayCommand] private void ShowAddMarketplace() => AddMode = AddingMarketplace ? PluginAddMode.None : PluginAddMode.Marketplace;
     [RelayCommand] private void ShowInstallIdentifier() => AddMode = AddingPlugin ? PluginAddMode.None : PluginAddMode.Identifier;
     [RelayCommand]
@@ -490,10 +435,6 @@ public partial class AgentPluginsViewModel : ViewModelBase
         : Task.CompletedTask;
 
     [RelayCommand]
-    private Task BrowseAllMarketplacesAsync() => BrowseAllMarketplacesAsync(CancellationToken.None,
-        Marketplaces.All(marketplace => _state.BrowseCatalogs.ContainsKey(marketplace.Name)));
-
-    [RelayCommand]
     private void LoadMore()
     {
         if (!CanLoadMore) return;
@@ -560,16 +501,6 @@ public partial class AgentPluginsViewModel : ViewModelBase
         finally { EndCatalogRead(read); }
     }
 
-    private static async Task DisposeMarketplaceWorkersAsync(
-        Task<(AgentPluginMarketplace Marketplace, AgentPluginCatalog? Catalog, Exception? Error)>[] pending,
-        SemaphoreSlim limit)
-    {
-        try { await Task.WhenAll(pending); }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { Logger.Error(ex); }
-        finally { limit.Dispose(); }
-    }
-
     private async Task BrowseMarketplaceAsync(string marketplaceName, bool forceRefresh, CancellationToken token)
     {
         if (IsAppHandoff || !CanWork || SelectedMarketplace?.Name != marketplaceName) return;
@@ -628,83 +559,6 @@ public partial class AgentPluginsViewModel : ViewModelBase
             }
         }
         finally { EndCatalogRead(read); }
-    }
-
-    private async Task BrowseAllMarketplacesAsync(CancellationToken token, bool forceRefresh = false)
-    {
-        if (IsAppHandoff || !CanWork || !_service.SupportsScopedBrowse || Marketplaces.Count == 0) return;
-        CancellationTokenSource read = BeginCatalogRead(token);
-        IAgentPluginService provider = _service;
-        int generation = _catalogGeneration;
-        var marketplaces = Marketplaces.ToArray();
-        var existingCatalogs = _state.BrowseCatalogs.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        Status = CoreTools.Translate("Searching {0} marketplaces…", marketplaces.Length);
-        HasError = false;
-        List<string> failures = [];
-        var limit = new SemaphoreSlim(3, 3);
-        CancellationToken browseToken = read.Token;
-        var pending = marketplaces.Select(async marketplace =>
-        {
-            await limit.WaitAsync(browseToken);
-            try
-            {
-                if (!forceRefresh && existingCatalogs.TryGetValue(marketplace.Name, out var existing))
-                    return (Marketplace: marketplace, Catalog: new AgentPluginCatalog(existing, []), Error: (Exception?)null);
-                if (!forceRefresh && _catalogCache is not null)
-                {
-                    var saved = await _catalogCache.ReadAsync(provider.CacheIdentity, marketplace, browseToken);
-                    browseToken.ThrowIfCancellationRequested();
-                    if (saved is not null && IsCurrentRead(provider, generation))
-                        return (Marketplace: marketplace, Catalog: new AgentPluginCatalog(saved.Plugins, []), Error: (Exception?)null);
-                }
-                var result = await provider.GetMarketplaceCatalogAsync(marketplace.Name, browseToken);
-                browseToken.ThrowIfCancellationRequested();
-                ValidateMarketplaceCatalog(marketplace.Name, result);
-                if (_catalogCache is not null)
-                    await _catalogCache.StoreAsync(provider.CacheIdentity, marketplace, result.Plugins, browseToken);
-                return (Marketplace: marketplace, Catalog: result, Error: (Exception?)null);
-            }
-            catch (OperationCanceledException) when (browseToken.IsCancellationRequested) { throw; }
-            catch (Exception ex) { return (Marketplace: marketplace, Catalog: (AgentPluginCatalog?)null, Error: ex); }
-            finally { limit.Release(); }
-        }).ToList();
-        try
-        {
-            while (pending.Count > 0)
-            {
-                Task<(AgentPluginMarketplace Marketplace, AgentPluginCatalog? Catalog, Exception? Error)> completed =
-                    await Task.WhenAny(pending);
-                pending.Remove(completed);
-                var result = await completed;
-                if (!IsCurrentRead(provider, generation)) return;
-                if (result.Catalog is { } catalog)
-                    _state.BrowseCatalogs[result.Marketplace.Name] = catalog.Plugins;
-                else
-                {
-                    Logger.Error(result.Error!);
-                    failures.Add(result.Marketplace.Name + ": " + result.Error!.Message);
-                }
-                Filter();
-                Status = CoreTools.Translate("Searched {0} of {1} marketplaces.", marketplaces.Length - pending.Count, marketplaces.Length);
-            }
-            if (!IsCurrentRead(provider, generation)) return;
-            if (failures.Count > 0)
-            {
-                HasError = true;
-                Status = CoreTools.Translate("Some marketplaces could not be searched: {0}", string.Join(Environment.NewLine, failures));
-            }
-            else Status = CoreTools.Translate("Loaded plugins from {0} marketplaces.", marketplaces.Length);
-        }
-        catch (OperationCanceledException) when (read.IsCancellationRequested)
-        {
-            if (IsCurrentRead(provider, generation)) Status = CoreTools.Translate("Marketplace search cancelled.");
-        }
-        finally
-        {
-            if (pending.Count == 0) limit.Dispose();
-            else _ = DisposeMarketplaceWorkersAsync(pending.ToArray(), limit);
-            EndCatalogRead(read);
-        }
     }
 
     private static void ValidateMarketplaceCatalog(string marketplace, AgentPluginCatalog catalog)
@@ -766,7 +620,6 @@ public partial class AgentPluginsViewModel : ViewModelBase
         if (_service.SupportsScopedBrowse && SelectedMarketplace is { } added && !knownMarketplaces.Contains(added.Name))
             await BrowseAddedMarketplaceAsync(added, token);
         AddMode = PluginAddMode.None;
-        Page = PluginPage.Library;
         return CoreTools.Translate("Plugin marketplace added.") + Environment.NewLine + result;
     });
 

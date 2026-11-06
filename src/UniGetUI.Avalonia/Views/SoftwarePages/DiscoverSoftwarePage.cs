@@ -55,11 +55,6 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     }, vm => AddCatalogToolbar(vm, catalogEditor))
     {
         _catalogEditor = catalogEditor;
-        if (InstalledPackagesLoader.Instance is { } installedLoader)
-        {
-            installedLoader.FinishedLoading += (_, _) =>
-                Dispatcher.UIThread.Post(() => ViewModel.ShowBrowsableSources(PEInterface.Managers));
-        }
     }
 
     private readonly CatalogEditorViewModel? _catalogEditor;
@@ -90,7 +85,6 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     public override async void OnEnter()
     {
         base.OnEnter();
-        ViewModel.ShowBrowsableSources(PEInterface.Managers);
         // Use the document handed in at construction: when Discover is the startup page it is entered
         // before the main window is registered, so looking it up through the window would find nothing.
         if (_catalogEditor is { } document)
@@ -311,7 +305,6 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
             return;
         }
 
-        _menuManual.IsEnabled = !package.Manager.Capabilities.RunsInProcess;
         _menuAsAdmin.IsEnabled = package.Manager.Capabilities.CanRunAsAdmin;
         _menuInteractive.IsEnabled = package.Manager.Capabilities.CanRunInteractively;
         _menuSkipHash.IsEnabled = package.Manager.Capabilities.CanSkipIntegrityChecks;

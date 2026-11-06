@@ -92,9 +92,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         }
 
         private static bool CanSearch(IPackageManager manager, string? query)
-            => query != string.Empty
-                || manager.Capabilities.SupportsEmptySearchQuery
-                || manager.Capabilities.CanListAllPackages;
+            => query != string.Empty || manager.Capabilities.SupportsEmptySearchQuery;
 
         protected override bool DidManagerReportFailure(IPackageManager manager)
         {
@@ -125,9 +123,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 lock (_failedManagers)
                     _failedManagers.Add(manager);
             }
-            if (text.Length == 0 && manager.Capabilities.CanListAllPackages)
-                return found;
-
             if (text.Length == 0)
             {
                 return found

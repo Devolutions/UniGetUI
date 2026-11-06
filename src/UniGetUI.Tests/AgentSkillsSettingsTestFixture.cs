@@ -400,7 +400,7 @@ internal sealed class AgentSkillsSettingsLocalManager : IPackageManager
         Properties = new ManagerProperties { Id = Id, Name = Name, DisplayName = DisplayName, DefaultSource = DefaultSource };
     }
     public ManagerProperties Properties { get; }
-    public ManagerCapabilities Capabilities { get; } = new() { RunsInProcess = true, KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes };
+    public ManagerCapabilities Capabilities { get; } = new() { KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes };
     public ManagerStatus Status { get; } = new() { Found = false, ExecutableCallArgs = "" };
     public string Id => "settings-test";
     public string Name => "SettingsTest";
@@ -427,7 +427,6 @@ internal sealed class AgentSkillsSettingsLocalManager : IPackageManager
     public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() => [];
     public IReadOnlyList<IPackage> FindPackages(string query) => throw new NotSupportedException();
     public IReadOnlyList<IPackage> FindPackages(string query, out bool failed) => throw new NotSupportedException();
-    public IReadOnlyList<IManagerSource> GetBrowsableSources() => [];
     public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotSupportedException();
     public IReadOnlyList<IPackage> GetInstalledPackages() => throw new NotSupportedException();
     public long InstalledPackagesGeneration => 0;

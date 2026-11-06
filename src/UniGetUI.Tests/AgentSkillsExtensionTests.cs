@@ -395,7 +395,6 @@ public sealed class AgentSkillsExtensionTests
         Assert.True(vm.IsLibraryView);
         Assert.False(vm.ShowSkillSources);
         Assert.True(vm.ShowPluginMarketplaces);
-        Assert.Empty(page.GetVisualDescendants().OfType<AgentPluginsControl>());
         await SelectLibraryViewAsync(page, host, vm, (int)AgentLibraryView.Sources);
         Assert.True(page.FindControl<Grid>("SourcesWorkspace")!.IsEffectivelyVisible);
         Assert.False(page.FindControl<Grid>("SkillSourcesPane")!.IsEffectivelyVisible);

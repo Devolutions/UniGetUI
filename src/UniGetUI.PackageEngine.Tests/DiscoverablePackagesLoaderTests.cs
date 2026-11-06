@@ -9,10 +9,7 @@ using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 
 namespace UniGetUI.PackageEngine.Tests;
 
-/// <summary>
-/// Searches on the Discover page's loader, and browsing: an empty search, which lists every
-/// package of the managers that can list them all.
-/// </summary>
+/// <summary>Searches on the Discover page's loader.</summary>
 public sealed class DiscoverablePackagesLoaderTests : IDisposable
 {
     private readonly string _testRoot = Path.Combine(
@@ -293,17 +290,11 @@ public sealed class DiscoverablePackagesLoaderTests : IDisposable
     /// <summary>A manager that finds <paramref name="packageCount"/> packages for any query, recording each query.</summary>
     private static TestPackageManager CreateManager(
         string name,
-        bool canListAllPackages,
         int packageCount,
         List<string> queries
     ) =>
         new PackageManagerBuilder()
             .WithName(name)
-            .ConfigureCapabilities(capabilities =>
-            {
-                capabilities.CanListAllPackages = canListAllPackages;
-                return capabilities;
-            })
             .WithFindPackages(
                 (manager, query) =>
                 {
@@ -327,28 +318,10 @@ public sealed class DiscoverablePackagesLoaderTests : IDisposable
     }
 
     [Fact]
-    public async Task AnEmptySearchListsEveryPackageOfTheManagersThatCanListThemAll()
-    {
-        List<string> listableQueries = [];
-        List<string> otherQueries = [];
-        var listable = CreateManager("Listable", canListAllPackages: true, packageCount: 150, listableQueries);
-        var other = CreateManager("Other", canListAllPackages: false, packageCount: 5, otherQueries);
-        var loader = CreateLoader(listable, other);
-
-        await loader.ReloadPackages("");
-
-        // All of them, past the cap that guards broad queries across vast catalogs
-        Assert.Equal(150, loader.Packages.Count);
-        Assert.All(loader.Packages, package => Assert.Same(listable, package.Manager));
-        Assert.Equal([""], listableQueries);
-        Assert.Empty(otherQueries);
-    }
-
-    [Fact]
     public async Task ASearchStillCapsTheResultsOfEachManager()
     {
         List<string> queries = [];
-        var loader = CreateLoader(CreateManager("Listable", canListAllPackages: true, packageCount: 150, queries));
+        var loader = CreateLoader(CreateManager("Manager", packageCount: 150, queries));
 
         await loader.ReloadPackages("tool");
 
@@ -360,7 +333,7 @@ public sealed class DiscoverablePackagesLoaderTests : IDisposable
     public async Task NothingIsLoadedBeforeTheFirstSearch()
     {
         List<string> queries = [];
-        var loader = CreateLoader(CreateManager("Listable", canListAllPackages: true, packageCount: 3, queries));
+        var loader = CreateLoader(CreateManager("Manager", packageCount: 3, queries));
 
         await loader.ReloadPackages();
 
@@ -369,35 +342,10 @@ public sealed class DiscoverablePackagesLoaderTests : IDisposable
     }
 
     [Fact]
-    public void OnlyManagersThatCanListAllTheirPackagesHaveSourcesToBrowse()
-    {
-        static TestPackageManager Create(bool canListAllPackages) =>
-            new PackageManagerBuilder()
-                .ConfigureCapabilities(capabilities =>
-                {
-                    capabilities.CanListAllPackages = canListAllPackages;
-                    return capabilities;
-                })
-                .WithSources(manager =>
-                [
-                    new SourceBuilder().WithManager(manager).WithName("community").WithUrl("https://example.test/community").Build(),
-                ])
-                .Build();
-
-        var listable = Create(canListAllPackages: true);
-        var other = Create(canListAllPackages: false);
-        listable.SourcesHelper.GetSources();
-        other.SourcesHelper.GetSources();
-
-        Assert.Equal(["community"], listable.GetBrowsableSources().Select(source => source.Name));
-        Assert.Empty(other.GetBrowsableSources());
-    }
-
-    [Fact]
     public async Task AQueryOfOnlyUnsafeCharactersDoesNotBrowse()
     {
         List<string> queries = [];
-        var loader = CreateLoader(CreateManager("Listable", canListAllPackages: true, packageCount: 3, queries));
+        var loader = CreateLoader(CreateManager("Manager", packageCount: 3, queries));
 
         await loader.ReloadPackages(";|&");
 

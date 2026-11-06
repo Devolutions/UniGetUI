@@ -240,7 +240,6 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private bool _sourcesPlaceholderVisible = true;
     [ObservableProperty] private bool _sourcesTreeVisible;
     [ObservableProperty] private bool _megaQueryVisible;
-    [ObservableProperty] private bool _browseAllVisible;
     [ObservableProperty] private string _megaQueryText = "";
     [ObservableProperty] private string _globalQueryText = "";
     [ObservableProperty] private bool _newVersionHeaderVisible;
@@ -296,10 +295,8 @@ public partial class PackagesPageViewModel : ViewModelBase
     private readonly SourceTreeNode _localPackagesNode = new() { PackageName = "local" };
     private bool _isSynchronizingSourceSelection;
 
-    // Discover browses (an empty search) the managers that can list all their packages. It keeps the
-    // sources picked across searches, so they can be picked before searching or browsing.
+    // Discover keeps source selections across searches, including empty-query searches.
     private bool _browsing;
-    private IReadOnlyList<IPackageManager> _browseCandidates = [];
     private readonly Dictionary<string, bool> _rememberedSourceSelection = new(StringComparer.Ordinal);
 
     // ─── Events (replace abstract methods) ───────────────────────────────────
@@ -578,9 +575,6 @@ public partial class PackagesPageViewModel : ViewModelBase
                 _wrappedPackages.Add(new PackageWrapper(pkg, this));
                 AddPackageToSourcesList(pkg);
             }
-            // Back to the Discover search box: the browsable sources can be picked again
-            if (MegaQueryBoxEnabled && MegaQueryVisible && _wrappedPackages.Count == 0)
-                ShowBrowsableSources();
             FilterPackages();
         }
 
@@ -759,43 +753,6 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             FilterPackages();
         }
-    }
-
-    /// <summary>Lists every package of the managers that can list them all: an empty search.</summary>
-    [RelayCommand]
-    private void BrowseAll()
-    {
-        MegaQueryText = "";
-        SubmitSearch();
-    }
-
-    /// <summary>
-    /// Before a search on the Discover page, lists the sources of the managers that can list all
-    /// their packages, so that sources can be picked before browsing them with an empty search.
-    /// </summary>
-    /// <param name="managers">The managers to consider, of which those ready and able to list
-    /// all their packages are browsed</param>
-    public void ShowBrowsableSources(IReadOnlyList<IPackageManager> managers)
-    {
-        _browseCandidates = managers;
-        ShowBrowsableSources();
-    }
-
-    private void ShowBrowsableSources()
-    {
-        var browsable = _browseCandidates
-            .Where(manager => manager.IsReady() && manager.Capabilities.CanListAllPackages)
-            .SelectMany(manager => manager.GetBrowsableSources())
-            .ToList();
-        BrowseAllVisible = browsable.Count > 0;
-
-        // Once a search shows packages, the sources are those of the results
-        if (!MegaQueryBoxEnabled || !MegaQueryVisible || Loader.IsLoading || _wrappedPackages.Count > 0)
-            return;
-
-        ClearSourcesList();
-        foreach (var source in browsable)
-            AddSourceToSourcesList(source);
     }
 
     public void FilterPackages()

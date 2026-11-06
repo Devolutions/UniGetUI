@@ -743,7 +743,7 @@ public sealed class SoftwareCatalogTests : IDisposable
     [Fact]
     public void TheDefaultNavigationOrderIsStoredAsUnset()
     {
-        Assert.Equal("", NavigationPageOrder.Serialize(NavigationPageOrder.DefaultPages(true, true)));
+        Assert.Equal("", NavigationPageOrder.Serialize(NavigationPageOrder.DefaultPages(true, true, true)));
         Assert.Equal(
             "Discover,Catalog,Updates,Installed,Bundles",
             NavigationPageOrder.Serialize(NavigationPageOrder.Resolve("Discover", true)));

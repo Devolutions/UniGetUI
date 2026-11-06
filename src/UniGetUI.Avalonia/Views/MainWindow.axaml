@@ -724,6 +724,7 @@
                  corners and shares a single accent focus border (see Window.Styles). -->
             <Border Grid.Column="1"
                     x:Name="GlobalSearchContainer"
+                    IsVisible="{Binding GlobalSearchEnabled}"
                     VerticalAlignment="Center"
                     Margin="0,0,40,0"
                     Height="32"

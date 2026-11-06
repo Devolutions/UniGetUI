@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Core.Tools;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
@@ -48,8 +49,8 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         StartupPageSelector.AddItem(CoreTools.Translate("Package Bundles"), "bundles");
         if (catalogEnabled && CoreSettings.Get(CoreSettings.K.EnableCatalogEditor))
             StartupPageSelector.AddItem(CoreTools.Translate("Catalog Editor"), "catalog-editor");
-        if (CoreSettings.Get(CoreSettings.K.EnableGitRepositories))
-            StartupPageSelector.AddItem(CoreTools.Translate("Git Repositories"), "git-repositories");
+        foreach (var extension in AppExtensions.All.Where(extension => extension.IsEnabled))
+            StartupPageSelector.AddItem(CoreTools.Translate(extension.Name), extension.Id);
         StartupPageSelector.AddItem(CoreTools.Translate("Settings"), "settings");
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;
         StartupPageSelector.Text = CoreTools.Translate("UniGetUI startup page:");

@@ -2,11 +2,14 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
+using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 
 namespace UniGetUI.PackageEngine.Tests;
 
+/// <summary>Searches on the Discover page's loader.</summary>
 public sealed class DiscoverablePackagesLoaderTests : IDisposable
 {
     private readonly string _testRoot = Path.Combine(
@@ -282,5 +285,71 @@ public sealed class DiscoverablePackagesLoaderTests : IDisposable
             new Dictionary<string, bool> { ["Alpha"] = true, ["Beta"] = false },
             System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(
                 File.ReadAllText(SearchScopeFile)));
+    }
+
+    /// <summary>A manager that finds <paramref name="packageCount"/> packages for any query, recording each query.</summary>
+    private static TestPackageManager CreateManager(
+        string name,
+        int packageCount,
+        List<string> queries
+    ) =>
+        new PackageManagerBuilder()
+            .WithName(name)
+            .WithFindPackages(
+                (manager, query) =>
+                {
+                    lock (queries)
+                        queries.Add(query);
+
+                    return Enumerable
+                        .Range(0, packageCount)
+                        .Select(index => new PackageBuilder().WithManager(manager).WithId($"{name}.Package{index}").Build())
+                        .ToList();
+                }
+            )
+            .Build();
+
+    private static DiscoverablePackagesLoader CreateLoader(params IPackageManager[] managers)
+    {
+        // Packages are tagged against the installed and upgradable ones as they are added
+        _ = new InstalledPackagesLoader(managers);
+        _ = new UpgradablePackagesLoader(managers);
+        return new DiscoverablePackagesLoader(managers);
+    }
+
+    [Fact]
+    public async Task ASearchStillCapsTheResultsOfEachManager()
+    {
+        List<string> queries = [];
+        var loader = CreateLoader(CreateManager("Manager", packageCount: 150, queries));
+
+        await loader.ReloadPackages("tool");
+
+        Assert.Equal(100, loader.Packages.Count);
+        Assert.Equal(["tool"], queries);
+    }
+
+    [Fact]
+    public async Task NothingIsLoadedBeforeTheFirstSearch()
+    {
+        List<string> queries = [];
+        var loader = CreateLoader(CreateManager("Manager", packageCount: 3, queries));
+
+        await loader.ReloadPackages();
+
+        Assert.Empty(loader.Packages);
+        Assert.Empty(queries);
+    }
+
+    [Fact]
+    public async Task AQueryOfOnlyUnsafeCharactersDoesNotBrowse()
+    {
+        List<string> queries = [];
+        var loader = CreateLoader(CreateManager("Manager", packageCount: 3, queries));
+
+        await loader.ReloadPackages(";|&");
+
+        Assert.Empty(loader.Packages);
+        Assert.Empty(queries);
     }
 }

@@ -91,7 +91,17 @@ internal static class AvaloniaBootstrapper
             }
         }
 
-        var missing = await GetMissingDependenciesAsync();
+        await ShowMissingDependenciesAsync(await GetMissingDependenciesAsync());
+    }
+
+    internal static async Task PromptForMissingDependencyAsync(ManagerDependency dependency)
+    {
+        if (await IsMissingDependencyAsync(dependency, "Skills", failOnError: true))
+            await Dispatcher.UIThread.InvokeAsync(() => ShowMissingDependencyDialogAsync(dependency, 1, 1));
+    }
+
+    private static async Task ShowMissingDependenciesAsync(IReadOnlyList<ManagerDependency> missing)
+    {
         if (missing.Count > 0)
         {
             Logger.Info($"Found {missing.Count} missing dependencies; showing install dialogs.");
@@ -187,6 +197,7 @@ internal static class AvaloniaBootstrapper
 
     private static async Task InitializePackageEngineAsync()
     {
+        AppExtensions.InitializePreferences();
         // LoadLoaders is called synchronously in App.axaml.cs before MainWindow creation
         await Task.Run(PEInterface.LoadManagers);
 
@@ -260,7 +271,8 @@ internal static class AvaloniaBootstrapper
                 {
                     "catalog" => window is { SoftwareCatalogEnabled: true },
                     "catalog-editor" => window is { CatalogEditorEnabled: true },
-                    "git-repositories" => window is { GitRepositoriesEnabled: true },
+                    var id when AppExtensions.All.FirstOrDefault(extension => extension.Id == id) is { } extension
+                        => window is not null && extension.IsEnabled,
                     _ => true,
                 })
                 .ToArray(),
@@ -306,10 +318,10 @@ internal static class AvaloniaBootstrapper
                     throw new InvalidOperationException("Catalog Editor is disabled. Enable it in Experimental settings and developer options, then restart UniGetUI.");
                 window.Navigate(page == "catalog-editor" ? PageType.CatalogEditor : PageType.Catalog);
                 break;
-            case "git-repositories":
-                if (!window.GitRepositoriesEnabled)
-                    throw new InvalidOperationException("Git Repositories is turned off. Turn it on in Settings, under Extensions.");
-                window.Navigate(PageType.GitRepositories);
+            case var id when AppExtensions.All.FirstOrDefault(extension => extension.Id == id) is { } extension:
+                if (!extension.IsEnabled)
+                    throw new InvalidOperationException($"{extension.Name} is turned off. Turn it on in Settings, under Extensions.");
+                window.Navigate(extension.Page);
                 break;
             case "settings":
                 window.Navigate(PageType.Settings);
@@ -396,37 +408,42 @@ internal static class AvaloniaBootstrapper
 
             foreach (var dep in manager.Dependencies)
             {
-                bool isInstalled = true;
-                try
-                {
-                    isInstalled = await dep.IsInstalled();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Error checking dependency {dep.Name}: {ex.Message}");
-                }
-
-                if (!isInstalled)
-                {
-                    if (Settings.GetDictionaryItem<string, string>(
-                            Settings.K.DependencyManagement, dep.Name) == "skipped")
-                    {
-                        Logger.Info($"Dependency {dep.Name} skipped by user preference.");
-                    }
-                    else
-                    {
-                        Logger.Warn(
-                            $"Dependency {dep.Name} not found for manager {manager.Name}.");
-                        missing.Add(dep);
-                    }
-                }
-                else
-                {
-                    Logger.Info($"Dependency {dep.Name} for {manager.Name} is present.");
-                }
+                if (await IsMissingDependencyAsync(dep, manager.Name))
+                    missing.Add(dep);
             }
         }
 
         return missing;
+    }
+
+    private static async Task<bool> IsMissingDependencyAsync(ManagerDependency dep, string managerName, bool failOnError = false)
+    {
+        bool isInstalled = true;
+        try
+        {
+            isInstalled = await dep.IsInstalled();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error checking dependency {dep.Name}: {ex.Message}");
+            if (failOnError)
+                throw;
+        }
+
+        if (isInstalled)
+        {
+            Logger.Info($"Dependency {dep.Name} for {managerName} is present.");
+            return false;
+        }
+
+        if (Settings.GetDictionaryItem<string, string>(
+                Settings.K.DependencyManagement, dep.Name) == "skipped")
+        {
+            Logger.Info($"Dependency {dep.Name} skipped by user preference.");
+            return false;
+        }
+
+        Logger.Warn($"Dependency {dep.Name} not found for manager {managerName}.");
+        return true;
     }
 }

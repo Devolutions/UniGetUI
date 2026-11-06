@@ -1,8 +1,10 @@
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.PackageEngine.Operations
@@ -32,6 +34,14 @@ namespace UniGetUI.PackageEngine.Operations
         protected bool RequiresAdminRights() =>
             !Settings.Get(Settings.K.ProhibitElevation)
             && (ForceAsAdministrator || Source.Manager.Capabilities.Sources.MustBeInstalledAsAdmin);
+
+        /// <summary>
+        /// The command-line parameters that perform this operation with the manager's executable.
+        /// </summary>
+        protected abstract IReadOnlyList<string> GetSourceParameters();
+
+        protected sealed override void PrepareProcessStartInfo() =>
+            PrepareSourceProcessStartInfo(GetSourceParameters());
 
         protected override void ApplyRetryAction(string retryMode)
         {
@@ -156,12 +166,8 @@ namespace UniGetUI.PackageEngine.Operations
         public AddSourceOperation(IManagerSource source)
             : base(source, []) { }
 
-        protected override void PrepareProcessStartInfo()
-        {
-            PrepareSourceProcessStartInfo(
-                Source.Manager.SourcesHelper.GetAddSourceParameters(Source)
-            );
-        }
+        protected override IReadOnlyList<string> GetSourceParameters() =>
+            Source.Manager.SourcesHelper.GetAddSourceParameters(Source);
 
         protected override Task<OperationVeredict> GetProcessVeredict(
             int ReturnCode,
@@ -224,12 +230,8 @@ namespace UniGetUI.PackageEngine.Operations
         public RemoveSourceOperation(IManagerSource source)
             : base(source, []) { }
 
-        protected override void PrepareProcessStartInfo()
-        {
-            PrepareSourceProcessStartInfo(
-                Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source)
-            );
-        }
+        protected override IReadOnlyList<string> GetSourceParameters() =>
+            Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source);
 
         protected override Task<OperationVeredict> GetProcessVeredict(
             int ReturnCode,

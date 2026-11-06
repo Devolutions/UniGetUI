@@ -10,8 +10,10 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
@@ -1326,6 +1328,56 @@ public sealed class PackageOperationsTests
             .Build();
     }
 
+    private static TestPackageManager CreateControlledManagedManager(
+        bool serializesOperations,
+        Func<IPackage, CancellationToken, Task> perform
+    )
+    {
+        return new PackageManagerBuilder()
+            .WithName($"ControlledManager{Guid.NewGuid():N}")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SerializesOperations = serializesOperations;
+                return capabilities;
+            })
+            .ConfigureManager(manager =>
+                manager.SetOperationHelper(new ControlledManagedOperationHelper(manager, perform))
+            )
+            .Build();
+    }
+
+    private sealed class ControlledManagedOperationHelper(
+        TestPackageManager manager,
+        Func<IPackage, CancellationToken, Task> perform
+    ) : BasePkgOperationHelper(manager), IManagedPackageOperationHelper
+    {
+        public async Task<OperationVeredict?> TryPerformAsync(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation,
+            Action<string> log,
+            Action<OperationProgress> progress,
+            CancellationToken cancellationToken
+        )
+        {
+            await perform(package, cancellationToken);
+            return OperationVeredict.Success;
+        }
+
+        protected override IReadOnlyList<string> _getOperationParameters(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation
+        ) => [];
+
+        protected override OperationVeredict _getOperationResult(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode
+        ) => OperationVeredict.Failure;
+    }
+
     private static bool HasLine(AbstractOperation operation, string prefix) =>
         operation.GetOutput().Any(line => line.Item1.StartsWith(prefix, StringComparison.Ordinal));
 
@@ -1549,11 +1601,33 @@ public sealed class PackageOperationsTests
     [Fact]
     public async Task AnOperationWaitingOnASerializingManagerDoesNotHoldAParallelSlot()
     {
-        if (!OperatingSystem.IsWindows())
-            return;
-
-        var serialized = CreateSlowProcessManager(serializesOperations: true);
-        var other = CreateSlowProcessManager(serializesOperations: false);
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var waitingStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var unrelatedStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var serialized = CreateControlledManagedManager(
+            serializesOperations: true,
+            async (package, cancellationToken) =>
+            {
+                if (package.Id == "first")
+                {
+                    firstStarted.TrySetResult();
+                    await releaseFirst.Task.WaitAsync(cancellationToken);
+                }
+                else
+                {
+                    waitingStarted.TrySetResult();
+                }
+            }
+        );
+        var other = CreateControlledManagedManager(
+            serializesOperations: false,
+            (_, _) =>
+            {
+                unrelatedStarted.TrySetResult();
+                return Task.CompletedTask;
+            }
+        );
         InitializeLoaders();
         using var first = new InstallPackageOperation(
             new PackageBuilder().WithManager(serialized).WithId("first").Build(),
@@ -1567,36 +1641,71 @@ public sealed class PackageOperationsTests
             new PackageBuilder().WithManager(other).WithId("unrelated").Build(),
             new InstallOptions()
         );
-        var waitingReported = ReportsWaitingOnTheGate(waiting);
-        bool? firstFinishedWhenUnrelatedStarted = null;
-        unrelated.LogLineAdded += (_, line) =>
-        {
-            if (line.Item1.StartsWith("Executing process", StringComparison.Ordinal))
-                firstFinishedWhenUnrelatedStarted = HasLine(first, "Process return value");
-        };
 
         AbstractOperation.OperationQueue.Clear();
         int previousMax = AbstractOperation.MAX_OPERATIONS;
         AbstractOperation.MAX_OPERATIONS = 2;
+        Task? firstRun = null;
+        Task? waitingRun = null;
+        Task? unrelatedRun = null;
         try
         {
-            Task firstRun = first.MainThread();
-            await WaitForConditionAsync(() => HasLine(first, "Start Time"));
-            Task waitingRun = waiting.MainThread();
-            await WaitForConditionAsync(waitingReported);
-            Task unrelatedRun = unrelated.MainThread();
+            firstRun = first.MainThread();
+            await Task.WhenAny(firstStarted.Task, firstRun, Task.Delay(TimeSpan.FromSeconds(15)));
+            Assert.True(
+                firstStarted.Task.IsCompletedSuccessfully,
+                $"The first operation did not enter its managed helper; status: {first.Status}."
+            );
+
+            waitingRun = waiting.MainThread();
+            await WaitForConditionAsync(() => waiting.IsWaitingForManager || waitingRun.IsCompleted);
+            Assert.True(waiting.IsWaitingForManager, "The second operation did not wait for its manager.");
+            Assert.False(waitingStarted.Task.IsCompleted);
+
+            unrelatedRun = unrelated.MainThread();
+            await Task.WhenAny(unrelatedStarted.Task, unrelatedRun, Task.Delay(TimeSpan.FromSeconds(15)));
+            Assert.True(
+                unrelatedStarted.Task.IsCompletedSuccessfully,
+                $"The unrelated operation did not start while the first held its manager gate; status: {unrelated.Status}."
+            );
+            Assert.False(firstRun.IsCompleted);
+            Assert.True(waiting.IsWaitingForManager);
+            Assert.False(waitingStarted.Task.IsCompleted);
+
+            releaseFirst.TrySetResult();
             await Task.WhenAll(firstRun, waitingRun, unrelatedRun).WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.True(waitingStarted.Task.IsCompletedSuccessfully);
+            Assert.Equal(OperationStatus.Succeeded, first.Status);
+            Assert.Equal(OperationStatus.Succeeded, waiting.Status);
+            Assert.Equal(OperationStatus.Succeeded, unrelated.Status);
+            Assert.Equal(0, AbstractOperation.QueueLength());
         }
         finally
         {
-            AbstractOperation.MAX_OPERATIONS = previousMax;
-            AbstractOperation.OperationQueue.Clear();
+            if (
+                firstRun?.IsCompleted is false
+                || waitingRun?.IsCompleted is false
+                || unrelatedRun?.IsCompleted is false
+            )
+            {
+                first.Cancel();
+                waiting.Cancel();
+                unrelated.Cancel();
+            }
+            releaseFirst.TrySetResult();
+            try
+            {
+                await Task.WhenAll(
+                    new[] { firstRun, waitingRun, unrelatedRun }.OfType<Task>()
+                ).WaitAsync(TimeSpan.FromSeconds(30));
+            }
+            finally
+            {
+                AbstractOperation.MAX_OPERATIONS = previousMax;
+                AbstractOperation.OperationQueue.Clear();
+            }
         }
-
-        Assert.Equal(OperationStatus.Succeeded, first.Status);
-        Assert.Equal(OperationStatus.Succeeded, waiting.Status);
-        Assert.Equal(OperationStatus.Succeeded, unrelated.Status);
-        Assert.False(firstFinishedWhenUnrelatedStarted);
     }
 
     private static TestPackageManager CreateFailingEchoManager(params string[] echoed)

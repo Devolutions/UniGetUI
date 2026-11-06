@@ -1,0 +1,174 @@
+using Devolutions.AgentSkills;
+using UniGetUI.Extensions.AgentSkills;
+
+namespace UniGetUI.Extensions.AgentSkills.Tests.Infrastructure.Fakes;
+
+/// <summary>
+/// Stands in for the bundled Agent Skills library in the service tests.
+/// </summary>
+internal sealed class FakeSkillsBackend : ISkillsBackend
+{
+    public string Version => "0.0.0-test";
+
+    public List<AgentInfo> Agents { get; } =
+    [
+        new("claude-code", "Claude Code", ".claude/skills", "/home/test/.claude/skills", false, true),
+        new("cursor", "Cursor", ".agents/skills", "/home/test/.cursor/skills", true, false),
+    ];
+
+    public List<InstalledSkillInfo> Installed { get; } = [];
+
+    public Dictionary<string, IReadOnlyList<AvailableSkill>> SourceSkills { get; } =
+        new(StringComparer.Ordinal);
+
+    public SkillUpdateCheckResult UpdateCheck { get; set; } = new([], []);
+
+    public SkillPreview Preview { get; set; } = new("test", "", [], null, null, [], false);
+
+    public SkillOperationStatus InstallStatus { get; set; } = SkillOperationStatus.Succeeded;
+
+    public string? InstallOutcomeName { get; set; }
+    public SkillUpdateResult? UpdateResult { get; set; }
+    public int AgentQueries { get; private set; }
+
+    public SkillOperationStatus RemoveStatus { get; set; } = SkillOperationStatus.Succeeded;
+
+    public List<string> ListedSources { get; } = [];
+    public Action<CancellationToken>? BeforeList { get; set; }
+    public Action<CancellationToken>? BeforeCheck { get; set; }
+
+    public List<(string Source, string Skill, IReadOnlyList<string>? Agents)> Installs { get; } = [];
+
+    public List<IReadOnlyList<SkillUpdate>> AppliedUpdates { get; } = [];
+
+    /// <summary>The skills each update check was limited to; null for a check of every skill.</summary>
+    public List<IReadOnlyList<string>?> CheckedSkills { get; } = [];
+
+    public List<string> Removed { get; } = [];
+
+    public IReadOnlyList<AgentInfo> GetAgents()
+    {
+        AgentQueries++;
+        return Agents;
+    }
+
+    public IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(CancellationToken cancellationToken) =>
+        Installed;
+
+    public IReadOnlyList<AvailableSkill> GetAvailableSkills(
+        string source,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    )
+    {
+        ListedSources.Add(source);
+        BeforeList?.Invoke(cancellationToken);
+        if (SourceFailures.TryGetValue(source, out var failure))
+            throw failure;
+
+        return SourceSkills.TryGetValue(source, out var skills)
+            ? skills
+            : throw new SkillsException("No valid skills found.");
+    }
+
+    public SkillPreview PreviewSkill(string source, string skill, CancellationToken cancellationToken) =>
+        Preview with { Name = skill };
+
+    /// <summary>Sources whose listing fails, and how.</summary>
+    public Dictionary<string, SkillsException> SourceFailures { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public SkillInstallResult Install(
+        string source,
+        string skill,
+        IReadOnlyList<string>? agents,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    )
+    {
+        Installs.Add((source, skill, agents));
+        progress?.Report($"Installing {skill}");
+        return new SkillInstallResult(
+            [
+                new SkillInstallOutcome
+                {
+                    Name = InstallOutcomeName ?? skill,
+                    Status = InstallStatus,
+                    Error = InstallStatus is SkillOperationStatus.Succeeded ? null : "The install failed",
+                    Agents = ["claude-code"],
+                },
+            ]
+        );
+    }
+
+    public SkillUpdateCheckResult CheckForUpdates(
+        IReadOnlyList<string>? skills,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    )
+    {
+        CheckedSkills.Add(skills);
+        BeforeCheck?.Invoke(cancellationToken);
+        return skills is null
+            ? UpdateCheck
+            : new SkillUpdateCheckResult(
+                UpdateCheck.Updates.Where(update => skills.Contains(update.Name)).ToList(),
+                UpdateCheck.Unchecked.Where(skill => skills.Contains(skill.Name)).ToList()
+            );
+    }
+
+    public SkillUpdateResult Update(
+        IReadOnlyList<SkillUpdate> updates,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    )
+    {
+        AppliedUpdates.Add(updates);
+        return UpdateResult ?? new SkillUpdateResult(
+            updates
+                .Select(update => new SkillUpdateOutcome(update.Name, SkillScope.Global, SkillOperationStatus.Succeeded))
+                .ToList()
+        );
+    }
+
+    public SkillRemoveResult Remove(
+        string skill,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    )
+    {
+        Removed.Add(skill);
+        return new SkillRemoveResult([new SkillRemoveOutcome(skill, RemoveStatus)]);
+    }
+
+    public NotionStatus NotionStatus { get; set; } = new(NotionCliState.SignedIn, "0.23.10", "Contoso", null);
+
+    public int NotionSignIns { get; private set; }
+
+    public NotionStatus GetNotionStatus(CancellationToken cancellationToken) => NotionStatus;
+
+    public NotionSignIn BeginNotionSignIn(CancellationToken cancellationToken) =>
+        new(new Uri("https://app.notion.com/workers/cli-login?verificationCode=K7Q-2MX"), "K7Q-2MX");
+
+    public void CompleteNotionSignIn(CancellationToken cancellationToken)
+    {
+        NotionSignIns++;
+        NotionStatus = new(NotionCliState.SignedIn, "0.23.10", "Contoso", null);
+    }
+
+    public void SignOutOfNotion(CancellationToken cancellationToken) =>
+        NotionStatus = new(NotionCliState.SignedOut, "0.23.10", null, null);
+
+    public static InstalledSkillInfo TrackedSkill(string name, string source, string hash) =>
+        new()
+        {
+            Name = name,
+            Description = $"The {name} skill",
+            Path = $"/home/test/.agents/skills/{name}",
+            Scope = SkillScope.Global,
+            Agents = ["claude-code"],
+            Source = source,
+            SourceType = "github",
+            SourceUrl = $"https://github.com/{source}.git",
+            Hash = hash,
+        };
+}

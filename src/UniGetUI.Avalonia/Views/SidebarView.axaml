@@ -201,6 +201,15 @@
                 </Panel>
             </ListBoxItem>
 
+            <ListBoxItem x:Name="AgentSkillsNavBtn" Tag="AgentSkills" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Agent Skills}"
+                         ToolTip.Tip="{t:Translate Agent Skills}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                    <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/skills.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{t:Translate Agent Skills}" FontSize="14" VerticalAlignment="Center"
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                </Grid>
+            </ListBoxItem>
         </ListBox>
 
         <!-- Footer items -->

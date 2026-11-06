@@ -1,0 +1,70 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+                         xmlns:skills="using:UniGetUI.Extensions.AgentSkills"
+                         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+                         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+                         x:Class="UniGetUI.Avalonia.Views.DialogPages.AgentSkillsInstallDialog"
+                         x:DataType="dialogs:AgentSkillsInstallDialog"
+                         Title="{Binding DialogTitle}"
+                         MaxWidth="620"
+                         MinWidth="420"
+                         MaxHeight="680"
+                         MinHeight="360"
+                         Background="{DynamicResource AppDialogBackground}">
+    <Grid RowDefinitions="*,Auto" Background="{DynamicResource AppDialogBackground}">
+        <ScrollViewer Grid.Row="0" Margin="24" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="14">
+                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
+                <Border Padding="12" CornerRadius="6" Background="{DynamicResource WarningBannerBackground}">
+                    <TextBlock Text="{t:Translate Skills are instructions for your coding agent. Review the source and selected files before installing.}"
+                               TextWrapping="Wrap"/>
+                </Border>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{t:Translate Install for these agents}" FontWeight="SemiBold"/>
+                    <ScrollViewer MaxHeight="260" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Targets}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="dialogs:SkillInstallTarget">
+                                    <CheckBox Content="{Binding DisplayName}"
+                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              ToolTip.Tip="{Binding DetectionLabel}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock x:Name="TargetValidationText"
+                               Text="{t:Translate Select at least one agent to install the skill.}"
+                               IsVisible="False"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               automation:AutomationProperties.LiveSetting="Assertive"/>
+                </StackPanel>
+                <CheckBox x:Name="RememberTargetsCheckBox"
+                          Content="{t:Translate Remember these targets for future installs}"/>
+                <StackPanel Spacing="4" IsVisible="{Binding HasSkills}">
+                    <TextBlock Text="{t:Translate Skills to install}" FontWeight="SemiBold"/>
+                    <ItemsControl ItemsSource="{Binding Skills}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="skills:SkillItem">
+                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+        <Border Grid.Row="1" Background="{DynamicResource AppDialogDarkBackground}"
+                CornerRadius="0,0,8,8" ClipToBounds="True">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="24">
+                <Button x:Name="InstallButton" Grid.Column="0" Classes="accent"
+                        Content="{t:Translate Install}" Height="32" MinWidth="0"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"/>
+                <Button x:Name="CancelButton" Grid.Column="1"
+                        Content="{t:Translate Cancel}" Height="32" MinWidth="0"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</dialogs:ImmersiveDialog>

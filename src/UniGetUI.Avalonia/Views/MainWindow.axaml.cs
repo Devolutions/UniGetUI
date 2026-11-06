@@ -48,6 +48,7 @@ public enum PageType
     CatalogEditor,
     GitRepositories,
     ManagerHealth,
+    AgentSkills,
 }
 
 public partial class MainWindow : Window
@@ -207,6 +208,7 @@ public partial class MainWindow : Window
     public bool GitRepositoriesEnabled => ViewModel.Sidebar.GitRepositoriesEnabled;
     public GitRepositoriesViewModel? GitRepositories => ViewModel.GitRepositories;
     public void SetGitRepositoriesEnabled(bool enabled) => ViewModel.SetGitRepositoriesEnabled(enabled);
+    public void SetExtensionEnabled(PageType page, bool enabled) => ViewModel.SetExtensionEnabled(page, enabled);
 
     public MainWindow()
     {
@@ -383,6 +385,7 @@ public partial class MainWindow : Window
 
     private void ReleaseWindowResources()
     {
+        ViewModel.StopExtensions();
         SaveGeometryNow();
         AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Window = true;
         _trayService?.Dispose();

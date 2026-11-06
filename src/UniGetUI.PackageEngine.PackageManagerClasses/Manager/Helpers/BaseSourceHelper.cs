@@ -103,12 +103,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Providers
                 }
 
                 var sources = task.Result;
-                Factory.Reset();
-
-                foreach (IManagerSource source in sources)
-                {
-                    Factory.AddSource(source);
-                }
+                Factory.ReplaceSources(sources);
 
                 Logger.Debug($"Loaded {sources.Count} sources for manager {Manager.Name}");
                 return sources;

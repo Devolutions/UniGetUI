@@ -14,31 +14,35 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
         public ScoopPkgDetailsHelper(Scoop manager)
             : base(manager) { }
 
+        internal static Uri? GetManifestUrl(IPackage package, ISourceFactory factory)
+        {
+            IManagerSource source = package.Source;
+            if (source.Url is null)
+                return null;
+
+            if (source.Name.StartsWith("http"))
+                return new Uri(source.Name);
+
+            if (source.Name.Contains(":\\"))
+                return new Uri("file:///" + source.Name.Replace("\\", "/"));
+
+            if (factory.IsPlaceholder(source))
+                return null;
+
+            return new Uri(source.Url + "/blob/master/bucket/" + package.Id + ".json");
+        }
+
         protected override void GetDetails_UnSafe(IPackageDetails details)
         {
-            if (details.Package.Source.Url is not null)
+            try
             {
-                try
-                {
-                    if (details.Package.Source.Name.StartsWith("http"))
-                        details.ManifestUrl = new Uri(details.Package.Source.Name);
-                    else if (details.Package.Source.Name.Contains(":\\"))
-                        details.ManifestUrl = new Uri(
-                            "file:///" + details.Package.Source.Name.Replace("\\", "/")
-                        );
-                    else
-                        details.ManifestUrl = new Uri(
-                            details.Package.Source.Url
-                                + "/blob/master/bucket/"
-                                + details.Package.Id
-                                + ".json"
-                        );
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Cannot load package manifest URL");
-                    Logger.Error(ex);
-                }
+                if (GetManifestUrl(details.Package, Manager.SourcesHelper.Factory) is Uri manifestUrl)
+                    details.ManifestUrl = manifestUrl;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Cannot load package manifest URL");
+                Logger.Error(ex);
             }
 
             string packageId = Scoop.GetPackageSpec(details.Package);

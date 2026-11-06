@@ -16,12 +16,14 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
-using UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using CornerRadius = global::Avalonia.CornerRadius;
 using Thickness = global::Avalonia.Thickness;
+#if !WINDOWS
+using UniGetUI.PackageEngine.Managers.MacAppStoreManager;
+#endif
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
@@ -583,10 +585,12 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 ExtraControls.Children.Add(BuildPythonEnvironmentsCard());
                 break;
 
+#if !WINDOWS
             case "MacAppStore":
                 ExtraControls.Children.Add(disableNotifsCard);
                 ExtraControls.Children.Add(BuildMacAppStoreTouchIdCard());
                 break;
+#endif
 
             case "vcpkg":
                 disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
@@ -615,6 +619,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         }
     }
 
+#if !WINDOWS
     private static SettingsCard BuildMacAppStoreTouchIdCard()
     {
         var status = new TextBlock
@@ -655,6 +660,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             Margin = new Thickness(0, 8, 0, 0),
         };
     }
+#endif
 
     private SettingsCard BuildPythonEnvironmentsCard()
     {

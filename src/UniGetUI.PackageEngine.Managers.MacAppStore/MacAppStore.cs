@@ -53,7 +53,7 @@ public partial class MacAppStore : PackageManager
             CanListVersions = false,
             SupportsCustomPackageIcons = true,
             SupportsCustomPackageScreenshots = true,
-            // The App Store installs one app at a time, and every operation may prompt for the password.
+            // The App Store installs one app at a time, and every operation may require authorization.
             SerializesOperations = true,
             SupportsCustomSources = false,
             Sources = new SourceCapabilities { KnowsPackageCount = false, KnowsUpdateDate = false },

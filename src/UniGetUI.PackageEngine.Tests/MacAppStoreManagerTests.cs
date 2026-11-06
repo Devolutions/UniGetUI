@@ -37,6 +37,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
     private readonly Func<ProcessStartInfo, Action<string>, CancellationToken, Task<int>> _runProcess =
         ElevatedMas.RunProcess;
     private readonly Func<bool> _isRoot = MacAppStorePkgOperationHelper.IsRoot;
+    private readonly Func<(uint UserId, uint GroupId)> _userIds = ElevatedMas.UserIds;
 
     public MacAppStoreManagerTests()
     {
@@ -45,11 +46,13 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
         Settings.ResetSettings();
         ElevatedMas.RunProcess = (_, _, _) => throw new InvalidOperationException("No process may run in this test.");
+        ElevatedMas.UserIds = () => (501, 20);
     }
 
     public void Dispose()
     {
         ElevatedMas.RunProcess = _runProcess;
+        ElevatedMas.UserIds = _userIds;
         MacAppStorePkgOperationHelper.IsRoot = _isRoot;
         Settings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
@@ -452,16 +455,14 @@ public sealed class MacAppStoreManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task RunsMasThroughSudoWithTheAskpassDialog()
+    public async Task RunsMasWithNativeAuthorizationAndTheRequestingUsersIdentity()
     {
         MacAppStorePkgOperationHelper.IsRoot = () => false;
         var (manager, _) = NewManager();
         ProcessStartInfo? started = null;
-        string? askpass = null;
         ElevatedMas.RunProcess = (startInfo, onLine, _) =>
         {
             started = startInfo;
-            askpass = File.ReadAllText(startInfo.Environment["SUDO_ASKPASS"]!);
             onLine("==> Installed Amphetamine (5.3.2)");
             return Task.FromResult(0);
         };
@@ -472,19 +473,16 @@ public sealed class MacAppStoreManagerTests : IDisposable
 
         Assert.Equal(OperationVeredict.Success, verdict);
         Assert.NotNull(started);
-        Assert.Equal(ElevatedMas.SudoPath, started.FileName);
+        Assert.Equal(ElevatedMas.OsaScriptPath, started.FileName);
         Assert.False(started.UseShellExecute);
         Assert.Equal(
-            ["-A", "-p", "UniGetUI needs your password to install Amphetamine from the Mac App Store.", "--", MasPath, "get", Amphetamine],
+            ["-e", ElevatedMas.AuthorizationScript, "--",
+                $"'/usr/bin/env' 'SUDO_UID=501' 'SUDO_GID=20' '{MasPath}' 'get' '{Amphetamine}' 2>&1",
+                "UniGetUI wants to install Amphetamine from the Mac App Store."],
             started.ArgumentList);
-        Assert.Equal(ElevatedMas.AskpassScript, askpass);
-        Assert.Equal(["==> Installed Amphetamine (5.3.2)"], log);
-
-        string script = started.Environment["SUDO_ASKPASS"]!;
-        Assert.StartsWith(CoreData.UniGetUIDataDirectory, script);
-        if (!OperatingSystem.IsWindows())
-            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
-                File.GetUnixFileMode(script));
+        Assert.Contains("Command output will appear", log[0]);
+        Assert.Equal("==> Installed Amphetamine (5.3.2)", log[1]);
+        Assert.False(File.Exists(Path.Combine(CoreData.UniGetUIDataDirectory, "mac-askpass.sh")));
     }
 
     [Fact]
@@ -503,24 +501,42 @@ public sealed class MacAppStoreManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task CancellingStopsTheElevatedOperation()
+    public async Task APreCanceledOperationNeverOpensAuthorization()
     {
         MacAppStorePkgOperationHelper.IsRoot = () => false;
         var (manager, _) = NewManager();
         using var cancellation = new CancellationTokenSource();
-        ElevatedMas.RunProcess = (_, _, token) =>
-        {
-            cancellation.Cancel();
-            token.ThrowIfCancellationRequested();
-            return Task.FromResult(0);
-        };
+        cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Operations(manager).TryPerformAsync(App(manager),
             new InstallOptions(), OperationType.Uninstall, _ => { }, _ => { }, cancellation.Token));
     }
 
     [Fact]
-    public void ReadsTheOutcomeOfSudo()
+    public async Task CancellationDoesNotAbandonAnAuthorizedInstaller()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finished = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ElevatedMas.RunProcess = (_, _, token) =>
+        {
+            Assert.False(token.CanBeCanceled);
+            started.SetResult();
+            return finished.Task;
+        };
+        List<string> log = [];
+
+        var run = ElevatedMas.RunAsync(MasPath, ["update", Amphetamine], "Update app", log.Add, cancellation.Token);
+        await started.Task;
+        cancellation.Cancel();
+        Assert.False(run.IsCompleted);
+        Assert.Contains(log, line => line.Contains("Waiting for the authorized Mac App Store operation"));
+        finished.SetResult(0);
+        Assert.Equal(0, (await run).ExitCode);
+    }
+
+    [Fact]
+    public void DistinguishesAuthorizationCancellationAndStoreFailure()
     {
         var (manager, _) = NewManager();
         var operations = Operations(manager);
@@ -528,20 +544,89 @@ public sealed class MacAppStoreManagerTests : IDisposable
 
         Assert.Equal(OperationVeredict.Success, operations.Verdict(0, [], log.Add));
         Assert.Equal(OperationVeredict.Canceled,
-            operations.Verdict(1, ["sudo: no password was provided", "sudo: a password is required"], log.Add));
+            operations.Verdict(1, ["0:19: execution error: User canceled. (-128)"], log.Add));
         Assert.Equal(OperationVeredict.Failure, operations.Verdict(1, ["Error: No apps found"], log.Add));
         Assert.Empty(log);
 
         Assert.Equal(OperationVeredict.Failure,
-            operations.Verdict(1, ["alex is not in the sudoers file."], log.Add));
-        Assert.Contains("administrator account", Assert.Single(log));
+            operations.Verdict(1, ["execution error: Error: No downloads initiated for ADAM ID 6450432292 (1)"], log.Add));
+        Assert.Contains("Open the App Store", Assert.Single(log));
+        Assert.Contains("Apple Account", log[0]);
+        log.Clear();
+        Assert.Equal(OperationVeredict.Failure, operations.Verdict(128, ["Command failed (128)"], log.Add));
+        Assert.Empty(log);
     }
 
     [Fact]
-    public void ThePasswordPromptIsShownVerbatim()
+    public async Task PromptsAndArgumentsAreDataNotAppleScriptOrShellCode()
     {
-        Assert.Equal(["-A", "-p", "100%% sure about %%p?", "--", MasPath, "get", "1"],
-            ElevatedMas.SudoArguments("100% sure about %p?", MasPath, ["get", "1"]));
+        const string prompt = "100% sure about \"quoted\" \\\\ names?\nNew line";
+        const string path = "/Applications/John's Apps/mas";
+        const string argument = "$(exit 99); \"quoted\" & 'single'";
+        ProcessStartInfo? started = null;
+        ElevatedMas.RunProcess = (info, _, _) => { started = info; return Task.FromResult(0); };
+
+        await ElevatedMas.RunAsync(path, [argument], prompt, _ => { }, CancellationToken.None);
+
+        Assert.NotNull(started);
+        Assert.Equal(ElevatedMas.AuthorizationScript, started.ArgumentList[1]);
+        Assert.Equal("--", started.ArgumentList[2]);
+        Assert.Equal(
+            "'/usr/bin/env' 'SUDO_UID=501' 'SUDO_GID=20' '/Applications/John'\\''s Apps/mas' '$(exit 99); \"quoted\" & '\\''single'\\''' 2>&1",
+            started.ArgumentList[3]);
+        Assert.Equal(prompt, started.ArgumentList[4]);
+    }
+
+    [Fact]
+    public async Task NativeScriptPreservesOutputAndTheMasExitCode()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+        // Exercise the real script/runner, without requesting privileges or changing any app.
+        ElevatedMas.RunProcess = (info, onLine, token) =>
+        {
+            info.ArgumentList[1] = info.ArgumentList[1].Replace(" with administrator privileges", "");
+            return _runProcess(info, onLine, token);
+        };
+        string[] messages = ["one", "$(exit 99); \"quoted\" & 'single'", "three"];
+        var success = await ElevatedMas.RunAsync("/usr/bin/printf", ["%s\n", .. messages],
+            "A \"quoted\" prompt", _ => { }, CancellationToken.None);
+        Assert.Equal(0, success.ExitCode);
+        Assert.Equal(messages, success.Output);
+
+        var identity = await ElevatedMas.RunAsync("/bin/sh", ["-c", "printf '%s:%s' \"$SUDO_UID\" \"$SUDO_GID\""],
+            "Identity", _ => { }, CancellationToken.None);
+        Assert.Equal(0, identity.ExitCode);
+        Assert.Equal("501:20", Assert.Single(identity.Output));
+
+        var failure = await ElevatedMas.RunAsync("/bin/sh",
+            ["-c", "printf 'standard output\\n'; printf 'standard error\\n' >&2; exit 7"],
+            "Failure", _ => { }, CancellationToken.None);
+        Assert.NotEqual(0, failure.ExitCode);
+        Assert.Contains(failure.Output, line => line.Contains("standard output"));
+        Assert.Contains(failure.Output, line => line.Contains("standard error"));
+        Assert.EndsWith("(7)", failure.Output[^1]);
+    }
+
+    [Fact]
+    public void NativeUserIdsIdentifyTheRequestingProcess()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+        var (user, group) = _userIds();
+        foreach (var (flag, expected) in new[] { ("-u", user), ("-g", group) })
+        {
+            using var process = Process.Start(new ProcessStartInfo("/usr/bin/id")
+            {
+                ArgumentList = { flag },
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            })!;
+            string actual = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+            Assert.Equal(0, process.ExitCode);
+            Assert.Equal(expected.ToString(System.Globalization.CultureInfo.InvariantCulture), actual);
+        }
     }
 
     // ── Manager ────────────────────────────────────────────────────────────

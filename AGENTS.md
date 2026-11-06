@@ -194,9 +194,13 @@ Its format-agnostic parts live in the shared feed project described in the next 
 - A free app is installed with `get`, which acquires it for the account; one with a price must
   already be owned and is downloaded with `install`.
 - mas 4 and later need root to install and update, and every release to uninstall. The operation
-  helper is an `IManagedPackageOperationHelper` that then runs `sudo -A` with an `osascript`
-  password dialog as askpass (`ElevatedMas`), and returns null (the ordinary process path) when no
-  root is needed or UniGetUI already runs as root. Tests swap `ElevatedMas.RunProcess`,
+  helper is an `IManagedPackageOperationHelper` using `osascript`'s native administrator authorization
+  (`ElevatedMas`), allowing Touch ID where macOS permits it. It explicitly passes the requesting
+  user's uid/gid as `SUDO_UID`/`SUDO_GID`, which mas needs to use that user's App Store session.
+  Native authorization buffers output; after submission, wait for its privileged child rather than
+  killing osascript and orphaning the installer. Cancellation in the dialog returns error -128.
+  The helper returns null (the ordinary process path) when no root is needed or UniGetUI already runs
+  as root. Tests swap `ElevatedMas.RunProcess`, `ElevatedMas.UserIds`,
   `MacAppStorePkgOperationHelper.IsRoot` and `AppStoreCatalog.Download`.
 
 ## Installer feeds shared by macOS and Windows

@@ -14,6 +14,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         // tags and renders thousands of packages, freezing the UI and spiking RAM.
         private const int MAX_RESULTS_PER_MANAGER = 100;
 
+        // Null until a search is made. An empty query browses: see LoadPackagesFromManager.
         private string? QUERY_TEXT;
         private volatile bool _pendingReload;
         private readonly HashSet<IPackageManager> _failedManagers = [];
@@ -122,7 +123,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 lock (_failedManagers)
                     _failedManagers.Add(manager);
             }
-
             if (text.Length == 0)
             {
                 return found

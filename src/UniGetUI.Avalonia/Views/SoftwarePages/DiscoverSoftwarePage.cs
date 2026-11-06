@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -13,6 +14,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
+using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -29,6 +31,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
     private MenuItem? _menuCopyLink;
+    private MenuItem? _menuManual;
 
     public DiscoverSoftwarePage(CatalogEditorViewModel? catalogEditor = null) : base(new PackagesPageData
     {
@@ -268,8 +271,8 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         var menuInstallOptions = new MenuItem { Header = ShortcutHeader(CoreTools.Translate("Install options"), OptionsShortcut), Icon = LoadMenuIcon("options") };
         menuInstallOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
-        var menuManual = new MenuItem { Header = CoreTools.Translate("Manual install"), Icon = LoadMenuIcon("console") };
-        menuManual.Click += (_, _) => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Install);
+        _menuManual = new MenuItem { Header = CoreTools.Translate("Manual install"), Icon = LoadMenuIcon("console") };
+        _menuManual.Click += (_, _) => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Install);
 
         var menuDetails = new MenuItem { Header = ShortcutHeader(CoreTools.Translate("Package details"), DetailsShortcut), Icon = LoadMenuIcon("info_round") };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
@@ -280,7 +283,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         menu.Items.Add(menuInstall);
         menu.Items.Add(new Separator());
         menu.Items.Add(menuInstallOptions);
-        menu.Items.Add(menuManual);
+        menu.Items.Add(_menuManual);
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuAsAdmin);
         menu.Items.Add(_menuInteractive);
@@ -296,7 +299,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     protected override void WhenShowingContextMenu(IPackage package)
     {
         if (_menuAsAdmin is null || _menuInteractive is null
-            || _menuSkipHash is null || _menuDownloadInstaller is null || _menuCopyLink is null)
+            || _menuSkipHash is null || _menuDownloadInstaller is null || _menuCopyLink is null || _menuManual is null)
         {
             Logger.Warn("Context menu items are null on DiscoverSoftwarePage");
             return;

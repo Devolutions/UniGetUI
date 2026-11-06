@@ -64,6 +64,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public ProxySupport SupportsProxy = ProxySupport.No;
         public bool SupportsProxyAuth = false;
         public PackageReleaseDateSupport KnowsPackageReleaseDate = PackageReleaseDateSupport.No;
+
         public SourceCapabilities Sources { get; set; }
 
         public ManagerCapabilities()

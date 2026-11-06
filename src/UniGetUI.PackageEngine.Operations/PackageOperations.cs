@@ -175,7 +175,6 @@ namespace UniGetUI.PackageEngine.Operations
                     (Options.SkipHashCheck && Role is not OperationType.Uninstall),
                     Package.OverridenOptions.Scope ?? Options.InstallationScope
                 );
-
                 Package.SetTag(PackageTag.OnQueue);
             };
             StatusChanged += (_, status) =>

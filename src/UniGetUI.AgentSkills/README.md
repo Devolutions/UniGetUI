@@ -1,0 +1,135 @@
+# UniGetUI Agent Skills
+
+A .NET library to install, list, update and remove **agent skills**: folders
+with a `SKILL.md` that coding agents such as Claude Code, Codex, Cursor and
+GitHub Copilot (about 75 others too) load as extra instructions.
+
+It is compiled directly into UniGetUI as `UniGetUI.AgentSkills`. Its public API
+remains in the `Devolutions.AgentSkills` namespace. The
+`UniGetUI.AgentSkills.Cli` library references this project and exposes
+`UniGetUI.AgentSkills.Cli.SkillsCli.RunAsync(string[] args)` for in-process CLI
+commands; it returns an exit code without terminating the host process. It is
+not a standalone executable; UniGetUI invokes it for `unigetui skills`.
+Pass only the arguments after `skills` (for example, `["list", "--json"]`).
+`update` runs its nested `add` commands in-process rather than relaunching
+the host executable.
+A skill installed by the library uses the same directories and lock files
+(`~/.agents/.skill-lock.json` and `skills-lock.json`) as the companion CLI.
+Sources include GitHub, GitLab, Git URLs, local paths, `/.well-known/skills`
+sites and direct downloads. There is no remote catalog or hosted telemetry.
+
+- Targets `net10.0`. It is trim- and NativeAOT-safe: the analyzers run on every build with warnings treated as errors.
+- It has no UI and never prompts. It writes nothing to the console and never exits the process.
+- Cloning needs `git` on `PATH`. Direct downloads and supported independent providers use HTTP.
+
+## Quick start
+
+```csharp
+using Devolutions.AgentSkills;
+
+var skills = new SkillsManager();
+
+// Install one skill globally, for the detected agents
+var result = skills.Install(new SkillInstallRequest
+{
+    Source = @"C:\skills\my-skills",
+    Skills = ["sample-skill"],
+});
+
+// Installed skills, with their source and content hash
+foreach (var s in skills.GetInstalledSkills(SkillScope.Global))
+    Console.WriteLine($"{s.Name} [{string.Join(", ", s.Agents)}] from {s.Source ?? "local"}");
+
+// Updates
+var check = skills.CheckForUpdates(SkillScope.Global);
+skills.Update(check.Updates);
+
+// Remove
+skills.Remove(["sample-skill"], SkillScope.Global);
+```
+
+## API
+
+| Method | CLI equivalent | Notes |
+| --- | --- | --- |
+| `GetAgents()` | | Every supported agent: id, display name, skill directories, and whether it is detected |
+| `GetInstalledSkills(scope)` | `skills list --json` | Merged with the lock file: source, ref, hash, install dates |
+| `GetAvailableSkills(source)` | `skills add <source> --list` | Lists what a source offers without installing |
+| `Install(request)` | `skills add <source> -y` | Returns one outcome per skill; per-agent failures don't throw |
+| `Remove(names, scope, agents)` | `skills remove <names> -y` | |
+| `CheckForUpdates(scope, names)` | `skills update` (check part) | Read-only; lists skills that can't be checked, with the reason |
+| `Update(updates)` / `Update(scope, names)` | `skills update -y` | Reinstalls each skill for the agents that have it |
+
+Methods are synchronous and may block on the network, `git` and the file
+system, so call them off the UI thread. Long operations take an
+`IProgress<string>`, which receives progress lines and
+warnings such as a skipped invalid SKILL.md, and a `CancellationToken`.
+Cancelling aborts HTTP requests and kills a running `git`. A source that
+can't be fetched, or has none of the requested skills, throws
+`SkillsException`. An unknown agent id throws `ArgumentException`.
+Failure to save required lock-file tracking metadata also throws `SkillsException`;
+skill files may already have been copied, so resolve the reported file access error
+and retry the installation rather than treating it as tracked successfully.
+
+### Scopes and agents
+
+- `SkillScope.Global` installs under the user's home: `~/.agents/skills`, plus each agent's global directory.
+- `SkillScope.Project` installs under `SkillsManagerOptions.ProjectDirectory`, which defaults to the current directory.
+- When `SkillInstallRequest.Agents` is null, the library installs for the detected agents plus the "universal" agents that read `.agents/skills`. Pass agent ids (see `GetAgents()`) or `*` to choose.
+- `Symlink` mode (the default) keeps one canonical copy and links it into each agent's directory. On Windows the links are junctions, which need no admin rights or Developer Mode.
+
+### Versions
+
+Skills have no version numbers. `InstalledSkillInfo.Hash` and
+`SkillUpdate.CurrentHash`/`LatestHash` carry the content hash recorded in the
+lock file instead. Depending on the source, that is a Git tree SHA or a
+SHA-256 folder hash. A short prefix works as a display version.
+
+### Options
+
+```csharp
+new SkillsManager(new SkillsManagerOptions
+{
+    ProjectDirectory = @"C:\src\my-app",   // for SkillScope.Project
+    GitHubToken = token,                   // default: GITHUB_TOKEN / GH_TOKEN
+    HomeDirectory = sandboxHome,           // tests and sandboxes
+    NotionCliPath = ntnPath,               // default: ntn on PATH
+});
+```
+
+### Notion
+
+A Notion skills database is a source: pass its address
+(`https://app.notion.com/p/<id>` or a `notion.so` link) to `GetAvailableSkills`
+and `Install`, or the address of one skill page. Skills are named the way
+Notion names them when it downloads them: `Proofreader / copyeditor` becomes
+`proofreader-copyeditor`. The page title works too.
+
+Everything goes through the [Notion CLI](https://developers.notion.com/cli)
+(`ntn`), which keeps the sign-in in the OS credential store, so the library
+never sees a Notion token:
+
+| Method | Notes |
+| --- | --- |
+| `GetNotionStatus()` | Whether `ntn` is installed and signed in, with the workspace name |
+| `BeginNotionSignIn()` | The Notion page to open in the user's browser, and the code it shows |
+| `CompleteNotionSignIn()` | Waits, up to 15 minutes, for the user to approve |
+| `SignOutOfNotion()` | Deletes the token `ntn` keeps |
+
+A failure a host can act on throws `SkillsException` with `Failure` set to
+`NotionCliMissing`, `NotionSignedOut` or `NotionNotFound` (not shared with the
+signed-in workspace).
+
+Global installs from Notion are tracked in the global lock, with the page and
+its Notion version id, so `CheckForUpdates` finds skills edited in Notion. The
+explicitly selected database or page remains the source across installs and updates,
+including when a selected page belongs to a database.
+
+## Not supported
+
+- Notion packs (`notion`), which need the interactive CLI to pick them.
+- `skills use`, `init` and `experimental_sync`, which are CLI workflows.
+
+## License
+
+MIT. See `LICENSE` for the original copyright and permission notice.

@@ -89,6 +89,17 @@ internal static partial class MacOsNotificationBridge
 
     // ── Feature notifications ──────────────────────────────────────────────
 
+    public static void ShowExtensionUpdatesAvailableNotification(string name, int count, string action)
+    {
+        if (Settings.AreUpdatesNotificationsDisabled()) return;
+        try
+        {
+            DeliverNotification(CoreTools.Translate("{0} updates", name), CoreTools.Translate("{0} skills can be updated", count),
+                MainWindow.RuntimeNotificationLevel.Success, inAppLaunchAction: action);
+        }
+        catch (Exception ex) { Logger.Warn(ex); }
+    }
+
     public static void ShowUpdatesAvailableNotification(IReadOnlyList<IPackage> upgradable)
     {
         if (Settings.AreUpdatesNotificationsDisabled()) return;

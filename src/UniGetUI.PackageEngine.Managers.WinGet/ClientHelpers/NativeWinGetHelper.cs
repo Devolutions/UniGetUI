@@ -482,6 +482,14 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     continue;
                 }
 
+                if (Manager.GetLauncherGameSource(nativePackage.InstalledVersion.Id) is { } launcherGameSource)
+                {
+                    logger.Log(
+                        $"Skipping the update of {nativePackage.Id}, since it was installed by {launcherGameSource.Name}"
+                    );
+                    continue;
+                }
+
                 if (nativePackage.DefaultInstallVersion is null)
                 {
                     Logger.Warn(
@@ -566,12 +574,19 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         {
             try
             {
+                string id = nativePackage.Id;
+                string? localIdentifier = nativePackage.InstalledVersion.Id;
                 IManagerSource source;
                 var availableVersions =
                     nativePackage.AvailableVersions is { } versions
                         ? NativeWinGetCollection.Copy(versions)
                         : [];
-                if (availableVersions.Length > 0)
+                if (Manager.GetLauncherGameSource(localIdentifier) is { } launcherGameSource)
+                {
+                    id = localIdentifier!;
+                    source = launcherGameSource;
+                }
+                else if (availableVersions.Length > 0)
                 {
                     var installPackage = nativePackage.GetPackageVersionInfo(availableVersions[0]);
                     source = Manager.SourcesHelper.Factory.GetSourceOrDefault(
@@ -585,16 +600,16 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
                 string? reportedVersion = nativePackage.InstalledVersion.Version;
                 string version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
-                    nativePackage.Id,
+                    id,
                     reportedVersion
                 );
 
                 logger.Log(
-                    $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}"
+                    $"Found package {nativePackage.Name} {id} on source {source.Name}"
                 );
                 var UniGetUIPackage = new Package(
                     nativePackage.Name,
-                    nativePackage.Id,
+                    id,
                     version,
                     source,
                     Manager

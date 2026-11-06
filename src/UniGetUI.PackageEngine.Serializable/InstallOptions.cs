@@ -231,6 +231,8 @@ namespace UniGetUI.PackageEngine.Serializable
         // from the manager-wide default. Transient (not serialized): set by InstallOptionsFactory.
         public bool CustomInstallLocationIsExplicit { get; set; }
 
+        public bool VersionIsExplicit { get; set; }
+
         public override InstallOptions Copy()
         {
             var copy = new InstallOptions();
@@ -247,6 +249,7 @@ namespace UniGetUI.PackageEngine.Serializable
             // Handle non-automated properties
             copy.OverridesNextLevelOpts = OverridesNextLevelOpts;
             copy.CustomInstallLocationIsExplicit = CustomInstallLocationIsExplicit;
+            copy.VersionIsExplicit = VersionIsExplicit;
             return copy;
         }
 

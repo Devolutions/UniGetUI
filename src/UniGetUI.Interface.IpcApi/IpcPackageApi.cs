@@ -600,6 +600,7 @@ public static class IpcPackageApi
         if (!string.IsNullOrWhiteSpace(request.Version))
         {
             options.Version = request.Version;
+            options.VersionIsExplicit = true;
         }
 
         if (!string.IsNullOrWhiteSpace(request.Scope))

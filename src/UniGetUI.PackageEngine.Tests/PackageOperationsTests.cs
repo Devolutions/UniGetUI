@@ -288,10 +288,13 @@ public sealed class PackageOperationsTests
     }
 
     [Theory]
-    [InlineData(false, "install Contoso.Tool 3.0.0")]
-    [InlineData(true, "install Contoso.Tool 2.0.0")]
-    public void ReinstallKeepsASavedVersionOnlyWhenTheManagerHonoursItOnUpdates(
+    [InlineData(false, false, "install Contoso.Tool 3.0.0")]
+    [InlineData(true, false, "install Contoso.Tool 3.0.0")]
+    [InlineData(false, true, "install Contoso.Tool 3.0.0")]
+    [InlineData(true, true, "install Contoso.Tool 2.0.0")]
+    public void ReinstallKeepsOnlyAnExplicitVersionAndOnlyWhenTheManagerHonoursItOnUpdates(
         bool supportsCustomVersionsOnUpdate,
+        bool versionIsExplicit,
         string expectedArguments
     )
     {
@@ -317,10 +320,99 @@ public sealed class PackageOperationsTests
 
         using var operation = new InspectableUpdatePackageOperation(
             package,
-            new InstallOptions { UninstallBeforeUpdate = true, Version = "2.0.0" }
+            new InstallOptions
+            {
+                UninstallBeforeUpdate = true,
+                Version = "2.0.0",
+                VersionIsExplicit = versionIsExplicit,
+            }
         );
 
         Assert.Equal(expectedArguments, operation.PrepareProcessStartInfoForTests().Arguments.Trim());
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, false, "update Contoso.Tool")]
+    [InlineData(OperationType.Update, true, "update Contoso.Tool 2.0.0")]
+    [InlineData(OperationType.Install, false, "install Contoso.Tool 2.0.0")]
+    public void ASavedVersionIsUsedForInstallsButNotForUpdates(
+        OperationType role,
+        bool versionIsExplicit,
+        string expectedArguments
+    )
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureManager(manager => manager.ExecutablePath = "C:\\tools\\pkgmgr.exe")
+            .ConfigureOperation(helper =>
+                helper.ParametersFactory = (package, options, operation) =>
+                    new[] { operation.ToString().ToLowerInvariant(), package.Id, options.Version }
+                        .Where(part => part.Length > 0)
+                        .ToList())
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        var options = new InstallOptions { Version = "2.0.0", VersionIsExplicit = versionIsExplicit };
+
+        string arguments;
+        if (role is OperationType.Install)
+        {
+            using var install = new InspectableInstallPackageOperation(package, options);
+            arguments = install.PrepareProcessStartInfoForTests().Arguments.Trim();
+        }
+        else
+        {
+            using var update = new InspectableUpdatePackageOperation(package, options);
+            arguments = update.PrepareProcessStartInfoForTests().Arguments.Trim();
+        }
+
+        Assert.Equal(expectedArguments, arguments);
+        Assert.Equal("2.0.0", options.Version);
+    }
+
+    [Fact]
+    public async Task AnAutomaticRetryIsJudgedOnlyOnItsOwnOutput()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        int attempts = 0;
+        var outputsSeen = new List<IReadOnlyList<string>>();
+        var manager = new PackageManagerBuilder()
+            .WithName($"RetryOutputManager{Guid.NewGuid():N}")
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (_, _, _) => ["echo", $"attempt-{++attempts}"];
+                helper.ResultFactory = (_, _, output, _) =>
+                {
+                    outputsSeen.Add(output.ToList());
+                    return outputsSeen.Count == 1 ? OperationVeredict.AutoRetry : OperationVeredict.Success;
+                };
+            })
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        using var operation = new UpdatePackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        Assert.Equal(2, outputsSeen.Count);
+        Assert.Contains(outputsSeen[1], line => line.Contains("attempt-2"));
+        Assert.DoesNotContain(outputsSeen[1], line => line.Contains("attempt-1"));
     }
 
     [Fact]
@@ -1919,7 +2011,7 @@ public sealed class PackageOperationsTests
         await InstalledPackagesLoader.Instance.AddForeign(installedBeforeUpdate);
         using var operation = new SimulatedUpdatePackageOperation(
             installedBeforeUpdate,
-            new InstallOptions { Version = "3.0.3" },
+            new InstallOptions { Version = "3.0.3", VersionIsExplicit = true },
             OperationVeredict.Success
         );
 

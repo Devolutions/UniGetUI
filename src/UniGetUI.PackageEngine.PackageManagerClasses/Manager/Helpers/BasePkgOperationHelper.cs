@@ -157,4 +157,11 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         OperationType operation
     )
     { }
+
+    public virtual string? GetFailureExplanation(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode
+    ) => null;
 }

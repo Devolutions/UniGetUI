@@ -632,6 +632,14 @@ public abstract partial class AbstractOperation : IDisposable
                     }
                 }
             }
+
+            if (result is OperationVeredict.AutoRetry)
+            {
+                Line($"", LineType.VerboseDetails);
+                Line($"-----------------------", LineType.VerboseDetails);
+                Line($"Retrying operation automatically", LineType.VerboseDetails);
+                Line($"", LineType.VerboseDetails);
+            }
         } while (result is OperationVeredict.AutoRetry);
 
         if (result is not (OperationVeredict.Success or OperationVeredict.RestartRequired))

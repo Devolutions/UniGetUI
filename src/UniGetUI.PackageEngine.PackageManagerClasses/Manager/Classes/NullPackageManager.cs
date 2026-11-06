@@ -211,5 +211,12 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             InstallOptions options,
             OperationType operation
         ) => throw new NotImplementedException();
+
+        public string? GetFailureExplanation(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode
+        ) => null;
     }
 }

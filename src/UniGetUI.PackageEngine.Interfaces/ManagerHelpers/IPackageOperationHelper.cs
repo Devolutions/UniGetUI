@@ -60,5 +60,12 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
             InstallOptions options,
             OperationType operation
         );
+
+        public string? GetFailureExplanation(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode
+        );
     }
 }

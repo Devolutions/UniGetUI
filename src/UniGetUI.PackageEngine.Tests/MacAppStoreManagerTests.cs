@@ -79,11 +79,12 @@ public sealed class MacAppStoreManagerTests : IDisposable
         AppStoreCatalog.ParseLookup(Fixture("lookup.json")).Single(app => AppStoreRecord.Id(app) == id);
 
     /// <summary>A manager whose catalog answers from the lookup fixture and counts the requests made.</summary>
-    private static (MacAppStore Manager, List<Uri> Requests) NewManager(int masMajorVersion = 7)
+    private static (MacAppStore Manager, List<Uri> Requests) NewManager(int masMajorVersion = 7, string storefront = "CA")
     {
         var manager = new MacAppStore
         {
             MasMajorVersion = masMajorVersion,
+            Storefront = storefront,
             Status = new ManagerStatus { Found = true, ExecutablePath = MasPath, ExecutableCallArgs = "", Version = "" },
         };
         List<Uri> requests = [];
@@ -311,10 +312,13 @@ public sealed class MacAppStoreManagerTests : IDisposable
 
     // ── Catalog ────────────────────────────────────────────────────────────
 
-    [Fact]
-    public void OneLookupFetchesEveryAppTheListingsShowed()
+    [Theory]
+    [InlineData("CA")]
+    [InlineData("US")]
+    [InlineData("JP")]
+    public void OneLookupFetchesEveryAppTheListingsShowed(string storefront)
     {
-        var (manager, requests) = NewManager();
+        var (manager, requests) = NewManager(storefront: storefront);
         manager.Catalog.Want([Amphetamine, Keynote]);
 
         Assert.NotNull(manager.Catalog.Get(Keynote));
@@ -322,7 +326,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
 
         Uri request = Assert.Single(requests);
         Assert.Equal("itunes.apple.com", request.Host);
-        Assert.Contains("country=ca", request.Query);
+        Assert.Contains($"country={storefront.ToLowerInvariant()}", request.Query);
         string ids = request.Query.Split('&').Single(part => part.TrimStart('?').StartsWith("id=")).Split('=')[1];
         // The app asked for comes first; the others ride along.
         Assert.Equal([Keynote, Amphetamine], ids.Split(','));

@@ -155,6 +155,11 @@ public partial class MacAppStore : PackageManager
             lock (_storefrontLock)
                 return _storefront ??= ReadStorefront();
         }
+        init
+        {
+            lock (_storefrontLock)
+                _storefront = value;
+        }
     }
 
     private string ReadStorefront()

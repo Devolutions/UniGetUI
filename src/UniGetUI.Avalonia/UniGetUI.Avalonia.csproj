@@ -105,12 +105,38 @@
          without a signature UNUserNotificationCenter has no bundle identity and notifications fail.
          "deep" also signs the dylib; entitlements disable library validation so it can be loaded. -->
     <Target Name="CodesignMacDebugAppBundle"
-            AfterTargets="AssembleMacDebugAppBundle;BuildMacNotificationBridgeForDebug"
+            AfterTargets="Build"
+            DependsOnTargets="AssembleMacDebugAppBundle;BuildMacNotificationBridgeForDebug;BuildMacMasHelperForDebug"
             Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' == 'Debug'">
         <PropertyGroup>
             <_MacScriptsDir>$(MSBuildProjectDirectory)/../../scripts/macos</_MacScriptsDir>
         </PropertyGroup>
         <Exec Command="codesign --force --deep --entitlements '$(_MacScriptsDir)/Entitlements.plist' --sign - '$(MacAppBundleDir)'" />
+        <!-- The privileged helper must not inherit the desktop app's library-validation exceptions. -->
+        <Exec Command="codesign --force --options runtime --entitlements '$(_MacScriptsDir)/MasHelper.entitlements' --sign - '$(TargetDir)UniGetUIMasHelper'" />
+        <Exec Command="codesign --force --entitlements '$(_MacScriptsDir)/Entitlements.plist' --sign - '$(MacAppBundleDir)'" />
+    </Target>
+
+    <Target Name="BuildMacMasHelperForDebug"
+            Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' == 'Debug'">
+        <PropertyGroup>
+            <_MacMasSource>$(MSBuildProjectDirectory)/../../scripts/macos</_MacMasSource>
+        </PropertyGroup>
+        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -mmacosx-version-min=12.0 -framework Foundation -framework LocalAuthentication -framework Security -framework ServiceManagement -framework SystemConfiguration '$(_MacMasSource)/UniGetUIMasHelper.m' -o '$(TargetDir)UniGetUIMasHelper'" />
+        <Copy SourceFiles="$(_MacMasSource)/io.github.marticliment.unigetui.mashelper.plist"
+              DestinationFolder="$(MacAppBundleDir)/Contents/Library/LaunchDaemons" />
+    </Target>
+
+    <Target Name="BuildMacMasHelperForPublish" AfterTargets="Publish"
+            Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' != 'Debug'">
+        <PropertyGroup>
+            <_MacMasSource>$(MSBuildProjectDirectory)/../../scripts/macos</_MacMasSource>
+            <_MacMasArchitecture Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">arm64</_MacMasArchitecture>
+            <_MacMasArchitecture Condition="'$(RuntimeIdentifier)' == 'osx-x64'">x86_64</_MacMasArchitecture>
+        </PropertyGroup>
+        <Error Condition="'$(_MacMasArchitecture)' == ''" Text="A macOS RuntimeIdentifier is required to build the Mac App Store helper." />
+        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -arch $(_MacMasArchitecture) -mmacosx-version-min=12.0 -framework Foundation -framework LocalAuthentication -framework Security -framework ServiceManagement -framework SystemConfiguration '$(_MacMasSource)/UniGetUIMasHelper.m' -o '$(PublishDir)UniGetUIMasHelper'" />
+        <Copy SourceFiles="$(_MacMasSource)/io.github.marticliment.unigetui.mashelper.plist" DestinationFolder="$(PublishDir)" />
     </Target>
 
     <Target Name="BuildMacNotificationBridgeForPublish" AfterTargets="Publish"

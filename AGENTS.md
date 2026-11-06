@@ -194,21 +194,41 @@ Its format-agnostic parts live in the shared feed project described in the next 
 - A free app is installed with `get`, which acquires it for the account; one with a price must
   already be owned and is downloaded with `install`.
 - mas 4 and later need root to install and update, and every release to uninstall. The operation
-  helper is an `IManagedPackageOperationHelper` using `ElevatedMas`: when Apple's `pam_tid.so` is
+  helper is an `IManagedPackageOperationHelper` using `ElevatedMas`. On macOS 13+, `NativeMas`
+  first tries the opt-in `UniGetUIMasHelper` (`scripts/macos/UniGetUIMasHelper.m`), registered through
+  `SMAppService` by the Mac App Store settings page and approved by an administrator in System
+  Settings. No automatic registration, sudo edits, or client-supplied biometric success flags.
+  The native helper is separately hardened with empty entitlements. Both XPC ends validate the
+  message audit identity with `SecCodeCreateWithXPCMessage` against their own designated requirement.
+  Only the active console administrator may request one of six verbs and a numeric app ID.
+  The root server snapshots both its worker (same signing requirement) and mas (signature integrity,
+  bounded Mach-O with absolute system-library imports) in a private root directory. The worker enters
+  the user's bootstrap session, temporarily changes effective identity for public `LAContext`
+  authentication, restores root only inside that worker, and runs the protected mas copy with
+  `SUDO_UID/GID`. It never accepts a shell command or custom switches. Native cancellation stays
+  canceled; transport/command failures never retry. Exit 77 (unavailable) or 78 (Apple signing required)
+  exclusively means mas did not start and password fallback is safe; raw mas failures are normalized
+  so they cannot impersonate those results.
+  Without the native helper, when Apple's `pam_tid.so` is
   configured for sudo, use `sudo -S` with closed stdin, never `-A` (Apple suppresses Touch ID in
   askpass mode). Otherwise, or if sudo cannot authenticate, use `osascript`'s native password dialog;
   AppleScript alone does not reliably offer Touch ID. Never change system PAM configuration.
   A per-operation marker emitted by the root shell before exec distinguishes an authentication
   failure from a command failure: once it appears, never retry the command through the other path.
-  Both paths explicitly pass the requesting
+  The native helper requires an Apple-issued signing certificate. Ad-hoc Debug builds reject setup
+  and use the existing sudo/password path; never weaken macOS launch constraints to test it.
+  All paths explicitly pass the requesting
   user's uid/gid as `SUDO_UID`/`SUDO_GID`, which mas needs to use that user's App Store session.
   The password path also wraps mas in `launchctl asuser <uid>`: Authorization Services runs it from
   the system-wide `authtrampoline`, outside the login session, where mas hangs waiting for the store.
-  Native authorization buffers output; after submission, wait for its privileged child rather than
+  AppleScript buffers output; after submission, wait for its privileged child rather than
   killing osascript and orphaning the installer. Cancellation in the dialog returns error -128.
   The helper returns null (the ordinary process path) when no root is needed or UniGetUI already runs
-  as root. Tests swap `ElevatedMas.RunProcess`, `ElevatedMas.UserIds`, `ElevatedMas.TouchIdSudoEnabled`,
+  as root. Tests swap `NativeMas.HelperPath`, `ElevatedMas.RunProcess`, `ElevatedMas.UserIds`, `ElevatedMas.TouchIdSudoEnabled`,
   `MacAppStorePkgOperationHelper.IsRoot` and `AppStoreCatalog.Download`.
+  macOS engine tests also build/run `scripts/macos/MasHelperTests.m` for native boundary and staging
+  checks; these never register a daemon or request authentication. Biometric approval and service
+  registration require separate interactive verification, not mocked unit-test claims.
 
 ## Installer feeds shared by macOS and Windows
 

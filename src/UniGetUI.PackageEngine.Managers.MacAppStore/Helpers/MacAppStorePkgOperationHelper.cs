@@ -107,7 +107,8 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
             return OperationVeredict.Success;
         }
 
-        if (output.Any(line => line.TrimEnd().EndsWith("(-128)", StringComparison.Ordinal)))
+        if (exitCode == NativeMas.CancellationResult
+            || output.Any(line => line.TrimEnd().EndsWith("(-128)", StringComparison.Ordinal)))
             return OperationVeredict.Canceled;
 
         if (output.Any(line => line.Contains("No downloads initiated", StringComparison.OrdinalIgnoreCase)))

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.marticliment.unigetui.mashelper</string>
+    <key>BundleProgram</key>
+    <string>Contents/MacOS/UniGetUIMasHelper</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>UniGetUIMasHelper</string>
+        <string>serve</string>
+    </array>
+    <key>MachServices</key>
+    <dict>
+        <key>io.github.marticliment.unigetui.mashelper</key>
+        <true/>
+    </dict>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>

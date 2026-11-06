@@ -2293,5 +2293,6 @@
   "In use": "در حال استفاده",
   "Manage the Python environment at {0}": "مدیریت محیط Python در {0}",
   "Unrecognized Python": "Python ناشناخته",
-  "The environment variable {0} was updated": "متغیر محیطی {0} به‌روزرسانی شد"
+  "The environment variable {0} was updated": "متغیر محیطی {0} به‌روزرسانی شد",
+  "Keep update notifications on screen until they are dismissed": "اعلان‌های به‌روزرسانی تا زمان بستن آن‌ها روی صفحه باقی بمانند"
 }

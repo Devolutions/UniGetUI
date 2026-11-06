@@ -2293,5 +2293,6 @@
   "In use": "Используется",
   "Manage the Python environment at {0}": "Управлять средой Python по пути {0}",
   "Unrecognized Python": "Неизвестный интерпретатор Python",
-  "The environment variable {0} was updated": "Переменная среды {0} обновлена"
+  "The environment variable {0} was updated": "Переменная среды {0} обновлена",
+  "Keep update notifications on screen until they are dismissed": "Оставлять уведомления об обновлениях на экране, пока они не будут закрыты"
 }

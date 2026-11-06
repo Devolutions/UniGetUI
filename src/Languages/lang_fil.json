@@ -2293,5 +2293,6 @@
   "In use": "Ginagamit",
   "Manage the Python environment at {0}": "Pamahalaan ang Python environment sa {0}",
   "Unrecognized Python": "Hindi kinilalang Python",
-  "The environment variable {0} was updated": "Na-update ang environment variable na {0}"
+  "The environment variable {0} was updated": "Na-update ang environment variable na {0}",
+  "Keep update notifications on screen until they are dismissed": "Panatilihing nasa screen ang mga notification ng update hanggang sa isara ang mga ito"
 }

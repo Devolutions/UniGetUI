@@ -2293,5 +2293,6 @@
   "In use": "У употреби",
   "Manage the Python environment at {0}": "Управљај Python окружењем на локацији {0}",
   "Unrecognized Python": "Непрепознати Python",
-  "The environment variable {0} was updated": "Промењена је променљива окружења {0}"
+  "The environment variable {0} was updated": "Промењена је променљива окружења {0}",
+  "Keep update notifications on screen until they are dismissed": "Остави обавештења о ажурирањима на екрану док их не затвориш"
 }

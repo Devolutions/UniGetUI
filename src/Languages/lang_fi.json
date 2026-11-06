@@ -2293,5 +2293,6 @@
   "In use": "Käytössä",
   "Manage the Python environment at {0}": "Hallitse Python-ympäristöä sijainnissa {0}",
   "Unrecognized Python": "Tunnistamaton Python",
-  "The environment variable {0} was updated": "Ympäristömuuttuja {0} päivitettiin"
+  "The environment variable {0} was updated": "Ympäristömuuttuja {0} päivitettiin",
+  "Keep update notifications on screen until they are dismissed": "Pidä päivitysilmoitukset näytöllä, kunnes ne suljetaan"
 }

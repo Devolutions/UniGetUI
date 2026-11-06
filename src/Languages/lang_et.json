@@ -2293,5 +2293,6 @@
   "In use": "Kasutusel",
   "Manage the Python environment at {0}": "Halda Pythoni keskkonda asukohas {0}",
   "Unrecognized Python": "Tundmatu Python",
-  "The environment variable {0} was updated": "Keskkonnamuutujat {0} uuendati"
+  "The environment variable {0} was updated": "Keskkonnamuutujat {0} uuendati",
+  "Keep update notifications on screen until they are dismissed": "Hoia uuendusteavitused ekraanil kuni nende sulgemiseni"
 }

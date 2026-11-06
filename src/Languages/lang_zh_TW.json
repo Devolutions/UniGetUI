@@ -2294,5 +2294,6 @@
   "In use": "使用中",
   "Manage the Python environment at {0}": "管理位於 {0} 的 Python 環境",
   "Unrecognized Python": "無法辨識的 Python",
-  "The environment variable {0} was updated": "環境變數 {0} 已更新"
+  "The environment variable {0} was updated": "環境變數 {0} 已更新",
+  "Keep update notifications on screen until they are dismissed": "在關閉前，讓更新通知持續顯示在畫面上"
 }

@@ -2293,5 +2293,6 @@
   "In use": "لە بەکارهێناندا",
   "Manage the Python environment at {0}": "ژینگەی Python لە {0} بەڕێوە ببە",
   "Unrecognized Python": "Pythonی نەناسراو",
-  "The environment variable {0} was updated": "گۆڕاوی ژینگەی {0} نوێکرایەوە"
+  "The environment variable {0} was updated": "گۆڕاوی ژینگەی {0} نوێکرایەوە",
+  "Keep update notifications on screen until they are dismissed": "ئاگادارکردنەوەکانی نوێکردنەوە لەسەر شاشە بهێڵەوە تا لایان دەبەیت"
 }

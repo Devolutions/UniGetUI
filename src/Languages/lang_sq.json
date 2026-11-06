@@ -2293,5 +2293,6 @@
   "In use": "Në përdorim",
   "Manage the Python environment at {0}": "Menaxho mjedisin Python te {0}",
   "Unrecognized Python": "Python i panjohur",
-  "The environment variable {0} was updated": "Ndryshorja e mjedisit {0} u përditësua"
+  "The environment variable {0} was updated": "Ndryshorja e mjedisit {0} u përditësua",
+  "Keep update notifications on screen until they are dismissed": "Mbaji njoftimet e përditësimit në ekran derisa të mbyllen."
 }

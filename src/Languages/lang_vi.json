@@ -2293,5 +2293,6 @@
   "In use": "Đang sử dụng",
   "Manage the Python environment at {0}": "Quản lý môi trường Python tại {0}",
   "Unrecognized Python": "Python không được nhận dạng",
-  "The environment variable {0} was updated": "Biến môi trường {0} đã được cập nhật"
+  "The environment variable {0} was updated": "Biến môi trường {0} đã được cập nhật",
+  "Keep update notifications on screen until they are dismissed": "Giữ thông báo cập nhật trên màn hình cho đến khi chúng được đóng."
 }

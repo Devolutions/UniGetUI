@@ -2293,5 +2293,6 @@
   "In use": "Uzata",
   "Manage the Python environment at {0}": "Administri la Python-medion ĉe {0}",
   "Unrecognized Python": "Nerekonita Python",
-  "The environment variable {0} was updated": "La mediovariablo {0} estis ĝisdatigita"
+  "The environment variable {0} was updated": "La mediovariablo {0} estis ĝisdatigita",
+  "Keep update notifications on screen until they are dismissed": "Konservi ĝisdatigajn sciigojn sur la ekrano ĝis ili estas fermitaj"
 }

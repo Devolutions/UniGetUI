@@ -2293,5 +2293,6 @@
   "In use": "ব্যবহৃত হচ্ছে",
   "Manage the Python environment at {0}": "{0}-এ থাকা Python এনভায়রনমেন্ট পরিচালনা করুন",
   "Unrecognized Python": "অপরিচিত Python",
-  "The environment variable {0} was updated": "এনভায়রনমেন্ট ভেরিয়েবল {0} আপডেট করা হয়েছে"
+  "The environment variable {0} was updated": "এনভায়রনমেন্ট ভেরিয়েবল {0} আপডেট করা হয়েছে",
+  "Keep update notifications on screen until they are dismissed": "আপডেটের বিজ্ঞপ্তিগুলি বন্ধ না করা পর্যন্ত স্ক্রিনে রাখুন"
 }

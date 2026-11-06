@@ -2289,5 +2289,6 @@
   "In use": "사용 중",
   "Manage the Python environment at {0}": "{0}의 Python 환경 관리",
   "Unrecognized Python": "인식할 수 없는 Python",
-  "The environment variable {0} was updated": "환경 변수 {0}이(가) 업데이트되었습니다"
+  "The environment variable {0} was updated": "환경 변수 {0}이(가) 업데이트되었습니다",
+  "Keep update notifications on screen until they are dismissed": "업데이트 알림을 닫을 때까지 화면에 표시"
 }

@@ -2293,5 +2293,6 @@
   "In use": "Používá se",
   "Manage the Python environment at {0}": "Spravovat prostředí Pythonu v umístění {0}",
   "Unrecognized Python": "Nerozpoznaný Python",
-  "The environment variable {0} was updated": "Proměnná prostředí {0} byla aktualizována"
+  "The environment variable {0} was updated": "Proměnná prostředí {0} byla aktualizována",
+  "Keep update notifications on screen until they are dismissed": "Ponechat oznámení o aktualizacích na obrazovce, dokud je nezavřete"
 }

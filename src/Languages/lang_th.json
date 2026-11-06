@@ -2293,5 +2293,6 @@
   "In use": "กำลังใช้งาน",
   "Manage the Python environment at {0}": "จัดการสภาพแวดล้อม Python ที่ {0}",
   "Unrecognized Python": "ไม่รู้จัก Python",
-  "The environment variable {0} was updated": "อัปเดตตัวแปรสภาพแวดล้อม {0} แล้ว"
+  "The environment variable {0} was updated": "อัปเดตตัวแปรสภาพแวดล้อม {0} แล้ว",
+  "Keep update notifications on screen until they are dismissed": "ให้การแจ้งเตือนการอัปเดตแสดงบนหน้าจอจนกว่าจะปิด"
 }

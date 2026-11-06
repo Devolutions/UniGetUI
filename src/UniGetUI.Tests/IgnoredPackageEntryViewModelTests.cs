@@ -1,3 +1,4 @@
+using Avalonia.Headless;
 using Avalonia.Platform;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
@@ -15,11 +16,15 @@ public class IgnoredPackageEntryViewModelTests
     [Theory]
     [InlineData("mas")]
     [InlineData("macappstore")]
-    public void MacAppStoreUsesItsOwnBundledIcon(string managerKey)
+    public Task MacAppStoreUsesItsOwnBundledIcon(string managerKey)
     {
-        string path = ManagerIconResolver.Resolve(managerKey);
-        Assert.Equal("avares://UniGetUI/Assets/Symbols/macappstore.svg", path);
-        Assert.True(AssetLoader.Exists(new Uri(path)));
+        var session = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(IgnoredPackageEntryViewModelTests).Assembly);
+        return session.Dispatch(() =>
+        {
+            string path = ManagerIconResolver.Resolve(managerKey);
+            Assert.Equal("avares://UniGetUI/Assets/Symbols/macappstore.svg", path);
+            Assert.True(AssetLoader.Exists(new Uri(path)));
+        }, CancellationToken.None);
     }
 
     private static IgnoredPackageEntryViewModel Entry(Package? update) =>

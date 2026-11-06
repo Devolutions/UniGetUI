@@ -390,6 +390,7 @@ These parameters are accepted by the app executables in addition to the automati
 | `--uninstall-unigetui` | Unregisters UniGetUI from the notification panel and quits. | Historical; only valid for specific old versions. |
 | `--uninstall-wingetui` | Unregisters the legacy WingetUI install from the notification panel and quits. | Historical; used by the WingetUI uninstaller. |
 | `--migrate-wingetui-to-unigetui` | Migrates legacy WingetUI data and shortcuts, then quits. | Migration helper. |
+| `--register-autostart` | Registers UniGetUI to start minimized at login for the current user, then quits. | Windows. Run once per user at logon by per-machine installs; the on/off toggle in Startup Apps is kept. |
 | `--help` / `-h` | Prints CLI help. | For the direct verb-based CLI. |
 | `--import-settings <file>` | Imports settings from a JSON file. | Existing settings are replaced. |
 | `--export-settings <file>` | Exports settings to a JSON file. | Creates or overwrites the file. |
@@ -464,7 +465,7 @@ The installer is Inno Setup based. It supports the standard [Inno Setup command-
 | Parameter | Meaning |
 | --- | --- |
 | `/NoAutoStart` | Do not launch UniGetUI after installation. |
-| `/NoRunOnStartup` | Do not register UniGetUI to start minimized at login. |
+| `/NoRunOnStartup` | Do not register UniGetUI to start minimized at login. On a per-machine install this applies to every user: an earlier all-users registration is removed, and each user's entry from it is deleted at their next logon. |
 | `/NoVCRedist` | Skip installation of the MSVC x64 runtime. |
 | `/NoEdgeWebView` | Skip installation of the Microsoft Edge WebView runtime. |
 | `/NoChocolatey` | Deprecated no-op kept for compatibility. |

@@ -8,6 +8,9 @@
 #define MyAppExeName "UniGetUI.exe"
 #define MyAppPublisherURL "https://devolutions.net/unigetui/"
 #define MyAppCopyright "Copyright 2021-2026 " + MyAppPublisher
+#define AutostartComponentKey "Software\Microsoft\Active Setup\Installed Components\Devolutions.UniGetUI.Autostart"
+#define AutostartRemovalKey "Software\Microsoft\Active Setup\Installed Components\Devolutions.UniGetUI.Autostart.Removal"
+#define UserRunKey "Software\Microsoft\Windows\CurrentVersion\Run"
 #ifndef InstallerCompression
 #define InstallerCompression "lzma"
 #endif
@@ -86,6 +89,8 @@ AppModifyPath="{app}\UniGetUI.Installer.exe" /silent /NoDeployInstaller
 
 var
   PreserveAutostartDisabled: Boolean;
+  AutostartComponentVersionValue: String;
+  AutostartRegisteredExecutable: String;
   // Set once the marker is written (which happens only after {app} is initialized).
   MarkerWritten: Boolean;
 
@@ -99,6 +104,81 @@ begin
        'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run',
        'WingetUI', Data) then
     Result := (Length(Data) >= 1) and ((Ord(Data[1]) and 1) = 1);
+end;
+
+function NewActiveSetupVersion: String;
+begin
+  Result := GetDateTimeString('yyyy,mmdd,hhnn,ss', #0, #0);
+end;
+
+function AutostartStubPath: String;
+begin
+  Result := '"' + ExpandConstant('{app}\{#MyAppExeName}') + '" --register-autostart';
+end;
+
+function ResolveAutostartComponentVersion: String;
+var
+  ExistingVersion, ExistingStubPath: String;
+begin
+  if RegQueryStringValue(HKLM64, '{#AutostartComponentKey}', 'Version', ExistingVersion)
+    and RegQueryStringValue(HKLM64, '{#AutostartComponentKey}', 'StubPath', ExistingStubPath)
+    and (ExistingVersion <> '')
+    and (CompareText(ExistingStubPath, AutostartStubPath) = 0) then
+    Result := ExistingVersion
+  else
+    Result := NewActiveSetupVersion;
+end;
+
+function AutostartComponentVersion(Param: String): String;
+begin
+  if AutostartComponentVersionValue = '' then
+    AutostartComponentVersionValue := ResolveAutostartComponentVersion;
+  Result := AutostartComponentVersionValue;
+end;
+
+function AutostartStubPathValue(Param: String): String;
+begin
+  Result := AutostartStubPath;
+end;
+
+function RegisteredAutostartExecutable: String;
+var
+  StubPath, Rest: String;
+  ClosingQuote: Integer;
+begin
+  Result := '';
+  if not RegQueryStringValue(HKLM64, '{#AutostartComponentKey}', 'StubPath', StubPath) then
+    Exit;
+  if (Length(StubPath) < 2) or (StubPath[1] <> '"') then
+    Exit;
+  Rest := Copy(StubPath, 2, Length(StubPath) - 1);
+  ClosingQuote := Pos('"', Rest);
+  if ClosingQuote > 1 then
+    Result := Copy(Rest, 1, ClosingQuote - 1);
+end;
+
+procedure RegisterAutostartRemovalForAllUsers(const ExecutablePath: String);
+var
+  Reg, Find, Cmd, Command: String;
+begin
+  Reg := '"' + ExpandConstant('{win}\System32\reg.exe') + '"';
+  Find := '"' + ExpandConstant('{win}\System32\find.exe') + '"';
+  Cmd := '"' + ExpandConstant('{win}\System32\cmd.exe') + '"';
+  Command := Cmd + ' /d /c "' + Reg + ' query "HKCU\{#UserRunKey}" /v WingetUI | ' + Find + ' /i "'
+    + ExecutablePath + '" >nul && ' + Reg + ' delete "HKCU\{#UserRunKey}" /v WingetUI /f"';
+  RegWriteStringValue(HKLM64, '{#AutostartRemovalKey}', '', '{#MyAppName}');
+  RegWriteStringValue(HKLM64, '{#AutostartRemovalKey}', 'Version', NewActiveSetupVersion);
+  RegWriteStringValue(HKLM64, '{#AutostartRemovalKey}', 'StubPath', Command);
+  RegWriteDWordValue(HKLM64, '{#AutostartRemovalKey}', 'IsInstalled', 1);
+end;
+
+procedure UnregisterAutostartForAllUsers;
+var
+  ExecutablePath: String;
+begin
+  ExecutablePath := RegisteredAutostartExecutable;
+  if ExecutablePath <> '' then
+    RegisterAutostartRemovalForAllUsers(ExecutablePath);
 end;
 
 procedure InitializeWizard;
@@ -182,6 +262,7 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
     // Capture before [Registry] rewrites the Run key, so updates keep the user's choice.
     PreserveAutostartDisabled := IsAutostartDisabledByUser;
+    AutostartComponentVersionValue := ResolveAutostartComponentVersion;
     KillRunningApps;
     WriteUpdateMarker;
     Result := '';
@@ -203,7 +284,13 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
     if CurUninstallStep = usUninstall then
+    begin
+        if IsAdminInstallMode then
+            AutostartRegisteredExecutable := RegisteredAutostartExecutable;
         UpdateUnigetPath(False);
+    end;
+    if (CurUninstallStep = usPostUninstall) and (AutostartRegisteredExecutable <> '') then
+        RegisterAutostartRemovalForAllUsers(AutostartRegisteredExecutable);
 end;
 
 function GetCustomSetupExitCode: Integer;
@@ -259,6 +346,16 @@ end;
 function ShouldSuppressRunOnStartup: Boolean;
 begin
   Result := CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall or PreserveAutostartDisabled;
+end;
+
+function ShouldRegisterAutostartForAllUsers: Boolean;
+begin
+  Result := IsAdminInstallMode and not (CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall);
+end;
+
+function ShouldUnregisterAutostartForAllUsers: Boolean;
+begin
+  Result := IsAdminInstallMode and (CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall);
 end;
 
 var CustomExitCode: integer;
@@ -336,6 +433,12 @@ Name: "regularinstall\addtopath"; Description: "{cm:RegAddToPath}";
 [Registry]
 Root: HKCU; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "WingetUI"; ValueData: """{app}\UniGetUI.exe"" --daemon"; Flags: uninsdeletevalue noerror; Tasks: regularinstall;
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: binary; ValueName: "WingetUI"; ValueData: "03"; Flags: uninsdeletevalue; Tasks: regularinstall; Check: ShouldSuppressRunOnStartup;
+Root: HKLM64; Subkey: "{#AutostartComponentKey}"; ValueType: none; Flags: deletekey; Tasks: regularinstall; Check: ShouldUnregisterAutostartForAllUsers; BeforeInstall: UnregisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "{#AutostartRemovalKey}"; ValueType: none; Flags: deletekey; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "{#AutostartComponentKey}"; ValueType: string; ValueData: "{#MyAppName}"; Flags: uninsdeletekey; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "{#AutostartComponentKey}"; ValueType: string; ValueName: "Version"; ValueData: "{code:AutostartComponentVersion}"; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "{#AutostartComponentKey}"; ValueType: dword; ValueName: "IsInstalled"; ValueData: 1; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
+Root: HKLM64; Subkey: "{#AutostartComponentKey}"; ValueType: string; ValueName: "StubPath"; ValueData: "{code:AutostartStubPathValue}"; Tasks: regularinstall; Check: ShouldRegisterAutostartForAllUsers;
 
 // Register the unigetui:// deep link
 Root: HKA; Subkey: "Software\Classes\unigetui"; ValueType: "string"; ValueData: "URL:UniGetUI Protocol"; Flags: uninsdeletekey; Tasks: regularinstall;

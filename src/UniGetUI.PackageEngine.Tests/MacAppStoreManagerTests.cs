@@ -480,7 +480,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Assert.False(started.UseShellExecute);
         Assert.Equal(
             ["-e", ElevatedMas.AuthorizationScript, "--",
-                $"'/usr/bin/env' 'SUDO_UID=501' 'SUDO_GID=20' '{MasPath}' 'get' '{Amphetamine}' 2>&1",
+                $"'/bin/launchctl' 'asuser' '501' '/usr/bin/env' 'SUDO_UID=501' 'SUDO_GID=20' '{MasPath}' 'get' '{Amphetamine}' 2>&1",
                 "UniGetUI wants to install Amphetamine from the Mac App Store."],
             started.ArgumentList);
         Assert.Contains("Command output will appear", log[0]);
@@ -723,7 +723,7 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Assert.Equal(ElevatedMas.AuthorizationScript, started.ArgumentList[1]);
         Assert.Equal("--", started.ArgumentList[2]);
         Assert.Equal(
-            "'/usr/bin/env' 'SUDO_UID=501' 'SUDO_GID=20' '/Applications/John'\\''s Apps/mas' '$(exit 99); \"quoted\" & '\\''single'\\''' 2>&1",
+            "'/bin/launchctl' 'asuser' '501' '/usr/bin/env' 'SUDO_UID=501' 'SUDO_GID=20' '/Applications/John'\\''s Apps/mas' '$(exit 99); \"quoted\" & '\\''single'\\''' 2>&1",
             started.ArgumentList[3]);
         Assert.Equal(prompt, started.ArgumentList[4]);
     }
@@ -737,6 +737,10 @@ public sealed class MacAppStoreManagerTests : IDisposable
         ElevatedMas.RunProcess = (info, onLine, token) =>
         {
             info.ArgumentList[1] = info.ArgumentList[1].Replace(" with administrator privileges", "");
+            // launchctl asuser needs root; the rest of the command is run exactly as built.
+            const string asUser = "'/bin/launchctl' 'asuser' '501' ";
+            Assert.StartsWith(asUser, info.ArgumentList[3]);
+            info.ArgumentList[3] = info.ArgumentList[3][asUser.Length..];
             return _runProcess(info, onLine, token);
         };
         string[] messages = ["one", "$(exit 99); \"quoted\" & 'single'", "three"];

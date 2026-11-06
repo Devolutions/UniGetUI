@@ -202,6 +202,8 @@ Its format-agnostic parts live in the shared feed project described in the next 
   failure from a command failure: once it appears, never retry the command through the other path.
   Both paths explicitly pass the requesting
   user's uid/gid as `SUDO_UID`/`SUDO_GID`, which mas needs to use that user's App Store session.
+  The password path also wraps mas in `launchctl asuser <uid>`: Authorization Services runs it from
+  the system-wide `authtrampoline`, outside the login session, where mas hangs waiting for the store.
   Native authorization buffers output; after submission, wait for its privileged child rather than
   killing osascript and orphaning the installer. Cancellation in the dialog returns error -128.
   The helper returns null (the ordinary process path) when no root is needed or UniGetUI already runs

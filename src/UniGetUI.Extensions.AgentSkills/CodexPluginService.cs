@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Extensions.AgentSkills;
@@ -52,7 +53,7 @@ public sealed class CodexPluginService : IAgentPluginService
     {
         string name = AgentPluginInput.Segment(marketplace);
         string output = await _runner.RunAsync(["plugin", "list", "--json", "--available", "--marketplace", name], token);
-        var catalog = JsonSerializer.Deserialize(output, CodexPluginJsonContext.Default.CodexPluginList)
+        var catalog = Deserialize(output, CodexPluginJsonContext.Default.CodexPluginList)
             ?? throw new JsonException(CoreTools.Translate("Codex returned an empty plugin inventory."));
         if (catalog.Available is null)
             throw new JsonException(CoreTools.Translate("Unsupported Codex plugin inventory. Update the Codex CLI and try again."));
@@ -72,7 +73,7 @@ public sealed class CodexPluginService : IAgentPluginService
 
     private static AgentPluginCatalog ParseInstalledCatalog(string plugins, string marketplaces)
     {
-        var catalog = JsonSerializer.Deserialize(plugins, CodexPluginJsonContext.Default.CodexPluginList)
+        var catalog = Deserialize(plugins, CodexPluginJsonContext.Default.CodexPluginList)
             ?? throw new JsonException(CoreTools.Translate("Codex returned an empty plugin inventory."));
         if (catalog.Installed is null)
             throw new JsonException(CoreTools.Translate("Unsupported Codex plugin inventory. Update the Codex CLI and try again."));
@@ -95,9 +96,9 @@ public sealed class CodexPluginService : IAgentPluginService
 
     internal static AgentPluginCatalog ParseCatalog(string plugins, string marketplaces)
     {
-        var catalog = JsonSerializer.Deserialize(plugins, CodexPluginJsonContext.Default.CodexPluginList)
+        var catalog = Deserialize(plugins, CodexPluginJsonContext.Default.CodexPluginList)
             ?? throw new JsonException(CoreTools.Translate("Codex returned an empty plugin inventory."));
-        var markets = JsonSerializer.Deserialize(marketplaces, CodexPluginJsonContext.Default.CodexMarketplaceList)
+        var markets = Deserialize(marketplaces, CodexPluginJsonContext.Default.CodexMarketplaceList)
             ?? throw new JsonException(CoreTools.Translate("Codex returned an empty marketplace inventory."));
         if (catalog.Installed is null || catalog.Available is null || markets.Marketplaces is null)
             throw new JsonException(CoreTools.Translate("Unsupported Codex plugin inventory. Update the Codex CLI and try again."));
@@ -117,7 +118,7 @@ public sealed class CodexPluginService : IAgentPluginService
 
     private static AgentPluginMarketplace[] ParseMarketplaces(string marketplaces)
     {
-        var markets = JsonSerializer.Deserialize(marketplaces, CodexPluginJsonContext.Default.CodexMarketplaceList)
+        var markets = Deserialize(marketplaces, CodexPluginJsonContext.Default.CodexMarketplaceList)
             ?? throw new JsonException(CoreTools.Translate("Codex returned an empty marketplace inventory."));
         if (markets.Marketplaces is null)
             throw new JsonException(CoreTools.Translate("Unsupported Codex marketplace inventory. Update the Codex CLI and try again."));
@@ -133,6 +134,10 @@ public sealed class CodexPluginService : IAgentPluginService
         _runner.RunAsync(["plugin", "marketplace", "upgrade", AgentPluginInput.Segment(name)], token);
     public Task<string> RemoveMarketplaceAsync(string name, CancellationToken token = default) =>
         _runner.RunAsync(["plugin", "marketplace", "remove", AgentPluginInput.Segment(name)], token);
+
+    private static T? Deserialize<T>(string json, JsonTypeInfo<T> typeInfo) =>
+        JsonSerializer.Deserialize(json, typeInfo);
+
     public Task<string> PerformAsync(string input, AgentPluginAction action, CancellationToken token = default)
     {
         string id = AgentPluginInput.PluginId(AgentPluginInput.StripCommand(input,

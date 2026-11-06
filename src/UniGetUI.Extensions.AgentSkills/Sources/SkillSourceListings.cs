@@ -40,12 +40,13 @@ internal sealed class SkillSourceListings(ISkillsBackend backend, string? cacheD
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
+            var typeInfo = SkillListingJsonContext.Default.SkillListingSnapshot;
             var data = JsonSerializer.SerializeToUtf8Bytes(new SkillListingSnapshot
             {
                 Version = 1,
                 Source = source.InstallSource,
                 Skills = skills.ToArray(),
-            }, SkillListingJsonContext.Default.SkillListingSnapshot);
+            }, typeInfo);
             if (data.Length > MaxCacheBytes)
             {
                 Logger.Warn($"Skill listing is too large to cache: {source.Name}");
@@ -85,7 +86,8 @@ internal sealed class SkillSourceListings(ISkillsBackend backend, string? cacheD
         {
             using var stream = File.OpenRead(path);
             if (stream.Length > MaxCacheBytes) throw new InvalidDataException("Skill listing cache exceeds the size limit.");
-            var snapshot = JsonSerializer.Deserialize(stream, SkillListingJsonContext.Default.SkillListingSnapshot);
+            var typeInfo = SkillListingJsonContext.Default.SkillListingSnapshot;
+            var snapshot = JsonSerializer.Deserialize(stream, typeInfo);
             if (snapshot is not { Version: 1, Skills: not null } || snapshot.Source != source.InstallSource
                 || snapshot.Skills.Any(skill => skill is null || string.IsNullOrWhiteSpace(skill.Name) || skill.Description is null))
                 throw new InvalidDataException("Unsupported skill listing cache.");

@@ -26,7 +26,8 @@ public sealed class AgentPluginCatalogCache(string? cacheDirectory, TimeProvider
             await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
                 16 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
             if (stream.Length > MaxCacheBytes) throw new InvalidDataException("Plugin catalog cache exceeds the size limit.");
-            var snapshot = await JsonSerializer.DeserializeAsync(stream, AgentPluginCatalogCacheJsonContext.Default.AgentPluginCatalogCacheEntry, token);
+            var typeInfo = AgentPluginCatalogCacheJsonContext.Default.AgentPluginCatalogCacheEntry;
+            var snapshot = await JsonSerializer.DeserializeAsync(stream, typeInfo, token);
             DateTimeOffset now = _timeProvider.GetUtcNow();
             if (snapshot is not { Version: Version, Plugins: not null }
                 || snapshot.Provider != provider || snapshot.Marketplace != marketplace.Name
@@ -74,6 +75,7 @@ public sealed class AgentPluginCatalogCache(string? cacheDirectory, TimeProvider
                 return new AgentPluginCatalogCacheItem(item.Id, item.Description, item.Version,
                     item.CanInstall, item.CanManage, item.Notice);
             }).ToArray();
+            var typeInfo = AgentPluginCatalogCacheJsonContext.Default.AgentPluginCatalogCacheEntry;
             byte[] data = JsonSerializer.SerializeToUtf8Bytes(new AgentPluginCatalogCacheEntry
             {
                 Version = Version,
@@ -82,7 +84,7 @@ public sealed class AgentPluginCatalogCache(string? cacheDirectory, TimeProvider
                 SourceHash = GetSourceHash(marketplace.Source),
                 CachedAt = _timeProvider.GetUtcNow(),
                 Plugins = entries,
-            }, AgentPluginCatalogCacheJsonContext.Default.AgentPluginCatalogCacheEntry);
+            }, typeInfo);
             if (data.Length > MaxCacheBytes)
             {
                 Logger.Warn($"Plugin marketplace catalog is too large to cache: {marketplace.Name}");

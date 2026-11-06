@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Extensions.AgentSkills;
@@ -42,10 +43,10 @@ public sealed class CopilotPluginService : IAgentPluginService
 
     public async Task<AgentPluginCatalog> GetInstalledCatalogAsync(CancellationToken token = default)
     {
-        var installed = JsonSerializer.Deserialize(
+        var installed = Deserialize(
             await _runner.RunAsync(["plugin", "list", "--json"], token), CopilotPluginJsonContext.Default.CopilotPluginEntryArray)
             ?? throw InvalidInventory();
-        var markets = JsonSerializer.Deserialize(
+        var markets = Deserialize(
             await _runner.RunAsync(["plugin", "marketplace", "list", "--json"], token),
             CopilotPluginJsonContext.Default.CopilotMarketplaceEntryArray) ?? throw InvalidInventory();
         var marketplaceItems = ParseMarketplaces(markets);
@@ -56,7 +57,7 @@ public sealed class CopilotPluginService : IAgentPluginService
     public async Task<AgentPluginCatalog> GetMarketplaceCatalogAsync(string marketplace, CancellationToken token = default)
     {
         string name = AgentPluginInput.Segment(marketplace);
-        var available = JsonSerializer.Deserialize(
+        var available = Deserialize(
             await _runner.RunAsync(["plugin", "marketplace", "browse", name, "--json"], token),
             CopilotPluginJsonContext.Default.CopilotPluginEntryArray) ?? throw InvalidInventory();
         HashSet<string> ids = new(StringComparer.Ordinal);
@@ -133,6 +134,9 @@ public sealed class CopilotPluginService : IAgentPluginService
     internal static string InstallSource(string input) => AgentPluginInput.Value(AgentPluginInput.StripCommand(input,
         "copilot plugin install ", "copilot plugins install ", "copilot plugin add ", "/plugin install "));
     private static JsonException InvalidInventory() => new(CoreTools.Translate("Unsupported Copilot plugin inventory. Update Copilot CLI and reload the list."));
+
+    private static T? Deserialize<T>(string json, JsonTypeInfo<T> typeInfo) =>
+        JsonSerializer.Deserialize(json, typeInfo);
 }
 
 internal sealed class CopilotPluginEntry

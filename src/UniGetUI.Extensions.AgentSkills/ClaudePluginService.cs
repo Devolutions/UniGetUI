@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Extensions.AgentSkills;
@@ -42,9 +43,9 @@ public sealed class ClaudePluginService : IAgentPluginService
     {
         // Without --available, Claude prints a bare array of installed plugins rather than { installed, available }.
         var installedPlugins = plugins.TrimStart().StartsWith('[')
-            ? JsonSerializer.Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudeInstalledPluginArray)
-            : JsonSerializer.Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudePluginList)?.Installed;
-        var markets = JsonSerializer.Deserialize(marketplaces, ClaudePluginJsonContext.Default.ClaudeMarketplaceEntryArray)
+            ? Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudeInstalledPluginArray)
+            : Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudePluginList)?.Installed;
+        var markets = Deserialize(marketplaces, ClaudePluginJsonContext.Default.ClaudeMarketplaceEntryArray)
             ?? throw new JsonException(CoreTools.Translate("Claude returned an empty marketplace inventory."));
         if (installedPlugins is null)
             throw new JsonException(CoreTools.Translate("Claude returned an unsupported plugin inventory. Update Claude Code and try again."));
@@ -97,7 +98,7 @@ public sealed class ClaudePluginService : IAgentPluginService
     private async Task<ClaudePluginList> ReadAvailableAsync(CancellationToken token)
     {
         string plugins = await _runner.RunAsync(["plugin", "list", "--json", "--available"], token);
-        var catalog = JsonSerializer.Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudePluginList)
+        var catalog = Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudePluginList)
             ?? throw new JsonException(CoreTools.Translate("Claude returned an empty plugin inventory."));
         if (catalog.Installed is null || catalog.Available is null)
             throw new JsonException(CoreTools.Translate("Claude returned an unsupported plugin inventory. Update Claude Code and try again."));
@@ -115,9 +116,9 @@ public sealed class ClaudePluginService : IAgentPluginService
 
     internal static AgentPluginCatalog ParseCatalog(string plugins, string marketplaces)
     {
-        var catalog = JsonSerializer.Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudePluginList)
+        var catalog = Deserialize(plugins, ClaudePluginJsonContext.Default.ClaudePluginList)
             ?? throw new JsonException(CoreTools.Translate("Claude returned an empty plugin inventory."));
-        var markets = JsonSerializer.Deserialize(marketplaces, ClaudePluginJsonContext.Default.ClaudeMarketplaceEntryArray)
+        var markets = Deserialize(marketplaces, ClaudePluginJsonContext.Default.ClaudeMarketplaceEntryArray)
             ?? throw new JsonException(CoreTools.Translate("Claude returned an empty marketplace inventory."));
         if (catalog.Installed is null || catalog.Available is null)
             throw new JsonException(CoreTools.Translate("Claude returned an unsupported plugin inventory. Update Claude Code and try again."));
@@ -171,6 +172,9 @@ public sealed class ClaudePluginService : IAgentPluginService
     private static string StripCommand(string input, string prefix) =>
         input.Trim().StartsWith(prefix, StringComparison.Ordinal)
             ? input.Trim()[prefix.Length..].Trim() : input.Trim();
+
+    private static T? Deserialize<T>(string json, JsonTypeInfo<T> typeInfo) =>
+        JsonSerializer.Deserialize(json, typeInfo);
 
     private static string RequireValue(string value)
     {

@@ -187,9 +187,23 @@ public partial class SidebarViewModel : ViewModelBase
             NavigationRequested?.Invoke(this, page);
     }
 
+    [ObservableProperty]
+    private bool _selfUpdateBadgeVisible;
+
+    [ObservableProperty]
+    private string _checkForUpdatesLabel = CoreTools.Translate("Check for UniGetUI updates");
+
+    public void SetPendingSelfUpdate(string? versionName)
+    {
+        SelfUpdateBadgeVisible = versionName is not null;
+        CheckForUpdatesLabel = versionName is null
+            ? CoreTools.Translate("Check for UniGetUI updates")
+            : CoreTools.Translate("UniGetUI {0} is available", ReleaseNotesLinks.ShortVersion(versionName));
+    }
+
     [RelayCommand]
-    private static Task CheckForUpdates() =>
-        AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
+    private static void CheckForUpdates() =>
+        _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
 
     public void SelectNavButtonForPage(PageType page) =>
         SelectedPageType = page;

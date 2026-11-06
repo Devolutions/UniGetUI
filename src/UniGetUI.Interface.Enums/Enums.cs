@@ -101,6 +101,7 @@ namespace UniGetUI.Interface.Enums
         public const string ShowOnUpdatesTab = "openUniGetUIOnUpdatesTab";
         public const string UpdateAllPackages = "updateAll";
         public const string ReleaseSelfUpdateLock = "releaseSelfUpdateLock";
+        public const string ShowSelfUpdate = "showSelfUpdate";
     }
 
     public enum BundleReportSeverity

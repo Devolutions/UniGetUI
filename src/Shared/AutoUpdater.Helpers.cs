@@ -236,6 +236,32 @@ internal static class AutoUpdaterHelpers
         return string.Equals(sa, sb, StringComparison.OrdinalIgnoreCase);
     }
 
+    internal enum SelfUpdateConsent
+    {
+        Waiting,
+        Install,
+        Decline,
+        Skip,
+    }
+
+    internal static SelfUpdateConsent ResolveSelfUpdateConsent(
+        bool installRequested,
+        bool installOnQuitRequested,
+        bool appIsQuitting,
+        bool skipRequested)
+    {
+        if (skipRequested)
+            return SelfUpdateConsent.Skip;
+        if (installRequested)
+            return SelfUpdateConsent.Install;
+        if (appIsQuitting)
+            return installOnQuitRequested ? SelfUpdateConsent.Install : SelfUpdateConsent.Decline;
+        return SelfUpdateConsent.Waiting;
+    }
+
+    internal static bool IsSkippedVersion(string? skippedVersion, string candidateVersion) =>
+        !string.IsNullOrWhiteSpace(skippedVersion) && VersionsMatch(skippedVersion, candidateVersion);
+
     internal static bool IsPreReleaseVersion(string? rawVersion) =>
         TryParseUpdaterVersion(rawVersion, out SemanticVersion parsed) && parsed.IsPreRelease;
 

@@ -22,6 +22,8 @@ public class ImmersiveDialog : ContentControl
 
     public Thickness TitleMargin { get; set; } = new(20, 0, 0, 0);
 
+    public Control? HeaderContent { get; set; }
+
     public string? Title
     {
         get => GetValue(TitleProperty);
@@ -67,7 +69,9 @@ public class ImmersiveDialog : ContentControl
 
     internal void NotifyOpened() => OnOpened(EventArgs.Empty);
     internal void NotifyClosed() => OnClosed(EventArgs.Empty);
+    internal void NotifyPresented() => OnPresented(EventArgs.Empty);
 
     protected virtual void OnOpened(EventArgs e) { }
     protected virtual void OnClosed(EventArgs e) { }
+    protected virtual void OnPresented(EventArgs e) { }
 }

@@ -1,0 +1,61 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.SelfUpdateDialog"
+        MaxWidth="920"
+        MaxHeight="760"
+        Background="{DynamicResource AppDialogBackground}">
+
+    <Grid Margin="20,4,20,20"
+          RowDefinitions="*,Auto"
+          RowSpacing="14">
+
+        <Border Grid.Row="0"
+                MinHeight="120"
+                CornerRadius="6"
+                ClipToBounds="True"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                Background="{DynamicResource AppDialogSubtleBackground}">
+            <controls:EmbeddedBrowser x:Name="Browser"/>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <CheckBox x:Name="SkipVersionCheck"
+                      Grid.Column="0"
+                      VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="1">
+                <Button x:Name="UpdateNowButton"
+                        Classes="accent"
+                        MinWidth="140"
+                        CornerRadius="4,0,0,4"/>
+                <Button x:Name="MoreOptionsButton"
+                        Classes="accent"
+                        CornerRadius="0,4,4,0"
+                        Padding="10,0"
+                        VerticalAlignment="Stretch"
+                        automation:AutomationProperties.Name="{t:Translate More update options}">
+                    <PathIcon Data="M 0,1.4 L 1.4,0 L 5,3.6 L 8.6,0 L 10,1.4 L 5,6.4 Z"
+                              Width="10"
+                              Height="7"
+                              VerticalAlignment="Center"
+                              automation:AutomationProperties.AccessibilityView="Raw"/>
+                    <Button.Flyout>
+                        <MenuFlyout Placement="TopEdgeAlignedRight">
+                            <MenuItem x:Name="UpdateNowMenuItem"/>
+                            <MenuItem x:Name="UpdateOnQuitMenuItem"/>
+                            <MenuItem x:Name="DownloadInBrowserMenuItem"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+
+</dialogs:ImmersiveDialog>

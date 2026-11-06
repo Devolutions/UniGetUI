@@ -2047,6 +2047,7 @@ public partial class MainWindow : Window
                 dialog.NotifyOpened();
                 opened = true;
                 await AnimateModalAsync(opening: true);
+                dialog.NotifyPresented();
                 FocusModalIfNeeded(dialog);
             }
             finally
@@ -2104,6 +2105,7 @@ public partial class MainWindow : Window
                     ModalLayer.Opacity = 1;
                     ModalSurface.Opacity = 1;
                     ModalSurface.RenderTransform = null;
+                    _modalStack[^1].NotifyPresented();
                     RestoreModalFocus(_modalStack[^1]);
                 }
                 else
@@ -2113,6 +2115,7 @@ public partial class MainWindow : Window
                     ModalLayer.IsVisible = false;
                     ModalContent.Content = null;
                     ModalTitle.Text = "";
+                    ModalHeaderContent.Content = null;
                     MainContentRoot.IsHitTestVisible = true;
                     TitleBarGrid.IsHitTestVisible = true;
                     RestoreNativeWebViewsAfterModal();
@@ -2141,6 +2144,10 @@ public partial class MainWindow : Window
             ? new Thickness(MAC_SHEET_CLOSE_INSET + MAC_SHEET_CLOSE_SIZE + 12, dialog.TitleMargin.Top,
                 dialog.TitleMargin.Right, dialog.TitleMargin.Bottom)
             : dialog.TitleMargin;
+        ModalHeaderContent.Margin = ModalTitle.Margin;
+        ModalHeaderContent.Content = dialog.HeaderContent;
+        ModalHeaderContent.IsVisible = dialog.HeaderContent is not null;
+        ModalTitle.IsVisible = dialog.HeaderContent is null;
         ModalContent.Content = dialog;
         ModalLayer.IsVisible = true;
         UpdateModalSurfaceSize();
@@ -2241,7 +2248,10 @@ public partial class MainWindow : Window
         if (_modalMinimumSizeHistory.TryGetValue(dialog, out var minimumSize))
         {
             dialog.MinWidth = Math.Min(minimumSize.MinWidth, ModalSurface.MaxWidth);
-            double availableContentHeight = Math.Max(0, ModalSurface.MaxHeight - ModalHeader.Height);
+            double headerWidth = double.IsFinite(ModalSurface.Width) ? ModalSurface.Width : ModalSurface.MaxWidth;
+            ModalHeader.Measure(new Size(headerWidth, double.PositiveInfinity));
+            double headerHeight = Math.Max(ModalHeader.MinHeight, ModalHeader.DesiredSize.Height);
+            double availableContentHeight = Math.Max(0, ModalSurface.MaxHeight - headerHeight);
             dialog.MinHeight = Math.Min(minimumSize.MinHeight, availableContentHeight);
         }
     }

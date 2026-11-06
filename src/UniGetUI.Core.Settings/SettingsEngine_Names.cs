@@ -152,6 +152,7 @@ public static partial class Settings
         // NOTE: Set this to true to delegate package operations to Devolutions Agent broker
         // instead of using local UAC elevation. Change default here when ready for production.
         UseAgentBroker,
+        SkippedUniGetUIVersion,
 
         Test1,
         Test2,
@@ -313,6 +314,7 @@ public static partial class Settings
             K.QuitAfterAutomaticUpdates => "QuitAfterAutomaticUpdates",
             K.InstallUniGetUIUpdatesWhenIdle => "InstallUniGetUIUpdatesWhenIdle",
             K.UseAgentBroker => "UseAgentBroker",
+            K.SkippedUniGetUIVersion => "SkippedUniGetUIVersion",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

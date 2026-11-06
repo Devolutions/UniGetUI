@@ -73,7 +73,19 @@ internal static partial class AvaloniaAutoUpdater
     /// Fired on the UI thread when a validated installer is ready.  Argument is the
     /// human-readable version string, e.g. "4.2.1".
     /// </summary>
-    public static event Action<string>? UpdateAvailable;
+    public static event Action<string, bool>? UpdateAvailable;
+
+    public static event Action? PendingUpdateChanged;
+
+    public sealed record PendingSelfUpdate(string VersionName, string InstallerDownloadUrl, long InstallerSizeBytes);
+
+    public static PendingSelfUpdate? PendingUpdate { get; private set; }
+
+    private static void SetPendingUpdate(PendingSelfUpdate? pending)
+    {
+        PendingUpdate = pending;
+        Dispatcher.UIThread.Post(() => PendingUpdateChanged?.Invoke());
+    }
 
     /// <summary>
     /// Fired on the UI thread to surface progress/result of an update check or
@@ -367,15 +379,16 @@ internal static partial class AvaloniaAutoUpdater
 
     private static readonly TimeSpan IdleSampleInterval = TimeSpan.FromSeconds(5);
     private static volatile bool _installRequested;
+    private static volatile bool _installOnQuitRequested;
+    private static volatile bool _skipRequested;
     private static readonly HashSet<string> _backgroundInstallTriedVersions = [];
     private static readonly string[] UniGetUIProcessNames = ["UniGetUI", "uniget", "UniGetUI.Avalonia", "WingetUI"];
     private static string? _pendingInstallerPath;
 
     /// <summary>
     /// Set to <c>true</c> when the main window is closing (user quit or hidden path).
-    /// Mirrors WinUI's <c>AutoUpdater.ReleaseLockForAutoupdate_Window</c> — once set,
-    /// a pending installer is allowed to launch even if the user has not yet clicked
-    /// the banner (e.g. user quits via tray while an update is ready).
+    /// Once set, a pending installer launches only if the user asked to update when
+    /// UniGetUI quits; otherwise the pending update is dropped without installing.
     /// </summary>
     public static bool ReleaseLockForAutoupdate_Window;
 
@@ -392,6 +405,25 @@ internal static partial class AvaloniaAutoUpdater
     {
         LogUpdateInfo("Auto-updater: TriggerInstall invoked (user clicked Update now).");
         _installRequested = true;
+    }
+
+    public static bool IsInstallOnQuitRequested => _installOnQuitRequested;
+
+    public static void RequestInstallOnQuit()
+    {
+        LogUpdateInfo("Auto-updater: the user asked to install the update when UniGetUI quits.");
+        _installOnQuitRequested = true;
+        Dispatcher.UIThread.Post(() => PendingUpdateChanged?.Invoke());
+    }
+
+    public static void SkipVersion(string versionName)
+    {
+        LogUpdateInfo($"Auto-updater: the user skipped version {versionName}.");
+        Settings.SetValue(Settings.K.SkippedUniGetUIVersion, versionName);
+        _installOnQuitRequested = false;
+        _skipRequested = true;
+        DismissUpdateBanner();
+        SetPendingUpdate(null);
     }
     public static async Task UpdateCheckLoopAsync()
     {
@@ -462,7 +494,7 @@ internal static partial class AvaloniaAutoUpdater
             onJoinedActiveAttempt: () =>
                 LogUpdateInfo("Auto-updater: an update attempt is already in progress; reusing active attempt."),
             onManualJoinWhileAwaitingConsent: versionName =>
-                Dispatcher.UIThread.Post(() => UpdateAvailable?.Invoke(versionName)),
+                Dispatcher.UIThread.Post(() => UpdateAvailable?.Invoke(versionName, true)),
             onManualJoinWhileBusy: () =>
                 RaiseStatus(
                     CoreTools.Translate("We are checking for updates."),
@@ -553,6 +585,15 @@ internal static partial class AvaloniaAutoUpdater
             RecordTargetVersion(candidate.VersionName);
             LogUpdateInfo($"Update to UniGetUI {candidate.VersionName} is available.");
 
+            if (!IsManual() && AutoUpdaterHelpers.IsSkippedVersion(Settings.GetValue(Settings.K.SkippedUniGetUIVersion), candidate.VersionName))
+            {
+                LogUpdateInfo($"Auto-updater: version {candidate.VersionName} was skipped by the user, not offering it.");
+                if (OperatingSystem.IsWindows())
+                    WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
+                MarkAttemptFinished("version skipped by the user");
+                return true;
+            }
+
             if (OperatingSystem.IsMacOS() && ReportMacUpdateTargetIfBlocked(ResolveMacUpdateTarget()))
             {
                 return false;
@@ -584,7 +625,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Cached valid installer found, preparing to launch...");
-                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, autoLaunch, IsManual());
+                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, candidate.InstallerDownloadUrl, autoLaunch, IsManual());
             }
 
             string installerValidationFailureMarkerPath =
@@ -619,9 +660,11 @@ internal static partial class AvaloniaAutoUpdater
 
             RaiseStatus(
                 CoreTools.Translate(
-                    "UniGetUI version {0} is being downloaded.",
+                    "Preparing UniGetUI {0}",
                     candidate.VersionName.ToString(CultureInfo.InvariantCulture)),
-                CoreTools.Translate("This may take a minute or two"),
+                Settings.Get(Settings.K.InstallUniGetUIUpdatesWhenIdle)
+                    ? CoreTools.Translate("It will be installed when UniGetUI is idle in the background")
+                    : CoreTools.Translate("Nothing will be installed until you choose to update"),
                 InfoBarSeverity.Informational,
                 isClosable: false);
 
@@ -664,7 +707,7 @@ internal static partial class AvaloniaAutoUpdater
                     message => LogUpdateWarn(message)
                 );
                 LogUpdateInfo("Downloaded installer is valid, preparing to launch...");
-                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, autoLaunch, IsManual());
+                return await PrepareAndLaunchAsync(attempt, installerPath, candidate.InstallerHash, candidate.VersionName, candidate.InstallerDownloadUrl, autoLaunch, IsManual());
             }
 
             UpdaterDownloadEngine.RecordFailure(
@@ -759,6 +802,7 @@ internal static partial class AvaloniaAutoUpdater
         string installerPath,
         string installerHash,
         string versionName,
+        string installerDownloadUrl,
         bool autoLaunch,
         bool manualCheck)
     {
@@ -775,10 +819,13 @@ internal static partial class AvaloniaAutoUpdater
 
         _pendingInstallerPath = installerPath;
         _installRequested = false;
+        _installOnQuitRequested = false;
+        _skipRequested = false;
         ReleaseLockForAutoupdate_Notification = false;
+        SetPendingUpdate(new PendingSelfUpdate(versionName, installerDownloadUrl, GetFileSize(installerPath)));
 
         // Notify UI (update banner + toast)
-        Dispatcher.UIThread.Post(() => UpdateAvailable?.Invoke(versionName));
+        Dispatcher.UIThread.Post(() => UpdateAvailable?.Invoke(versionName, manualCheck));
         if (OperatingSystem.IsWindows())
             WindowsAppNotificationBridge.ShowSelfUpdateAvailableNotification(versionName);
         else if (OperatingSystem.IsMacOS())
@@ -817,8 +864,28 @@ internal static partial class AvaloniaAutoUpdater
                     int idleChecks = 0;
                     DateTime nextIdleSample = DateTime.UtcNow + IdleSampleInterval;
 
-                    while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
+                    while (true)
                     {
+                        AutoUpdaterHelpers.SelfUpdateConsent consent = AutoUpdaterHelpers.ResolveSelfUpdateConsent(
+                            _installRequested || ReleaseLockForAutoupdate_Notification,
+                            _installOnQuitRequested,
+                            ReleaseLockForAutoupdate_Window,
+                            _skipRequested);
+                        if (consent is AutoUpdaterHelpers.SelfUpdateConsent.Install)
+                            break;
+                        if (consent is AutoUpdaterHelpers.SelfUpdateConsent.Skip)
+                        {
+                            MarkAttemptFinished("version skipped by the user");
+                            return true;
+                        }
+                        if (consent is AutoUpdaterHelpers.SelfUpdateConsent.Decline)
+                        {
+                            LogUpdateInfo("Auto-updater: UniGetUI is quitting and the user did not ask to update — not installing.");
+                            DismissUpdateBanner();
+                            MarkAttemptFinished("not installed - the user did not ask to update before quitting");
+                            return true;
+                        }
+
                         if (IsChannelObsolete())
                         {
                             LogUpdateInfo("Auto-updater: update channel changed while waiting for user — aborting.");
@@ -897,6 +964,7 @@ internal static partial class AvaloniaAutoUpdater
                 installingInBackground = false;
                 canInstallInBackground = false;
                 _installRequested = false;
+                _installOnQuitRequested = false;
                 ReleaseLockForAutoupdate_Notification = false;
                 InstallerHandoffs.Complete(handoff);
                 handoff = InstallerHandoffs.Begin();
@@ -907,6 +975,20 @@ internal static partial class AvaloniaAutoUpdater
             if (installingInBackground)
                 AbstractOperation.HoldNewOperations = false;
             InstallerHandoffs.Complete(handoff);
+            SetPendingUpdate(null);
+        }
+    }
+
+    private static long GetFileSize(string path)
+    {
+        try
+        {
+            return new FileInfo(path).Length;
+        }
+        catch (Exception ex)
+        {
+            LogUpdateWarn($"Could not read the size of {path}: {ex.Message}");
+            return 0;
         }
     }
 

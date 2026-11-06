@@ -283,6 +283,9 @@ brew install mas
 
 UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/bin`.
 
+- **Search and package IDs.** Search by app name or its numeric App Store ID. Exact IDs are resolved
+  through Apple's lookup service in the account's storefront, so package links and
+  `package install --manager mas --id <id>` can find apps without a prior name search.
 - **Apple Account.** mas uses the Apple Account signed in to the App Store app and cannot sign in
   by itself. Searching and listing installed apps and updates work without one; installing and
   updating apps need one. Depending on **Media & Purchases** in System Settings, the App Store may

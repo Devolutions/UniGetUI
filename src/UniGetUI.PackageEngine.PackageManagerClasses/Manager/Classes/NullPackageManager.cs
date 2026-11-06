@@ -197,7 +197,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             IPackage package,
             OperationType operation,
             IReadOnlyList<string> processOutput,
-            int returnCode
+            int returnCode,
+            InstallOptions? options = null
         ) => throw new NotImplementedException();
 
         public void ApplyElevationRequirements(
@@ -211,5 +212,13 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             InstallOptions options,
             OperationType operation
         ) => throw new NotImplementedException();
+
+        public string? GetFailureExplanation(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode,
+            InstallOptions? options = null
+        ) => null;
     }
 }

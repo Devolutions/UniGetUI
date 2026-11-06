@@ -396,6 +396,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                     FALSE_PACKAGE_IDS.Contains(elements[0])
                     || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
                     || elements[1] == elements[2]
+                    || (elements.Length > 3 && elements[3].Equals("true", StringComparison.OrdinalIgnoreCase))
                 )
                 {
                     continue;

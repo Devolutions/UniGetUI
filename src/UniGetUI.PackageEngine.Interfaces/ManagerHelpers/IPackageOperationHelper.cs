@@ -39,7 +39,8 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
             IPackage package,
             OperationType operation,
             IReadOnlyList<string> processOutput,
-            int returnCode
+            int returnCode,
+            InstallOptions? options = null
         );
 
         /// <summary>
@@ -59,6 +60,14 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
             IPackage package,
             InstallOptions options,
             OperationType operation
+        );
+
+        public string? GetFailureExplanation(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode,
+            InstallOptions? options = null
         );
     }
 }

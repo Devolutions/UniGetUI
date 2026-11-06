@@ -55,6 +55,9 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         bool standalone
     )
     {
+        if (operation is OperationType.Update)
+            options = options.WithoutSavedVersion();
+
         // Every manager concatenates these onto a command line, so an identifier that looks like
         // an option is smuggled in as one even where no shell is involved: a Pip identifier of
         // "requests --index-url https://host" would otherwise add a real index to the install.
@@ -114,11 +117,20 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
             _ => options.CustomParameters_Install,
         };
 
+    protected virtual OperationVeredict _getOperationResult(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options
+    ) => _getOperationResult(package, operation, processOutput, returnCode);
+
     public OperationVeredict GetResult(
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
-        int returnCode
+        int returnCode,
+        InstallOptions? options = null
     )
     {
         if (
@@ -136,7 +148,7 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
             return OperationVeredict.Canceled;
         }
 
-        return _getOperationResult(package, operation, processOutput, returnCode);
+        return _getOperationResult(package, operation, processOutput, returnCode, options);
     }
 
     /// <summary>
@@ -157,4 +169,12 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         OperationType operation
     )
     { }
+
+    public virtual string? GetFailureExplanation(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options = null
+    ) => null;
 }

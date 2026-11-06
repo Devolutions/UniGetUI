@@ -384,28 +384,51 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             }
 
             // Check if source is Steam
-            if (MeaningfulId == "Steam" || MeaningfulId.StartsWith("Steam App"))
+            if (MeaningfulId == "Steam")
             {
                 return SteamSource;
             }
 
             // Check if source is Ubisoft Connect
-            if (MeaningfulId == "Uplay" || MeaningfulId.StartsWith("Uplay Install"))
+            if (MeaningfulId == "Uplay")
             {
                 return UbisoftConnectSource;
             }
 
-            // Check if source is GOG
-            if (
-                MeaningfulId.EndsWith("_is1")
-                && MeaningfulId.Replace("_is1", "").All(c => (c >= '0' && c <= '9'))
-            )
+            if (GetLauncherGameSource(MeaningfulId) is { } launcherGameSource)
             {
-                return GOGSource;
+                return launcherGameSource;
             }
 
             // Otherwise they are Local PC
             return LocalPcSource;
+        }
+
+        public LocalWinGetSource? GetLauncherGameSource(string? localIdentifier)
+        {
+            if (string.IsNullOrEmpty(localIdentifier))
+            {
+                return null;
+            }
+
+            string key = localIdentifier.Split('\\')[^1];
+
+            if (key.StartsWith("Steam App", StringComparison.Ordinal))
+            {
+                return SteamSource;
+            }
+
+            if (key.StartsWith("Uplay Install", StringComparison.Ordinal))
+            {
+                return UbisoftConnectSource;
+            }
+
+            if (key.EndsWith("_is1") && key.Replace("_is1", "").All(c => (c >= '0' && c <= '9')))
+            {
+                return GOGSource;
+            }
+
+            return null;
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()

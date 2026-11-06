@@ -60,6 +60,12 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
         List<Package> packages = [];
         foreach (ListMatch match in result.Matches.Where(match => match.AvailableVersion is not null))
         {
+            if (Manager.GetLauncherGameSource(match.LocalId) is { } launcherGameSource)
+            {
+                Logger.Info($"Skipping the update of {match.Id}, since it was installed by {launcherGameSource.Name}");
+                continue;
+            }
+
             // Restore the version we last upgraded to when WinGet reports it as unknown (#5158).
             bool versionUnknown = WinGetPkgOperationHelper.IsUnknownVersion(match.InstalledVersion);
             var package = new Package(
@@ -106,19 +112,22 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
     {
         return result
             .Matches.Select(match =>
-                new Package(
+            {
+                LocalWinGetSource? launcherGameSource = Manager.GetLauncherGameSource(match.LocalId);
+                string id = launcherGameSource is null ? match.Id : match.LocalId!;
+                return new Package(
                     ResolveDisplayName(match),
-                    match.Id,
-                    WinGetPkgOperationHelper.ResolveReportedInstalledVersion(match.Id, match.InstalledVersion),
-                    GetSource(match),
+                    id,
+                    WinGetPkgOperationHelper.ResolveReportedInstalledVersion(id, match.InstalledVersion),
+                    launcherGameSource ?? GetSource(match),
                     Manager
                 )
                 {
                     InstalledVersionIsUnverified = WinGetPkgOperationHelper.IsUnknownVersion(
                         match.InstalledVersion
                     ),
-                }
-            )
+                };
+            })
             .ToArray();
     }
 

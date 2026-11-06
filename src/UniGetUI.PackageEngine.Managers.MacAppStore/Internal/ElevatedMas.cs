@@ -11,6 +11,7 @@ internal static partial class ElevatedMas
 {
     internal const string OsaScriptPath = "/usr/bin/osascript";
     internal const string SudoPath = "/usr/bin/sudo";
+    internal const string LaunchctlPath = "/bin/launchctl";
     internal const string SudoCommandScript = """
         printf '%s\n' "$1" || exit
         shift
@@ -86,8 +87,13 @@ internal static partial class ElevatedMas
         ];
     }
 
+    // Authorization Services starts the command from the system-wide authtrampoline, outside the
+    // user's login session, where the App Store's per-user services cannot be reached and mas waits
+    // forever for its purchase request. asuser runs it in the user's bootstrap context, as sudo would.
     internal static string Command(string masPath, IEnumerable<string> arguments, uint userId, uint groupId) =>
-        string.Join(' ', CommandArguments(masPath, arguments, userId, groupId).Select(CoreTools.QuoteForPosixShell)) + " 2>&1";
+        string.Join(' ', new[] { LaunchctlPath, "asuser", userId.ToString(CultureInfo.InvariantCulture) }
+            .Concat(CommandArguments(masPath, arguments, userId, groupId))
+            .Select(CoreTools.QuoteForPosixShell)) + " 2>&1";
 
     private static ProcessStartInfo StartInfo(string executable) => new(executable)
     {

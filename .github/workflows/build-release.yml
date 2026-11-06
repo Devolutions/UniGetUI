@@ -674,6 +674,10 @@ jobs:
           chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_EXECUTABLE}"
           test -f "${APP_BUNDLE}/Contents/MacOS/uniget"
           chmod +x "${APP_BUNDLE}/Contents/MacOS/uniget"
+          test -f "${APP_BUNDLE}/Contents/MacOS/UniGetUIMasHelper"
+          mkdir -p "${APP_BUNDLE}/Contents/Library/LaunchDaemons"
+          mv "${APP_BUNDLE}/Contents/MacOS/io.github.marticliment.unigetui.mashelper.plist" \
+            "${APP_BUNDLE}/Contents/Library/LaunchDaemons/"
           sed "s|@VERSION@|${VERSION}|g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"
@@ -698,6 +702,10 @@ jobs:
                 --entitlements "$ENTITLEMENTS" \
                 --sign "$SIGNING_IDENTITY" "$f"
             done
+            # No JIT, debugger, or library-validation exceptions on the root helper.
+            codesign --force --timestamp --options runtime \
+                --entitlements scripts/macos/MasHelper.entitlements \
+                --sign "$SIGNING_IDENTITY" "${APP_BUNDLE}/Contents/MacOS/UniGetUIMasHelper"
             codesign --force --timestamp --options runtime \
               --entitlements "$ENTITLEMENTS" \
               --sign "$SIGNING_IDENTITY" "${APP_BUNDLE}"
@@ -706,6 +714,8 @@ jobs:
             find "${APP_BUNDLE}/Contents/MacOS" -type f | while IFS= read -r f; do
               codesign --force --sign - "$f" 2>/dev/null || true
             done
+            codesign --force --options runtime --entitlements scripts/macos/MasHelper.entitlements \
+              --sign - "${APP_BUNDLE}/Contents/MacOS/UniGetUIMasHelper"
             codesign --force --sign - "${APP_BUNDLE}"
           fi
 

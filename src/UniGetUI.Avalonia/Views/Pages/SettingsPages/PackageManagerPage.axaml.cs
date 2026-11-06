@@ -21,6 +21,9 @@ using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using CornerRadius = global::Avalonia.CornerRadius;
 using Thickness = global::Avalonia.Thickness;
+#if !WINDOWS
+using UniGetUI.PackageEngine.Managers.MacAppStoreManager;
+#endif
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
@@ -582,6 +585,13 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 ExtraControls.Children.Add(BuildPythonEnvironmentsCard());
                 break;
 
+#if !WINDOWS
+            case "MacAppStore":
+                ExtraControls.Children.Add(disableNotifsCard);
+                ExtraControls.Children.Add(BuildMacAppStoreTouchIdCard());
+                break;
+#endif
+
             case "vcpkg":
                 disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
                 disableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
@@ -608,6 +618,49 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 break;
         }
     }
+
+#if !WINDOWS
+    private static SettingsCard BuildMacAppStoreTouchIdCard()
+    {
+        var status = new TextBlock
+        {
+            Text = CoreTools.Translate("Enable the UniGetUI helper once in System Settings to authorize Mac App Store operations with Touch ID. This does not change sudo settings. Only the active administrator can use it."),
+            TextWrapping = TextWrapping.Wrap,
+        };
+        var enable = new Button { Content = CoreTools.Translate("Set up Touch ID") };
+        var disable = new Button { Content = CoreTools.Translate("Remove helper") };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        buttons.Children.Add(enable);
+        buttons.Children.Add(disable);
+        var body = new StackPanel { Spacing = 8, Children = { status, buttons } };
+        async Task Configure(bool value)
+        {
+            buttons.IsEnabled = false;
+            status.Text = CoreTools.Translate("Please wait...");
+            try
+            {
+                status.Text = await MacAppStore.ConfigureTouchIdAsync(value);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                Logger.Error(ex);
+                status.Text = CoreTools.Translate("Could not configure native Touch ID authorization.") + "\n" + ex.Message;
+            }
+            finally
+            {
+                buttons.IsEnabled = true;
+            }
+        }
+        enable.Click += async (_, _) => await Configure(true);
+        disable.Click += async (_, _) => await Configure(false);
+        return new SettingsCard
+        {
+            Header = CoreTools.Translate("Touch ID authorization"),
+            Description = body,
+            Margin = new Thickness(0, 8, 0, 0),
+        };
+    }
+#endif
 
     private SettingsCard BuildPythonEnvironmentsCard()
     {

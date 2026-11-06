@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.DotNetManager;
 using UniGetUI.PackageEngine.Managers.FlatpakManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
+using UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 using UniGetUI.PackageEngine.Managers.MacPkgManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PacmanManager;
@@ -48,6 +49,7 @@ public class ReinstallOnUpdateManagerTests
             { nameof(Dnf), false },
             { nameof(Snap), false },
             { nameof(MacPkg), false },
+            { nameof(MacAppStore), false },
         };
 #if WINDOWS
         data.Add(nameof(WinGet), true);
@@ -76,6 +78,7 @@ public class ReinstallOnUpdateManagerTests
             nameof(Dnf) => new Dnf(),
             nameof(Snap) => new Snap(),
             nameof(MacPkg) => new MacPkg(),
+            nameof(MacAppStore) => new MacAppStore(),
 #if WINDOWS
             nameof(WinGet) => new WinGet(),
             nameof(Scoop) => new Scoop(),

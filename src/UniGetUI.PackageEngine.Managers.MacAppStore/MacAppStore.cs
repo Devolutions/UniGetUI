@@ -230,6 +230,17 @@ public partial class MacAppStore : PackageManager
         if (terms.Length == 0)
             return [];
 
+        // mas search treats an App Store ID as a name, but package links and the CLI resolve by ID.
+        if (terms.All(char.IsAsciiDigit) && Catalog.Get(terms) is { } record
+            && AppStoreRecord.Text(record, "kind") == "mac-software"
+            && AppStoreRecord.Text(record, "name", "trackName") is { } name)
+        {
+            var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
+            logger.Log($"Resolved App Store ID {terms} in the {Storefront} storefront.");
+            logger.Close(0);
+            return [new Package(name.Trim(), terms, AppStoreRecord.Text(record, "version") ?? "", DefaultSource, this)];
+        }
+
         var lines = RunListing(LoggableTaskType.FindPackages, $"search{JsonFlag} {terms}", out int exitCode, out string errors);
         var apps = MasOutput.ParseApps(lines, outdated: false);
         // mas fails a search that finds nothing.

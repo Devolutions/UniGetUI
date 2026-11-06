@@ -913,6 +913,77 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Assert.Equal(["version", "list", "outdated"], Calls());
     }
 
+    [Theory]
+    [InlineData(2)]
+    [InlineData(7)]
+    public void SearchesAppStoreIdsThroughTheCatalog(int major)
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+        var manager = Listing(FakeMas(new()
+        {
+            ["version.out"] = $"{major}.0.0\n",
+            ["config.out"] = Fixture("config.json"),
+        }));
+        List<Uri> requests = [];
+        manager.Catalog.Download = url =>
+        {
+            requests.Add(url);
+            return Fixture("lookup.json");
+        };
+        manager.LoadVersion();
+
+        var found = Assert.Single(manager.Search($" {Amphetamine} "));
+        Assert.Equal(Amphetamine, found.Id);
+        Assert.Equal("Amphetamine", found.Name);
+        Assert.Equal("5.3.2", found.VersionString);
+        Assert.Same(manager.DefaultSource, found.Source);
+        Assert.Single(manager.Search(Amphetamine));
+        Assert.Contains($"id={Amphetamine}", Assert.Single(requests).Query);
+        if (major >= 3)
+            Assert.Contains("country=ca", requests[0].Query);
+        Assert.Equal(major >= 3 ? ["version", "config --json"] : new[] { "version" }, Calls());
+    }
+
+    [Theory]
+    [InlineData("software", "iOS app")]
+    [InlineData("song", "A song")]
+    [InlineData(null, "Missing kind")]
+    [InlineData("mac-software", null)]
+    [InlineData("mac-software", " ")]
+    public void ExactIdSearchRejectsNonMacAndIncompleteRecords(string? kind, string? name)
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+        var manager = Listing(FakeMas(new() { ["search.err"] = "Error: No apps found\n" }, new() { ["search"] = 1 }));
+        var record = LookupRecord(Amphetamine);
+        record["kind"] = kind;
+        record["trackName"] = name;
+        manager.Catalog.Remember(record);
+
+        Assert.Empty(manager.Search(Amphetamine));
+        Assert.Equal([$"search {Amphetamine}"], Calls());
+    }
+
+    [Fact]
+    public void NumericNamesStillSearchWhenNoAppHasThatId()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+        var manager = Listing(FakeMas(new() { ["search.out"] = Fixture("search.txt") }));
+        int requests = 0;
+        manager.Catalog.Download = _ =>
+        {
+            requests++;
+            return """{"results":[]}""";
+        };
+
+        Assert.Equal(4, manager.Search("2048").Count);
+        Assert.Equal(4, manager.Search("2048").Count);
+        Assert.Equal(1, requests);
+        Assert.Equal(["search 2048", "search 2048"], Calls());
+    }
+
     [Fact]
     public void ASearchWithNoResultsIsNotAFailure()
     {

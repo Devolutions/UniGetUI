@@ -160,7 +160,8 @@ internal static partial class MacOsNotificationBridge
             DeliverNotification(
                 CoreTools.Translate("{0} can be updated to version {1}", "UniGetUI", newVersion),
                 CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName),
-                MainWindow.RuntimeNotificationLevel.Success);
+                MainWindow.RuntimeNotificationLevel.Success,
+                allowInAppFallback: false);
         }
         catch (Exception ex)
         {

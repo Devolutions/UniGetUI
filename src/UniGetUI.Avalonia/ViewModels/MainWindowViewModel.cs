@@ -507,16 +507,20 @@ public partial class MainWindowViewModel : ViewModelBase
 
         Sidebar.NavigationRequested += (_, pageType) => NavigateTo(pageType);
 
-        AvaloniaAutoUpdater.UpdateAvailable += version => Dispatcher.UIThread.Post(() =>
+        AvaloniaAutoUpdater.UpdateAvailable += (version, userAsked) => Dispatcher.UIThread.Post(() =>
         {
-            UpdatesBanner.Severity = InfoBarSeverity.Success;
-            UpdatesBanner.Title = CoreTools.Translate("UniGetUI {0} is ready to be installed.", version);
-            UpdatesBanner.Message = CoreTools.Translate("The update process will start after closing UniGetUI");
-            UpdatesBanner.ActionButtonText = CoreTools.Translate("Update now");
-            UpdatesBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(AvaloniaAutoUpdater.TriggerInstall);
-            UpdatesBanner.IsClosable = true;
-            UpdatesBanner.IsOpen = true;
+            ShowSelfUpdateBanner(version);
+            if (userAsked)
+                _ = ShowSelfUpdateDialogAsync();
         });
+
+        AvaloniaAutoUpdater.PendingUpdateChanged += () =>
+        {
+            string? pendingVersion = AvaloniaAutoUpdater.PendingUpdate?.VersionName;
+            Sidebar.SetPendingSelfUpdate(pendingVersion);
+            if (pendingVersion is not null && AvaloniaAutoUpdater.IsInstallOnQuitRequested && UpdatesBanner.IsOpen)
+                ShowSelfUpdateBanner(pendingVersion);
+        };
 
         AvaloniaAutoUpdater.StatusChanged += status => Dispatcher.UIThread.Post(() =>
         {
@@ -1149,6 +1153,51 @@ public partial class MainWindowViewModel : ViewModelBase
         else if (string.Equals(action, NotificationArguments.ReleaseSelfUpdateLock, StringComparison.OrdinalIgnoreCase))
         {
             AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Notification = true;
+        }
+        else if (string.Equals(action, NotificationArguments.ShowSelfUpdate, StringComparison.OrdinalIgnoreCase))
+        {
+            MainWindow.Instance?.ShowFromTray();
+            if (AvaloniaAutoUpdater.PendingUpdate is null)
+                _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
+            else
+                await ShowSelfUpdateDialogAsync();
+        }
+    }
+
+    private void ShowSelfUpdateBanner(string version)
+    {
+        UpdatesBanner.Severity = InfoBarSeverity.Success;
+        UpdatesBanner.Title = CoreTools.Translate("UniGetUI {0} is available", ReleaseNotesLinks.ShortVersion(version));
+        UpdatesBanner.Message = AvaloniaAutoUpdater.IsInstallOnQuitRequested
+            ? CoreTools.Translate("UniGetUI will update when you quit it")
+            : CoreTools.Translate("See what's new and choose when to update");
+        UpdatesBanner.ActionButtonText = CoreTools.Translate("What's new");
+        UpdatesBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => _ = ShowSelfUpdateDialogAsync());
+        UpdatesBanner.IsClosable = true;
+        UpdatesBanner.IsOpen = true;
+    }
+
+    private SelfUpdateDialog? _selfUpdateDialog;
+
+    public async Task ShowSelfUpdateDialogAsync()
+    {
+        if (_selfUpdateDialog is not null
+            || AvaloniaAutoUpdater.PendingUpdate is not { } pending
+            || MainWindow.Instance is not { } window)
+            return;
+
+        _selfUpdateDialog = new SelfUpdateDialog(pending);
+        try
+        {
+            await window.ShowDialogAndRestoreVisibilityAsync(_selfUpdateDialog);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex);
+        }
+        finally
+        {
+            _selfUpdateDialog = null;
         }
     }
 

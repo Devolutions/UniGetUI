@@ -803,6 +803,8 @@ public sealed class MacAppStoreManagerTests : IDisposable
             operations.Verdict(1, ["execution error: Error: No downloads initiated for ADAM ID 6450432292 (1)"], log.Add));
         Assert.Contains("Open the App Store", Assert.Single(log));
         Assert.Contains("Apple Account", log[0]);
+        Assert.Contains("administrator authorization and Apple Account sign-in are separate", log[0]);
+        Assert.Contains("complete any account prompts", log[0]);
         log.Clear();
         Assert.Equal(OperationVeredict.Failure, operations.Verdict(128, ["Command failed (128)"], log.Add));
         Assert.Equal(OperationVeredict.Canceled, operations.Verdict(NativeMas.CancellationResult, [], log.Add));

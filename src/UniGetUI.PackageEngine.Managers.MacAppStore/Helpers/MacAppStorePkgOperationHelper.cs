@@ -113,7 +113,7 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
 
         if (output.Any(line => line.Contains("No downloads initiated", StringComparison.OrdinalIgnoreCase)))
             log(CoreTools.Translate(
-                "The Mac App Store did not start a download. Open the App Store and try this app there. Check that the signed-in Apple Account owns it and that it is available in your region."));
+                "The Mac App Store did not start a download. Mac administrator authorization and Apple Account sign-in are separate. Open the App Store, try this app there, and complete any account prompts. Also check that the signed-in Apple Account owns it and that it is available in your region."));
 
         return OperationVeredict.Failure;
     }

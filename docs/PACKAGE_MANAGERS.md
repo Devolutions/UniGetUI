@@ -345,7 +345,10 @@ UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/
   for its live download state. A lost helper connection is an error, never a reason to run the
   installation a second time. Do not remove the helper while an operation is running.
 - **No downloads initiated / Redownload unavailable.** This is a store-side failure after
-  authorization, not a rejection of your macOS password. Open the app in the App Store and try there.
+  authorization, not a rejection of your macOS password. Mac administrator authorization and Apple
+  Account sign-in are separate. Open the app in the App Store, try there, and complete any account
+  prompts directly in Apple's app. A successful administrator-password prompt does not resolve an
+  Apple Account sign-in or password-change requirement.
   Check which Apple Account acquired it and whether it is still available in your region.
   UniGetUI does not automatically uninstall, buy, or reacquire apps to bypass this error.
 - **Versions.** The App Store only offers the latest version of an app, so UniGetUI cannot install

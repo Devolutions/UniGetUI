@@ -100,6 +100,8 @@ namespace UniGetUI.PackageEngine.Operations
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
         private readonly List<string> _brokerKillBeforeOperationAdded = [];
+        private readonly string _genericFailureTitle;
+        private readonly string _genericFailureMessage;
 
         protected abstract Task HandleSuccess();
         protected abstract Task HandleFailure();
@@ -168,6 +170,8 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             Initialize();
+            _genericFailureTitle = Metadata.FailureTitle;
+            _genericFailureMessage = Metadata.FailureMessage;
 
             Enqueued += (_, _) =>
             {
@@ -1203,10 +1207,13 @@ namespace UniGetUI.PackageEngine.Operations
                 Package,
                 CommandRole,
                 Output,
-                ReturnCode
+                ReturnCode,
+                Options
             );
 
             FailedBecauseApplicationRunning = false;
+            Metadata.FailureTitle = _genericFailureTitle;
+            Metadata.FailureMessage = _genericFailureMessage;
             if (veredict is OperationVeredict.Failure)
             {
                 if (
@@ -1214,7 +1221,8 @@ namespace UniGetUI.PackageEngine.Operations
                         Package,
                         CommandRole,
                         Output,
-                        ReturnCode
+                        ReturnCode,
+                        Options
                     )
                     is { Length: > 0 } explanation
                 )

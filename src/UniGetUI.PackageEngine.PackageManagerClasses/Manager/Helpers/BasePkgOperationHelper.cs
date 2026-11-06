@@ -117,11 +117,20 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
             _ => options.CustomParameters_Install,
         };
 
+    protected virtual OperationVeredict _getOperationResult(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options
+    ) => _getOperationResult(package, operation, processOutput, returnCode);
+
     public OperationVeredict GetResult(
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
-        int returnCode
+        int returnCode,
+        InstallOptions? options = null
     )
     {
         if (
@@ -139,7 +148,7 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
             return OperationVeredict.Canceled;
         }
 
-        return _getOperationResult(package, operation, processOutput, returnCode);
+        return _getOperationResult(package, operation, processOutput, returnCode, options);
     }
 
     /// <summary>
@@ -165,6 +174,7 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
-        int returnCode
+        int returnCode,
+        InstallOptions? options = null
     ) => null;
 }

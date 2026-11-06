@@ -374,6 +374,30 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public void AFailureExplanationDoesNotOutliveTheAttemptThatProducedIt()
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureOperation(helper =>
+                helper.FailureExplanationFactory = (_, _, output, _) =>
+                    output.Contains("sources offer nothing newer") ? "Nothing newer is available" : null)
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        using var operation = new InspectableUpdatePackageOperation(package, new InstallOptions());
+        string genericMessage = operation.Metadata.FailureMessage;
+
+        operation.GetProcessVeredictForTests(1, ["sources offer nothing newer"]);
+        Assert.Equal("Nothing newer is available", operation.Metadata.FailureMessage);
+
+        operation.GetProcessVeredictForTests(1, ["network error"]);
+        Assert.Equal(genericMessage, operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
     public async Task AnAutomaticRetryIsJudgedOnlyOnItsOwnOutput()
     {
         if (!OperatingSystem.IsWindows())
@@ -3694,6 +3718,9 @@ public sealed class PackageOperationsTests
             GetAttemptPreOperations();
 
         public void ApplyRetryActionForTests(string retryMode) => ApplyRetryAction(retryMode);
+
+        public OperationVeredict GetProcessVeredictForTests(int returnCode, List<string> output) =>
+            GetProcessVeredict(returnCode, output).GetAwaiter().GetResult();
     }
 
     private class InspectableInstallPackageOperation : InstallPackageOperation

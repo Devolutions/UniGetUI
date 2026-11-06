@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -49,11 +48,9 @@ internal sealed partial class ChocolateyPkgOperationHelper : BasePkgOperationHel
         return null;
     }
 
-    private readonly ConditionalWeakTable<IPackage, string> _requestedUpdateVersions = new();
-
-    private string? UpdateTarget(IPackage package)
+    private static string? UpdateTarget(IPackage package, InstallOptions? options)
     {
-        if (_requestedUpdateVersions.TryGetValue(package, out string? requested) && requested.Length > 0)
+        if (options?.WithoutSavedVersion().Version is { Length: > 0 } requested)
             return requested;
 
         return package.IsUpgradable && package.NewVersionString.Length > 0 ? package.NewVersionString : null;
@@ -64,11 +61,12 @@ internal sealed partial class ChocolateyPkgOperationHelper : BasePkgOperationHel
             ? comparison >= 0
             : latest.Equals(target, StringComparison.OrdinalIgnoreCase);
 
-    private NoOpUpdate ClassifyNoOpUpdate(
+    private static NoOpUpdate ClassifyNoOpUpdate(
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
-        int returnCode
+        int returnCode,
+        InstallOptions? options
     )
     {
         if (returnCode is not 0 || operation is not OperationType.Update || !UpgradedNothing(processOutput))
@@ -77,26 +75,13 @@ internal sealed partial class ChocolateyPkgOperationHelper : BasePkgOperationHel
         if (LatestAvailableVersion(package, processOutput) is not { } latest)
             return NoOpUpdate.NotUpgraded;
 
-        return UpdateTarget(package) is not { } target || Reaches(package, latest, target)
+        return UpdateTarget(package, options) is not { } target || Reaches(package, latest, target)
             ? NoOpUpdate.AlreadyCurrent
             : NoOpUpdate.NotUpgraded;
     }
 
     public ChocolateyPkgOperationHelper(Chocolatey manager)
         : base(manager) { }
-
-    protected override IReadOnlyList<string> _getOperationParameters(
-        IPackage package,
-        InstallOptions options,
-        OperationType operation,
-        bool standalone
-    )
-    {
-        if (operation is OperationType.Update && !standalone)
-            _requestedUpdateVersions.AddOrUpdate(package, options.Version);
-
-        return _getOperationParameters(package, options, operation);
-    }
 
     protected override IReadOnlyList<string> _getOperationParameters(
         IPackage package,
@@ -160,6 +145,14 @@ internal sealed partial class ChocolateyPkgOperationHelper : BasePkgOperationHel
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode
+    ) => _getOperationResult(package, operation, processOutput, returnCode, null);
+
+    protected override OperationVeredict _getOperationResult(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options
     )
     {
         if (returnCode is 3010 or 1641)
@@ -167,7 +160,7 @@ internal sealed partial class ChocolateyPkgOperationHelper : BasePkgOperationHel
             return OperationVeredict.RestartRequired;
         }
 
-        switch (ClassifyNoOpUpdate(package, operation, processOutput, returnCode))
+        switch (ClassifyNoOpUpdate(package, operation, processOutput, returnCode, options))
         {
             case NoOpUpdate.AlreadyCurrent:
                 return OperationVeredict.Success;
@@ -210,10 +203,11 @@ internal sealed partial class ChocolateyPkgOperationHelper : BasePkgOperationHel
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
-        int returnCode
+        int returnCode,
+        InstallOptions? options = null
     )
     {
-        if (ClassifyNoOpUpdate(package, operation, processOutput, returnCode) is not NoOpUpdate.NotUpgraded)
+        if (ClassifyNoOpUpdate(package, operation, processOutput, returnCode, options) is not NoOpUpdate.NotUpgraded)
             return null;
 
         return LatestAvailableVersion(package, processOutput) is { } latest

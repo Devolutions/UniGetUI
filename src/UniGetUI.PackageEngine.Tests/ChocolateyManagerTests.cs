@@ -261,12 +261,42 @@ public sealed class ChocolateyManagerTests : IDisposable
             "Chocolatey upgraded 0/1 packages. ",
         ];
 
-        manager.OperationHelper.GetParameters(package, options, OperationType.Update);
-        var veredict = manager.OperationHelper.GetResult(package, OperationType.Update, output, 0);
+        var veredict = manager.OperationHelper.GetResult(package, OperationType.Update, output, 0, options);
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
         Assert.Null(
-            manager.OperationHelper.GetFailureExplanation(package, OperationType.Update, output, 0)
+            manager.OperationHelper.GetFailureExplanation(package, OperationType.Update, output, 0, options)
+        );
+    }
+
+    [Fact]
+    public void OverlappingUpdatesOfOnePackageAreEachJudgedOnTheirOwnTarget()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ghidra")
+            .WithVersion("12.0.4")
+            .WithNewVersion("12.2.0")
+            .Build();
+        var explicitOptions = new InstallOptions { Version = "12.0.4", VersionIsExplicit = true };
+        var ordinaryOptions = new InstallOptions();
+        string[] output =
+        [
+            "ghidra v12.0.4 is the latest version available based on your source(s).",
+            "Chocolatey upgraded 0/1 packages. ",
+        ];
+
+        manager.OperationHelper.GetParameters(package, explicitOptions, OperationType.Update);
+        manager.OperationHelper.GetParameters(package, ordinaryOptions, OperationType.Update);
+
+        OperationAssert.HasVeredict(
+            manager.OperationHelper.GetResult(package, OperationType.Update, output, 0, explicitOptions),
+            OperationVeredict.Success
+        );
+        OperationAssert.HasVeredict(
+            manager.OperationHelper.GetResult(package, OperationType.Update, output, 0, ordinaryOptions),
+            OperationVeredict.Failure
         );
     }
 

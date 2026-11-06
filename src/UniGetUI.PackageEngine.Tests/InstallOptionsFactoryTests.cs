@@ -284,6 +284,25 @@ public sealed class InstallOptionsFactoryTests : IDisposable
         Assert.False(resolved.CustomInstallLocationIsExplicit);
     }
 
+    [Theory]
+    [InlineData(@"E:\WinGet/%PACKAGE%")]
+    [InlineData(@"E:/WinGet/%PACKAGE%")]
+    public void LoadApplicable_UsesWindowsSeparatorsInLegacyForwardSlashLocations(string location)
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+        var package = new PackageBuilder().WithManager(manager).WithId("BitSum.ProcessLasso").Build();
+
+        InstallOptionsFactory.SaveForManager(new InstallOptions { CustomInstallLocation = location }, manager);
+        InstallOptionsFactory.SaveForPackage(new InstallOptions(), package);
+
+        var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+        Assert.Equal(@"E:\WinGet\BitSum.ProcessLasso", resolved.CustomInstallLocation);
+    }
+
     [Fact]
     public void LoadApplicable_ExpandsNameTokenFromManagerDefaults()
     {

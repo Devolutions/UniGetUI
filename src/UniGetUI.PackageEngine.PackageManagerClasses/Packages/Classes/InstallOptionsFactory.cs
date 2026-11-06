@@ -410,6 +410,9 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public static string ExpandPackagePlaceholders(string location, IPackage package)
         {
+            if (OperatingSystem.IsWindows())
+                location = location.Replace('/', '\\');
+
             if (!location.Contains('%'))
                 return location;
 

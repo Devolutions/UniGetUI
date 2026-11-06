@@ -281,6 +281,16 @@ dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /p:Configuration=R
 - Self-contained, publish-trimmed (partial), Windows App SDK self-contained
 - Tests use **xUnit** (`[Fact]`, `Assert.*`)
 
+The `.NET Tests` workflow runs the Windows build/tests and the full-trim NativeAOT publish
+in parallel jobs. `test-codebase` is the aggregate gate and requires both to succeed.
+The test job builds once with two MSBuild nodes and runs the complete suite with
+`--no-build /m:1`; keep test hosts serial because suites share on-disk state. NativeAOT
+already checks full trimming, so do not add a second warning-only full-trim publish.
+
+Do not copy and rename system executables to create process-test fixtures: endpoint
+protection flags launching these copies as executable masquerading. Process tests
+must not terminate unrelated processes on the developer's machine.
+
 ### Formatting (required before every commit)
 
 The PR check (`.github/workflows/dotnet-test.yml`) fails on any whitespace or code-style diff, even when the build and tests pass. After changing any C# file, apply both formatters from the repo root and commit the result:

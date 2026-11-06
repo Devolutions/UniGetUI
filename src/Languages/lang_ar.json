@@ -2293,5 +2293,6 @@
   "In use": "قيد الاستخدام",
   "Manage the Python environment at {0}": "إدارة بيئة Python في {0}",
   "Unrecognized Python": "Python غير معروف",
-  "The environment variable {0} was updated": "تم تحديث متغير البيئة {0}"
+  "The environment variable {0} was updated": "تم تحديث متغير البيئة {0}",
+  "Keep update notifications on screen until they are dismissed": "إبقاء إشعارات التحديث ظاهرة على الشاشة حتى يتم إغلاقها"
 }

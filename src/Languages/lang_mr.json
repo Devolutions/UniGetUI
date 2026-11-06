@@ -2293,5 +2293,6 @@
   "In use": "वापरात",
   "Manage the Python environment at {0}": "{0} येथील Python वातावरण व्यवस्थापित करा",
   "Unrecognized Python": "ओळखता न आलेले Python",
-  "The environment variable {0} was updated": "पर्यावरण चल {0} अद्यतनित केले"
+  "The environment variable {0} was updated": "पर्यावरण चल {0} अद्यतनित केले",
+  "Keep update notifications on screen until they are dismissed": "अद्यतन सूचना बंद करेपर्यंत स्क्रीनवर ठेवा"
 }

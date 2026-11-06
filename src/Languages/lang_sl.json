@@ -2293,5 +2293,6 @@
   "In use": "V uporabi",
   "Manage the Python environment at {0}": "Upravljaj okolje Python na poti {0}",
   "Unrecognized Python": "Neznana namestitev Pythona",
-  "The environment variable {0} was updated": "Spremenljivka okolja {0} je bila posodobljena"
+  "The environment variable {0} was updated": "Spremenljivka okolja {0} je bila posodobljena",
+  "Keep update notifications on screen until they are dismissed": "Obvestila o posodobitvah naj ostanejo prikazana, dokler jih ne zaprete."
 }

@@ -2293,5 +2293,6 @@
   "In use": "W użyciu",
   "Manage the Python environment at {0}": "Zarządzaj środowiskiem Python w lokalizacji {0}",
   "Unrecognized Python": "Nierozpoznany Python",
-  "The environment variable {0} was updated": "Zmienna środowiskowa {0} została zaktualizowana"
+  "The environment variable {0} was updated": "Zmienna środowiskowa {0} została zaktualizowana",
+  "Keep update notifications on screen until they are dismissed": "Pozostawiaj powiadomienia o aktualizacjach na ekranie do momentu ich zamknięcia"
 }

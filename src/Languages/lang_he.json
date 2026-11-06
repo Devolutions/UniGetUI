@@ -2293,5 +2293,6 @@
   "In use": "בשימוש",
   "Manage the Python environment at {0}": "נהל את סביבת Python במיקום {0}",
   "Unrecognized Python": "Python לא מזוהה",
-  "The environment variable {0} was updated": "משתנה הסביבה {0} עודכן"
+  "The environment variable {0} was updated": "משתנה הסביבה {0} עודכן",
+  "Keep update notifications on screen until they are dismissed": "השאר את התראות העדכון על המסך עד שתסגור אותן"
 }

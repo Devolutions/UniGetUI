@@ -2293,5 +2293,6 @@
   "In use": "Выкарыстоўваецца",
   "Manage the Python environment at {0}": "Кіраваць асяроддзем Python у {0}",
   "Unrecognized Python": "Невядомая версія Python",
-  "The environment variable {0} was updated": "Зменная асяроддзя {0} абноўлена"
+  "The environment variable {0} was updated": "Зменная асяроддзя {0} абноўлена",
+  "Keep update notifications on screen until they are dismissed": "Пакіраць апавяшчэнні аб абнаўленнях на экране, пакуль іх не закрыюць"
 }

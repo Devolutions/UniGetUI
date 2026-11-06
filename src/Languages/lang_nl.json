@@ -2293,5 +2293,6 @@
   "In use": "In gebruik",
   "Manage the Python environment at {0}": "De Python-omgeving beheren op {0}",
   "Unrecognized Python": "Onbekende Python-installatie",
-  "The environment variable {0} was updated": "De omgevingsvariabele {0} is bijgewerkt"
+  "The environment variable {0} was updated": "De omgevingsvariabele {0} is bijgewerkt",
+  "Keep update notifications on screen until they are dismissed": "Houd meldingen over updates op het scherm totdat ze worden gesloten"
 }

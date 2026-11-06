@@ -2293,5 +2293,6 @@
   "In use": "Naudojama",
   "Manage the Python environment at {0}": "Tvarkyti Python aplinką, esančią {0}",
   "Unrecognized Python": "Neatpažinta Python versija",
-  "The environment variable {0} was updated": "Aplinkos kintamasis {0} buvo atnaujintas"
+  "The environment variable {0} was updated": "Aplinkos kintamasis {0} buvo atnaujintas",
+  "Keep update notifications on screen until they are dismissed": "Atnaujinimų pranešimus ekrane laikyti, kol juos uždarysite"
 }

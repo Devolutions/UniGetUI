@@ -2293,5 +2293,6 @@
   "In use": "In uso",
   "Manage the Python environment at {0}": "Gestisci l'ambiente Python in {0}",
   "Unrecognized Python": "Python non riconosciuto",
-  "The environment variable {0} was updated": "La variabile di ambiente {0} è stata aggiornata"
+  "The environment variable {0} was updated": "La variabile di ambiente {0} è stata aggiornata",
+  "Keep update notifications on screen until they are dismissed": "Mantieni visualizzate le notifiche di aggiornamento finché non vengono chiuse"
 }

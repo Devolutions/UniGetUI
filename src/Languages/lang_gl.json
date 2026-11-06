@@ -2293,5 +2293,6 @@
   "In use": "En uso",
   "Manage the Python environment at {0}": "Xestionar o contorno de Python en {0}",
   "Unrecognized Python": "Python non recoñecido",
-  "The environment variable {0} was updated": "Actualizouse a variable de contorno {0}"
+  "The environment variable {0} was updated": "Actualizouse a variable de contorno {0}",
+  "Keep update notifications on screen until they are dismissed": "Manter as notificacións de actualización na pantalla ata que se descarten"
 }

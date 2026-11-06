@@ -2293,5 +2293,6 @@
   "In use": "Kullanımda",
   "Manage the Python environment at {0}": "{0} konumundaki Python ortamını yönetin",
   "Unrecognized Python": "Tanınmayan Python",
-  "The environment variable {0} was updated": "{0} ortam değişkeni güncellendi"
+  "The environment variable {0} was updated": "{0} ortam değişkeni güncellendi",
+  "Keep update notifications on screen until they are dismissed": "Güncelleme bildirimleri kapatılana kadar ekranda kalsın"
 }

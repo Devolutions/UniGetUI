@@ -2293,5 +2293,6 @@
   "In use": "Használatban",
   "Manage the Python environment at {0}": "A(z) {0} helyen található Python-környezet kezelése",
   "Unrecognized Python": "Ismeretlen Python",
-  "The environment variable {0} was updated": "A(z) {0} környezeti változó frissült"
+  "The environment variable {0} was updated": "A(z) {0} környezeti változó frissült",
+  "Keep update notifications on screen until they are dismissed": "A frissítési értesítések maradjanak a képernyőn, amíg be nem zárja őket"
 }

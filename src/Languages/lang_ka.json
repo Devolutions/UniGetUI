@@ -2293,5 +2293,6 @@
   "In use": "გამოიყენება",
   "Manage the Python environment at {0}": "მართეთ Python-ის გარემო მისამართზე {0}",
   "Unrecognized Python": "ამოუცნობი Python",
-  "The environment variable {0} was updated": "გარემოს ცვლადი {0} განახლდა"
+  "The environment variable {0} was updated": "გარემოს ცვლადი {0} განახლდა",
+  "Keep update notifications on screen until they are dismissed": "განახლების შეტყობინებების ეკრანზე დატოვება მათ დახურვამდე"
 }

@@ -2293,5 +2293,6 @@
   "In use": "În uz",
   "Manage the Python environment at {0}": "Gestionează mediul Python din {0}",
   "Unrecognized Python": "Python nerecunoscut",
-  "The environment variable {0} was updated": "Variabila de mediu {0} a fost actualizată"
+  "The environment variable {0} was updated": "Variabila de mediu {0} a fost actualizată",
+  "Keep update notifications on screen until they are dismissed": "Păstrează notificările de actualizare pe ecran până când sunt închise."
 }

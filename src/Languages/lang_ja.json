@@ -2293,5 +2293,6 @@
   "In use": "使用中",
   "Manage the Python environment at {0}": "{0}のPython環境を管理",
   "Unrecognized Python": "認識できないPython",
-  "The environment variable {0} was updated": "環境変数{0}を更新しました"
+  "The environment variable {0} was updated": "環境変数{0}を更新しました",
+  "Keep update notifications on screen until they are dismissed": "更新通知を閉じるまで画面に表示する"
 }

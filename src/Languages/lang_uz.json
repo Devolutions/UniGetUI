@@ -2288,5 +2288,6 @@
     "In use": "Foydalanilmoqda",
     "Manage the Python environment at {0}": "{0} manzilidagi Python muhitini boshqarish",
     "Unrecognized Python": "Noma'lum Python",
-    "The environment variable {0} was updated": "{0} muhit o'zgaruvchisi yangilandi"
+    "The environment variable {0} was updated": "{0} muhit o'zgaruvchisi yangilandi",
+    "Keep update notifications on screen until they are dismissed": "Yangilanish bildirishnomalarini yopilmaguncha ekranda ko‘rsatib turing"
 }

@@ -2293,5 +2293,6 @@
   "In use": "භාවිතයේ",
   "Manage the Python environment at {0}": "{0} හි ඇති Python පරිසරය කළමනාකරණය කරන්න",
   "Unrecognized Python": "හඳුනා නොගත් Python",
-  "The environment variable {0} was updated": "පරිසර විචල්‍යය {0} යාවත්කාලීන කරන ලදී"
+  "The environment variable {0} was updated": "පරිසර විචල්‍යය {0} යාවත්කාලීන කරන ලදී",
+  "Keep update notifications on screen until they are dismissed": "යාවත්කාලීන දැනුම්දීම් ඉවත් කරන තෙක් තිරය මත තබා ගන්න"
 }

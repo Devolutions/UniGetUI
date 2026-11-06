@@ -2293,5 +2293,6 @@
   "In use": "I bruk",
   "Manage the Python environment at {0}": "Administrer Python-miljøet på {0}",
   "Unrecognized Python": "Ukjent Python-installasjon",
-  "The environment variable {0} was updated": "Miljøvariabelen {0} ble oppdatert"
+  "The environment variable {0} was updated": "Miljøvariabelen {0} ble oppdatert",
+  "Keep update notifications on screen until they are dismissed": "Hold oppdateringsvarsler på skjermen til de lukkes"
 }

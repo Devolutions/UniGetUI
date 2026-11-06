@@ -2293,5 +2293,6 @@
   "In use": "Σε χρήση",
   "Manage the Python environment at {0}": "Διαχείριση του περιβάλλοντος Python στη θέση {0}",
   "Unrecognized Python": "Μη αναγνωρισμένη Python",
-  "The environment variable {0} was updated": "Η μεταβλητή περιβάλλοντος {0} ενημερώθηκε"
+  "The environment variable {0} was updated": "Η μεταβλητή περιβάλλοντος {0} ενημερώθηκε",
+  "Keep update notifications on screen until they are dismissed": "Οι ειδοποιήσεις ενημέρωσης να παραμένουν στην οθόνη μέχρι να κλείσουν"
 }

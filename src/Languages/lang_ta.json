@@ -2293,5 +2293,6 @@
   "In use": "பயன்பாட்டில் உள்ளது",
   "Manage the Python environment at {0}": "{0}-இல் உள்ள Python சூழலை நிர்வகி",
   "Unrecognized Python": "அடையாளம் காணப்படாத Python",
-  "The environment variable {0} was updated": "சூழல் மாறி {0} புதுப்பிக்கப்பட்டது"
+  "The environment variable {0} was updated": "சூழல் மாறி {0} புதுப்பிக்கப்பட்டது",
+  "Keep update notifications on screen until they are dismissed": "புதுப்பிப்பு அறிவிப்புகள் மூடப்படும் வரை திரையில் காட்டப்படட்டும்"
 }

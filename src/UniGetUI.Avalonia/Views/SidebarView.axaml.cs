@@ -427,6 +427,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         PageType.Installed => InstalledNavBtn,
         PageType.Bundles => BundlesNavBtn,
         PageType.GitRepositories => GitRepositoriesNavBtn,
+        PageType.Xcode => XcodeNavBtn,
         PageType.Settings => SettingsNavBtn,
         PageType.Managers => ManagersNavBtn,
         _ => null,
@@ -447,6 +448,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             PageType.Bundles => BundlesNavBtn,
             PageType.Catalog => CatalogNavBtn,
             PageType.GitRepositories => GitRepositoriesNavBtn,
+            PageType.Xcode => XcodeNavBtn,
             _ => null,
         };
         FooterNavListBox.SelectedItem = page switch

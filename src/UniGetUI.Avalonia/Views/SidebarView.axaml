@@ -201,6 +201,47 @@
                 </Panel>
             </ListBoxItem>
 
+            <!-- Xcode (macOS only): an optional page, last unless moved -->
+            <ListBoxItem x:Name="XcodeNavBtn" Tag="Xcode" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Xcode}"
+                         ToolTip.Tip="{t:Translate Xcode}">
+                <Panel>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                        <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/xcode.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{t:Translate Xcode}"
+                                   FontSize="14"
+                                   FontWeight="Normal"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                    </Grid>
+                    <!-- Shown while a newer Xcode than the newest installed is available, styled like the updates bubble -->
+                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="3,1"
+                            MinWidth="16"
+                            Height="16"
+                            IsVisible="{Binding XcodeBadgeVisible}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="26,5,-20,0">
+                        <TextBlock Text="{Binding XcodeBadgeText}"
+                                   FontSize="9"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <ProgressBar IsIndeterminate="{Binding XcodeIsLoading}"
+                                 IsVisible="{Binding XcodeIsLoading}"
+                                 Height="2"
+                                 Width="32"
+                                 MinWidth="0"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Bottom"
+                                 Margin="4,0,0,2"/>
+                </Panel>
+            </ListBoxItem>
+
         </ListBox>
 
         <!-- Footer items -->

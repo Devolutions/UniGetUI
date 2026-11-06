@@ -28,10 +28,22 @@ public partial class SidebarViewModel : ViewModelBase
 
     partial void OnGitRepositoriesEnabledChanged(bool value)
     {
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, value);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, value, XcodeEnabled);
         if (value) return;
         GitRepositoriesBadgeCount = 0;
         GitRepositoriesIsLoading = false;
+    }
+
+    // Xcode is a macOS tool, so a setting carried over from another system does nothing elsewhere.
+    [ObservableProperty]
+    private bool _xcodeEnabled = OperatingSystem.IsMacOS() && Settings.Get(Settings.K.EnableXcode);
+
+    partial void OnXcodeEnabledChanged(bool value)
+    {
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, value);
+        if (value) return;
+        XcodeBadgeCount = 0;
+        XcodeIsLoading = false;
     }
 
     [ObservableProperty]
@@ -40,13 +52,13 @@ public partial class SidebarViewModel : ViewModelBase
     public void ReorderNavigationPages(IReadOnlyList<PageType> pages)
     {
         NavigationPageOrder.Save(pages);
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, XcodeEnabled);
     }
 
     public void ResetNavigationPages()
     {
         NavigationPageOrder.Reset();
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, XcodeEnabled);
     }
 
     // ─── Badge properties ─────────────────────────────────────────────────────
@@ -74,6 +86,19 @@ public partial class SidebarViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _gitRepositoriesIsLoading;
+
+    // Whether a newer Xcode than the newest one installed can be installed; one at most.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(XcodeBadgeText))]
+    [NotifyPropertyChangedFor(nameof(XcodeBadgeVisible))]
+    private int _xcodeBadgeCount;
+
+    public bool XcodeBadgeVisible => XcodeBadgeCount > 0;
+
+    public string XcodeBadgeText => XcodeBadgeCount > 99 ? "99+" : XcodeBadgeCount.ToString();
+
+    [ObservableProperty]
+    private bool _xcodeIsLoading;
 
     // When the count changes, sync the badge visibility
     partial void OnUpdatesBadgeCountChanged(int value) =>
@@ -133,7 +158,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     public SidebarViewModel()
     {
-        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, XcodeEnabled);
         _wasDocked = Docked;
         _isPaneOpen = Docked && !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
     }
@@ -202,6 +227,7 @@ public partial class SidebarViewModel : ViewModelBase
             case PageType.Updates: UpdatesIsLoading = isLoading; break;
             case PageType.Installed: InstalledIsLoading = isLoading; break;
             case PageType.GitRepositories: GitRepositoriesIsLoading = isLoading; break;
+            case PageType.Xcode: XcodeIsLoading = isLoading; break;
         }
     }
 }

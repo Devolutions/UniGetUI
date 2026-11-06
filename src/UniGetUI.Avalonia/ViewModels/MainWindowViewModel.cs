@@ -41,6 +41,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public CatalogEditorViewModel? CatalogEditor { get; }
     private GitRepositoriesPage? _gitRepositoriesPage;
     public GitRepositoriesViewModel? GitRepositories { get; private set; }
+    private XcodePage? _xcodePage;
+    public XcodeViewModel? Xcode { get; private set; }
     private SettingsBasePage? SettingsPage;
     private SettingsBasePage? ManagersPage;
     private UniGetUILogPage? UniGetUILogPage;
@@ -490,6 +492,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (Sidebar.GitRepositoriesEnabled)
             StartGitRepositories();
+        if (Sidebar.XcodeEnabled)
+            StartXcode();
 
         MaintenanceScheduler.Start();
 
@@ -741,6 +745,39 @@ public partial class MainWindowViewModel : ViewModelBase
         _gitRepositoriesPage = null;
     }
 
+    // Lives while the feature is on, so automatic checks and the sidebar badge run with the page closed.
+    private void StartXcode()
+    {
+        var xcode = Xcode = new XcodeViewModel();
+        xcode.PropertyChanged += (_, e) =>
+        {
+            // A turned-off instance may still finish what it had started.
+            if (!ReferenceEquals(xcode, Xcode)) return;
+            if (e.PropertyName == nameof(XcodeViewModel.UpdateCount))
+                Sidebar.XcodeBadgeCount = xcode.UpdateCount;
+            else if (e.PropertyName == nameof(XcodeViewModel.IsBusy))
+                Sidebar.SetNavItemLoading(PageType.Xcode, xcode.IsBusy);
+        };
+        _ = xcode.InitializeAsync();
+    }
+
+    /// <summary>Turns Xcode on or off without a restart: its sidebar entry, badge and automatic checks.</summary>
+    public void SetXcodeEnabled(bool enabled)
+    {
+        if (enabled && Xcode is null)
+            StartXcode();
+        // Off first, so leaving the page cannot pick it again as the startup page.
+        Sidebar.XcodeEnabled = enabled;
+        if (enabled || Xcode is not { } xcode)
+            return;
+
+        if (_currentPage == PageType.Xcode)
+            LoadDefaultPage();
+        xcode.Stop();
+        Xcode = null;
+        _xcodePage = null;
+    }
+
     // ─── Navigation ──────────────────────────────────────────────────────────
     public void LoadDefaultPage()
     {
@@ -753,6 +790,7 @@ public partial class MainWindowViewModel : ViewModelBase
             "catalog" when Sidebar.SoftwareCatalogEnabled => PageType.Catalog,
             "catalog-editor" when Sidebar.CatalogEditorEnabled => PageType.CatalogEditor,
             "git-repositories" when Sidebar.GitRepositoriesEnabled => PageType.GitRepositories,
+            "xcode" when Sidebar.XcodeEnabled => PageType.Xcode,
             "settings" => PageType.Settings,
             // A usable admin-curated catalog is the simplest starting point, so it wins over the default pages.
             _ when Sidebar.HasUsableCatalog => PageType.Catalog,
@@ -780,6 +818,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 CatalogEditor ?? throw new InvalidOperationException("Catalog Editor is disabled.")),
             PageType.GitRepositories => _gitRepositoriesPage ??= new GitRepositoriesPage(
                 GitRepositories ?? throw new InvalidOperationException("Git Repositories is disabled.")),
+            PageType.Xcode => _xcodePage ??= new XcodePage(
+                Xcode ?? throw new InvalidOperationException("Xcode is disabled.")),
             PageType.Settings => SettingsPage ??= new SettingsBasePage(false),
             PageType.Managers => ManagersPage ??= new SettingsBasePage(true),
             PageType.OwnLog => UniGetUILogPage ??= new UniGetUILogPage(),
@@ -843,6 +883,15 @@ public partial class MainWindowViewModel : ViewModelBase
             Logger.Warn("Git Repositories navigation was rejected because it is turned off.");
             MainWindow.Instance?.ShowBanner(
                 CoreTools.Translate("Git Repositories is turned off"),
+                CoreTools.Translate("Turn it on in Settings, under Extensions."),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return false;
+        }
+        if (newPage_t is PageType.Xcode && !Sidebar.XcodeEnabled)
+        {
+            Logger.Warn("Xcode navigation was rejected because it is turned off.");
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Xcode is turned off"),
                 CoreTools.Translate("Turn it on in Settings, under Extensions."),
                 MainWindow.RuntimeNotificationLevel.Error);
             return false;
@@ -935,6 +984,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.Catalog => CoreTools.Translate("Software Catalog"),
         PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
         PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
+        PageType.Xcode => CoreTools.Translate("Xcode"),
         PageType.Settings => CoreTools.Translate("Settings"),
         PageType.Managers => CoreTools.Translate("Package Managers"),
         PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),
@@ -1072,7 +1122,8 @@ public partial class MainWindowViewModel : ViewModelBase
     /// </summary>
     public bool CanShutdownWithoutAsking
         => CurrentPageContent is not IAsyncLeaveGuard { HasUnsavedWork: true }
-            && CatalogEditor is not ({ IsBusy: true } or { IsDirty: true });
+            && CatalogEditor is not ({ IsBusy: true } or { IsDirty: true })
+            && Xcode is not { IsOperationRunning: true };
 
     public async Task<bool> CanShutdownAsync(CancellationToken cancellationToken = default)
     {
@@ -1081,6 +1132,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (CurrentPageContent is IAsyncLeaveGuard guard
                 && !await guard.CanLeaveAsync(PageLeaveReason.Shutdown, cancellationToken))
+                return false;
+            if (Xcode is { IsOperationRunning: true } xcode && !await xcode.ConfirmQuitAsync())
                 return false;
             if (CatalogEditor is null) return true;
             if (CatalogEditor.IsBusy) return false;

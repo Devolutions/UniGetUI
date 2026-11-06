@@ -1,0 +1,119 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.XcodeSettings"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:XcodeSettingsViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,10">
+        <StackPanel Orientation="Vertical">
+
+            <settings:CheckboxCard x:Name="XcodeCard"
+                                   SettingName="EnableXcode"
+                                   Text="{t:Translate Enable Xcode}"
+                                   Description="{t:Translate Text='Installs and updates Xcode with xcodes, and lets you switch between the versions you have.'}"
+                                   StateChangedCommand="{Binding EnabledChangedCommand}"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   CornerRadius="8"/>
+
+            <settings:TranslatedTextBlock Text="Requirements"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:SettingsCard x:Name="XcodesFoundCard"
+                                   CornerRadius="8"
+                                   Header="{t:Translate xcodes}"
+                                   Description="{Binding XcodesStatus}"/>
+
+            <settings:TranslatedTextBlock Text="Preferences"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:ComboboxCard x:Name="XcodeCheckIntervalCard"
+                                   SettingName="XcodeCheckInterval"
+                                   Text="{t:Translate Check for new Xcode versions automatically}"
+                                   ValueChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:CheckboxCard x:Name="XcodeIncludePrereleasesCard"
+                                   SettingName="XcodeIncludePrereleases"
+                                   Text="{t:Translate Include pre-releases}"
+                                   Description="{t:Translate Text='List betas and release candidates, and offer them as the update.'}"
+                                   StateChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="XcodeSelectAfterInstallCard"
+                                   SettingName="XcodeSelectAfterInstall"
+                                   Text="{t:Translate Select a new version after installing it}"
+                                   Description="{t:Translate Text='Command line tools such as xcodebuild then use it. This asks for your macOS password.'}"
+                                   StateChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="XcodeSkipAdminStepsCard"
+                                   SettingName="XcodeSkipAdminSteps"
+                                   Text="{t:Translate Skip the steps that need your macOS password}"
+                                   Description="{t:Translate Text='Accepting the license and installing the extra components are left for Xcode, which asks for them the first time you open it.'}"
+                                   StateChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="XcodeDeleteArchiveCard"
+                                   SettingName="XcodeDeleteArchive"
+                                   Text="{t:Translate Delete the download once Xcode is unpacked}"
+                                   Description="{t:Translate Text='The download is several gigabytes. Otherwise it is moved to the Trash.'}"
+                                   StateChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="XcodeFastUnarchiveCard"
+                                   SettingName="XcodeFastUnarchive"
+                                   Text="{t:Translate Unpack Xcode faster}"
+                                   Description="{t:Translate Text='Uses the experimental unxip built into xcodes, which can be much faster.'}"
+                                   StateChangedCommand="{Binding PreferencesChangedCommand}"
+                                   IsEnabled="{Binding IsEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:ButtonCard x:Name="OpenXcodeCard"
+                                 Text="{t:Translate Text='Install, update and remove Xcode versions'}"
+                                 ButtonText="{t:Translate Open Xcode}"
+                                 Command="{Binding OpenCommand}"
+                                 IsEnabled="{Binding IsEnabled}"
+                                 BorderThickness="1,0,1,1"
+                                 CornerRadius="0,0,8,8"/>
+
+            <settings:TranslatedTextBlock Text="Apple ID"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:ButtonCard x:Name="SignOutCard"
+                                 Text="{t:Translate Sign out of Apple}"
+                                 ButtonText="{t:Translate Sign out}"
+                                 Description="{Binding SignOutStatus}"
+                                 Command="{Binding SignOutCommand}"
+                                 IsEnabled="{Binding IsXcodesFound}"
+                                 CornerRadius="8"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

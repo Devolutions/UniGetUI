@@ -45,4 +45,18 @@ public class SettingsSearchIndexTests
         Assert.DoesNotContain(results, result =>
             result.Title.Equals("Repair the stored policy", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Search_ExposesXcodeSettingsOnlyOnMac()
+    {
+        Assert.Contains(
+            SettingsSearchIndex.Search("xcode", limit: 100, isWindows: false, isMacOS: true),
+            result => result.PageType == typeof(XcodeSettings));
+        Assert.DoesNotContain(
+            SettingsSearchIndex.Search("xcode", limit: 100, isWindows: false, isMacOS: false),
+            result => result.PageType == typeof(XcodeSettings));
+        Assert.DoesNotContain(
+            SettingsSearchIndex.Search("xcode", limit: 100, isWindows: true),
+            result => result.PageType == typeof(XcodeSettings));
+    }
 }

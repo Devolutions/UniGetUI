@@ -7,7 +7,7 @@ internal static class NavigationPageOrder
 {
     // Experimental pages are part of the stored order even while hidden, so turning one off and
     // back on puts it back where it was.
-    public static PageType[] DefaultPages(bool catalogEnabled, bool gitRepositoriesEnabled = false) =>
+    public static PageType[] DefaultPages(bool catalogEnabled, bool gitRepositoriesEnabled = false, bool xcodeEnabled = false) =>
     [
         .. catalogEnabled ? [PageType.Catalog] : Array.Empty<PageType>(),
         PageType.Discover,
@@ -15,23 +15,24 @@ internal static class NavigationPageOrder
         PageType.Installed,
         PageType.Bundles,
         .. gitRepositoriesEnabled ? [PageType.GitRepositories] : Array.Empty<PageType>(),
+        .. xcodeEnabled ? [PageType.Xcode] : Array.Empty<PageType>(),
     ];
 
-    private static PageType[] AllPages => DefaultPages(catalogEnabled: true, gitRepositoriesEnabled: true);
+    private static PageType[] AllPages => DefaultPages(catalogEnabled: true, gitRepositoriesEnabled: true, xcodeEnabled: true);
 
-    public static PageType[] Get(bool catalogEnabled, bool gitRepositoriesEnabled = false)
-        => Resolve(Settings.GetValue(Settings.K.NavigationPageOrder), catalogEnabled, gitRepositoriesEnabled);
+    public static PageType[] Get(bool catalogEnabled, bool gitRepositoriesEnabled = false, bool xcodeEnabled = false)
+        => Resolve(Settings.GetValue(Settings.K.NavigationPageOrder), catalogEnabled, gitRepositoriesEnabled, xcodeEnabled);
 
     public static void Save(IReadOnlyList<PageType> visiblePages)
         => Settings.SetValue(
             Settings.K.NavigationPageOrder,
-            Serialize(Merge(Get(catalogEnabled: true, gitRepositoriesEnabled: true), visiblePages)));
+            Serialize(Merge(Get(catalogEnabled: true, gitRepositoriesEnabled: true, xcodeEnabled: true), visiblePages)));
 
     public static void Reset() => Settings.SetValue(Settings.K.NavigationPageOrder, "");
 
-    internal static PageType[] Resolve(string stored, bool catalogEnabled, bool gitRepositoriesEnabled = false)
+    internal static PageType[] Resolve(string stored, bool catalogEnabled, bool gitRepositoriesEnabled = false, bool xcodeEnabled = false)
     {
-        PageType[] defaults = DefaultPages(catalogEnabled, gitRepositoriesEnabled);
+        PageType[] defaults = DefaultPages(catalogEnabled, gitRepositoriesEnabled, xcodeEnabled);
         PageType[] ordered = stored
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Select(name => Enum.TryParse(name, out PageType page) ? page : PageType.Null)
@@ -53,6 +54,8 @@ internal static class NavigationPageOrder
         return merged;
     }
 
+    // An order that is the default one for the pages it holds is stored as unset, so a page added later
+    // finds it still following the default.
     internal static string Serialize(PageType[] fullOrder)
-        => fullOrder.SequenceEqual(AllPages) ? "" : string.Join(',', fullOrder);
+        => fullOrder.SequenceEqual(AllPages.Where(fullOrder.Contains)) ? "" : string.Join(',', fullOrder);
 }

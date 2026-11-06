@@ -93,6 +93,7 @@ namespace UniGetUI.Interface.Enums
         Bun = '\uE949',
         GitBranch = '\uE94A',
         Extensions = '\uE94B',
+        Xcode = '\uE94C',
     }
 
     public class NotificationArguments

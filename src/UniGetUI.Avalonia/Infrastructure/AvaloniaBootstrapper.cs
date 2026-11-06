@@ -261,6 +261,7 @@ internal static class AvaloniaBootstrapper
                     "catalog" => window is { SoftwareCatalogEnabled: true },
                     "catalog-editor" => window is { CatalogEditorEnabled: true },
                     "git-repositories" => window is { GitRepositoriesEnabled: true },
+                    "xcode" => window is { XcodeEnabled: true },
                     _ => true,
                 })
                 .ToArray(),
@@ -310,6 +311,11 @@ internal static class AvaloniaBootstrapper
                 if (!window.GitRepositoriesEnabled)
                     throw new InvalidOperationException("Git Repositories is turned off. Turn it on in Settings, under Extensions.");
                 window.Navigate(PageType.GitRepositories);
+                break;
+            case "xcode":
+                if (!window.XcodeEnabled)
+                    throw new InvalidOperationException("Xcode is turned off. Turn it on in Settings, under Extensions.");
+                window.Navigate(PageType.Xcode);
                 break;
             case "settings":
                 window.Navigate(PageType.Settings);

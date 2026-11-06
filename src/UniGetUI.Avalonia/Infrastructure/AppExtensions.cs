@@ -70,6 +70,32 @@ internal static class AppExtensions
                 },
     };
 
-    /// <summary>Every extension, in the order Settings lists them.</summary>
-    public static IReadOnlyList<AppExtension> All { get; } = [GitRepositories];
+    public static readonly AppExtension Xcode = new()
+    {
+        Id = "xcode",
+        Name = "Xcode",
+        Description = "Install, update and switch between versions of Xcode, using xcodes",
+        Icon = IconType.Xcode,
+        EnabledSetting = Settings.K.EnableXcode,
+        Page = PageType.Xcode,
+        SettingsPage = typeof(XcodeSettings),
+        CreateSettingsPage = () => new XcodeSettings(),
+        ApplyEnabled = enabled => MainWindow.Instance?.SetXcodeEnabled(enabled),
+        Status = () => MainWindow.Instance?.Xcode is not { } xcode
+            ? ""
+            : xcode.IsXcodesMissing
+                ? CoreTools.Translate("xcodes is not installed")
+                : xcode.HasUpdate
+                    ? CoreTools.Translate("Xcode {0} is available", xcode.UpdateVersion)
+                    : xcode.Installed.Count switch
+                    {
+                        0 => xcode.HasLoaded ? CoreTools.Translate("No Xcode installed") : "",
+                        1 => CoreTools.Translate("1 version installed"),
+                        int count => CoreTools.Translate("{0} versions installed", count),
+                    },
+    };
+
+    /// <summary>Every extension available on this system, in the order Settings lists them.</summary>
+    public static IReadOnlyList<AppExtension> All { get; } =
+        OperatingSystem.IsMacOS() ? [GitRepositories, Xcode] : [GitRepositories];
 }

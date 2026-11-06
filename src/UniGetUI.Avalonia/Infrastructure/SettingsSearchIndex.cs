@@ -32,7 +32,8 @@ public static class SettingsSearchIndex
         string[] Keywords,
         Type PageType,
         string? Anchor,
-        bool WindowsOnly = false);
+        bool WindowsOnly = false,
+        bool MacOnly = false);
 
     // Order matters only as a tie-break for equally-ranked matches.
     private static readonly Entry[] Entries =
@@ -148,6 +149,14 @@ public static class SettingsSearchIndex
         new("Enable Git Repositories", ["git", "git repositories", "clones", "worktrees", "branches"], typeof(GitRepositoriesSettings), "GitRepositoriesCard"),
         new("Check for new commits automatically", ["git check interval", "fetch"], typeof(GitRepositoriesSettings), "GitCheckIntervalCard"),
         new("Update clones after checking", ["git auto update", "fast-forward", "pull"], typeof(GitRepositoriesSettings), "GitAutoUpdateCard"),
+        new("Enable Xcode", ["xcode", "xcodes", "apple", "ios", "macos", "developer tools"], typeof(XcodeSettings), "XcodeCard", MacOnly: true),
+        new("Check for new Xcode versions automatically", ["xcode check interval", "xcode updates"], typeof(XcodeSettings), "XcodeCheckIntervalCard", MacOnly: true),
+        new("Include pre-releases", ["xcode beta", "xcode prerelease", "release candidate"], typeof(XcodeSettings), "XcodeIncludePrereleasesCard", MacOnly: true),
+        new("Select a new version after installing it", ["xcode-select", "xcode command line tools"], typeof(XcodeSettings), "XcodeSelectAfterInstallCard", MacOnly: true),
+        new("Skip the steps that need your macOS password", ["xcode license", "xcode sudo", "xcode administrator"], typeof(XcodeSettings), "XcodeSkipAdminStepsCard", MacOnly: true),
+        new("Delete the download once Xcode is unpacked", ["xcode archive", "xip", "trash"], typeof(XcodeSettings), "XcodeDeleteArchiveCard", MacOnly: true),
+        new("Unpack Xcode faster", ["unxip", "xip", "unarchive"], typeof(XcodeSettings), "XcodeFastUnarchiveCard", MacOnly: true),
+        new("Sign out of Apple", ["apple id", "xcode sign out", "keychain"], typeof(XcodeSettings), "SignOutCard", MacOnly: true),
 
         // ── Experimental ─────────────────────────────────────────────────────
         new("Enable Software Catalog", ["catalog", "software catalog"], typeof(Experimental), "SoftwareCatalogCard"),
@@ -167,10 +176,10 @@ public static class SettingsSearchIndex
 
     public static IReadOnlyList<SettingsSearchResult> Search(string query, int limit = 8)
     {
-        return Search(query, limit, OperatingSystem.IsWindows());
+        return Search(query, limit, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
     }
 
-    internal static IReadOnlyList<SettingsSearchResult> Search(string query, int limit, bool isWindows)
+    internal static IReadOnlyList<SettingsSearchResult> Search(string query, int limit, bool isWindows, bool isMacOS = false)
     {
         var queryWords = Tokenize(query);
         if (queryWords.Count == 0) return [];
@@ -180,6 +189,7 @@ public static class SettingsSearchIndex
         foreach (var e in Entries)
         {
             if (e.WindowsOnly && !isWindows) continue;
+            if (e.MacOnly && !isMacOS) continue;
 
             int score = Rank(queryWords, CoreTools.Translate(e.Title), e.Title, e.Keywords);
             if (score < NoMatch)
@@ -308,6 +318,7 @@ public static class SettingsSearchIndex
         nameof(AgentPolicyInspector) => "Active package broker policy",
         nameof(ExtensionsHomepage) => "Extensions",
         nameof(GitRepositoriesSettings) => "Git Repositories",
+        nameof(XcodeSettings) => "Xcode",
         nameof(Experimental) => "Experimental settings and developer options",
         _ => "UniGetUI Settings",
     });

@@ -100,6 +100,14 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="UniGetUI.Extensions.Xcode/UniGetUI.Extensions.Xcode.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Extensions.Xcode.Tests/UniGetUI.Extensions.Xcode.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
   </Folder>
   <Folder Name="/UniGetUI.Interface.Enums/">
     <Project Path="UniGetUI.Interface.Enums/UniGetUI.Interface.Enums.csproj">

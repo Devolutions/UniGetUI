@@ -168,7 +168,7 @@ other hosts; this does not substitute for their native lock-contention tests.
 | --- | --- | --- | --- |
 | `app status` | None | None | Returns app/session state such as headless mode, page, and supported UI actions. |
 | `app show` | None | None | Shows and focuses the window when a GUI session exists. |
-| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` requires the Git Repositories extension to be turned on in Settings, under Extensions; no restart is needed. |
+| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `xcode`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` requires the Git Repositories extension to be turned on in Settings, under Extensions; no restart is needed. `xcode` requires the Xcode extension, which exists on macOS only, to be turned on the same way. |
 | `app quit` | None | None | Gracefully shuts down the selected session, including headless daemons. |
 
 The **Git Repositories** page fetches the remote even when the main clone is on a feature
@@ -183,6 +183,19 @@ first, then smallest first, then back to the original order; **Name** sorts A–
 Z–A. Entries not yet measured sort last. Sizes appear after a background scan and
 include build output. They are the sum of file lengths, not allocated disk space;
 symbolic links and junctions are not followed.
+
+The **Xcode** page (macOS only) wraps the [`xcodes`](https://github.com/XcodesOrg/xcodes)
+command line tool, which UniGetUI looks for on `PATH`, then in `/opt/homebrew/bin`,
+`/usr/local/bin` and `~/.mint/bin`; install it from Discover Packages (`brew install xcodes`)
+and use **Look again** without restarting. The page lists the Xcode versions Apple publishes and
+the ones installed, installs one next to the others, selects the one command line tools use,
+and uninstalls. An update is the newest stable release when it is newer than every installed
+Xcode (a pre-release counts when **Include pre-releases** is on); nothing is offered while no
+Xcode is installed, and the older version is kept until it is uninstalled. Installs are never
+unattended: the Apple ID, verification code and macOS password that xcodes asks for are
+collected in a dialog and handed to xcodes, which keeps the Apple ID in the Keychain. UniGetUI
+neither stores nor logs them. Quitting during an install asks first, and stopping it keeps what
+was downloaded.
 
 ### Operations
 

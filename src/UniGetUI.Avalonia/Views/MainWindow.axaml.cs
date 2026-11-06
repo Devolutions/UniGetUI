@@ -48,6 +48,7 @@ public enum PageType
     CatalogEditor,
     GitRepositories,
     ManagerHealth,
+    Xcode,
 }
 
 public partial class MainWindow : Window
@@ -207,6 +208,9 @@ public partial class MainWindow : Window
     public bool GitRepositoriesEnabled => ViewModel.Sidebar.GitRepositoriesEnabled;
     public GitRepositoriesViewModel? GitRepositories => ViewModel.GitRepositories;
     public void SetGitRepositoriesEnabled(bool enabled) => ViewModel.SetGitRepositoriesEnabled(enabled);
+    public bool XcodeEnabled => ViewModel.Sidebar.XcodeEnabled;
+    public XcodeViewModel? Xcode => ViewModel.Xcode;
+    public void SetXcodeEnabled(bool enabled) => ViewModel.SetXcodeEnabled(enabled);
 
     public MainWindow()
     {

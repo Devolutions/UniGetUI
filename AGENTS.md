@@ -181,6 +181,24 @@ Its format-agnostic parts live in the shared feed project described in the next 
 - The Catalog Editor's **Package feed** dialog (`PkgFeedEditor`, `PkgFeedEditorViewModel`) edits
   `pkgFeed`/`allowUnsignedPackages` and previews a feed through `PkgFeedInspector`.
 
+## Mac App Store (mas)
+
+`UniGetUI.PackageEngine.Managers.MacAppStore` (id `mas`, macOS only) drives the
+[mas](https://github.com/mas-cli/mas) CLI; packages are App Store ids (adam ids).
+
+- Listings parse both mas 7's `--json` lines and the tables of older releases (`MasOutput`), and the
+  verbs follow the mas major version: `get`/`update` from 3, `purchase`/`upgrade` before.
+- Details, icons and screenshots come from Apple's lookup API (`AppStoreCatalog`), for the account's
+  storefront (`mas config`). It is rate-limited, so ids from listings are queued with `Want` and
+  fetched up to 100 per request, with misses and failures cached; `Peek` never goes to the network.
+- A free app is installed with `get`, which acquires it for the account; one with a price must
+  already be owned and is downloaded with `install`.
+- mas 4 and later need root to install and update, and every release to uninstall. The operation
+  helper is an `IManagedPackageOperationHelper` that then runs `sudo -A` with an `osascript`
+  password dialog as askpass (`ElevatedMas`), and returns null (the ordinary process path) when no
+  root is needed or UniGetUI already runs as root. Tests swap `ElevatedMas.RunProcess`,
+  `MacAppStorePkgOperationHelper.IsRoot` and `AppStoreCatalog.Download`.
+
 ## Installer feeds shared by macOS and Windows
 
 `UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds` holds what does not depend on the file
@@ -244,7 +262,7 @@ So the comparison is per-manager, not global. `IPackageManager.CompareVersions(a
 usual negative/zero/positive, or `null` when two versions cannot be meaningfully compared:
 
 - **Default** (`PackageManager.CompareVersions`) - the numeric comparison above. Used by Scoop,
-  WinGet, Apt, Dnf, Pacman, Homebrew, vcpkg, Snap and Flatpak.
+  WinGet, Apt, Dnf, Pacman, Homebrew, Mac App Store, vcpkg, Snap and Flatpak.
 - **`SemanticVersion`** in `UniGetUI.Core.Tools` - SemVer 2.0 with NuGet's fourth numeric segment
   allowed. Used by `BaseNuGet` (so Chocolatey, .NET Tool, Windows PowerShell and PowerShell 7),
   npm, Bun and Cargo.

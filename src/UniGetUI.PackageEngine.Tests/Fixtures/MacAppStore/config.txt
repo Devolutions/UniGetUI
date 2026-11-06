@@ -1,0 +1,5 @@
+mas ▁▁▁▁ 7.0.0
+slice ▁▁ arm64
+region ▁ FR
+store ▁▁ CA
+macos ▁▁ 26.5.1 (25F80)

@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.DotNetManager;
 using UniGetUI.PackageEngine.Managers.FlatpakManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
+using UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 using UniGetUI.PackageEngine.Managers.MacPkgManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PacmanManager;
@@ -32,7 +33,7 @@ public class ManagerSetupGuideTests
     private static readonly Lazy<PackageManager[]> Managers = new(() =>
     [
         new Npm(), new Bun(), new Pip(), new Cargo(), new Vcpkg(), new DotNet(),
-        new Homebrew(), new MacPkg(), new Apt(), new Dnf(), new Pacman(), new Snap(), new Flatpak(),
+        new Homebrew(), new MacPkg(), new MacAppStore(), new Apt(), new Dnf(), new Pacman(), new Snap(), new Flatpak(),
 #if WINDOWS
         new WinGet(), new Scoop(), new Chocolatey(), new WinInstaller(), new PowerShell(), new PowerShell7(),
 #endif
@@ -137,6 +138,7 @@ public class ManagerSetupGuideTests
     [Theory]
     [InlineData("Homebrew")]
     [InlineData("Pkg")]
+    [InlineData("MacAppStore")]
     [InlineData("Apt")]
     [InlineData("Dnf")]
     [InlineData("Pacman")]

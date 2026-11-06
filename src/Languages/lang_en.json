@@ -2607,5 +2607,12 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex returned a plugin for the wrong marketplace.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Provided by the Codex app, which restores it if removed. You can still turn it on or off.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.",
+  "Mac App Store": "Mac App Store",
+  "Apple's app store for macOS, through the mas command-line tool.<br>Contains: <b>Apps from the Mac App Store</b>": "Apple's app store for macOS, through the mas command-line tool.<br>Contains: <b>Apps from the Mac App Store</b>",
+  "UniGetUI needs your password to install {0} from the Mac App Store.": "UniGetUI needs your password to install {0} from the Mac App Store.",
+  "UniGetUI needs your password to update {0} from the Mac App Store.": "UniGetUI needs your password to update {0} from the Mac App Store.",
+  "UniGetUI needs your password to uninstall {0}.": "UniGetUI needs your password to uninstall {0}.",
+  "The Mac App Store needs administrator rights for this operation, but elevation is prohibited in UniGetUI's settings.": "The Mac App Store needs administrator rights for this operation, but elevation is prohibited in UniGetUI's settings.",
+  "Only an administrator account can install, update or uninstall Mac App Store apps.": "Only an administrator account can install, update or uninstall Mac App Store apps."
 }

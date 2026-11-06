@@ -59,6 +59,7 @@ macOS, the first terminal emulator UniGetUI finds on Linux).
 | [Cargo](#cargo) | Yes | Yes | Yes |
 | [vcpkg](#vcpkg) | Yes | Yes | Yes |
 | [Homebrew](#homebrew) | | Yes | Yes |
+| [Mac App Store](#mac-app-store) | | Yes | |
 | [Apt](#apt), [Dnf](#dnf), [Pacman](#pacman), [Snap](#snap), [Flatpak](#flatpak) | | | [Depends on the distribution](#linux-distributions) |
 
 Installer packages published by your organization (`.msi`, `.exe`, `.pkg`, `.dmg`) need no package
@@ -269,6 +270,38 @@ UniGetUI finds `brew` on `PATH`, and also in `/opt/homebrew/bin`, `/usr/local/bi
 `/home/linuxbrew/.linuxbrew/bin`. UniGetUI offers casks on macOS only.
 
 Check: `brew --version`
+
+## Mac App Store
+
+UniGetUI installs, updates and uninstalls Mac App Store apps through
+[mas](https://github.com/mas-cli/mas), a command-line client for the App Store. Install it with
+Homebrew, or download the installer from <https://github.com/mas-cli/mas/releases>:
+
+```shell
+brew install mas
+```
+
+UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/bin`.
+
+- **Apple Account.** mas uses the Apple Account signed in to the App Store app and cannot sign in
+  by itself. Searching and listing installed apps and updates work without one; installing and
+  updating apps need one. Depending on **Media & Purchases** in System Settings, the App Store may
+  still ask for the Apple Account password, or Touch ID, for each app.
+- **Free and paid apps.** UniGetUI gets a free app with `mas get`, whether or not the account
+  already owns it. A paid app must first be bought in the App Store app; UniGetUI then downloads it
+  with `mas install`.
+- **Your password.** mas 4 and later need administrator rights to install and update apps, and every
+  release needs them to uninstall one. UniGetUI then runs mas through `sudo` and asks for your macOS
+  password in a dialog, so only an administrator account can do this. When **Prohibit any kind of
+  Elevation via UniGetUI Elevator or GSudo** is turned on, under **Settings > Administrator rights
+  and other dangerous settings**, those operations fail instead. Uninstalling moves the app to the
+  Trash.
+- **Versions.** The App Store only offers the latest version of an app, so UniGetUI cannot install
+  a specific version.
+- **Details.** Descriptions, icons and screenshots come from Apple's public lookup service
+  (`itunes.apple.com`), for the country of the account signed in to the App Store.
+
+Check: `mas version`
 
 ## Linux distributions
 

@@ -133,7 +133,8 @@ namespace UniGetUI.PackageEngine.Operations
         {
             Package = package;
             Role = role;
-            options = WithoutSavedUpdateVersion(options, role);
+            if (role is OperationType.Update)
+                options = options.WithoutSavedVersion();
             if (ReinstallsOnUpdate(package, options, role))
             {
                 Options = PinReinstallVersion(package, options);
@@ -1606,16 +1607,6 @@ namespace UniGetUI.PackageEngine.Operations
             && opts.UninstallBeforeUpdate
             && package.IsUpgradable
             && SupportsUninstallBeforeUpdate(package);
-
-        private static InstallOptions WithoutSavedUpdateVersion(InstallOptions options, OperationType role)
-        {
-            if (role is not OperationType.Update || options.Version.Length == 0 || options.VersionIsExplicit)
-                return options;
-
-            var cleared = options.Copy();
-            cleared.Version = "";
-            return cleared;
-        }
 
         private static InstallOptions PinReinstallVersion(IPackage package, InstallOptions opts)
         {

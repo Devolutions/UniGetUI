@@ -55,6 +55,9 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         bool standalone
     )
     {
+        if (operation is OperationType.Update)
+            options = options.WithoutSavedVersion();
+
         // Every manager concatenates these onto a command line, so an identifier that looks like
         // an option is smuggled in as one even where no shell is involved: a Pip identifier of
         // "requests --index-url https://host" would otherwise add a real index to the install.

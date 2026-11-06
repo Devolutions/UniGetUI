@@ -245,6 +245,54 @@ public sealed class ChocolateyManagerTests : IDisposable
     }
 
     [Fact]
+    public void UpdateToAnExplicitVersionThatIsAlreadyInstalledIsASuccess()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ghidra")
+            .WithVersion("12.0.4")
+            .WithNewVersion("12.2.0")
+            .Build();
+        var options = new InstallOptions { Version = "12.0.4", VersionIsExplicit = true };
+        string[] output =
+        [
+            "ghidra v12.0.4 is the latest version available based on your source(s).",
+            "Chocolatey upgraded 0/1 packages. ",
+        ];
+
+        manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+        var veredict = manager.OperationHelper.GetResult(package, OperationType.Update, output, 0);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
+        Assert.Null(
+            manager.OperationHelper.GetFailureExplanation(package, OperationType.Update, output, 0)
+        );
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, false, false)]
+    [InlineData(OperationType.Update, true, true)]
+    [InlineData(OperationType.Install, false, true)]
+    public void StandaloneCommandsUseASavedVersionOnlyForInstalls(
+        OperationType operation,
+        bool versionIsExplicit,
+        bool expectVersion
+    )
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder().WithManager(manager).WithId("ghidra").Build();
+        var options = new InstallOptions { Version = "12.0.4", VersionIsExplicit = versionIsExplicit };
+
+        var standalone = manager.OperationHelper.GetStandaloneParameters(package, options, operation);
+        var launched = manager.OperationHelper.GetParameters(package, options, operation);
+
+        Assert.Equal(expectVersion, standalone.Contains("\"--version=12.0.4\""));
+        Assert.Equal(expectVersion, launched.Contains("\"--version=12.0.4\""));
+        Assert.Equal("12.0.4", options.Version);
+    }
+
+    [Fact]
     public void UpdateThatStayedBelowTheOfferedVersionIsAnExplainedFailure()
     {
         var manager = new Chocolatey();

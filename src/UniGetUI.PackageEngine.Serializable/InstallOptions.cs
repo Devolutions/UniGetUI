@@ -233,6 +233,16 @@ namespace UniGetUI.PackageEngine.Serializable
 
         public bool VersionIsExplicit { get; set; }
 
+        public InstallOptions WithoutSavedVersion()
+        {
+            if (Version.Length == 0 || VersionIsExplicit)
+                return this;
+
+            var cleared = Copy();
+            cleared.Version = "";
+            return cleared;
+        }
+
         public override InstallOptions Copy()
         {
             var copy = new InstallOptions();

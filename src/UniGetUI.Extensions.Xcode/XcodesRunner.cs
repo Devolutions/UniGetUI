@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using UniGetUI.Core.Logging;
 
 namespace UniGetUI.Extensions.Xcode;
 
@@ -31,6 +32,9 @@ public sealed class XcodesRunner
 
     /// <summary>How long to wait for the pipes once xcodes has exited, in case a child it started kept them open.</summary>
     private static readonly TimeSpan DrainGrace = TimeSpan.FromSeconds(5);
+
+    /// <summary>How long a killed xcodes has to be gone before the run stops waiting for it.</summary>
+    private static readonly TimeSpan KillGrace = TimeSpan.FromSeconds(5);
 
     private readonly string? _executable;
     private readonly IReadOnlyDictionary<string, string?> _environment;
@@ -91,10 +95,9 @@ public sealed class XcodesRunner
             }
             catch (OperationCanceledException)
             {
-                // Disposing a Process leaves it running: stop it, and let it exit, before going on.
-                try { process.Kill(entireProcessTree: true); }
-                catch (InvalidOperationException) { } // It has just exited.
-                await process.WaitForExitAsync(CancellationToken.None);
+                // Disposing a Process leaves it running: stop it, and let it go, before leaving.
+                Kill(process);
+                await WaitForKilledAsync(process);
                 if (cancellationToken.IsCancellationRequested)
                     throw;
                 throw new XcodesException(
@@ -111,6 +114,44 @@ public sealed class XcodesRunner
 
     public Task<XcodesResult> RunAsync(params string[] arguments)
         => RunAsync(arguments, null, CancellationToken.None);
+
+    /// <summary>Stops a process and everything it started.</summary>
+    internal static void Kill(Process process) => Kill(() => process.Kill(entireProcessTree: true));
+
+    /// <summary>
+    /// Runs <paramref name="kill"/>, whose failures do not matter to whoever wants the process gone: it may
+    /// have just exited, or a child it started as root cannot be signalled by this user.
+    /// </summary>
+    internal static void Kill(Action kill)
+    {
+        try
+        {
+            kill();
+        }
+        catch (InvalidOperationException) { } // It has just exited.
+        catch (Win32Exception ex)
+        {
+            Logger.Warn($"Could not stop everything xcodes started: {ex.Message}");
+        }
+        catch (AggregateException ex)
+        {
+            Logger.Warn($"Could not stop everything xcodes started: {ex.Message}");
+        }
+    }
+
+    /// <summary>Waits for a process that has been killed to be gone, for as long as that should take.</summary>
+    private static async Task WaitForKilledAsync(Process process)
+    {
+        using var grace = new CancellationTokenSource(KillGrace);
+        try
+        {
+            await process.WaitForExitAsync(grace.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.Warn($"xcodes was still running {KillGrace.TotalSeconds:0} seconds after it was killed.");
+        }
+    }
 
     /// <summary>The environment every xcodes run gets: no colour, and whatever the caller overrides.</summary>
     internal static void ApplyEnvironment(ProcessStartInfo startInfo, IReadOnlyDictionary<string, string?> overrides)

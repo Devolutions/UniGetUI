@@ -166,6 +166,66 @@ public sealed class XcodesTerminalRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_KeepsTheAppleIdOutOfThePasswordQuestionAndTheFailureText()
+    {
+        if (!OnMac)
+            return;
+        // With an Apple ID xcodes already has, it names the account in the password question and again in
+        // the message for a wrong password, which is where a log or a dialog would otherwise keep it.
+        using var script = new FakeXcodesScript("""
+            printf 'Apple ID Password (me@example.com): '
+            read -rs password
+            printf '\n'
+            echo "Invalid username and password combination. Attempted to sign in with username me@example.com."
+            echo "Try entering your password again"
+            printf 'Apple ID Password (me@example.com): '
+            read -rs password
+            printf '\n'
+            echo "length=${#password}"
+            """);
+        List<XcodesPrompt> asked = [];
+        List<XcodesOutputLine> output = [];
+
+        XcodesResult result = await RunAsync(
+            script,
+            prompts: (prompt, _) =>
+            {
+                asked.Add(prompt);
+                return Task.FromResult<string?>("s3cret!");
+            },
+            output: output);
+
+        Assert.True(result.Success);
+        Assert.Equal([XcodesPromptKind.Password, XcodesPromptKind.Password], asked.Select(prompt => prompt.Kind));
+        Assert.All(asked, prompt => Assert.True(prompt.IsSecret));
+        Assert.Equal(["Apple ID Password:", "Apple ID Password:"], asked.Select(prompt => prompt.Message));
+        Assert.Contains("Invalid username and password combination.", Lines(result));
+        Assert.Contains("Try entering your password again", Lines(result));
+        Assert.Contains("length=7", Lines(result));
+
+        Assert.DoesNotContain("me@example.com", result.StandardOutput);
+        Assert.DoesNotContain("me@example.com", result.Output);
+        Assert.DoesNotContain(output, line => line.Text.Contains("me@example.com", StringComparison.Ordinal));
+        Assert.DoesNotContain(asked, prompt => prompt.Message.Contains("me@example.com", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            asked.SelectMany(prompt => prompt.Context),
+            line => line.Contains("me@example.com", StringComparison.Ordinal));
+        Assert.DoesNotContain("s3cret!", result.StandardOutput);
+    }
+
+    [Fact]
+    public async Task RunAsync_DoesNotNameTheAppleIdWhenAQuestionCannotBeAnswered()
+    {
+        if (!OnMac)
+            return;
+        using var script = new FakeXcodesScript("printf 'Apple ID Password (me@example.com): '\nsleep 30\n");
+
+        XcodesException error = await Assert.ThrowsAsync<XcodesException>(() => RunAsync(script));
+
+        Assert.Equal("xcodes is waiting for input: Apple ID Password:", error.Message);
+    }
+
+    [Fact]
     public async Task RunAsync_ShowsAQuestionWhatCameBeforeIt()
     {
         if (!OnMac)

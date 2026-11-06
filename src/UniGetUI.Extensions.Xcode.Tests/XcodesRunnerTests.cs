@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace UniGetUI.Extensions.Xcode.Tests;
@@ -149,6 +150,49 @@ public sealed class XcodesRunnerTests
         XcodesException error = await Assert.ThrowsAsync<XcodesException>(() => new XcodesRunner().RunAsync("list"));
 
         Assert.Equal("Could not find xcodes.", error.Message);
+    }
+
+    [Fact]
+    public void Kill_ToleratesWhatStoppingAProcessTreeCanThrow()
+    {
+        XcodesRunner.Kill(() => throw new InvalidOperationException("The process has exited."));
+        XcodesRunner.Kill(() => throw new Win32Exception(1, "Operation not permitted"));
+        XcodesRunner.Kill(() => throw new AggregateException(
+            "The process tree was not completely terminated.", new Win32Exception(1, "Operation not permitted")));
+    }
+
+    [Fact]
+    public void Kill_DoesNotHideAnythingElse()
+        => Assert.Throws<ArgumentException>(() => XcodesRunner.Kill(() => throw new ArgumentException("A bug.")));
+
+    [Fact]
+    public async Task Kill_StopsARunningProcess()
+    {
+        if (!HasShell)
+            return;
+        using Process process = Process.Start(new ProcessStartInfo("sleep", "60") { UseShellExecute = false, CreateNoWindow = true })
+            ?? throw new InvalidOperationException("sleep did not start.");
+
+        XcodesRunner.Kill(process);
+
+        using var safety = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await process.WaitForExitAsync(safety.Token);
+        Assert.True(process.HasExited);
+    }
+
+    [Fact]
+    public async Task Kill_AcceptsAProcessThatHasAlreadyExited()
+    {
+        if (!HasShell)
+            return;
+        using Process process = Process.Start(new ProcessStartInfo("true") { UseShellExecute = false, CreateNoWindow = true })
+            ?? throw new InvalidOperationException("true did not start.");
+        using var safety = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await process.WaitForExitAsync(safety.Token);
+
+        XcodesRunner.Kill(process);
+
+        Assert.True(process.HasExited);
     }
 }
 

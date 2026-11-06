@@ -159,15 +159,20 @@ public sealed class XcodesService
         if (installed.Count == 0)
             return null;
 
+        XcodeRelease[] all = [.. releases];
         XcodeRelease? newest = null;
-        foreach (XcodeRelease release in releases)
+        foreach (XcodeRelease release in all)
         {
             if (release.IsPrerelease && !includePrereleases)
                 continue;
             if (newest is null || XcodeVersion.Compare(release.Version, newest.Version) > 0)
                 newest = release;
         }
-        if (newest is null || newest.IsInstalled)
+        if (newest is null)
+            return null;
+
+        // The list can have more than one row for a version, and xcodes marks only the one it matched as installed.
+        if (all.Any(release => release.IsInstalled && XcodeVersion.Compare(release.Version, newest.Version) == 0))
             return null;
 
         string newestInstalled = installed

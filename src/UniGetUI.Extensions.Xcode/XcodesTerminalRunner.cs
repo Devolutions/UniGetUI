@@ -94,7 +94,7 @@ public sealed class XcodesTerminalRunner
         using (process)
         {
             // The command ends the moment this is cancelled; reading the terminal then runs out.
-            using CancellationTokenRegistration killOnCancel = cancellationToken.Register(() => Kill(process));
+            using CancellationTokenRegistration killOnCancel = cancellationToken.Register(() => XcodesRunner.Kill(process));
             try
             {
                 return await ReadAsync(process, prompts, output, cancellationToken);
@@ -103,7 +103,7 @@ public sealed class XcodesTerminalRunner
             {
                 // Disposing a Process leaves it running, which an exception out of here must not.
                 if (!HasExited(process))
-                    Kill(process);
+                    XcodesRunner.Kill(process);
             }
         }
     }
@@ -136,6 +136,8 @@ public sealed class XcodesTerminalRunner
                     echo = null;
             }
 
+            // Whatever is kept or shown from here on never names the Apple ID.
+            line = line with { Text = XcodesPrompts.Redact(line.Text) };
             if (line.ReplacesPrevious && log.Count > 0)
                 log.RemoveAt(log.Count - 1);
             log.Add(line.Text);
@@ -161,7 +163,7 @@ public sealed class XcodesTerminalRunner
                     quiet.Token);
                 if (await Task.WhenAny(read, settled) == settled)
                 {
-                    string message = decoder.Pending.Trim();
+                    string message = XcodesPrompts.Redact(decoder.Pending.Trim());
                     decoder.ClearPending();
                     string[] before = [.. context];
                     context.Clear();
@@ -221,14 +223,14 @@ public sealed class XcodesTerminalRunner
     {
         if (prompts is null)
         {
-            Kill(process);
+            XcodesRunner.Kill(process);
             throw new XcodesException($"xcodes is waiting for input: {prompt.Message}");
         }
 
         string? answer = await prompts(prompt, cancellationToken);
         if (answer is null)
         {
-            Kill(process);
+            XcodesRunner.Kill(process);
             throw new OperationCanceledException("The question was not answered.");
         }
 
@@ -251,16 +253,5 @@ public sealed class XcodesTerminalRunner
     {
         try { return process.HasExited; }
         catch (InvalidOperationException) { return true; }
-    }
-
-    private static void Kill(Process process)
-    {
-        try
-        {
-            process.Kill(entireProcessTree: true);
-        }
-        catch (InvalidOperationException) { } // It has just exited.
-        catch (Win32Exception) { } // A child it started as root cannot be signalled by this user.
-        catch (AggregateException) { }
     }
 }

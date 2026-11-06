@@ -224,8 +224,22 @@ internal static partial class XcodesPrompts
             : null;
     }
 
+    /// <summary>
+    /// Takes the Apple ID out of a line xcodes wrote. xcodes names the account in the password question it
+    /// asks when the ID did not come from this run's own question, and again when the password was wrong;
+    /// neither the log nor a dialog has any use for it.
+    /// </summary>
+    public static string Redact(string text)
+        => AttemptedAccount().Replace(PasswordAccount().Replace(text, "$1:"), "");
+
     [GeneratedRegex(@"^Apple ID:$")]
     private static partial Regex AppleId();
+
+    [GeneratedRegex(@"^(\s*Apple ID Password) \(.*\):")]
+    private static partial Regex PasswordAccount();
+
+    [GeneratedRegex(@"\s*Attempted to sign in with username .*$")]
+    private static partial Regex AttemptedAccount();
 
     [GeneratedRegex(@"^Apple ID Password(?: \(.+\))?:$")]
     private static partial Regex Password();

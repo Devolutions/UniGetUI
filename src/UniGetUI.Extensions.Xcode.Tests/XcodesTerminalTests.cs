@@ -219,6 +219,37 @@ public sealed class XcodesPromptsTests
     }
 
     [Theory]
+    [InlineData("Apple ID Password (me@example.com):", "Apple ID Password:")]
+    [InlineData("  Apple ID Password (me@example.com): ", "  Apple ID Password: ")]
+    [InlineData("Apple ID Password (a (b) c@example.com):", "Apple ID Password:")]
+    [InlineData(
+        "Invalid username and password combination. Attempted to sign in with username me@example.com.",
+        "Invalid username and password combination.")]
+    [InlineData(
+        "Error: Invalid username and password combination. Attempted to sign in with username me@example.com.  ",
+        "Error: Invalid username and password combination.")]
+    public void Redact_TakesTheAppleIdOutOfTheLinesThatNameIt(string line, string expected)
+        => Assert.Equal(expected, XcodesPrompts.Redact(line));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Apple ID:")]
+    [InlineData("Apple ID Password:")]
+    [InlineData("Try entering your password again")]
+    [InlineData("(1/6) Downloading Xcode 26.4: 42%")]
+    [InlineData("Enter the 6 digit code sent to +1 (•••) •••-••12:")]
+    [InlineData("Xcode 26.4 has been installed to /Applications/Xcode-26.4.app")]
+    public void Redact_LeavesEveryOtherLineAlone(string line)
+        => Assert.Equal(line, XcodesPrompts.Redact(line));
+
+    [Fact]
+    public void Redact_DoesNotChangeWhichQuestionALineIs()
+    {
+        Assert.Equal(XcodesPromptKind.Password, XcodesPrompts.Detect("Apple ID Password (me@example.com):"));
+        Assert.Equal(XcodesPromptKind.Password, XcodesPrompts.Detect(XcodesPrompts.Redact("Apple ID Password (me@example.com):")));
+    }
+
+    [Theory]
     [InlineData(XcodesPromptKind.Password, true)]
     [InlineData(XcodesPromptKind.SudoPassword, true)]
     [InlineData(XcodesPromptKind.AppleId, false)]

@@ -419,6 +419,37 @@ public sealed class XcodesServiceTests
     }
 
     [Fact]
+    public void FindUpdate_OffersNothingWhenAnotherRowOfTheNewestVersionIsInstalled()
+    {
+        // xcodes lists a few versions twice, and may mark only one of the rows.
+        Assert.Null(XcodesService.FindUpdate(
+            [Release("26.6"), Release("26.4"), Release("26.6", installed: true)],
+            [Installed("26.4")],
+            includePrereleases: false));
+        Assert.Null(XcodesService.FindUpdate(
+            [Release("26.6", installed: true), Release("26.4"), Release("26.6")],
+            [Installed("26.4")],
+            includePrereleases: false));
+    }
+
+    [Fact]
+    public void FindUpdate_ReadsTheReleasesOnce()
+    {
+        int enumerations = 0;
+        IEnumerable<XcodeRelease> Releases()
+        {
+            enumerations++;
+            yield return Release("26.6");
+            yield return Release("26.4", installed: true);
+        }
+
+        XcodeRelease? update = XcodesService.FindUpdate(Releases(), [Installed("26.4")], includePrereleases: false);
+
+        Assert.Equal("26.6", update?.Version);
+        Assert.Equal(1, enumerations);
+    }
+
+    [Fact]
     public void FindUpdate_OffersNothingWhenAnInstalledXcodeIsAlreadyNewer()
     {
         Assert.Null(XcodesService.FindUpdate(

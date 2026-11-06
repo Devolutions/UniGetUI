@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Microsoft.Management.Deployment;
@@ -199,6 +200,102 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 new(PackageMatchField.Moniker, false, null),
             ];
 
+    internal readonly record struct NativeSearchMatchId(string CatalogName, string? Id);
+
+    internal readonly record struct NativeSearchResult(string Name, string Version);
+
+    internal static IReadOnlyList<int> SelectUniqueSearchMatches(
+        IReadOnlyList<NativeSearchMatchId> matches
+    )
+    {
+        List<int> selected = [];
+        HashSet<(string, string)> seen = [];
+        for (int index = 0; index < matches.Count; index++)
+        {
+            if (matches[index].Id is { } id && seen.Add((matches[index].CatalogName, id)))
+            {
+                selected.Add(index);
+            }
+        }
+
+        return selected;
+    }
+
+    internal sealed record ResolvedSearchMatch<TPackage>(
+        int FirstIndex,
+        string Id,
+        NativeSearchResult Result,
+        TPackage Package
+    );
+
+    internal sealed record SearchMatchResolution<TPackage>(
+        IReadOnlyList<ResolvedSearchMatch<TPackage>> Matches,
+        IReadOnlyList<Exception> Errors,
+        int ResultCount
+    );
+
+    internal static SearchMatchResolution<TPackage> ResolveSearchMatches<TPackage>(
+        IReadOnlyList<(string CatalogName, TPackage Package)> matches,
+        Func<TPackage, string> readId,
+        Func<TPackage, NativeSearchResult> readResult,
+        int parallelism,
+        CancellationToken cancellationToken
+    )
+    {
+        var ids = new NativeSearchMatchId[matches.Count];
+        var resolved = new NativeSearchResult?[matches.Count];
+        var errors = new Exception?[matches.Count];
+        ConcurrentDictionary<(string, string), int> resolvingIndex = new();
+        Parallel.For(
+            0,
+            matches.Count,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = parallelism,
+                CancellationToken = cancellationToken,
+            },
+            index =>
+            {
+                var (catalogName, package) = matches[index];
+                try
+                {
+                    string id = readId(package);
+                    ids[index] = new(catalogName, id);
+                    if (resolvingIndex.TryAdd((catalogName, id), index))
+                    {
+                        resolved[index] = readResult(package);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (ids[index].Id is null)
+                    {
+                        ids[index] = new(catalogName, null);
+                    }
+
+                    errors[index] = e;
+                }
+            }
+        );
+
+        List<ResolvedSearchMatch<TPackage>> results = [];
+        foreach (int firstIndex in SelectUniqueSearchMatches(ids))
+        {
+            NativeSearchMatchId match = ids[firstIndex];
+            int index = resolvingIndex[(match.CatalogName, match.Id!)];
+            if (resolved[index] is { } result)
+            {
+                results.Add(new(firstIndex, match.Id!, result, matches[index].Package));
+            }
+        }
+
+        return new(
+            results,
+            [.. errors.OfType<Exception>()],
+            resolvingIndex.Count + ids.Count(match => match.Id is null)
+        );
+    }
+
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
         List<Package> packages = [];
@@ -281,6 +378,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         Task.WhenAll(FindPackageTasks.Values.ToArray()).GetAwaiter().GetResult();
         logger.Log($"All catalogs fetched. Fetching results for query piece {query}");
 
+        List<(IManagerSource Source, CatalogPackage NativePackage)> matches = [];
         foreach (var CatalogTaskPair in FindPackageTasks)
         {
             try
@@ -295,24 +393,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     MatchResult matchResult in NativeWinGetCollection.Copy(FoundPackages.Matches)
                 )
                 {
-                    CatalogPackage nativePackage = matchResult.CatalogPackage;
-                    // Create the Package item and add it to the list
-                    logger.Log(
-                        $"Found package: {nativePackage.Name}|{nativePackage.Id}|{nativePackage.DefaultInstallVersion.Version} on catalog {source.Name}"
-                    );
-
-                    var overriden_options = new OverridenInstallationOptions();
-
-                    var UniGetUIPackage = new Package(
-                        nativePackage.Name,
-                        nativePackage.Id,
-                        nativePackage.DefaultInstallVersion.Version,
-                        source,
-                        Manager,
-                        overriden_options
-                    );
-                    NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
-                    packages.Add(UniGetUIPackage);
+                    matches.Add((source, matchResult.CatalogPackage));
                 }
             }
             catch (Exception e)
@@ -326,9 +407,57 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             }
         }
 
-        logger.Close(0);
+        SearchMatchResolution<CatalogPackage> resolution;
+        try
+        {
+            resolution = ResolveSearchMatches(
+                [.. matches.Select(match => (match.Source.Name, match.NativePackage))],
+                nativePackage => nativePackage.Id,
+                nativePackage =>
+                    new(nativePackage.Name, nativePackage.DefaultInstallVersion.Version),
+                SearchVersionResolutionParallelism,
+                Manager.CurrentListingCancellation
+            );
+        }
+        catch (OperationCanceledException)
+        {
+            logger.Error("WinGet: The search was cancelled before its results were read.");
+            logger.Close(1);
+            throw;
+        }
+
+        if (resolution.Errors.Count > 0)
+        {
+            logger.Error(
+                $"WinGet: {resolution.Errors.Count} of {resolution.ResultCount} search results could not be read. First error:"
+            );
+            logger.Error(resolution.Errors[0]);
+        }
+
+        foreach (var match in resolution.Matches)
+        {
+            IManagerSource source = matches[match.FirstIndex].Source;
+            logger.Log(
+                $"Found package: {match.Result.Name}|{match.Id}|{match.Result.Version} on catalog {source.Name}"
+            );
+
+            var UniGetUIPackage = new Package(
+                match.Result.Name,
+                match.Id,
+                match.Result.Version,
+                source,
+                Manager,
+                new OverridenInstallationOptions()
+            );
+            NativePackageHandler.AddPackage(UniGetUIPackage, match.Package);
+            packages.Add(UniGetUIPackage);
+        }
+
+        logger.Close(packages.Count == 0 && resolution.Errors.Count > 0 ? 1 : 0);
         return packages;
     }
+
+    private const int SearchVersionResolutionParallelism = 8;
 
     public IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {

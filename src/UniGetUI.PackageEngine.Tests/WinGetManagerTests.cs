@@ -179,6 +179,203 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void SelectUniqueSearchMatchesKeepsTheFirstMatchOfEachPackageInOrder()
+    {
+        NativeWinGetHelper.NativeSearchMatchId[] matches =
+        [
+            new("winget", "Mozilla.Firefox"),
+            new("winget", "Contoso.Tool"),
+            new("winget", "Mozilla.Firefox"),
+            new("msstore", "Mozilla.Firefox"),
+            new("winget", "Contoso.Tool"),
+        ];
+
+        Assert.Equal([0, 1, 3], NativeWinGetHelper.SelectUniqueSearchMatches(matches));
+    }
+
+    [Fact]
+    public void SelectUniqueSearchMatchesSkipsUnreadableMatches()
+    {
+        NativeWinGetHelper.NativeSearchMatchId[] matches =
+        [
+            new("winget", null),
+            new("winget", "Contoso.Tool"),
+            new("winget", null),
+            new("winget", "Contoso.Other"),
+        ];
+
+        Assert.Equal([1, 3], NativeWinGetHelper.SelectUniqueSearchMatches(matches));
+    }
+
+    [Fact]
+    public void SelectUniqueSearchMatchesTreatsIdsWithDifferentCaseAsDifferentPackages()
+    {
+        NativeWinGetHelper.NativeSearchMatchId[] matches =
+        [
+            new("winget", "Contoso.Tool"),
+            new("winget", "contoso.tool"),
+        ];
+
+        Assert.Equal([0, 1], NativeWinGetHelper.SelectUniqueSearchMatches(matches));
+    }
+
+    private sealed class FakeSearchMatch(string id, string name, string version)
+    {
+        public string Id { get; } = id;
+        public string Name { get; } = name;
+        public string Version { get; } = version;
+        public Func<string>? ReadId { get; init; }
+        public Func<NativeWinGetHelper.NativeSearchResult>? ReadResult { get; init; }
+    }
+
+    private static NativeWinGetHelper.SearchMatchResolution<FakeSearchMatch> Resolve(
+        IReadOnlyList<(string CatalogName, FakeSearchMatch Package)> matches,
+        ConcurrentDictionary<FakeSearchMatch, int>? resultReads = null,
+        int parallelism = 8,
+        CancellationToken cancellationToken = default
+    ) =>
+        NativeWinGetHelper.ResolveSearchMatches(
+            matches,
+            match => match.ReadId?.Invoke() ?? match.Id,
+            match =>
+            {
+                resultReads?.AddOrUpdate(match, 1, (_, count) => count + 1);
+                return match.ReadResult?.Invoke() ?? new(match.Name, match.Version);
+            },
+            parallelism,
+            cancellationToken
+        );
+
+    [Fact]
+    public void ResolveSearchMatchesReadsMetadataOncePerPackageInFirstOccurrenceOrder()
+    {
+        var firefox = new FakeSearchMatch("Mozilla.Firefox", "Mozilla Firefox", "150.0");
+        var tool = new FakeSearchMatch("Contoso.Tool", "Contoso Tool", "1.0");
+        var firefoxById = new FakeSearchMatch("Mozilla.Firefox", "Mozilla Firefox", "150.0");
+        var storeFirefox = new FakeSearchMatch("Mozilla.Firefox", "Mozilla Firefox", "Unknown");
+        var toolByMoniker = new FakeSearchMatch("Contoso.Tool", "Contoso Tool", "1.0");
+        ConcurrentDictionary<FakeSearchMatch, int> reads = new();
+
+        var resolution = Resolve(
+            [
+                ("winget", firefox),
+                ("winget", tool),
+                ("winget", firefoxById),
+                ("msstore", storeFirefox),
+                ("winget", toolByMoniker),
+            ],
+            reads
+        );
+
+        Assert.Equal([0, 1, 3], resolution.Matches.Select(match => match.FirstIndex));
+        Assert.Equal(
+            ["Mozilla.Firefox", "Contoso.Tool", "Mozilla.Firefox"],
+            resolution.Matches.Select(match => match.Id)
+        );
+        Assert.Equal(["150.0", "1.0", "Unknown"], resolution.Matches.Select(match => match.Result.Version));
+        Assert.Equal(3, reads.Values.Sum());
+        Assert.All(reads.Values, count => Assert.Equal(1, count));
+        Assert.Equal(1, reads.Keys.Count(match => match == firefox || match == firefoxById));
+        Assert.Equal(1, reads.Keys.Count(match => match == tool || match == toolByMoniker));
+        Assert.Empty(resolution.Errors);
+        Assert.Equal(3, resolution.ResultCount);
+    }
+
+    [Fact]
+    public void ResolveSearchMatchesKeepsTheResolvingDuplicateAtTheFirstPosition()
+    {
+        using var laterDuplicateResolved = new ManualResetEventSlim();
+        var first = new FakeSearchMatch("Contoso.Tool", "Contoso Tool", "1.0")
+        {
+            ReadId = () =>
+            {
+                Assert.True(laterDuplicateResolved.Wait(TimeSpan.FromSeconds(10)));
+                return "Contoso.Tool";
+            },
+        };
+        var other = new FakeSearchMatch("Contoso.Other", "Contoso Other", "2.0");
+        var laterDuplicate = new FakeSearchMatch("Contoso.Tool", "Contoso Tool", "1.0")
+        {
+            ReadResult = () =>
+            {
+                laterDuplicateResolved.Set();
+                return new("Contoso Tool", "1.0");
+            },
+        };
+        ConcurrentDictionary<FakeSearchMatch, int> reads = new();
+
+        var resolution = Resolve(
+            [("winget", first), ("winget", other), ("winget", laterDuplicate)],
+            reads
+        );
+
+        Assert.Equal([0, 1], resolution.Matches.Select(match => match.FirstIndex));
+        Assert.Same(laterDuplicate, resolution.Matches[0].Package);
+        Assert.False(reads.ContainsKey(first));
+        Assert.Empty(resolution.Errors);
+    }
+
+    [Fact]
+    public void ResolveSearchMatchesStopsResolvingWhenCancelled()
+    {
+        using var cancellation = new CancellationTokenSource();
+        int resolvedCount = 0;
+        var matches = Enumerable
+            .Range(0, 50)
+            .Select(index =>
+                (
+                    "winget",
+                    new FakeSearchMatch($"Contoso.Tool{index}", "Contoso Tool", "1.0")
+                    {
+                        ReadResult = () =>
+                        {
+                            if (Interlocked.Increment(ref resolvedCount) == 3)
+                            {
+                                cancellation.Cancel();
+                            }
+
+                            return new("Contoso Tool", "1.0");
+                        },
+                    }
+                )
+            )
+            .ToArray();
+
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            Resolve(matches, parallelism: 1, cancellationToken: cancellation.Token)
+        );
+        Assert.Equal(3, resolvedCount);
+    }
+
+    [Fact]
+    public void ResolveSearchMatchesReportsUnreadablePackagesInOrderAndKeepsTheRest()
+    {
+        var unreadableId = new FakeSearchMatch("Contoso.Broken", "Broken", "1.0")
+        {
+            ReadId = () => throw new InvalidOperationException("id"),
+        };
+        var unreadableVersion = new FakeSearchMatch("Contoso.NoVersion", "No Version", "1.0")
+        {
+            ReadResult = () => throw new InvalidOperationException("version"),
+        };
+        var readable = new FakeSearchMatch("Contoso.Tool", "Contoso Tool", "1.0");
+
+        var resolution = Resolve(
+            [("winget", unreadableId), ("winget", unreadableVersion), ("winget", readable)]
+        );
+
+        Assert.Equal(["Contoso.Tool"], resolution.Matches.Select(match => match.Id));
+        Assert.Equal(["id", "version"], resolution.Errors.Select(error => error.Message));
+        Assert.Equal(3, resolution.ResultCount);
+    }
+
+    [Fact]
+    public void SelectUniqueSearchMatchesReturnsNothingForNoMatches()
+    {
+        Assert.Empty(NativeWinGetHelper.SelectUniqueSearchMatches([]));
+    }
+
+    [Fact]
     public void NativeWinGetCollectionCopiesWithoutEnumeratingWinRtCollections()
     {
         IReadOnlyList<string> nativeCollection = new EnumeratorThrowingReadOnlyList<string>(

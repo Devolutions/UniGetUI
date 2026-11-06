@@ -20,6 +20,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
     {
         private const int PackageListingTaskTimeout = 60;
 
+        protected virtual TimeSpan ListingTaskTimeout => TimeSpan.FromSeconds(PackageListingTaskTimeout);
+
         public ManagerProperties Properties { get; set; } = new(IsDummy: true);
         public ManagerCapabilities Capabilities { get; set; } = new(IsDummy: true);
         public ManagerStatus Status { get; set; } = new() { Found = false };
@@ -384,6 +386,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         private readonly HashSet<List<Process>> _activeListingProcesses = [];
 
+        private readonly AsyncLocal<CancellationToken> _listingCancellation = new();
+
+        private readonly HashSet<CancellationTokenSource> _activeListingCancellations = [];
+
+        protected CancellationToken ListingCancellationToken => _listingCancellation.Value;
+
         // Lets a listing task register a process for kill-on-timeout. No-op when outside a listing task.
         protected void RegisterListingProcess(Process process)
         {
@@ -425,11 +433,33 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             List<Process>[] active;
             lock (_activeListingProcesses)
                 active = [.. _activeListingProcesses];
+            CancellationTokenSource[] cancellations;
+            lock (_activeListingCancellations)
+                cancellations = [.. _activeListingCancellations];
 
             Interlocked.Exchange(ref _lastStopTimestamp, Stopwatch.GetTimestamp());
             int killed = active.Sum(KillListingProcesses);
+            foreach (CancellationTokenSource cancellation in cancellations)
+                CancelListing(cancellation);
             Logger.Warn($"Stopped {killed} running process(es) of manager {Name}");
             return killed;
+        }
+
+        private void CancelListing(CancellationTokenSource cancellation)
+        {
+            lock (_activeListingCancellations)
+            {
+                if (!_activeListingCancellations.Contains(cancellation))
+                    return;
+                try
+                {
+                    cancellation.Cancel();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"A cancelled listing task of manager {Name} failed to stop: {ex.Message}");
+                }
+            }
         }
 
         private void RefreshPackageIndexesSafely()
@@ -468,6 +498,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             List<Process> processes = [];
             lock (_activeListingProcesses)
                 _activeListingProcesses.Add(processes);
+            CancellationTokenSource cancellation = new();
+            lock (_activeListingCancellations)
+                _activeListingCancellations.Add(cancellation);
 
             bool abandoned = false;
             try
@@ -475,10 +508,11 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 var task = Task.Run(() =>
                 {
                     _listingProcesses.Value = processes;
+                    _listingCancellation.Value = cancellation.Token;
                     return method();
                 });
 
-                if (!task.Wait(TimeSpan.FromSeconds(PackageListingTaskTimeout)))
+                if (!task.Wait(ListingTaskTimeout))
                 {
                     if (
                         !allowDisablingTimeout
@@ -486,9 +520,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     )
                     {
                         KillListingProcesses(processes);
+                        CancelListing(cancellation);
                         abandoned = true;
                         task.ContinueWith(
-                            _ => ForgetListingProcesses(processes),
+                            _ => ForgetListing(processes, cancellation),
                             CancellationToken.None,
                             TaskContinuationOptions.ExecuteSynchronously,
                             TaskScheduler.Default
@@ -496,7 +531,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                         CoreTools.FinalizeDangerousTask(task);
                         throw new TimeoutException(
                             $"Task {taskName} for manager {Name} did not finish after "
-                                + $"{PackageListingTaskTimeout} seconds, aborting."
+                                + $"{ListingTaskTimeout.TotalSeconds} seconds, aborting."
                                 + (
                                     allowDisablingTimeout
                                         ? "  You may disable timeouts from UniGetUI Advanced Settings"
@@ -513,7 +548,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             finally
             {
                 if (!abandoned)
-                    ForgetListingProcesses(processes);
+                    ForgetListing(processes, cancellation);
             }
         }
 
@@ -521,6 +556,16 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         {
             lock (_activeListingProcesses)
                 _activeListingProcesses.Remove(processes);
+        }
+
+        private void ForgetListing(List<Process> processes, CancellationTokenSource cancellation)
+        {
+            ForgetListingProcesses(processes);
+            lock (_activeListingCancellations)
+            {
+                _activeListingCancellations.Remove(cancellation);
+                cancellation.Dispose();
+            }
         }
 
         private long _lastStopTimestamp;

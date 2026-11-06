@@ -102,6 +102,12 @@ public sealed class TestPackageManager : PackageManager
 
     public string? LastQuery { get; private set; }
 
+    public CancellationToken CurrentListingCancellation => ListingCancellationToken;
+
+    public TimeSpan ListingTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    protected override TimeSpan ListingTaskTimeout => ListingTimeout;
+
     public void SetFindPackages(Func<string, IReadOnlyList<Package>> findPackages)
     {
         _findPackages = findPackages;

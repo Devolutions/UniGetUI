@@ -359,6 +359,40 @@ public sealed class OperationHistoryTests : IDisposable
         Assert.False(record.ClampStoredOutput());
     }
 
+    [Theory]
+    [InlineData("[... 10 frühere Zeilen ausgelassen ...]")]
+    [InlineData("[... предыдущих строк пропущено: 10 ...]")]
+    [InlineData("[... 以前の10行は省略されました ...]")]
+    [InlineData("[... تم حذف 10 من الأسطر السابقة ...]")]
+    [InlineData("[... 10 earlier lines omitted ...]")]
+    public void ClampStoredOutput_KeepsTheOmittedCountOfAMarkerInAnyLanguage(string storedMarker)
+    {
+        var record = Record("localized");
+        record.Output.Add(new OperationHistoryOutputLine { Text = storedMarker, Type = "Information" });
+        for (int i = 0; i < OperationHistoryRecord.MaxOutputLines; i++)
+            record.Output.Add(new OperationHistoryOutputLine { Text = new string('w', 100), Type = "Information" });
+
+        Assert.True(record.ClampStoredOutput());
+
+        int expectedOmitted = 10 + OperationHistoryRecord.MaxOutputLines - (record.Output.Count - 1);
+        Assert.Contains(expectedOmitted.ToString(), record.Output[0].Text);
+        Assert.DoesNotContain(record.Output, line => line.Text == storedMarker);
+    }
+
+    [Fact]
+    public void ClampStoredOutput_TreatsAnOrdinaryFirstLineAsOutput()
+    {
+        var record = Record("ordinary");
+        record.Output.Add(new OperationHistoryOutputLine { Text = "[... 10 of 20 ...]", Type = "Information" });
+        for (int i = 0; i < OperationHistoryRecord.MaxOutputLines; i++)
+            record.Output.Add(new OperationHistoryOutputLine { Text = new string('w', 100), Type = "Information" });
+
+        Assert.True(record.ClampStoredOutput());
+
+        int expectedOmitted = 1 + OperationHistoryRecord.MaxOutputLines - (record.Output.Count - 1);
+        Assert.Contains(expectedOmitted.ToString(), record.Output[0].Text);
+    }
+
     private static List<OperationHistoryOutputLine> Lines(params (string text, string type)[] items)
         => items.Select(i => new OperationHistoryOutputLine { Text = i.text, Type = i.type }).ToList();
 

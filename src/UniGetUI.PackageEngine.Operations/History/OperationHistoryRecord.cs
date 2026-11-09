@@ -175,7 +175,7 @@ public sealed class OperationHistoryRecord
 
         int start = 0;
         int alreadyOmitted = 0;
-        if (Output.Count > 0 && TryReadOmittedMarker(Output[0].Text, out alreadyOmitted))
+        if (Output.Count > 0 && TryReadOmittedMarker(Output[0], out alreadyOmitted))
             start = 1;
 
         int first = FirstKeptLine(Output.Count, start, int.MaxValue, maxChars, i => Output[i].Text);
@@ -214,22 +214,36 @@ public sealed class OperationHistoryRecord
         });
     }
 
-    private static bool TryReadOmittedMarker(string? text, out int omitted)
+    private static bool TryReadOmittedMarker(OperationHistoryOutputLine line, out int omitted)
     {
         omitted = 0;
-        if (text is null)
+        string? text = line.Text;
+        if (line.Type != "Information"
+            || text is null
+            || text.Length > MarkerReserveChars
+            || !text.StartsWith("[... ", StringComparison.Ordinal)
+            || !text.EndsWith(" ...]", StringComparison.Ordinal))
             return false;
-        string[] parts = CoreTools.Translate("[... {0} earlier lines omitted ...]", "\u0001").Split('\u0001');
-        if (parts.Length != 2
-            || text.Length <= parts[0].Length + parts[1].Length
-            || !text.StartsWith(parts[0], StringComparison.Ordinal)
-            || !text.EndsWith(parts[1], StringComparison.Ordinal))
-            return false;
-        return int.TryParse(
-            text.AsSpan(parts[0].Length, text.Length - parts[0].Length - parts[1].Length),
-            NumberStyles.None,
-            CultureInfo.InvariantCulture,
-            out omitted);
+
+        int digitsStart = -1;
+        int digitsEnd = -1;
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (!char.IsAsciiDigit(text[i]))
+                continue;
+            if (digitsStart < 0)
+                digitsStart = i;
+            else if (digitsEnd != i)
+                return false;
+            digitsEnd = i + 1;
+        }
+
+        return digitsStart >= 0
+            && int.TryParse(
+                text.AsSpan(digitsStart, digitsEnd - digitsStart),
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out omitted);
     }
 
     private static bool NeedsCharacterClamp(IReadOnlyList<OperationHistoryOutputLine> output, long maxChars)

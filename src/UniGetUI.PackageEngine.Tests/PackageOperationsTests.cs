@@ -288,6 +288,112 @@ public sealed class PackageOperationsTests
     }
 
     [Theory]
+    [InlineData(true, false, true)]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, true)]
+    public void UpdateOperationReinstallsWhenTheUpdateRequiresItOrTheOptionIsOn(
+        bool requiresReinstall,
+        bool uninstallBeforeUpdate,
+        bool expectsUninstallFirst
+    )
+    {
+        var builder = new PackageBuilder()
+            .WithManager(CreateManager())
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0");
+        if (requiresReinstall)
+            builder.RequiringReinstallToUpdate();
+
+        using var operation = new InspectableUpdatePackageOperation(
+            builder.Build(),
+            new InstallOptions { UninstallBeforeUpdate = uninstallBeforeUpdate }
+        );
+
+        var preOperations = operation.AttemptPreOperationsForTests();
+        if (expectsUninstallFirst)
+            Assert.IsType<UninstallPackageOperation>(Assert.Single(preOperations).Operation);
+        else
+            Assert.Empty(preOperations);
+    }
+
+    [Theory]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    public void BulkUpdatesLeaveOutUpdatesThatNeedAReinstallUnlessTheOptionIsOn(
+        bool requiresReinstall,
+        bool uninstallBeforeUpdate,
+        bool expected
+    )
+    {
+        var builder = new PackageBuilder()
+            .WithManager(CreateManager())
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0");
+        if (requiresReinstall)
+            builder.RequiringReinstallToUpdate();
+
+        Assert.Equal(
+            expected,
+            PackageOperation.IsLeftOutOfBulkUpdates(
+                builder.Build(),
+                new InstallOptions { UninstallBeforeUpdate = uninstallBeforeUpdate }
+            )
+        );
+    }
+
+    [Fact]
+    public async Task BulkUpdateNotificationsOnlyNameTheUpdatesThatRun()
+    {
+        var manager = CreateManager();
+        var regular = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Regular")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var reinstall = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Reinstall")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .RequiringReinstallToUpdate()
+            .Build();
+
+        var kept = await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync([regular, reinstall]);
+
+        Assert.Same(regular, Assert.Single(kept));
+    }
+
+    [Fact]
+    public async Task UpdatesThatNeedAReinstallAreNotCheckedByDefault()
+    {
+        InitializeLoaders();
+        var manager = CreateManager();
+        var regular = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Regular")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var reinstall = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Reinstall")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .RequiringReinstallToUpdate()
+            .Build();
+
+        await UpgradablePackagesLoader.Instance.AddForeign(regular);
+        await UpgradablePackagesLoader.Instance.AddForeign(reinstall);
+
+        Assert.True(regular.IsChecked);
+        Assert.False(reinstall.IsChecked);
+    }
+
+    [Theory]
     [InlineData(false, false, "install Contoso.Tool 3.0.0")]
     [InlineData(true, false, "install Contoso.Tool 3.0.0")]
     [InlineData(false, true, "install Contoso.Tool 3.0.0")]

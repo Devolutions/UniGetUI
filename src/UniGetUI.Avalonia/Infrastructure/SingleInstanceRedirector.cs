@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO.Pipes;
 using System.Security.Cryptography;
 using System.Text;
@@ -33,6 +34,8 @@ internal static class SingleInstanceRedirector
     }
 
     private static Thread? _listener;
+    private static readonly CancellationTokenSource _listenerStop = new();
+    private static readonly ConcurrentDictionary<Task, byte> _deliveries = new();
 
     // The mutex proves a first instance exists, so keep probing this long before giving up.
     private static readonly TimeSpan ForwardBudget = TimeSpan.FromSeconds(5);
@@ -45,9 +48,10 @@ internal static class SingleInstanceRedirector
     /// </summary>
     public static void StartListener(Action<string[]> onArgsReceived)
     {
+        CancellationToken stop = _listenerStop.Token;
         _listener = new Thread(() =>
         {
-            while (true)
+            while (!stop.IsCancellationRequested)
             {
                 NamedPipeServerStream? pipe = null;
                 try
@@ -59,12 +63,16 @@ internal static class SingleInstanceRedirector
                         transmissionMode: PipeTransmissionMode.Byte,
                         options: PipeOptions.Asynchronous);
 
-                    pipe.WaitForConnection();
+                    pipe.WaitForConnectionAsync(stop).GetAwaiter().GetResult();
 
                     // Read off-thread and immediately re-arm: a single slow/stuck client can
                     // never block the next accept nor "busy out" the pipe into timeouts.
                     HandleConnection(pipe, onArgsReceived);
                     pipe = null; // ownership handed to the read task
+                }
+                catch (OperationCanceledException) when (stop.IsCancellationRequested)
+                {
+                    break;
                 }
                 catch (Exception ex) when (ex is not ThreadAbortException)
                 {
@@ -86,9 +94,18 @@ internal static class SingleInstanceRedirector
         _listener.Start();
     }
 
+    public static async Task StopListenerAsync()
+    {
+        _listenerStop.Cancel();
+        if (_listener is { } listener)
+            await Task.Run(() => listener.Join(ReadTimeout)).ConfigureAwait(false);
+
+        await Task.WhenAll(_deliveries.Keys).WaitAsync(ReadTimeout).ConfigureAwait(false);
+    }
+
     private static void HandleConnection(NamedPipeServerStream pipe, Action<string[]> onArgsReceived)
     {
-        _ = Task.Run(async () =>
+        Task delivery = Task.Run(async () =>
         {
             try
             {
@@ -107,6 +124,13 @@ internal static class SingleInstanceRedirector
                 Logger.Warn($"SingleInstanceRedirector read error: {ex.Message}");
             }
         });
+        _deliveries.TryAdd(delivery, 0);
+        _ = delivery.ContinueWith(
+            finished => _deliveries.TryRemove(finished, out _),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default
+        );
     }
 
     /// <summary>

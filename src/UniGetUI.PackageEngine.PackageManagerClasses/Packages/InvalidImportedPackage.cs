@@ -50,6 +50,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public bool InstalledVersionIsUnverified => false;
 
+        public bool RequiresReinstallToUpdate => false;
+
         public string VersionString { get; }
 
         public CoreTools.Version NormalizedVersion { get; }

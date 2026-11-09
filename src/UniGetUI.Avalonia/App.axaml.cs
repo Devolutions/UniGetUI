@@ -335,6 +335,13 @@ public partial class App : Application
 
     private static void HandleSecondaryInstanceArgs(MainWindow mainWindow, string[] args)
     {
+        if (mainWindow.IsQuitting)
+        {
+            Logger.Warn("UniGetUI is quitting, so a forwarded launch will start it again once it has exited");
+            AvaloniaAppHost.RecordLaunchWhileQuitting(args);
+            return;
+        }
+
         bool isDaemonLaunch = args.Contains(AvaloniaCliHandler.DAEMON);
         CoreData.IsDaemon = isDaemonLaunch;
 

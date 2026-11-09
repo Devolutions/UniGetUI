@@ -46,6 +46,44 @@ public static class AvaloniaAppHost
         remove => _secondaryInstanceArgsReceived -= value;
     }
 
+    private static readonly List<string[]> _launchesWhileQuitting = [];
+
+    public static void RecordLaunchWhileQuitting(string[] args)
+    {
+        lock (_launchesWhileQuitting)
+            _launchesWhileQuitting.Add(args);
+    }
+
+    public static IReadOnlyList<string[]> TakeLaunchesWhileQuitting()
+    {
+        lock (_launchesWhileQuitting)
+        {
+            string[][] launches = [.. _launchesWhileQuitting];
+            _launchesWhileQuitting.Clear();
+            return launches;
+        }
+    }
+
+    public static async Task StopAcceptingLaunchesAsync()
+    {
+        try
+        {
+            await SingleInstanceRedirector.StopListenerAsync();
+        }
+        catch (TimeoutException)
+        {
+            Logger.Warn("Timed out while waiting for forwarded launches to be delivered");
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
+    }
+
+    public static void ReleaseSingleInstance()
+    {
+        Interlocked.Exchange(ref _singleInstanceMutex, null)?.Dispose();
+        Interlocked.Exchange(ref _singleInstanceLock, null)?.Dispose();
+    }
+
     private static void RaiseSecondaryInstanceArgs(string[] args)
     {
         if (_secondaryInstanceArgsReceived is null)
@@ -267,6 +305,20 @@ public static class AvaloniaAppHost
             return false;
         }
 
+        _singleInstanceMutex.Dispose();
+        _singleInstanceMutex = new Mutex(
+            initiallyOwned: true,
+            name: CoreData.MainWindowIdentifier,
+            createdNew: out createdNew
+        );
+        if (createdNew)
+        {
+            SingleInstanceRedirector.StartListener(RaiseSecondaryInstanceArgs);
+            return true;
+        }
+
+        _singleInstanceMutex.Dispose();
+        _singleInstanceMutex = null;
         Logger.Warn("Could not redirect to the existing Avalonia instance; starting a new one");
         return true;
     }
@@ -276,21 +328,33 @@ public static class AvaloniaAppHost
         // FileShare.None is an flock() advisory lock the OS releases on exit (even on crash), so the
         // lock file never goes stale. The static FileStream holds the lock for the process lifetime.
         string lockPath = Path.Combine(Path.GetTempPath(), $"UniGetUI_{Environment.UserName}.lock");
-        try
-        {
-            _singleInstanceLock = new FileStream(
-                lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        }
-        catch (IOException)
+        if (!TryTakeFileLock(lockPath))
         {
             if (SingleInstanceRedirector.TryForwardToFirstInstance(args))
                 return false;
 
-            Logger.Warn("Could not redirect to the existing Avalonia instance; starting a new one");
-            return true;
+            if (!TryTakeFileLock(lockPath))
+            {
+                Logger.Warn("Could not redirect to the existing Avalonia instance; starting a new one");
+                return true;
+            }
         }
 
         SingleInstanceRedirector.StartListener(RaiseSecondaryInstanceArgs);
         return true;
+    }
+
+    private static bool TryTakeFileLock(string lockPath)
+    {
+        try
+        {
+            _singleInstanceLock = new FileStream(
+                lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 }

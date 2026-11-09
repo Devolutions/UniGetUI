@@ -2422,9 +2422,11 @@ public partial class MainWindow : Window
     {
         Logger.Warn("Quitting UniGetUI");
         await AvaloniaAutoUpdater.WaitForInstallerHandoffAsync();
+        bool ipcStopped = false;
         try
         {
             await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            ipcStopped = true;
         }
         catch (TimeoutException ex)
         {
@@ -2436,7 +2438,37 @@ public partial class MainWindow : Window
             Logger.Error(ex);
         }
 
+        await AvaloniaAppHost.StopAcceptingLaunchesAsync();
+        if (ipcStopped)
+            AvaloniaAppHost.ReleaseSingleInstance();
+
+        if (!AvaloniaAutoUpdater.InstallerLaunched)
+        {
+            string executablePath = AppRestartHelper.ResolveRestartExecutablePath(AppContext.BaseDirectory);
+            foreach (string[] launch in AvaloniaAppHost.TakeLaunchesWhileQuitting())
+            {
+                if (!CoreTools.TryScheduleRelaunchAfterExit(executablePath, launch))
+                    StartDirectly(executablePath, launch);
+            }
+        }
+
         Environment.Exit(0);
+    }
+
+    private static void StartDirectly(string executablePath, string[] arguments)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo(executablePath) { UseShellExecute = false };
+            foreach (string argument in arguments)
+                startInfo.ArgumentList.Add(argument);
+            using var process = Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Could not start UniGetUI again for a launch made while it was quitting");
+            Logger.Error(ex);
+        }
     }
 
     public static void ApplyProxyVariableToProcess()

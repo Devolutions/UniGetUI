@@ -319,6 +319,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 && helper.ReportedUpdateNotApplicable(processOutput, returnCode);
         }
 
+        public bool ReportedDifferentInstallTechnology(IReadOnlyList<string> processOutput) =>
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(processOutput);
+
         public bool ReportedInstallerHashMismatch(int returnCode) =>
             WinGetPkgOperationHelper.ReportedInstallerHashMismatch(returnCode);
 

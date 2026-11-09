@@ -172,10 +172,17 @@ namespace UniGetUI.Core.Tools
         /// Starts the helper that relaunches UniGetUI once this process exits. Returns false, and
         /// logs why, when the helper could not be started; the caller should then keep running.
         /// </summary>
-        public static bool TryScheduleRelaunchAfterExit(string? executablePath = null)
+        public static bool TryScheduleRelaunchAfterExit(
+            string? executablePath = null,
+            IReadOnlyList<string>? arguments = null
+        )
         {
             executablePath ??= CoreData.UniGetUIExecutableFile;
-            ProcessStartInfo startInfo = CreateRelaunchStartInfo(Environment.ProcessId, executablePath);
+            ProcessStartInfo startInfo = CreateRelaunchStartInfo(
+                Environment.ProcessId,
+                executablePath,
+                arguments
+            );
             Logger.Debug($"Scheduling a relaunch of {executablePath} through {startInfo.FileName}");
             return TryStartRelaunchHelper(startInfo);
         }
@@ -200,18 +207,38 @@ namespace UniGetUI.Core.Tools
         /// then starts <paramref name="executablePath"/>: PowerShell on Windows, a /bin/sh helper
         /// elsewhere (the same shape the self-updater uses), which opens the .app bundle on macOS.
         /// </summary>
-        internal static ProcessStartInfo CreateRelaunchStartInfo(int currentProcessId, string executablePath)
+        internal static ProcessStartInfo CreateRelaunchStartInfo(
+            int currentProcessId,
+            string executablePath,
+            IReadOnlyList<string>? arguments = null
+        )
         {
+            arguments ??= [];
             if (OperatingSystem.IsWindows())
             {
                 string escapedExecutablePath = executablePath.Replace("'", "''");
                 string command =
                     $"Wait-Process -Id {currentProcessId}; Start-Process -FilePath '{escapedExecutablePath}'";
 
+                if (arguments.Count == 0)
+                {
+                    return new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{command}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    };
+                }
+
+                string argumentLine = string.Join(" ", arguments.Select(EscapeCommandLineArgument));
+                command += $" -ArgumentList '{argumentLine.Replace("'", "''")}'";
                 return new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{command}\"",
+                    Arguments =
+                        "-NoProfile -WindowStyle Hidden -EncodedCommand "
+                        + Convert.ToBase64String(Encoding.Unicode.GetBytes(command)),
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 };
@@ -222,12 +249,12 @@ namespace UniGetUI.Core.Tools
             // old process is alive would hand off to it through the single-instance guard and exit.
             // If open rejects the bundle, the executable is started directly.
             const string script = """
-                pid="$1"; exe="$2"; bundle="$3"
+                pid="$1"; exe="$2"; bundle="$3"; shift 3
                 while kill -0 "$pid" 2>/dev/null; do sleep 0.2; done
                 if [ -n "$bundle" ]; then
-                  /usr/bin/open -na "$bundle" || "$exe" >/dev/null 2>&1 &
+                  /usr/bin/open -na "$bundle" --args "$@" || "$exe" "$@" >/dev/null 2>&1 &
                 else
-                  "$exe" >/dev/null 2>&1 &
+                  "$exe" "$@" >/dev/null 2>&1 &
                 fi
                 """;
 
@@ -245,6 +272,8 @@ namespace UniGetUI.Core.Tools
             startInfo.ArgumentList.Add(
                 OperatingSystem.IsMacOS() ? FindAppBundle(executablePath) ?? "" : ""
             );
+            foreach (string argument in arguments)
+                startInfo.ArgumentList.Add(argument);
             return startInfo;
         }
 

@@ -518,6 +518,8 @@
   "Skip hash check": "Skip hash check",
   "Uninstall previous versions when updated": "Uninstall previous versions when updated",
   "Uninstall, then reinstall when updated": "Uninstall, then reinstall when updated",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.",
   "Skip minor updates for this package": "Skip minor updates for this package",
   "Ignore changes after the first": "Ignore changes after the first",
   "version numbers": "version numbers",

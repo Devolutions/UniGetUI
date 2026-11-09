@@ -44,6 +44,7 @@ public sealed class OperationHistoryRecord
     /// written before this was tracked, and for operations that never ran a process.
     /// </summary>
     public bool? RanElevated { get; set; }
+    public bool? RequiresReinstallToUpdate { get; set; }
     public bool SystemRestartRequired { get; set; }
     /// <summary>Short human-readable reason, derived from the last error line (mainly for failures).</summary>
     public string FailureSummary { get; set; } = "";
@@ -111,6 +112,7 @@ public sealed class OperationHistoryRecord
                     };
                     record.OptionsJson = pop.Options.AsJsonString();
                     record.RanElevated = pop.WillRunElevated;
+                    record.RequiresReinstallToUpdate = pop.Package.RequiresReinstallToUpdate ? true : null;
                     break;
                 case DownloadOperation dop:
                     record.PackageId = dop.Package.Id;

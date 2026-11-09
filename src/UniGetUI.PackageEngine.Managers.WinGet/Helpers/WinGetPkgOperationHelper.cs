@@ -39,8 +39,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     private static string? GetSelectedLocalIdentifier(IPackage package) =>
         package.OverridenOptions.WinGet_UseLocalIdentifier ? GetFallbackIdentifier(package) : null;
 
-    private static bool DropsArchAndScope(IPackage package) =>
+    private static bool DropsArchAndScope(IPackage package, OperationType? operation = null) =>
         package.OverridenOptions.WinGet_DropArchAndScope
+        || (package.RequiresReinstallToUpdate && operation is not OperationType.Uninstall)
         || GetSelectedLocalIdentifier(package) is not null;
 
     private static bool OperationIsBrokered(IPackage package) =>
@@ -70,9 +71,13 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     public WinGetPkgOperationHelper(WinGet manager)
         : base(manager) { }
 
-    internal static string? GetEffectiveScope(IPackage package, InstallOptions options)
+    internal static string? GetEffectiveScope(
+        IPackage package,
+        InstallOptions options,
+        OperationType? operation = null
+    )
     {
-        if (DropsArchAndScope(package))
+        if (DropsArchAndScope(package, operation))
             return null;
 
         return (package.OverridenOptions.Scope ?? options.InstallationScope) switch
@@ -156,7 +161,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
         // package.OverridenInstallationOptions.Scope is meaningless in WinGet packages. Default is unspecified, hence the _ => [].
         // WinGet_DropArchAndScope is set after an "update not applicable" failure to retry without the scope/architecture constraints.
-        if (GetEffectiveScope(package, options) is { } scope)
+        if (GetEffectiveScope(package, options, operation) is { } scope)
         {
             parameters.AddRange(["--scope", scope]);
         }
@@ -474,7 +479,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 }
             }
 
-            if (operation is OperationType.Update)
+            if (operation is OperationType.Update && !ReportedDifferentInstallTechnology(processOutput))
                 SuppressPhantomUpgrade(package);
 
             Logger.Warn(
@@ -696,6 +701,28 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
     internal static bool ReportedInstallerHashMismatch(int returnCode) =>
         (uint)returnCode is 0x8A150011;
+
+    private static readonly string[] DifferentInstallTechnologyMessages =
+    [
+        "install technology is different",
+        "Die Installationstechnologie der angegebenen neueren Version unterscheidet sich von der aktuell installierten Version",
+        "La tecnología de instalación de la versión más reciente especificada es diferente de la versión actual instalada",
+        "La technologie d’installation de la version la plus récente spécifiée est différente de la version actuelle installée",
+        "La tecnologia di installazione della versione più recente specificata è diversa dalla versione corrente installata",
+        "指定された新しいバージョンのインストール テクノロジが、現在インストールされているバージョンと異なります",
+        "지정된 최신 버전의 설치 기술이 현재 설치된 버전과 다릅니다",
+        "A tecnologia de instalação da versão mais recente especificada é diferente da versão atual instalada",
+        "Указанная технология установки более новой версии отличается от текущей установленной версии",
+        "指定的较新版本的安装技术与当前安装的版本不同",
+        "指定之較新版本的安裝技術與目前安裝的版本不同",
+    ];
+
+    internal static bool ReportedDifferentInstallTechnology(IEnumerable<string> processOutput) =>
+        processOutput.Any(line =>
+            DifferentInstallTechnologyMessages.Any(message =>
+                line.Contains(message, StringComparison.OrdinalIgnoreCase)
+            )
+        );
 
     internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>
         (uint)returnCode is 0x8A150101 or 0x8A150103 or 0x8A150111;

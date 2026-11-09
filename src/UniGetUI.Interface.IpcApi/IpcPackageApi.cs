@@ -223,6 +223,11 @@ public static class IpcPackageApi
                 continue;
             }
 
+            if (PackageOperation.IsLeftOutOfBulkUpdates(package, options))
+            {
+                continue;
+            }
+
             var operation = new UpdatePackageOperation(package, options);
             IpcOperationApi.Track(operation);
             _ = Task.Run(() => RunTrackedOperationAsync(operation));

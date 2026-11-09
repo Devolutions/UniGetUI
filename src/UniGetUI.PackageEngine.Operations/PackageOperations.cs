@@ -398,6 +398,10 @@ namespace UniGetUI.PackageEngine.Operations
         /// </summary>
         protected override async Task<OperationVeredict> PerformOperation()
         {
+            // Both execution vehicles, the local process and the agent broker, funnel through
+            // here, so options persisted by the install-options GUI reach the helpers either way.
+            Package.Manager.OperationHelper.ApplyOperationOverrides(Package, Options, Role);
+
             // Observational stage marker only: structured progress starts as indeterminate
             // with the role's stage label (e.g. "Installing..."). Re-reported on every
             // attempt, so AutoRetry restarts also reset any previous speed. This changes

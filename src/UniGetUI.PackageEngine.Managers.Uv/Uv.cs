@@ -26,6 +26,7 @@ public sealed class Uv : PackageManager
             CanDownloadInstaller = true,
             SupportsCustomVersions = true,
             SerializesOperations = true,
+            SupportsCustomPythonInterpreters = true,
         };
 
         Properties = new ManagerProperties
@@ -42,7 +43,7 @@ public sealed class Uv : PackageManager
             ),
             IconId = IconType.Python,
             ColorIconId = "pip_color",
-            ExecutableFriendlyName = "uv",
+            ExecutableFriendlyName = "uv tool",
             InstallVerb = "install",
             UpdateVerb = "upgrade",
             UninstallVerb = "uninstall",
@@ -216,13 +217,34 @@ public sealed class Uv : PackageManager
     }
 
     internal IReadOnlyList<UvTool> ListTools(string listArguments, LoggableTaskType taskType)
+        => UvToolListParser.Parse(RunUvCli($"list {listArguments}", taskType));
+
+    internal IReadOnlyList<UvPythonInstall> ListPythonInterpreters(
+        string listArguments,
+        LoggableTaskType taskType
+    ) => UvPythonService.ParseJson(
+        string.Join(
+            '\n',
+            RunUvCli($"python list {listArguments} --output-format json", taskType, toolScoped: false)
+        )
+    );
+
+    /// <summary>
+    /// Runs the uv executable. Tool subcommands run under <c>uv tool</c>, which the manager's
+    /// call arguments already name; <c>uv python</c> is top level, so it must not carry them.
+    /// </summary>
+    internal IReadOnlyList<string> RunUvCli(
+        string arguments,
+        LoggableTaskType taskType,
+        bool toolScoped = true
+    )
     {
         using Process process = new()
         {
             StartInfo = new ProcessStartInfo
             {
                 FileName = Status.ExecutablePath,
-                Arguments = Status.ExecutableCallArgs + "list " + listArguments,
+                Arguments = (toolScoped ? Status.ExecutableCallArgs : "") + arguments,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -248,7 +270,7 @@ public sealed class Uv : PackageManager
         process.WaitForExit();
         processLogger.Close(process.ExitCode);
 
-        return UvToolListParser.Parse(outputLines);
+        return outputLines;
     }
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() =>

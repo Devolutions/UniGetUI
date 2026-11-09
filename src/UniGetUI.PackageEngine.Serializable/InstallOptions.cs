@@ -33,6 +33,12 @@ namespace UniGetUI.PackageEngine.Serializable
         private const string PRE_UNINST_CMD = "PreUninstallCommand";
         private const string POST_UNINST_CMD = "PostUninstallCommand";
 
+        // Uv_ManagedPython is a tri-state string: "" lets uv decide, "true"/"false" map to
+        // --managed-python/--no-managed-python.
+        private const string UV_PYTHON_REQUEST = "UvPythonRequest";
+        private const string UV_MANAGED_PYTHON = "UvManagedPython";
+        private const string UV_NO_PYTHON_DOWNLOADS = "UvNoPythonDownloads";
+
         private const string INST_PARAMS = "CustomParameters_Install";
         private const string UPD_PARAMS = "CustomParameters_Update";
         private const string UNINST_PARAMS = "CustomParameters_Uninstall";
@@ -56,6 +62,7 @@ namespace UniGetUI.PackageEngine.Serializable
             { ABORT_PRE_UPD_FAIL, true },
             { ABORT_PRE_UNINST_FAIL, true },
             { AUTO_UPDATE_PACKAGE, false },
+            { UV_NO_PYTHON_DOWNLOADS, false },
         };
 
         public readonly IReadOnlyList<string> _stringKeys =
@@ -71,6 +78,8 @@ namespace UniGetUI.PackageEngine.Serializable
             PRE_UNINST_CMD,
             POST_UNINST_CMD,
             SKIP_MINOR_LEVEL,
+            UV_PYTHON_REQUEST,
+            UV_MANAGED_PYTHON,
         ];
 
         public readonly IReadOnlyList<string> _listKeys =
@@ -209,6 +218,21 @@ namespace UniGetUI.PackageEngine.Serializable
         {
             get => _strVal[POST_UNINST_CMD];
             set => _strVal[POST_UNINST_CMD] = value;
+        }
+        public string Uv_PythonRequest
+        {
+            get => _strVal[UV_PYTHON_REQUEST];
+            set => _strVal[UV_PYTHON_REQUEST] = value ?? "";
+        }
+        public string Uv_ManagedPython
+        {
+            get => _strVal[UV_MANAGED_PYTHON];
+            set => _strVal[UV_MANAGED_PYTHON] = value ?? "";
+        }
+        public bool Uv_NoPythonDownloads
+        {
+            get => _boolVal[UV_NO_PYTHON_DOWNLOADS];
+            set => _boolVal[UV_NO_PYTHON_DOWNLOADS] = value;
         }
 
         public List<string> CustomParameters_Install

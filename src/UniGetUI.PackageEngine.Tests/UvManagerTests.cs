@@ -1,11 +1,16 @@
+using System.Text.Json.Nodes;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.Generic.PyPI;
 using UniGetUI.PackageEngine.Managers.UvManager;
 using UniGetUI.PackageEngine.Managers.UvManager.Helpers;
+using UniGetUI.PackageEngine.Managers.UvManager.Internal;
 using UniGetUI.PackageEngine.Managers.UvManager.Models;
 using UniGetUI.PackageEngine.Managers.UvManager.Services;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
+using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -316,5 +321,329 @@ public class UvManagerTests
         Assert.Equal(["uninstall", "ruff", "--verbose"], uninstall);
         Assert.Equal(OperationVeredict.Success, helper.GetResult(package, OperationType.Uninstall, [], 0));
         Assert.Equal(OperationVeredict.Failure, helper.GetResult(package, OperationType.Uninstall, [], 1));
+    }
+}
+
+public sealed class UvInstallOptionsTests : IDisposable
+{
+    private readonly string _recordsFile = Path.Combine(
+        Path.GetTempPath(),
+        $"uv-records-test-{Guid.NewGuid():N}.json"
+    );
+
+    /// <summary>
+    /// Verbatim `uv python list --output-format json` rows from uv 0.13.7 on Windows: two
+    /// uv-managed CPython builds on disk (default and freethreaded variants are separate rows
+    /// in the text listing, but this fixture keeps one of each), plus three bare download rows.
+    /// </summary>
+    private const string PythonJson = """
+        [
+          {"key":"cpython-3.13.2-windows-x86_64-none","version":"3.13.2","version_parts":{"major":3,"minor":13,"patch":2},"path":"C:\\Users\\me\\AppData\\Roaming\\uv\\python\\cpython-3.13.2-windows-x86_64-none\\python.exe","symlink":null,"url":null,"os":"windows","variant":"default","implementation":"cpython","arch":"x86_64","libc":"none"},
+          {"key":"cpython-3.12.8+freethreaded-windows-x86_64-none","version":"3.12.8","version_parts":{"major":3,"minor":12,"patch":8},"path":"C:\\Users\\me\\AppData\\Roaming\\uv\\python\\cpython-3.12.8-freethreaded-windows-x86_64-none\\python.exe","symlink":null,"url":null,"os":"windows","variant":"freethreaded","implementation":"cpython","arch":"x86_64","libc":"none"},
+          {"key":"cpython-3.11.18-windows-x86_64-none","version":"3.11.18","version_parts":{"major":3,"minor":11,"patch":18},"path":null,"symlink":null,"url":"https://releases.astral.sh/python-build-standalone/20261026/cpython-3.11.18.tar.gz","os":"windows","variant":"default","implementation":"cpython","arch":"x86_64","libc":"none"},
+          {"key":"pypy-3.11.17-windows-x86_64-none","version":"3.11.17","version_parts":{"major":3,"minor":11,"patch":17},"path":null,"symlink":null,"url":"https://downloads.python.org/pypy/pypy3.11-v8.0.1-win64.zip","os":"windows","variant":"default","implementation":"pypy","arch":"x86_64","libc":"none"},
+          {"key":"graalpy-3.12.0-windows-x86_64-none","version":"3.12.0","version_parts":{"major":3,"minor":12,"patch":0},"path":null,"symlink":null,"url":"https://github.com/oracle/graalpython/releases/download/graal-25.2.4/graalpy-3.12-25.2.4-windows-amd64.zip","os":"windows","variant":"default","implementation":"graalpy","arch":"x86_64","libc":"none"}
+        ]
+        """;
+
+    public void Dispose()
+    {
+        File.Delete(_recordsFile);
+    }
+
+    [Fact]
+    public void ParsesPythonListingIntoInstalledAndDownloadableEntries()
+    {
+        IReadOnlyList<UvPythonInstall> interpreters = UvPythonService.ParseJson(PythonJson);
+
+        Assert.Equal(5, interpreters.Count);
+
+        UvPythonInstall installed = interpreters[0];
+        Assert.Equal("cpython-3.13.2-windows-x86_64-none", installed.Key);
+        Assert.Equal("3.13.2", installed.Version);
+        Assert.Equal("cpython", installed.Implementation);
+        Assert.Equal("default", installed.Variant);
+        Assert.True(installed.IsInstalled);
+
+        UvPythonInstall freethreaded = interpreters[1];
+        Assert.Equal("freethreaded", freethreaded.Variant);
+        Assert.True(freethreaded.IsInstalled);
+
+        UvPythonInstall download = interpreters[2];
+        Assert.Null(download.Path);
+        Assert.Equal("https://releases.astral.sh/python-build-standalone/20261026/cpython-3.11.18.tar.gz", download.DownloadUrl);
+        Assert.False(download.IsInstalled);
+
+        Assert.Equal("pypy", interpreters[3].Implementation);
+        Assert.Equal("graalpy", interpreters[4].Implementation);
+    }
+
+    [Fact]
+    public void PythonListingRequiresAnArrayAndPopulatedRows()
+    {
+        Assert.Throws<InvalidDataException>(() => UvPythonService.ParseJson("{}"));
+        Assert.Throws<InvalidDataException>(() => UvPythonService.ParseJson("[]"));
+        Assert.Throws<InvalidDataException>(() => UvPythonService.ParseJson("""[{"key":"cpython-3.13"}]"""));
+    }
+
+    [Fact]
+    public void InstallFlagsFollowTheUserRequest()
+    {
+        Uv manager = new();
+        Package package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ruff")
+            .WithOptions(new OverridenInstallationOptions
+            {
+                Uv_PythonRequest = "3.12",
+                Uv_ManagedPython = true,
+            })
+            .Build();
+        UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+
+        IReadOnlyList<string> install = helper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Install
+        );
+        IReadOnlyList<string> uninstall = helper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Uninstall
+        );
+
+        Assert.Equal(["install", "ruff", "--python", "\"3.12\"", "--managed-python"], install);
+        Assert.Equal(["uninstall", "ruff"], uninstall);
+
+        OverridenInstallationOptions systemOnly = new()
+        {
+            Uv_PythonRequest = "3.13.2",
+            Uv_ManagedPython = false,
+            Uv_NoPythonDownloads = true,
+        };
+        IReadOnlyList<string> systemOnlyInstall = helper.GetParameters(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("httpie")
+                .WithOptions(systemOnly)
+                .Build(),
+            new InstallOptions(),
+            OperationType.Install
+        );
+
+        Assert.Equal(
+            ["install", "httpie", "--python", "\"3.13.2\"", "--no-managed-python", "--no-python-downloads"],
+            systemOnlyInstall
+        );
+    }
+
+    [Fact]
+    public void SuccessfulInstallsAreRecordedAndUpgradesRepeatTheRequest()
+    {
+        UvToolInstallRecords.TestPathOverride = _recordsFile;
+        try
+        {
+            Uv manager = new();
+            UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+            Package package = new PackageBuilder()
+                .WithManager(manager)
+                .WithId("ruff")
+                .WithVersion("0.5.0")
+                .WithOptions(new OverridenInstallationOptions { Uv_PythonRequest = "3.12" })
+                .Build();
+
+            Assert.Null(UvToolInstallRecords.Get("ruff"));
+            Assert.Equal(
+                OperationVeredict.Success,
+                helper.GetResult(package, OperationType.Install, [], 0)
+            );
+
+            UvToolInstallRecord? record = UvToolInstallRecords.Get("ruff");
+            Assert.NotNull(record);
+            Assert.Equal("0.5.0", record.Version);
+            Assert.Equal("3.12", record.PythonRequest);
+            Assert.Null(record.ManagedPython);
+            Assert.Equal("uv", record.Source);
+            Assert.Equal(1, record.SchemaVersion);
+
+            Package upgrade = new PackageBuilder()
+                .WithManager(manager)
+                .WithId("ruff")
+                .WithVersion("0.5.0")
+                .WithNewVersion("0.17.4")
+                .Build();
+            IReadOnlyList<string> upgradeParameters = helper.GetParameters(
+                upgrade,
+                new InstallOptions(),
+                OperationType.Update
+            );
+            Assert.Contains("--python", upgradeParameters);
+            Assert.Contains("\"3.12\"", upgradeParameters);
+
+            Assert.Equal(
+                OperationVeredict.Success,
+                helper.GetResult(upgrade, OperationType.Update, [], 0)
+            );
+            Assert.Equal("0.17.4", UvToolInstallRecords.Get("ruff")!.Version);
+
+            Assert.Equal(
+                OperationVeredict.Success,
+                helper.GetResult(package, OperationType.Uninstall, [], 0)
+            );
+            Assert.Null(UvToolInstallRecords.Get("ruff"));
+        }
+        finally
+        {
+            UvToolInstallRecords.TestPathOverride = null;
+        }
+    }
+
+    [Fact]
+    public void FreshInstallsWithoutOptionsRecordDefaultBehaviour()
+    {
+        UvToolInstallRecords.TestPathOverride = _recordsFile;
+        try
+        {
+            Uv manager = new();
+            UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+            Package package = new PackageBuilder()
+                .WithManager(manager)
+                .WithId("httpie")
+                .WithVersion("3.2.4")
+                .Build();
+
+            Assert.Equal(
+                OperationVeredict.Success,
+                helper.GetResult(package, OperationType.Install, [], 0)
+            );
+
+            UvToolInstallRecord? record = UvToolInstallRecords.Get("httpie");
+            Assert.NotNull(record);
+            Assert.Null(record.PythonRequest);
+            Assert.Null(record.ManagedPython);
+            Assert.False(record.NoPythonDownloads);
+
+            IReadOnlyList<string> parameters = helper.GetParameters(
+                package,
+                new InstallOptions(),
+                OperationType.Update
+            );
+            Assert.Equal(["upgrade", "httpie"], parameters);
+        }
+        finally
+        {
+            UvToolInstallRecords.TestPathOverride = null;
+        }
+    }
+
+    [Fact]
+    public void UvOptionsSurviveAsJsonNodeRoundTrip()
+    {
+        InstallOptions options = new()
+        {
+            Uv_PythonRequest = "3.13.2",
+            Uv_ManagedPython = "false",
+            Uv_NoPythonDownloads = true,
+        };
+
+        InstallOptions reloaded = new(options.AsJsonNode());
+
+        Assert.Equal("3.13.2", reloaded.Uv_PythonRequest);
+        Assert.Equal("false", reloaded.Uv_ManagedPython);
+        Assert.True(reloaded.Uv_NoPythonDownloads);
+    }
+
+    [Fact]
+    public void ClearedManagedPythonStaysOutOfSerializedOutput()
+    {
+        InstallOptions options = new() { Uv_ManagedPython = "true" };
+        options.Uv_ManagedPython = "";
+
+        JsonObject serialized = options.AsJsonNode();
+
+        Assert.Null(serialized["UvManagedPython"]);
+    }
+
+    [Fact]
+    public void SavedUvOptionsLandInThePackageOverrides()
+    {
+        Uv manager = new();
+        Package package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ruff")
+            .Build();
+        UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+
+        helper.ApplyOperationOverrides(
+            package,
+            new InstallOptions
+            {
+                Uv_PythonRequest = "3.13.2",
+                Uv_ManagedPython = "false",
+                Uv_NoPythonDownloads = true,
+            },
+            OperationType.Install
+        );
+
+        Assert.Equal("3.13.2", package.OverridenOptions.Uv_PythonRequest);
+        Assert.False(package.OverridenOptions.Uv_ManagedPython);
+        Assert.True(package.OverridenOptions.Uv_NoPythonDownloads);
+    }
+
+    [Fact]
+    public void EmptySavedUvOptionsLeaveFreshOverridesUntouched()
+    {
+        Uv manager = new();
+        Package package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("httpie")
+            .Build();
+        UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+
+        helper.ApplyOperationOverrides(package, new InstallOptions(), OperationType.Install);
+
+        Assert.Null(package.OverridenOptions.Uv_PythonRequest);
+        Assert.Null(package.OverridenOptions.Uv_ManagedPython);
+        Assert.False(package.OverridenOptions.Uv_NoPythonDownloads);
+    }
+
+    [Fact]
+    public void TheInterpreterCatalogueComesFromUvPythonList()
+    {
+        Uv manager = new();
+        manager.Initialize();
+        if (!manager.Status.Found)
+            return;
+
+        IReadOnlyList<PythonInterpreterChoice> choices =
+            manager.OperationHelper.ListPythonInterpreters();
+
+        Assert.NotEmpty(choices);
+        Assert.All(choices, choice => Assert.False(string.IsNullOrWhiteSpace(choice.Request)));
+    }
+
+    [Fact]
+    public void ThePreviewHonorsTheUvOptionsItWasHandedWithoutTouchingThePackage()
+    {
+        Uv manager = new();
+        Package package = new PackageBuilder().WithManager(manager).WithId("ruff").Build();
+        InstallOptions options = new()
+        {
+            Uv_PythonRequest = "3.13.2",
+            Uv_ManagedPython = "true",
+            Uv_NoPythonDownloads = true,
+        };
+
+        IReadOnlyList<string> parameters = manager.OperationHelper.GetStandaloneParameters(
+            package,
+            options,
+            OperationType.Install
+        );
+
+        Assert.Contains("--python", parameters);
+        Assert.Contains("\"3.13.2\"", parameters);
+        Assert.Contains("--managed-python", parameters);
+        Assert.Contains("--no-python-downloads", parameters);
+        Assert.Null(package.OverridenOptions.Uv_PythonRequest);
     }
 }

@@ -457,6 +457,42 @@
                                              Padding="0" FontSize="12"/>
                         </Grid>
 
+                        <StackPanel IsVisible="{Binding PythonEnabled}" Spacing="8">
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
+
+                            <TextBlock Text="{Binding PythonSectionLabel}"
+                                       Margin="0,8,0,0" FontSize="14"/>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <TextBlock x:Name="PythonLabelBlock" Text="{Binding PythonLabel}" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          Classes="install-option-input"
+                                          ItemsSource="{Binding PythonOptions}"
+                                          SelectedItem="{Binding SelectedPython}"
+                                          IsEnabled="{Binding PythonEnabled}"
+                                          automation:AutomationProperties.LabeledBy="{Binding #PythonLabelBlock}"
+                                          HorizontalAlignment="Stretch"/>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <TextBlock x:Name="ManagedPythonLabelBlock" Text="{Binding ManagedPythonLabel}" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          Classes="install-option-input"
+                                          ItemsSource="{Binding ManagedPythonOptions}"
+                                          SelectedItem="{Binding SelectedManagedPython}"
+                                          IsEnabled="{Binding PythonEnabled}"
+                                          automation:AutomationProperties.LabeledBy="{Binding #ManagedPythonLabelBlock}"
+                                          HorizontalAlignment="Stretch"/>
+                            </Grid>
+
+                            <CheckBox Content="{Binding NoPythonDownloadsCheckBox_Content, FallbackValue='Do not download Python interpreters'}"
+                                      IsChecked="{Binding NoPythonDownloadsChecked}"
+                                      automation:AutomationProperties.Name="{Binding NoPythonDownloadsCheckBox_Content}"/>
+
+                        </StackPanel>
+
                     </StackPanel>
                 </Border>
             </TabItem>

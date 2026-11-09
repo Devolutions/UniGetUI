@@ -51,6 +51,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool SupportsCustomVersionsOnUpdate = true;
         public bool SupportsCustomArchitectures = false;
         public string[] SupportedCustomArchitectures = [];
+        // True when the install-options GUI offers the section that lets the user pick which
+        // Python interpreter a tool runs on (uv).
+        public bool SupportsCustomPythonInterpreters = false;
         public bool SupportsCustomScopes = false;
         // Whether a custom scope can be applied to update/uninstall too, not just install
         // (e.g. Windows PowerShell 5.x's Update-Module has no -Scope parameter)

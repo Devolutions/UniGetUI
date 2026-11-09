@@ -74,6 +74,11 @@ internal static class FakeCatalog
             SupportsArchitectures: false, CanRunAsAdmin: true, CanRunInteractively: false,
             CanSkipIntegrityChecks: false, CanDownloadInstaller: true,
             "pypi", "https://fake.unigetui.invalid/pypi/simple"),
+        new("Uv", "Uv", "Fake stand-in for Astral's uv tool runner", "uv.exe",
+            Found: true, SupportsSources: false, SupportsVersions: true, SupportsScopes: false,
+            SupportsArchitectures: false, CanRunAsAdmin: true, CanRunInteractively: false,
+            CanSkipIntegrityChecks: false, CanDownloadInstaller: true,
+            "pypi", "https://fake.unigetui.invalid/pypi/simple", TypedVersions: true),
         new("Npm", "Npm", "Fake stand-in for the Node.js package manager", "npm.cmd",
             Found: true, SupportsSources: false, SupportsVersions: true, SupportsScopes: true,
             SupportsArchitectures: false, CanRunAsAdmin: true, CanRunInteractively: false,
@@ -118,6 +123,8 @@ internal static class FakeCatalog
         ("Chocolatey", "contoso-node", "20.11.0", "community"),
         ("Pip", "contoso-requests", "2.31.0", "pypi"),
         ("Pip", "fabrikam-numbers", "1.26.4", "pypi"),
+        ("Uv", "contosa-ruff", "0.5.0", "pypi"),
+        ("Uv", "northwind-watch", "1.4.0", "pypi"),
         ("Npm", "@contoso/cli", "9.8.1", "npm"),
         ("Npm", "northwind-lint", "8.57.0", "npm"),
     ];
@@ -216,6 +223,17 @@ internal static class FakeCatalog
         Add("Pip", "northwind-plot", "northwind-plot", "Northwind Traders",
             "Create static, animated and interactive visualisations.",
             ["3.8.0", "3.9.2"], ["plotting", "python"], "PSF", "wheel", 8_300_000);
+
+        // Uv
+        Add("Uv", "contosa-ruff", "contosa-ruff", "Contoso Ltd.",
+            "A clapboard-fast fake linter and formatter for Python code.",
+            ["0.5.0", "0.8.1", "0.17.4"], ["linter", "python", "cli"], "MIT", "wheel", 2_400_000);
+        Add("Uv", "northwind-watch", "northwind-watch", "Northwind Traders",
+            "Watches folders and rebuilds targets as their inputs change.",
+            ["1.4.0", "1.5.2"], ["build", "python"], "Apache-2.0", "wheel", 3_100_000);
+        Add("Uv", "tailspin-httpie", "tailspin-httpie", "Tailspin Toys",
+            "A human-friendly command-line HTTP tester.",
+            ["3.2.4"], ["http", "python"], "BSD-3-Clause", "wheel", 1_200_000);
 
         // Npm
         Add("Npm", "@contoso/cli", "@contoso/cli", "Contoso Ltd.",

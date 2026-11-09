@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Generic.PyPI\UniGetUI.PackageEngine.Managers.Generic.PyPI.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.IconStore\UniGetUI.Core.IconEngine.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.Logger\UniGetUI.Core.Logging.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.Tools\UniGetUI.Core.Tools.csproj" />
+        <ProjectReference Include="..\UniGetUI.Interface.Enums\UniGetUI.Interface.Enums.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Enums\UniGetUI.PackageEngine.Structs.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.PackageManagerClasses\UniGetUI.PackageEngine.Classes.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+    </ItemGroup>
+</Project>

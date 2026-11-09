@@ -213,6 +213,18 @@
       <Platform Solution="*|x64" Project="x64" />
     </Project>
   </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.Managers.Uv/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Uv/UniGetUI.PackageEngine.Managers.Uv.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.Managers.Generic.PyPI/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Generic.PyPI/UniGetUI.PackageEngine.Managers.Generic.PyPI.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
   <Folder Name="/UniGetUI.PackageEngine.Managers.PowerShell7/">
     <Project Path="UniGetUI.PackageEngine.Managers.PowerShell7/UniGetUI.PackageEngine.Managers.PowerShell7.csproj">
       <Platform Solution="*|arm64" Project="arm64" />

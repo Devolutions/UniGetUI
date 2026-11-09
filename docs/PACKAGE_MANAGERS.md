@@ -164,6 +164,22 @@ allows changing package manager executables.
 
 Check: `python -m pip --version` (or `python3 -m pip --version`)
 
+## Uv
+
+Install uv, Astral's Python tool environment manager:
+
+- **Windows:** `winget install --exact --id astral-sh.uv`
+- **macOS:** `brew install uv`
+- **Linux:** `curl -LsSf https://astral.sh/uv/install.sh | sh` or the package of your
+  distribution.
+
+UniGetUI finds `uv` on `PATH` and runs every command as `uv tool <verb>`. uv installs Python
+command-line tools into isolated tool environments, one per tool, and expects its own executable
+directory on `PATH`; if `uv tool install` reports a missing executable directory, run
+`uv tool update-shell` or log out and back in.
+
+Check: `uv --version`
+
 ## Npm
 
 Install Node.js, which includes npm:

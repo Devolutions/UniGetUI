@@ -22,6 +22,8 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 {
     public partial class Scoop : PackageManager
     {
+        public const string CleanupActionId = "cleanup-scoop";
+
         protected override IEnumerable<ManagerMaintenanceAction> GetExtraMaintenanceActions()
         {
             if (!OperatingSystem.IsWindows())
@@ -54,7 +56,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             };
             yield return new ManagerMaintenanceAction
             {
-                Id = "cleanup-scoop",
+                Id = CleanupActionId,
                 Title = CoreTools.Translate("Clear cache"),
                 Description = CoreTools.Translate(
                     "Remove old app versions and the download cache, for the current user and machine-wide. Requires administrator rights."

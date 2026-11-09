@@ -368,6 +368,7 @@
   "{0} h ago": "{0} h ago",
   "{0} d ago": "{0} d ago",
   "Imported history (from a previous version)": "Imported history (from a previous version)",
+  "[... {0} characters omitted ...]": "[... {0} characters omitted ...]",
   "[... {0} earlier lines omitted ...]": "[... {0} earlier lines omitted ...]",
   "This will uninstall {0}. Continue?": "This will uninstall {0}. Continue?",
   "This will downgrade {0} to version {1}. Continue?": "This will downgrade {0} to version {1}. Continue?",

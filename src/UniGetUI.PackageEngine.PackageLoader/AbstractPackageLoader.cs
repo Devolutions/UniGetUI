@@ -58,7 +58,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         protected readonly ConcurrentDictionary<long, IPackage> PackageReference;
 
-        private readonly ConcurrentDictionary<long, bool> _rememberedSelection = new();
+        private readonly ConcurrentDictionary<long, (bool Checked, bool RequiresReinstall)> _rememberedSelection = new();
 
         /// <summary>
         /// Fires when a block of packages (one package or more) is added or removed to the loader
@@ -360,7 +360,10 @@ namespace UniGetUI.PackageEngine.PackageLoader
             _rememberedSelection.Clear();
             foreach (var entry in PackageReference)
             {
-                _rememberedSelection[entry.Key] = entry.Value.IsChecked;
+                _rememberedSelection[entry.Key] = (
+                    entry.Value.IsChecked,
+                    entry.Value.RequiresReinstallToUpdate
+                );
             }
         }
 
@@ -371,8 +374,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
             package.IsChecked =
                 restoreSelection
-                && _rememberedSelection.TryGetValue(HashPackage(package), out bool wasChecked)
-                    ? wasChecked
+                && _rememberedSelection.TryGetValue(HashPackage(package), out var remembered)
+                && (remembered.RequiresReinstall || !package.RequiresReinstallToUpdate)
+                    ? remembered.Checked
                     : PACKAGES_CHECKED_BY_DEFAULT && !package.RequiresReinstallToUpdate;
             await WhenAddingPackage(package);
             PackageReference.TryAdd(HashPackage(package), package);

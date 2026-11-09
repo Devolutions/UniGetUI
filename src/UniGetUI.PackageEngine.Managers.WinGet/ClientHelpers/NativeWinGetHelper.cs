@@ -481,8 +481,14 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             {
                 if (!nativePackage.IsUpdateAvailable)
                 {
-                    if (TryGetReinstallOnlyUpdate(nativePackage) is { } newest)
+                    if (
+                        Manager.GetLauncherGameSource(nativePackage.InstalledVersion?.Id) is null
+                        && TryGetReinstallOnlyUpdate(nativePackage) is { } newest
+                    )
+                    {
                         reinstallCandidates.Add((nativePackage, newest));
+                    }
+
                     continue;
                 }
 
@@ -600,6 +606,19 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         }
     }
 
+    private static IEnumerable<string?> GetPinIdentifiers(CatalogPackage nativePackage)
+    {
+        yield return nativePackage.Id;
+        if (nativePackage.InstalledVersion is not { } installed)
+            yield break;
+
+        yield return installed.Id;
+        foreach (string productCode in NativeWinGetCollection.Copy(installed.ProductCodes))
+            yield return productCode;
+        foreach (string familyName in NativeWinGetCollection.Copy(installed.PackageFamilyNames))
+            yield return familyName;
+    }
+
     internal static bool IsNewerVersion(IPackageManager manager, string? installedVersion, string? newestVersion) =>
         !WinGetPkgOperationHelper.IsUnknownVersion(installedVersion)
         && !string.IsNullOrWhiteSpace(newestVersion)
@@ -635,7 +654,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         {
             try
             {
-                if (WinGetPins.IsPinned(pinnedIds, nativePackage.Id))
+                if (WinGetPins.IsPinned(pinnedIds, GetPinIdentifiers(nativePackage)))
                     continue;
 
                 IManagerSource source = Manager.SourcesHelper.Factory.GetSourceOrDefault(

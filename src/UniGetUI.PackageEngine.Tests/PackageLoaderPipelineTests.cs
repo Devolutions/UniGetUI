@@ -296,6 +296,37 @@ public sealed class PackageLoaderPipelineTests
     }
 
     [Fact]
+    public async Task ReloadPackages_UnchecksAnUpdateThatNowNeedsAReinstall_ButKeepsAChosenOne()
+    {
+        bool requiresReinstall = false;
+        var manager = new PackageManagerBuilder()
+            .WithInstalledPackages(testManager =>
+            {
+                var builder = new PackageBuilder()
+                    .WithManager(testManager)
+                    .WithId("Contoso.Tool")
+                    .WithVersion("1.0.0")
+                    .WithNewVersion("2.0.0");
+                if (requiresReinstall)
+                    builder.RequiringReinstallToUpdate();
+                return [builder.Build()];
+            })
+            .Build();
+        var loader = new TestPackageLoader([manager], checkedByDefault: true);
+
+        await loader.ReloadPackages();
+        Assert.True(loader.GetPackageForId("Contoso.Tool")!.IsChecked);
+
+        requiresReinstall = true;
+        await loader.ReloadPackages();
+        Assert.False(loader.GetPackageForId("Contoso.Tool")!.IsChecked);
+
+        loader.GetPackageForId("Contoso.Tool")!.IsChecked = true;
+        await loader.ReloadPackages();
+        Assert.True(loader.GetPackageForId("Contoso.Tool")!.IsChecked);
+    }
+
+    [Fact]
     public async Task ReloadPackages_AppliesTheDefaultCheckedState_ToPackagesThatWereNotOnTheList()
     {
         var ids = new List<string> { "Contoso.First" };

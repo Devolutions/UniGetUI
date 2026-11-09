@@ -119,18 +119,22 @@ internal static class WinGetPins
         return ids;
     }
 
-    internal static bool IsPinned(IReadOnlyList<string> pinnedIds, string packageId)
+    internal static bool IsPinned(IReadOnlyList<string> pinnedIds, IEnumerable<string?> packageIdentifiers)
     {
+        string[] identifiers = [.. packageIdentifiers.OfType<string>().Where(id => id.Length > 0)];
         foreach (string pinned in pinnedIds)
         {
-            if (pinned.EndsWith('…'))
+            foreach (string identifier in identifiers)
             {
-                if (packageId.StartsWith(pinned[..^1], StringComparison.OrdinalIgnoreCase))
+                if (pinned.EndsWith('…'))
+                {
+                    if (identifier.StartsWith(pinned[..^1], StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+                else if (string.Equals(pinned, identifier, StringComparison.OrdinalIgnoreCase))
+                {
                     return true;
-            }
-            else if (string.Equals(pinned, packageId, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
+                }
             }
         }
 

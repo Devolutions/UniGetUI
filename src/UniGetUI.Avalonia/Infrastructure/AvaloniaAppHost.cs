@@ -305,6 +305,20 @@ public static class AvaloniaAppHost
             return false;
         }
 
+        _singleInstanceMutex.Dispose();
+        _singleInstanceMutex = new Mutex(
+            initiallyOwned: true,
+            name: CoreData.MainWindowIdentifier,
+            createdNew: out createdNew
+        );
+        if (createdNew)
+        {
+            SingleInstanceRedirector.StartListener(RaiseSecondaryInstanceArgs);
+            return true;
+        }
+
+        _singleInstanceMutex.Dispose();
+        _singleInstanceMutex = null;
         Logger.Warn("Could not redirect to the existing Avalonia instance; starting a new one");
         return true;
     }
@@ -314,21 +328,33 @@ public static class AvaloniaAppHost
         // FileShare.None is an flock() advisory lock the OS releases on exit (even on crash), so the
         // lock file never goes stale. The static FileStream holds the lock for the process lifetime.
         string lockPath = Path.Combine(Path.GetTempPath(), $"UniGetUI_{Environment.UserName}.lock");
-        try
-        {
-            _singleInstanceLock = new FileStream(
-                lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        }
-        catch (IOException)
+        if (!TryTakeFileLock(lockPath))
         {
             if (SingleInstanceRedirector.TryForwardToFirstInstance(args))
                 return false;
 
-            Logger.Warn("Could not redirect to the existing Avalonia instance; starting a new one");
-            return true;
+            if (!TryTakeFileLock(lockPath))
+            {
+                Logger.Warn("Could not redirect to the existing Avalonia instance; starting a new one");
+                return true;
+            }
         }
 
         SingleInstanceRedirector.StartListener(RaiseSecondaryInstanceArgs);
         return true;
+    }
+
+    private static bool TryTakeFileLock(string lockPath)
+    {
+        try
+        {
+            _singleInstanceLock = new FileStream(
+                lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 }

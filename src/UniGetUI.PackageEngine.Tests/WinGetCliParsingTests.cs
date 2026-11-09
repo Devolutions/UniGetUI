@@ -70,8 +70,27 @@ public sealed class WinGetCliParsingTests : IDisposable
     {
         Assert.Equal(
             expected,
-            WinGetPins.IsPinned(["Audacity.Audacity", "MoonlightGameStreamingPro…"], packageId)
+            WinGetPins.IsPinned(["Audacity.Audacity", "MoonlightGameStreamingPro…"], [packageId])
         );
+    }
+
+    [Fact]
+    public void AnInstalledPinMatchesThroughTheInstalledProductCode()
+    {
+        IReadOnlyList<string> pins = WinGetPins.Parse(
+            Lines(
+                """
+                Name           Id           Version Source      Pin type
+                --------------------------------------------------------
+                Audacity 3.7.9 Audacity_is1 3.7.9   (installed) Blocking
+                """
+            )
+        );
+
+        Assert.True(
+            WinGetPins.IsPinned(pins, ["Audacity.Audacity", "ARP\\Machine\\X64\\Audacity_is1", "Audacity_is1"])
+        );
+        Assert.False(WinGetPins.IsPinned(pins, ["Audacity.Audacity"]));
     }
 
     [Theory]

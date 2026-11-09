@@ -94,9 +94,14 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Theory]
-    [InlineData(false, "machine")]
-    [InlineData(true, null)]
-    public void AnUpdateThatNeedsAReinstallIsNotHeldToTheSavedScope(bool requiresReinstall, string? expectedScope)
+    [InlineData(false, OperationType.Install, "machine")]
+    [InlineData(true, OperationType.Install, null)]
+    [InlineData(true, OperationType.Uninstall, "machine")]
+    public void AnUpdateThatNeedsAReinstallIsInstalledWithoutTheSavedScopeButUninstalledWithIt(
+        bool requiresReinstall,
+        OperationType operation,
+        string? expectedScope
+    )
     {
         var builder = new PackageBuilder()
             .WithManager(new WinGet())
@@ -110,7 +115,8 @@ public sealed class WinGetCliParsingTests : IDisposable
             expectedScope,
             WinGetPkgOperationHelper.GetEffectiveScope(
                 builder.Build(),
-                new InstallOptions { InstallationScope = PackageScope.Machine }
+                new InstallOptions { InstallationScope = PackageScope.Machine },
+                operation
             )
         );
     }

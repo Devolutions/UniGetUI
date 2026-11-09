@@ -39,9 +39,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     private static string? GetSelectedLocalIdentifier(IPackage package) =>
         package.OverridenOptions.WinGet_UseLocalIdentifier ? GetFallbackIdentifier(package) : null;
 
-    private static bool DropsArchAndScope(IPackage package) =>
+    private static bool DropsArchAndScope(IPackage package, OperationType? operation = null) =>
         package.OverridenOptions.WinGet_DropArchAndScope
-        || package.RequiresReinstallToUpdate
+        || (package.RequiresReinstallToUpdate && operation is not OperationType.Uninstall)
         || GetSelectedLocalIdentifier(package) is not null;
 
     private static bool OperationIsBrokered(IPackage package) =>
@@ -71,9 +71,13 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     public WinGetPkgOperationHelper(WinGet manager)
         : base(manager) { }
 
-    internal static string? GetEffectiveScope(IPackage package, InstallOptions options)
+    internal static string? GetEffectiveScope(
+        IPackage package,
+        InstallOptions options,
+        OperationType? operation = null
+    )
     {
-        if (DropsArchAndScope(package))
+        if (DropsArchAndScope(package, operation))
             return null;
 
         return (package.OverridenOptions.Scope ?? options.InstallationScope) switch
@@ -157,7 +161,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
         // package.OverridenInstallationOptions.Scope is meaningless in WinGet packages. Default is unspecified, hence the _ => [].
         // WinGet_DropArchAndScope is set after an "update not applicable" failure to retry without the scope/architecture constraints.
-        if (GetEffectiveScope(package, options) is { } scope)
+        if (GetEffectiveScope(package, options, operation) is { } scope)
         {
             parameters.AddRange(["--scope", scope]);
         }

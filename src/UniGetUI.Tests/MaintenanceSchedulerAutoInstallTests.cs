@@ -102,6 +102,36 @@ public sealed class MaintenanceSchedulerAutoInstallTests : IDisposable
         Assert.NotNull(MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.CheckForUpdates));
     }
 
+    [Theory]
+    [InlineData(MaintenanceTaskSchedule.UnlimitedGrace, true)]
+    [InlineData(0, false)]
+    public void AnUpdateLoadThatCatchesUpAMissedCheckInstallsWhenTheUpdatesPageChecksBeforeTheScheduler(
+        int graceMinutes,
+        bool expectedDue)
+    {
+        InstallAfterEveryUpdateCheck();
+        CheckForUpdates(ScheduleFrequency.Daily, graceMinutes);
+        DateTime afterMissedCheck = DateTime.Now.Date.AddDays(1).AddHours(12);
+
+        Assert.Equal(expectedDue, MaintenanceScheduler.IsAutoInstallDue(afterMissedCheck, updatesLoaded: true));
+        MaintenanceScheduler.RecordUpdateLoad(afterMissedCheck);
+
+        Assert.Equal(expectedDue, MaintenanceScheduler.IsAutoInstallDue());
+        MaintenanceScheduler.MarkAutoInstallHandled();
+        Assert.False(MaintenanceScheduler.IsAutoInstallDue());
+    }
+
+    [Fact]
+    public void AnUnfinishedUpdateLoadDoesNotCatchUpAMissedCheck()
+    {
+        InstallAfterEveryUpdateCheck();
+        CheckForUpdates(ScheduleFrequency.Daily, MaintenanceTaskSchedule.UnlimitedGrace);
+        DateTime afterMissedCheck = DateTime.Now.Date.AddDays(1).AddHours(12);
+
+        Assert.False(MaintenanceScheduler.IsAutoInstallDue(afterMissedCheck, updatesLoaded: false));
+        Assert.Null(MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.CheckForUpdates));
+    }
+
     [Fact]
     public void EveryUpdateLoadInstallsWhenUpdateChecksRunOnAnInterval()
     {

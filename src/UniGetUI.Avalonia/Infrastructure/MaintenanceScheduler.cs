@@ -19,6 +19,7 @@ internal static class MaintenanceScheduler
     private static readonly HashSet<MaintenanceTaskKind> RunningTasks = [];
     private static readonly Dictionary<MaintenanceTaskKind, RetryState> Retries = [];
     private static readonly object RetryLock = new();
+    private static readonly object UpdateLoadLock = new();
 
     private static DispatcherTimer? _timer;
     private static System.Timers.Timer? _headlessTimer;
@@ -62,6 +63,9 @@ internal static class MaintenanceScheduler
     }
 
     public static bool IsAutoInstallDue()
+        => IsAutoInstallDue(DateTime.Now, UpgradablePackagesLoader.Instance is not { IsLoaded: false });
+
+    internal static bool IsAutoInstallDue(DateTime nowLocal, bool updatesLoaded)
     {
         if (_pendingInstallSince is { } since && DateTime.Now - since > PendingInstallLifetime)
             _pendingInstallSince = null;
@@ -74,6 +78,9 @@ internal static class MaintenanceScheduler
             MarkAutoInstallHandled();
             return false;
         }
+
+        if (updatesLoaded)
+            ClaimMissedCheck(nowLocal);
 
         return ScheduleEvaluator.IsAutoInstallDue(
             schedule,
@@ -215,12 +222,25 @@ internal static class MaintenanceScheduler
 
     internal static void RecordUpdateLoad(DateTime nowLocal)
     {
-        var check = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
-        if (ScheduleEvaluator.IsTimeBased(check.Frequency)
-            && ScheduleEvaluator.IsDue(check, MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.CheckForUpdates), nowLocal))
-            _pendingCheckSince = DateTime.Now;
+        lock (UpdateLoadLock)
+        {
+            ClaimMissedCheck(nowLocal);
+            MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
+        }
+    }
 
-        MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
+    private static void ClaimMissedCheck(DateTime nowLocal)
+    {
+        lock (UpdateLoadLock)
+        {
+            var check = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
+            if (!ScheduleEvaluator.IsTimeBased(check.Frequency)
+                || !ScheduleEvaluator.IsDue(check, MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.CheckForUpdates), nowLocal))
+                return;
+
+            _pendingCheckSince = DateTime.Now;
+            MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
+        }
     }
 
     private static void Evaluate()

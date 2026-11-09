@@ -36,6 +36,17 @@ public sealed class TestPackageOperationHelper(TestPackageManager manager)
         OperationOverridesAction?.Invoke(package, options, operation);
     }
 
+    public Func<IPackage, OperationType, IReadOnlyList<string>, int, string?> FailureExplanationFactory { get; set; } =
+        static (_, _, _, _) => null;
+
+    public override string? GetFailureExplanation(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options = null
+    ) => FailureExplanationFactory(package, operation, processOutput, returnCode);
+
     protected override IReadOnlyList<string> _getOperationParameters(
         IPackage package,
         InstallOptions options,

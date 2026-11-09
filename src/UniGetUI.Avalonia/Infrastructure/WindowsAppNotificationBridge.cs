@@ -126,6 +126,17 @@ internal static class WindowsAppNotificationBridge
     /// non-Windows or when notifications are disabled (mirrors the previous bridge's
     /// platform guard so macOS/Linux stay untouched).
     /// </summary>
+    public static void ShowExtensionUpdatesAvailableNotification(string name, int count, string action)
+    {
+        if (!OperatingSystem.IsWindows() || Settings.AreUpdatesNotificationsDisabled()) return;
+        try
+        {
+            Show(CoreTools.Translate("{0} updates", name), CoreTools.Translate("{0} skills can be updated", count),
+                MainWindow.RuntimeNotificationLevel.Success, action);
+        }
+        catch (Exception ex) { Logger.Warn(ex); }
+    }
+
     public static void ShowUpdatesAvailableNotification(IReadOnlyList<IPackage> upgradable)
     {
         if (!OperatingSystem.IsWindows()) return;
@@ -222,7 +233,8 @@ internal static class WindowsAppNotificationBridge
                 CoreTools.Translate("{0} can be updated to version {1}", "UniGetUI", newVersion),
                 CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName),
                 MainWindow.RuntimeNotificationLevel.Success,
-                launchAction: NotificationArguments.Show,
+                launchAction: NotificationArguments.ShowSelfUpdate,
+                allowInAppFallback: false,
                 tag: SelfUpdateToastTag);
         }
         catch (Exception ex)

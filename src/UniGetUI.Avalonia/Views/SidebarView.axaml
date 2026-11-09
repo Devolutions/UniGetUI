@@ -201,6 +201,15 @@
                 </Panel>
             </ListBoxItem>
 
+            <ListBoxItem x:Name="AgentSkillsNavBtn" Tag="AgentSkills" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Agent Skills}"
+                         ToolTip.Tip="{t:Translate Agent Skills}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                    <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/skills.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{t:Translate Agent Skills}" FontSize="14" VerticalAlignment="Center"
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                </Grid>
+            </ListBoxItem>
         </ListBox>
 
         <!-- Footer items -->
@@ -244,12 +253,22 @@
                 <ListBoxItem x:Name="MoreNavBtn" Tag="More" Classes="nav-item" Padding="4,2" CornerRadius="6"
                              automation:AutomationProperties.Name="{t:Translate More}"
                              ToolTip.Tip="{t:Translate More}">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
-                        <TextBlock Grid.Column="0" Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
-                                   automation:AutomationProperties.AccessibilityView="Raw"/>
-                        <TextBlock Grid.Column="1" Text="{t:Translate More}" FontSize="14" VerticalAlignment="Center"
-                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
-                    </Grid>
+                    <Panel>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                            <TextBlock Grid.Column="0" Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                                       automation:AutomationProperties.AccessibilityView="Raw"/>
+                            <TextBlock Grid.Column="1" Text="{t:Translate More}" FontSize="14" VerticalAlignment="Center"
+                                       IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                        </Grid>
+                        <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                CornerRadius="5"
+                                Width="10"
+                                Height="10"
+                                IsVisible="{Binding SelfUpdateBadgeVisible}"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Margin="28,7,0,0"/>
+                    </Panel>
                     <FlyoutBase.AttachedFlyout>
                         <MenuFlyout Placement="RightEdgeAlignedTop">
                         <MenuItem Header="{t:Translate UniGetUI Log}" Command="{Binding RequestNavigationCommand}" CommandParameter="OwnLog">
@@ -271,7 +290,19 @@
                         <MenuItem Header="{t:Translate Release notes}" Command="{Binding RequestNavigationCommand}" CommandParameter="ReleaseNotes">
                             <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/megaphone.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
-                        <MenuItem Header="{t:Translate Check for UniGetUI updates}" Command="{Binding CheckForUpdatesCommand}">
+                        <MenuItem Command="{Binding CheckForUpdatesCommand}"
+                                  automation:AutomationProperties.Name="{Binding CheckForUpdatesLabel}">
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding CheckForUpdatesLabel}" VerticalAlignment="Center"/>
+                                    <Ellipse Width="8"
+                                             Height="8"
+                                             Fill="{DynamicResource AccentFillColorDefaultBrush}"
+                                             IsVisible="{Binding SelfUpdateBadgeVisible}"
+                                             VerticalAlignment="Center"
+                                             Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </MenuItem.Header>
                             <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <Separator/>

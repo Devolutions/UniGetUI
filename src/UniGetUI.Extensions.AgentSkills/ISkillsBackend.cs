@@ -1,0 +1,67 @@
+using Devolutions.AgentSkills;
+
+namespace UniGetUI.Extensions.AgentSkills;
+
+/// <summary>
+/// The part of the bundled Agent Skills library the extension uses, always in the user (global)
+/// scope. Tests replace it with a fake.
+/// </summary>
+internal interface ISkillsBackend
+{
+    /// <summary>The library version.</summary>
+    string Version { get; }
+
+    /// <summary>Every agent the library can install skills for, and whether it is detected.</summary>
+    IReadOnlyList<AgentInfo> GetAgents();
+
+    IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(CancellationToken cancellationToken);
+
+    /// <summary>The skills a repository or a well-known index offers.</summary>
+    IReadOnlyList<AvailableSkill> GetAvailableSkills(
+        string source,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    );
+
+    SkillPreview PreviewSkill(
+        string source,
+        string skill,
+        CancellationToken cancellationToken
+    );
+
+    /// <param name="agents">Agent ids to install for, or null for the detected and universal agents</param>
+    SkillInstallResult Install(
+        string source,
+        string skill,
+        IReadOnlyList<string>? agents,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    );
+
+    /// <param name="skills">The skills to check, or null for every installed skill</param>
+    SkillUpdateCheckResult CheckForUpdates(
+        IReadOnlyList<string>? skills,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>Applies updates found by <see cref="CheckForUpdates"/>.</summary>
+    SkillUpdateResult Update(
+        IReadOnlyList<SkillUpdate> updates,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken
+    );
+
+    SkillRemoveResult Remove(string skill, IProgress<string>? progress, CancellationToken cancellationToken);
+
+    /// <summary>Whether the Notion CLI, which Notion sources go through, is installed and signed in.</summary>
+    NotionStatus GetNotionStatus(CancellationToken cancellationToken);
+
+    /// <summary>Starts a Notion sign-in: the page to open in the browser, and the code it shows.</summary>
+    NotionSignIn BeginNotionSignIn(CancellationToken cancellationToken);
+
+    /// <summary>Waits for the user to approve the sign-in in the browser.</summary>
+    void CompleteNotionSignIn(CancellationToken cancellationToken);
+
+    void SignOutOfNotion(CancellationToken cancellationToken);
+}

@@ -3,7 +3,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Consolonia.Core.Drawing.PixelBufferImplementation;
-using Consolonia.Fonts;
 using Consolonia.NUnit;
 using NUnit.Framework;
 using UniGetUI.PackageEngine.Operations.History;
@@ -23,16 +22,29 @@ using Avalonia = global::Avalonia;
 /// the screen, the fake system state file.
 /// </summary>
 [NonParallelizable]
-internal abstract class TuiE2ETestBase : ConsoloniaAppTestBase<App>
+internal abstract class TuiE2ETestBase
 {
     protected static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(20);
+    private TuiTestHost? _host;
 
-    protected TuiE2ETestBase() : base(new PixelBufferSize(160, 50))
+    protected UnitTestConsole UITest { get; private set; } = null!;
+
+    [SetUp]
+    public async Task SetUpApp()
     {
-        Args = [];
+        UITest = new UnitTestConsole(new PixelBufferSize(160, 50));
+        _host = new TuiTestHost(UITest, CreateAppBuilder);
+        await _host.StartAsync();
     }
 
-    protected override AppBuilder CreateAppBuilder() => base.CreateAppBuilder().WithConsoleFonts();
+    [TearDown]
+    public async Task TearDownApp()
+    {
+        if (_host is not null) await _host.StopAsync();
+        _host = null;
+    }
+
+    protected virtual AppBuilder CreateAppBuilder() => TuiTestHost.CreateAppBuilder(UITest);
 
     internal static MainWindow Window
         => (MainWindow)((IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).MainWindow!;

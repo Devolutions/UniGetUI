@@ -93,14 +93,17 @@ namespace UniGetUI.Interface.Enums
         Bun = '\uE949',
         GitBranch = '\uE94A',
         Extensions = '\uE94B',
+        Skills = '\uE94C',
     }
 
     public class NotificationArguments
     {
         public const string Show = "openUniGetUI";
         public const string ShowOnUpdatesTab = "openUniGetUIOnUpdatesTab";
+        public const string ShowOnAgentSkillsTab = "openUniGetUIOnAgentSkillsTab";
         public const string UpdateAllPackages = "updateAll";
         public const string ReleaseSelfUpdateLock = "releaseSelfUpdateLock";
+        public const string ShowSelfUpdate = "showSelfUpdate";
     }
 
     public enum BundleReportSeverity

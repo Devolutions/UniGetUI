@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniGetUI.AgentSkills</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <!-- The core keeps the CLI's `Skills` namespace (internal); the public API
+         lives in `Devolutions.AgentSkills`. -->
+    <RootNamespace>Skills</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Consumers (UniGetUI) publish with full trimming and NativeAOT: run the
+         trim, AOT and single-file analyzers on every build, warnings as errors. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Version>0.1.0</Version>
+    <PackageId>UniGetUI.AgentSkills</PackageId>
+    <Authors>Devolutions</Authors>
+    <Description>Install, list, update and remove agent skills (SKILL.md folders) for Claude Code, Codex, Cursor, GitHub Copilot and other coding agents.</Description>
+    <PackageTags>agent-skills;skills;claude-code;codex;cursor;copilot;ai-agents</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Only the AOT-safe YamlStream API is used. 17.0.1 is the floor (UniGetUI
+         references it); NuGet picks the highest version in the graph. -->
+    <PackageReference Include="YamlDotNet" Version="17.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The CLI command flows use the library's internal core. -->
+    <InternalsVisibleTo Include="UniGetUI.AgentSkills.Cli" />
+    <InternalsVisibleTo Include="UniGetUI.Extensions.AgentSkills.Tests" />
+  </ItemGroup>
+
+</Project>

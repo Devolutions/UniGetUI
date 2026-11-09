@@ -724,6 +724,7 @@
                  corners and shares a single accent focus border (see Window.Styles). -->
             <Border Grid.Column="1"
                     x:Name="GlobalSearchContainer"
+                    IsVisible="{Binding GlobalSearchEnabled}"
                     VerticalAlignment="Center"
                     Margin="0,0,40,0"
                     Height="32"
@@ -952,13 +953,16 @@
                 <Grid RowDefinitions="Auto,*">
                     <Grid x:Name="ModalHeader"
                           Grid.Row="0"
-                          Height="48"
+                          MinHeight="48"
                           ColumnDefinitions="*,Auto">
                         <TextBlock x:Name="ModalTitle"
                                    VerticalAlignment="Center"
                                    FontSize="20"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis"/>
+                        <ContentControl x:Name="ModalHeaderContent"
+                                        VerticalAlignment="Center"
+                                        IsVisible="False"/>
                         <Button x:Name="ModalCloseButton"
                                 Grid.Column="1"
                                 Width="46"

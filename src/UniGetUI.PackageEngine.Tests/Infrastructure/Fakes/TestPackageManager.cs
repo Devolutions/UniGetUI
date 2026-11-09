@@ -1,6 +1,7 @@
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -111,6 +112,11 @@ public sealed class TestPackageManager : PackageManager
     public void SetFindPackages(Func<string, IReadOnlyList<Package>> findPackages)
     {
         _findPackages = findPackages;
+    }
+
+    internal void SetOperationHelper(IPackageOperationHelper helper)
+    {
+        OperationHelper = helper;
     }
 
     public void SetAvailableUpdates(Func<IReadOnlyList<Package>> getAvailableUpdates)

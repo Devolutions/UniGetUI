@@ -28,10 +28,22 @@ public partial class SidebarViewModel : ViewModelBase
 
     partial void OnGitRepositoriesEnabledChanged(bool value)
     {
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, value);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, value, AgentSkillsEnabled);
         if (value) return;
         GitRepositoriesBadgeCount = 0;
         GitRepositoriesIsLoading = false;
+    }
+
+    [ObservableProperty]
+    private bool _agentSkillsEnabled = Settings.Get(Settings.K.EnableAgentSkills);
+
+    partial void OnAgentSkillsEnabledChanged(bool value)
+        => NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, value);
+
+    public void SetExtensionEnabled(PageType page, bool enabled)
+    {
+        if (page == PageType.GitRepositories) GitRepositoriesEnabled = enabled;
+        if (page == PageType.AgentSkills) AgentSkillsEnabled = enabled;
     }
 
     [ObservableProperty]
@@ -40,13 +52,13 @@ public partial class SidebarViewModel : ViewModelBase
     public void ReorderNavigationPages(IReadOnlyList<PageType> pages)
     {
         NavigationPageOrder.Save(pages);
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
     }
 
     public void ResetNavigationPages()
     {
         NavigationPageOrder.Reset();
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
     }
 
     // ─── Badge properties ─────────────────────────────────────────────────────
@@ -133,7 +145,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     public SidebarViewModel()
     {
-        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled);
+        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
         _wasDocked = Docked;
         _isPaneOpen = Docked && !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
     }
@@ -187,9 +199,23 @@ public partial class SidebarViewModel : ViewModelBase
             NavigationRequested?.Invoke(this, page);
     }
 
+    [ObservableProperty]
+    private bool _selfUpdateBadgeVisible;
+
+    [ObservableProperty]
+    private string _checkForUpdatesLabel = CoreTools.Translate("Check for UniGetUI updates");
+
+    public void SetPendingSelfUpdate(string? versionName)
+    {
+        SelfUpdateBadgeVisible = versionName is not null;
+        CheckForUpdatesLabel = versionName is null
+            ? CoreTools.Translate("Check for UniGetUI updates")
+            : CoreTools.Translate("UniGetUI {0} is available", ReleaseNotesLinks.ShortVersion(versionName));
+    }
+
     [RelayCommand]
-    private static Task CheckForUpdates() =>
-        AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
+    private static void CheckForUpdates() =>
+        _ = AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, manualCheck: true);
 
     public void SelectNavButtonForPage(PageType page) =>
         SelectedPageType = page;

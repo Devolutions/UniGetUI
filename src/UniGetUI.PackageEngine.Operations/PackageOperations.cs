@@ -100,6 +100,8 @@ namespace UniGetUI.PackageEngine.Operations
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
         private readonly List<string> _brokerKillBeforeOperationAdded = [];
+        private readonly string _genericFailureTitle;
+        private readonly string _genericFailureMessage;
 
         protected abstract Task HandleSuccess();
         protected abstract Task HandleFailure();
@@ -133,6 +135,8 @@ namespace UniGetUI.PackageEngine.Operations
         {
             Package = package;
             Role = role;
+            if (role is OperationType.Update)
+                options = options.WithoutSavedVersion();
             if (ReinstallsOnUpdate(package, options, role))
             {
                 Options = PinReinstallVersion(package, options);
@@ -166,6 +170,8 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             Initialize();
+            _genericFailureTitle = Metadata.FailureTitle;
+            _genericFailureMessage = Metadata.FailureMessage;
 
             Enqueued += (_, _) =>
             {
@@ -175,7 +181,6 @@ namespace UniGetUI.PackageEngine.Operations
                     (Options.SkipHashCheck && Role is not OperationType.Uninstall),
                     Package.OverridenOptions.Scope ?? Options.InstallationScope
                 );
-
                 Package.SetTag(PackageTag.OnQueue);
             };
             StatusChanged += (_, status) =>
@@ -1202,12 +1207,26 @@ namespace UniGetUI.PackageEngine.Operations
                 Package,
                 CommandRole,
                 Output,
-                ReturnCode
+                ReturnCode,
+                Options
             );
 
             FailedBecauseApplicationRunning = false;
+            Metadata.FailureTitle = _genericFailureTitle;
+            Metadata.FailureMessage = _genericFailureMessage;
             if (veredict is OperationVeredict.Failure)
             {
+                if (
+                    Package.Manager.OperationHelper.GetFailureExplanation(
+                        Package,
+                        CommandRole,
+                        Output,
+                        ReturnCode,
+                        Options
+                    )
+                    is { Length: > 0 } explanation
+                )
+                    Metadata.FailureMessage = explanation;
                 if (CommandRole is OperationType.Update)
                     ExplainNotApplicableUpdate(Output, ReturnCode);
                 ExplainInstallerHashMismatch(ReturnCode);

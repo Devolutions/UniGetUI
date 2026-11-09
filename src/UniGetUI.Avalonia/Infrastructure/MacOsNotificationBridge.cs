@@ -89,6 +89,17 @@ internal static partial class MacOsNotificationBridge
 
     // ── Feature notifications ──────────────────────────────────────────────
 
+    public static void ShowExtensionUpdatesAvailableNotification(string name, int count, string action)
+    {
+        if (Settings.AreUpdatesNotificationsDisabled()) return;
+        try
+        {
+            DeliverNotification(CoreTools.Translate("{0} updates", name), CoreTools.Translate("{0} skills can be updated", count),
+                MainWindow.RuntimeNotificationLevel.Success, inAppLaunchAction: action);
+        }
+        catch (Exception ex) { Logger.Warn(ex); }
+    }
+
     public static void ShowUpdatesAvailableNotification(IReadOnlyList<IPackage> upgradable)
     {
         if (Settings.AreUpdatesNotificationsDisabled()) return;
@@ -149,7 +160,8 @@ internal static partial class MacOsNotificationBridge
             DeliverNotification(
                 CoreTools.Translate("{0} can be updated to version {1}", "UniGetUI", newVersion),
                 CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName),
-                MainWindow.RuntimeNotificationLevel.Success);
+                MainWindow.RuntimeNotificationLevel.Success,
+                allowInAppFallback: false);
         }
         catch (Exception ex)
         {

@@ -10,8 +10,10 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
@@ -392,10 +394,13 @@ public sealed class PackageOperationsTests
     }
 
     [Theory]
-    [InlineData(false, "install Contoso.Tool 3.0.0")]
-    [InlineData(true, "install Contoso.Tool 2.0.0")]
-    public void ReinstallKeepsASavedVersionOnlyWhenTheManagerHonoursItOnUpdates(
+    [InlineData(false, false, "install Contoso.Tool 3.0.0")]
+    [InlineData(true, false, "install Contoso.Tool 3.0.0")]
+    [InlineData(false, true, "install Contoso.Tool 3.0.0")]
+    [InlineData(true, true, "install Contoso.Tool 2.0.0")]
+    public void ReinstallKeepsOnlyAnExplicitVersionAndOnlyWhenTheManagerHonoursItOnUpdates(
         bool supportsCustomVersionsOnUpdate,
+        bool versionIsExplicit,
         string expectedArguments
     )
     {
@@ -421,10 +426,123 @@ public sealed class PackageOperationsTests
 
         using var operation = new InspectableUpdatePackageOperation(
             package,
-            new InstallOptions { UninstallBeforeUpdate = true, Version = "2.0.0" }
+            new InstallOptions
+            {
+                UninstallBeforeUpdate = true,
+                Version = "2.0.0",
+                VersionIsExplicit = versionIsExplicit,
+            }
         );
 
         Assert.Equal(expectedArguments, operation.PrepareProcessStartInfoForTests().Arguments.Trim());
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, false, "update Contoso.Tool")]
+    [InlineData(OperationType.Update, true, "update Contoso.Tool 2.0.0")]
+    [InlineData(OperationType.Install, false, "install Contoso.Tool 2.0.0")]
+    public void ASavedVersionIsUsedForInstallsButNotForUpdates(
+        OperationType role,
+        bool versionIsExplicit,
+        string expectedArguments
+    )
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureManager(manager => manager.ExecutablePath = "C:\\tools\\pkgmgr.exe")
+            .ConfigureOperation(helper =>
+                helper.ParametersFactory = (package, options, operation) =>
+                    new[] { operation.ToString().ToLowerInvariant(), package.Id, options.Version }
+                        .Where(part => part.Length > 0)
+                        .ToList())
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        var options = new InstallOptions { Version = "2.0.0", VersionIsExplicit = versionIsExplicit };
+
+        string arguments;
+        if (role is OperationType.Install)
+        {
+            using var install = new InspectableInstallPackageOperation(package, options);
+            arguments = install.PrepareProcessStartInfoForTests().Arguments.Trim();
+        }
+        else
+        {
+            using var update = new InspectableUpdatePackageOperation(package, options);
+            arguments = update.PrepareProcessStartInfoForTests().Arguments.Trim();
+        }
+
+        Assert.Equal(expectedArguments, arguments);
+        Assert.Equal("2.0.0", options.Version);
+    }
+
+    [Fact]
+    public void AFailureExplanationDoesNotOutliveTheAttemptThatProducedIt()
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureOperation(helper =>
+                helper.FailureExplanationFactory = (_, _, output, _) =>
+                    output.Contains("sources offer nothing newer") ? "Nothing newer is available" : null)
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        using var operation = new InspectableUpdatePackageOperation(package, new InstallOptions());
+        string genericMessage = operation.Metadata.FailureMessage;
+
+        operation.GetProcessVeredictForTests(1, ["sources offer nothing newer"]);
+        Assert.Equal("Nothing newer is available", operation.Metadata.FailureMessage);
+
+        operation.GetProcessVeredictForTests(1, ["network error"]);
+        Assert.Equal(genericMessage, operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public async Task AnAutomaticRetryIsJudgedOnlyOnItsOwnOutput()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        int attempts = 0;
+        var outputsSeen = new List<IReadOnlyList<string>>();
+        var manager = new PackageManagerBuilder()
+            .WithName($"RetryOutputManager{Guid.NewGuid():N}")
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (_, _, _) => ["echo", $"attempt-{++attempts}"];
+                helper.ResultFactory = (_, _, output, _) =>
+                {
+                    outputsSeen.Add(output.ToList());
+                    return outputsSeen.Count == 1 ? OperationVeredict.AutoRetry : OperationVeredict.Success;
+                };
+            })
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        using var operation = new UpdatePackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        Assert.Equal(2, outputsSeen.Count);
+        Assert.Contains(outputsSeen[1], line => line.Contains("attempt-2"));
+        Assert.DoesNotContain(outputsSeen[1], line => line.Contains("attempt-1"));
     }
 
     [Fact]
@@ -1432,6 +1550,56 @@ public sealed class PackageOperationsTests
             .Build();
     }
 
+    private static TestPackageManager CreateControlledManagedManager(
+        bool serializesOperations,
+        Func<IPackage, CancellationToken, Task> perform
+    )
+    {
+        return new PackageManagerBuilder()
+            .WithName($"ControlledManager{Guid.NewGuid():N}")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SerializesOperations = serializesOperations;
+                return capabilities;
+            })
+            .ConfigureManager(manager =>
+                manager.SetOperationHelper(new ControlledManagedOperationHelper(manager, perform))
+            )
+            .Build();
+    }
+
+    private sealed class ControlledManagedOperationHelper(
+        TestPackageManager manager,
+        Func<IPackage, CancellationToken, Task> perform
+    ) : BasePkgOperationHelper(manager), IManagedPackageOperationHelper
+    {
+        public async Task<OperationVeredict?> TryPerformAsync(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation,
+            Action<string> log,
+            Action<OperationProgress> progress,
+            CancellationToken cancellationToken
+        )
+        {
+            await perform(package, cancellationToken);
+            return OperationVeredict.Success;
+        }
+
+        protected override IReadOnlyList<string> _getOperationParameters(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation
+        ) => [];
+
+        protected override OperationVeredict _getOperationResult(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode
+        ) => OperationVeredict.Failure;
+    }
+
     private static bool HasLine(AbstractOperation operation, string prefix) =>
         operation.GetOutput().Any(line => line.Item1.StartsWith(prefix, StringComparison.Ordinal));
 
@@ -1655,11 +1823,33 @@ public sealed class PackageOperationsTests
     [Fact]
     public async Task AnOperationWaitingOnASerializingManagerDoesNotHoldAParallelSlot()
     {
-        if (!OperatingSystem.IsWindows())
-            return;
-
-        var serialized = CreateSlowProcessManager(serializesOperations: true);
-        var other = CreateSlowProcessManager(serializesOperations: false);
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var waitingStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var unrelatedStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var serialized = CreateControlledManagedManager(
+            serializesOperations: true,
+            async (package, cancellationToken) =>
+            {
+                if (package.Id == "first")
+                {
+                    firstStarted.TrySetResult();
+                    await releaseFirst.Task.WaitAsync(cancellationToken);
+                }
+                else
+                {
+                    waitingStarted.TrySetResult();
+                }
+            }
+        );
+        var other = CreateControlledManagedManager(
+            serializesOperations: false,
+            (_, _) =>
+            {
+                unrelatedStarted.TrySetResult();
+                return Task.CompletedTask;
+            }
+        );
         InitializeLoaders();
         using var first = new InstallPackageOperation(
             new PackageBuilder().WithManager(serialized).WithId("first").Build(),
@@ -1673,36 +1863,71 @@ public sealed class PackageOperationsTests
             new PackageBuilder().WithManager(other).WithId("unrelated").Build(),
             new InstallOptions()
         );
-        var waitingReported = ReportsWaitingOnTheGate(waiting);
-        bool? firstFinishedWhenUnrelatedStarted = null;
-        unrelated.LogLineAdded += (_, line) =>
-        {
-            if (line.Item1.StartsWith("Executing process", StringComparison.Ordinal))
-                firstFinishedWhenUnrelatedStarted = HasLine(first, "Process return value");
-        };
 
         AbstractOperation.OperationQueue.Clear();
         int previousMax = AbstractOperation.MAX_OPERATIONS;
         AbstractOperation.MAX_OPERATIONS = 2;
+        Task? firstRun = null;
+        Task? waitingRun = null;
+        Task? unrelatedRun = null;
         try
         {
-            Task firstRun = first.MainThread();
-            await WaitForConditionAsync(() => HasLine(first, "Start Time"));
-            Task waitingRun = waiting.MainThread();
-            await WaitForConditionAsync(waitingReported);
-            Task unrelatedRun = unrelated.MainThread();
+            firstRun = first.MainThread();
+            await Task.WhenAny(firstStarted.Task, firstRun, Task.Delay(TimeSpan.FromSeconds(15)));
+            Assert.True(
+                firstStarted.Task.IsCompletedSuccessfully,
+                $"The first operation did not enter its managed helper; status: {first.Status}."
+            );
+
+            waitingRun = waiting.MainThread();
+            await WaitForConditionAsync(() => waiting.IsWaitingForManager || waitingRun.IsCompleted);
+            Assert.True(waiting.IsWaitingForManager, "The second operation did not wait for its manager.");
+            Assert.False(waitingStarted.Task.IsCompleted);
+
+            unrelatedRun = unrelated.MainThread();
+            await Task.WhenAny(unrelatedStarted.Task, unrelatedRun, Task.Delay(TimeSpan.FromSeconds(15)));
+            Assert.True(
+                unrelatedStarted.Task.IsCompletedSuccessfully,
+                $"The unrelated operation did not start while the first held its manager gate; status: {unrelated.Status}."
+            );
+            Assert.False(firstRun.IsCompleted);
+            Assert.True(waiting.IsWaitingForManager);
+            Assert.False(waitingStarted.Task.IsCompleted);
+
+            releaseFirst.TrySetResult();
             await Task.WhenAll(firstRun, waitingRun, unrelatedRun).WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.True(waitingStarted.Task.IsCompletedSuccessfully);
+            Assert.Equal(OperationStatus.Succeeded, first.Status);
+            Assert.Equal(OperationStatus.Succeeded, waiting.Status);
+            Assert.Equal(OperationStatus.Succeeded, unrelated.Status);
+            Assert.Equal(0, AbstractOperation.QueueLength());
         }
         finally
         {
-            AbstractOperation.MAX_OPERATIONS = previousMax;
-            AbstractOperation.OperationQueue.Clear();
+            if (
+                firstRun?.IsCompleted is false
+                || waitingRun?.IsCompleted is false
+                || unrelatedRun?.IsCompleted is false
+            )
+            {
+                first.Cancel();
+                waiting.Cancel();
+                unrelated.Cancel();
+            }
+            releaseFirst.TrySetResult();
+            try
+            {
+                await Task.WhenAll(
+                    new[] { firstRun, waitingRun, unrelatedRun }.OfType<Task>()
+                ).WaitAsync(TimeSpan.FromSeconds(30));
+            }
+            finally
+            {
+                AbstractOperation.MAX_OPERATIONS = previousMax;
+                AbstractOperation.OperationQueue.Clear();
+            }
         }
-
-        Assert.Equal(OperationStatus.Succeeded, first.Status);
-        Assert.Equal(OperationStatus.Succeeded, waiting.Status);
-        Assert.Equal(OperationStatus.Succeeded, unrelated.Status);
-        Assert.False(firstFinishedWhenUnrelatedStarted);
     }
 
     private static TestPackageManager CreateFailingEchoManager(params string[] echoed)
@@ -1916,7 +2141,7 @@ public sealed class PackageOperationsTests
         await InstalledPackagesLoader.Instance.AddForeign(installedBeforeUpdate);
         using var operation = new SimulatedUpdatePackageOperation(
             installedBeforeUpdate,
-            new InstallOptions { Version = "3.0.3" },
+            new InstallOptions { Version = "3.0.3", VersionIsExplicit = true },
             OperationVeredict.Success
         );
 
@@ -3599,6 +3824,9 @@ public sealed class PackageOperationsTests
             GetAttemptPreOperations();
 
         public void ApplyRetryActionForTests(string retryMode) => ApplyRetryAction(retryMode);
+
+        public OperationVeredict GetProcessVeredictForTests(int returnCode, List<string> output) =>
+            GetProcessVeredict(returnCode, output).GetAwaiter().GetResult();
     }
 
     private class InspectableInstallPackageOperation : InstallPackageOperation

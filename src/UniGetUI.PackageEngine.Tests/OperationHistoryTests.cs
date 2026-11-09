@@ -340,7 +340,7 @@ public sealed class OperationHistoryTests : IDisposable
 
         using var op = new UpdatePackageOperation(
             package,
-            new InstallOptions { Version = "2.0.0" }
+            new InstallOptions { Version = "2.0.0", VersionIsExplicit = true }
         );
         var record = OperationHistoryRecord.FromOperation(
             op,
@@ -349,6 +349,26 @@ public sealed class OperationHistoryTests : IDisposable
 
         Assert.Equal("1.0.0", record.VersionBefore);
         Assert.Equal("2.0.0", record.VersionAfter);
+    }
+
+    [Fact]
+    public void FromOperation_Update_RecordsTheNewVersionWhenTheVersionIsOnlySaved()
+    {
+        var manager = new PackageManagerBuilder().WithName("Scoop").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+
+        using var op = new UpdatePackageOperation(package, new InstallOptions { Version = "1.0.0" });
+        var record = OperationHistoryRecord.FromOperation(
+            op,
+            OperationHistoryRecord.StatusSucceeded
+        );
+
+        Assert.Equal("3.0.0", record.VersionAfter);
     }
 
     [Fact]

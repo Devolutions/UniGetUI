@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
@@ -8,8 +9,77 @@ using Architecture = UniGetUI.PackageEngine.Enums.Architecture;
 
 namespace UniGetUI.PackageEngine.Managers.ChocolateyManager;
 
-internal sealed class ChocolateyPkgOperationHelper : BasePkgOperationHelper
+internal sealed partial class ChocolateyPkgOperationHelper : BasePkgOperationHelper
 {
+    [GeneratedRegex(@"\bupgraded (\d+)/\d+ packages", RegexOptions.IgnoreCase)]
+    private static partial Regex UpgradeSummary();
+
+    [GeneratedRegex(@"^\s*(\S+) v(\S+) is the latest version available", RegexOptions.IgnoreCase)]
+    private static partial Regex LatestVersionAvailable();
+
+    private enum NoOpUpdate
+    {
+        None,
+        AlreadyCurrent,
+        NotUpgraded,
+    }
+
+    private static bool UpgradedNothing(IReadOnlyList<string> processOutput)
+    {
+        for (int i = processOutput.Count - 1; i >= 0; i--)
+        {
+            Match match = UpgradeSummary().Match(processOutput[i]);
+            if (match.Success)
+                return int.TryParse(match.Groups[1].Value, out int upgraded) && upgraded == 0;
+        }
+
+        return false;
+    }
+
+    private static string? LatestAvailableVersion(IPackage package, IReadOnlyList<string> processOutput)
+    {
+        for (int i = processOutput.Count - 1; i >= 0; i--)
+        {
+            Match match = LatestVersionAvailable().Match(processOutput[i]);
+            if (match.Success && match.Groups[1].Value.Equals(package.Id, StringComparison.OrdinalIgnoreCase))
+                return match.Groups[2].Value;
+        }
+
+        return null;
+    }
+
+    private static string? UpdateTarget(IPackage package, InstallOptions? options)
+    {
+        if (options?.WithoutSavedVersion().Version is { Length: > 0 } requested)
+            return requested;
+
+        return package.IsUpgradable && package.NewVersionString.Length > 0 ? package.NewVersionString : null;
+    }
+
+    private static bool Reaches(IPackage package, string latest, string target) =>
+        package.Manager.CompareVersions(latest, target) is int comparison
+            ? comparison >= 0
+            : latest.Equals(target, StringComparison.OrdinalIgnoreCase);
+
+    private static NoOpUpdate ClassifyNoOpUpdate(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options
+    )
+    {
+        if (returnCode is not 0 || operation is not OperationType.Update || !UpgradedNothing(processOutput))
+            return NoOpUpdate.None;
+
+        if (LatestAvailableVersion(package, processOutput) is not { } latest)
+            return NoOpUpdate.NotUpgraded;
+
+        return UpdateTarget(package, options) is not { } target || Reaches(package, latest, target)
+            ? NoOpUpdate.AlreadyCurrent
+            : NoOpUpdate.NotUpgraded;
+    }
+
     public ChocolateyPkgOperationHelper(Chocolatey manager)
         : base(manager) { }
 
@@ -75,11 +145,27 @@ internal sealed class ChocolateyPkgOperationHelper : BasePkgOperationHelper
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode
+    ) => _getOperationResult(package, operation, processOutput, returnCode, null);
+
+    protected override OperationVeredict _getOperationResult(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options
     )
     {
         if (returnCode is 3010 or 1641)
         {
             return OperationVeredict.RestartRequired;
+        }
+
+        switch (ClassifyNoOpUpdate(package, operation, processOutput, returnCode, options))
+        {
+            case NoOpUpdate.AlreadyCurrent:
+                return OperationVeredict.Success;
+            case NoOpUpdate.NotUpgraded:
+                return OperationVeredict.Failure;
         }
 
         if (returnCode is 1614 or 1605 or 0)
@@ -111,5 +197,28 @@ internal sealed class ChocolateyPkgOperationHelper : BasePkgOperationHelper
         }
 
         return OperationVeredict.Failure;
+    }
+
+    public override string? GetFailureExplanation(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options = null
+    )
+    {
+        if (ClassifyNoOpUpdate(package, operation, processOutput, returnCode, options) is not NoOpUpdate.NotUpgraded)
+            return null;
+
+        return LatestAvailableVersion(package, processOutput) is { } latest
+            ? CoreTools.Translate(
+                "Chocolatey did not update {0}: version {1} is the newest one its sources offer",
+                package.Name,
+                latest
+            )
+            : CoreTools.Translate(
+                "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version",
+                package.Name
+            );
     }
 }

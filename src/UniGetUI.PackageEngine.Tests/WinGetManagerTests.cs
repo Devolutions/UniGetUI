@@ -1047,6 +1047,90 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal("Contoso.StoreApp", Assert.Single(helper.BuildUpdatePackages(response)).Name);
     }
 
+    private static ListResponse PingetCorrelatedListResponse(string id, string localId) =>
+        PingetCliHelper.DeserializeJson<ListResponse>(
+            $$"""
+            {
+                "Matches": [
+                    {
+                        "Name": "OpenTTD",
+                        "Id": "{{id}}",
+                        "LocalId": "{{localId.Replace("\\", "\\\\")}}",
+                        "InstalledVersion": "Unknown",
+                        "AvailableVersion": "15.3",
+                        "SourceName": "winget",
+                        "Publisher": "OpenTTD",
+                        "Scope": "Machine",
+                        "InstallerCategory": "exe",
+                        "InstallLocation": "D:\\SteamLibrary\\steamapps\\common\\OpenTTD",
+                        "PackageFamilyNames": [],
+                        "ProductCodes": [],
+                        "UpgradeCodes": []
+                    }
+                ],
+                "Warnings": [],
+                "Truncated": false
+            }
+            """
+        );
+
+    [Theory]
+    [InlineData(@"ARP\Machine\X86\Steam App 1536610", LocalSourceKind.Steam)]
+    [InlineData(@"ARP\Machine\X86\Uplay Install 4311", LocalSourceKind.Ubisoft)]
+    [InlineData(@"ARP\Machine\X86\1207658924_is1", LocalSourceKind.Gog)]
+    public void PingetCliHelperKeepsLauncherGamesCorrelatedToACatalogPackageOnTheirLauncher(
+        string localId,
+        LocalSourceKind expectedSourceKind
+    )
+    {
+        var manager = new WinGet();
+        var helper = new PingetCliHelper(manager, @"C:\Program Files\UniGetUI\pinget.exe");
+        ListResponse response = PingetCorrelatedListResponse("OpenTTD.OpenTTD", localId);
+
+        Package installed = Assert.Single(helper.BuildInstalledPackages(response));
+        Assert.Equal(localId, installed.Id);
+        Assert.Same(GetExpectedSource(manager, expectedSourceKind), installed.Source);
+        Assert.Empty(helper.BuildUpdatePackages(response));
+    }
+
+    [Fact]
+    public void PingetCliHelperStillOffersUpdatesForTheLauncherClientsThemselves()
+    {
+        var helper = new PingetCliHelper(new WinGet(), @"C:\Program Files\UniGetUI\pinget.exe");
+        ListResponse response = PingetCorrelatedListResponse("Valve.Steam", @"ARP\Machine\X86\Steam");
+
+        Package installed = Assert.Single(helper.BuildInstalledPackages(response));
+        Assert.Equal("Valve.Steam", installed.Id);
+        Assert.Equal("winget", installed.Source.Name);
+        Assert.Equal("Valve.Steam", Assert.Single(helper.BuildUpdatePackages(response)).Id);
+    }
+
+    [Theory]
+    [InlineData(@"ARP\Machine\X86\Steam App 1536610", LocalSourceKind.Steam)]
+    [InlineData(@"ARP\User\X64\Uplay Install 4311", LocalSourceKind.Ubisoft)]
+    [InlineData(@"ARP\Machine\X86\1207658924_is1", LocalSourceKind.Gog)]
+    public void GetLauncherGameSourceRecognizesLauncherGameEntries(
+        string localId,
+        LocalSourceKind expectedSourceKind
+    )
+    {
+        var manager = new WinGet();
+
+        Assert.Same(GetExpectedSource(manager, expectedSourceKind), manager.GetLauncherGameSource(localId));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(@"ARP\Machine\X86\Steam")]
+    [InlineData(@"ARP\Machine\X86\Uplay")]
+    [InlineData(@"ARP\Machine\X64\{12345678-1234-1234-1234-123456789ABC}")]
+    [InlineData(@"ARP\Machine\X64\Contoso Tool_is1")]
+    public void GetLauncherGameSourceIgnoresOtherEntries(string? localId)
+    {
+        Assert.Null(new WinGet().GetLauncherGameSource(localId));
+    }
+
     [Fact]
     public void GetCliToolPreferenceUsesEnvironmentBeforeSettings()
     {

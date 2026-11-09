@@ -30,6 +30,10 @@ on:
 
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   # NuGet's package and HTTP caches go in the workspace, on D: on Windows runners, instead of
   # their default folders on C:, the runner's slow OS disk. Set here for every job and action.
@@ -37,13 +41,11 @@ env:
   NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}\.nuget\http-cache
 
 jobs:
-  test-codebase:
+  test-windows:
     runs-on: windows-latest
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v7
-      with:
-        fetch-depth: 0
 
     - name: Install .NET SDK
       uses: actions/setup-dotnet@v6
@@ -71,44 +73,46 @@ jobs:
 
     - name: Build Avalonia Windows solution
       working-directory: src
-      run: |
-        dotnet build-server shutdown
-        dotnet build UniGetUI.Windows.slnx --no-restore --verbosity minimal /p:Platform=x64 /p:UseSharedCompilation=false /m:1
+      run: dotnet build UniGetUI.Windows.slnx --no-restore --verbosity minimal /p:Platform=x64 /m:2
 
     - name: Run Tests
       working-directory: src
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64 /p:UseSharedCompilation=false /m:1
+      # Keep test hosts serial: several suites share on-disk settings and package-manager state.
+      run: dotnet test UniGetUI.Windows.slnx --no-build --no-restore --verbosity q --nologo /p:Platform=x64 /m:1
 
-    - name: Report full-trim publish warnings
-      working-directory: src
-      shell: pwsh
-      continue-on-error: true
-      run: |
-        dotnet build-server shutdown
-        dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
-          --no-restore `
-          --configuration Release `
-          --runtime win-x64 `
-          --self-contained true `
-          --output "${{ runner.temp }}\unigetui-full-trim-publish" `
-          /p:Platform=x64 `
-          /p:TrimMode=full `
-          /p:TrimmerSingleWarn=false `
-          /p:UseSharedCompilation=false `
-          --verbosity minimal
+  publish-nativeaot:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v7
 
+    - name: Install .NET SDK
+      uses: actions/setup-dotnet@v6
+      with:
+        global-json-file: global.json
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    # NativeAOT already uses TrimMode=full; a second warning-only publish adds no gate.
     - name: Report NativeAOT publish warnings
       working-directory: src
       shell: pwsh
       run: |
-        dotnet build-server shutdown
         dotnet restore UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
           --runtime win-x64 `
           /p:Configuration=Release `
+          /p:Platform=x64 `
           /p:PublishAot=true `
           /p:SelfContained=true
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
           --no-restore `
           --configuration Release `
@@ -121,6 +125,19 @@ jobs:
           /p:TrimmerSingleWarn=false `
           /p:UseSharedCompilation=false `
           --verbosity minimal
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         if (-not (Test-Path "${{ runner.temp }}\unigetui-nativeaot-publish\UniGetUI.exe")) {
           throw "NativeAOT publish did not produce UniGetUI.exe."
         }
+
+  # Preserve the existing required check: neither tests nor NativeAOT may fail or be skipped.
+  test-codebase:
+    needs: [test-windows, publish-nativeaot]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Require tests and NativeAOT publish
+      env:
+        TEST_RESULT: ${{ needs.test-windows.result }}
+        PUBLISH_RESULT: ${{ needs.publish-nativeaot.result }}
+      run: test "$TEST_RESULT" = success && test "$PUBLISH_RESULT" = success

@@ -1,0 +1,356 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:skills="using:UniGetUI.Extensions.AgentSkills"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             x:Class="UniGetUI.Avalonia.Views.Pages.AgentSkillsPage"
+             x:DataType="vm:AgentSkillsViewModel">
+    <UserControl.Styles>
+        <StyleInclude Source="avares://UniGetUI/Views/Pages/AgentLibraryStyles.axaml"/>
+    </UserControl.Styles>
+    <Grid x:Name="PageWorkspace" Margin="16,12" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="3">
+                <TextBlock Text="{t:Translate Agent Skills}" FontSize="26" FontWeight="SemiBold"
+                           TextWrapping="Wrap" automation:AutomationProperties.HeadingLevel="1"/>
+                <TextBlock Text="{t:Translate Skills and plugins for your AI tools}" Classes="secondary"/>
+            </StackPanel>
+            <Button Grid.Column="1" x:Name="SettingsButton" Content="{t:Translate Settings}" Click="OpenSettings"
+                    VerticalAlignment="Center"/>
+        </Grid>
+        <TabStrip Grid.Row="1" x:Name="LibraryTabs" Classes="library-tabs"
+                  SelectedIndex="{Binding LibraryViewIndex, Mode=TwoWay}" SelectionChanged="LibraryViewChanged"
+                  automation:AutomationProperties.Name="{t:Translate Agent library views}">
+            <TabStripItem Content="{t:Translate Discover}"/>
+            <TabStripItem Content="{t:Translate Installed}"/>
+            <TabStripItem Content="{Binding UpdatesHeader}"/>
+            <TabStripItem Content="{t:Translate Sources}"/>
+        </TabStrip>
+        <Grid Grid.Row="2" x:Name="LibraryWorkspace" ColumnDefinitions="*,0" IsVisible="{Binding IsLibraryView}">
+            <Grid x:Name="LibraryListPane" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                    <ComboBox x:Name="TypeFilter" ItemsSource="{Binding ContentTypes}" SelectedItem="{Binding ContentType, Mode=TwoWay}"
+                              MinWidth="130" SelectionChanged="ContentTypeChanged"
+                              automation:AutomationProperties.Name="{t:Translate Filter by content type}"/>
+                    <ComboBox x:Name="ToolFilter" ItemsSource="{Binding ToolOptions}" SelectedItem="{Binding SelectedTool, Mode=TwoWay}"
+                              MinWidth="180" SelectionChanged="ToolFilterChanged"
+                              automation:AutomationProperties.Name="{t:Translate Filter by tool}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AgentLibraryToolOption"><TextBlock Text="{Binding Name}"/></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBox x:Name="LibrarySearch" Text="{Binding Query, Mode=TwoWay}" PlaceholderText="{t:Translate Search skills and plugins}"
+                             Width="260" automation:AutomationProperties.Name="{t:Translate Search skills and plugins}"/>
+                    <Button Content="{Binding RefreshLabel}" Command="{Binding ReloadLibraryCommand}" IsEnabled="{Binding CanChangeLibrary}"/>
+                    <Button Content="{t:Translate Add skill source}" Command="{Binding ToggleAddSourceCommand}"
+                            IsVisible="{Binding CanAddSkillSource}" IsEnabled="{Binding CanNavigate}"/>
+                    <Button Content="{t:Translate Add marketplace}" Command="{Binding AgentPlugins.ShowAddMarketplaceCommand}"
+                            IsVisible="{Binding CanAddPluginMarketplace}" IsEnabled="{Binding CanChangeLibrary}"/>
+                    <ComboBox x:Name="MarketplaceFilter" ItemsSource="{Binding AgentPlugins.Marketplaces}"
+                              SelectedItem="{Binding AgentPlugins.SelectedMarketplace, Mode=TwoWay}"
+                              IsVisible="{Binding ShowPluginBrowseActions}" MinWidth="190"
+                              automation:AutomationProperties.Name="{t:Translate Plugin marketplace}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="skills:AgentPluginMarketplace">
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="{Binding AgentPlugins.BrowseSelectedLabel}" Command="{Binding AgentPlugins.BrowseSelectedMarketplaceCommand}"
+                            IsVisible="{Binding ShowPluginBrowseActions}" IsEnabled="{Binding AgentPlugins.ShowBrowseSelected}"/>
+                    <Button Content="{Binding AgentPlugins.LoadMoreLabel}" Command="{Binding AgentPlugins.LoadMoreCommand}"
+                            IsVisible="{Binding ShowLoadMorePlugins}" IsEnabled="{Binding AgentPlugins.CanLoadMore}"/>
+                    <Button Content="{Binding InstallAllLabel}" Command="{Binding InstallAllCommand}" IsVisible="{Binding ShowInstallAll}"
+                            IsEnabled="{Binding CanInstallAll}"/>
+                    <Button Content="{Binding UpdateAllLabel}" Command="{Binding UpdateAllCommand}" Classes="accent"
+                            IsVisible="{Binding ShowUpdateAll}" IsEnabled="{Binding CanUpdateAll}"/>
+                    <Button Content="{Binding PluginUpdateLabel}" Command="{Binding AgentPlugins.UpdateAllCommand}" Classes="accent"
+                            IsVisible="{Binding ShowPluginUpdateOperation}" IsEnabled="{Binding AgentPlugins.CanUpdateAll}"
+                            ToolTip.Tip="{t:Translate Tool update operation; newer versions have not been verified.}"/>
+                </WrapPanel>
+                <StackPanel Grid.Row="1" Spacing="8">
+                    <Border x:Name="AddSourceBar" Classes="library-surface" Padding="12" IsVisible="{Binding ShowSourceEditor}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{t:Translate Add a skill source}" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBox x:Name="SourceInput" Text="{Binding SourceInput, Mode=TwoWay}" KeyDown="SourceInputKeyDown"
+                                         PlaceholderText="{t:Translate Repository or website}" IsEnabled="{Binding CanNavigate}"
+                                         automation:AutomationProperties.Name="{t:Translate Skill source to add}"/>
+                                <Button Grid.Column="1" Content="{t:Translate Add and browse}" Classes="accent"
+                                        Command="{Binding AddFromSourceCommand}" IsEnabled="{Binding CanAddSource}"/>
+                            </Grid>
+                            <TextBlock Text="{t:Translate Text='Accepts owner/repo, a supported website, or an npx skills add command.'}"
+                                       Classes="secondary" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SourceInputMessage}" IsVisible="{Binding HasSourceInputMessage}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource StatusErrorForeground}" automation:AutomationProperties.LiveSetting="Assertive"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="library-surface" Padding="12" IsVisible="{Binding AgentPlugins.AddingMarketplace}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{t:Translate Add a marketplace for the selected agent}" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBox x:Name="MarketplaceInput" Text="{Binding AgentPlugins.MarketplaceInput, Mode=TwoWay}"
+                                         PlaceholderText="{t:Translate Repository or Git URL}" KeyDown="MarketplaceKeyDown"
+                                         automation:AutomationProperties.Name="{t:Translate Plugin marketplace source}"/>
+                                <Button Grid.Column="1" Content="{t:Translate Add and browse}" Classes="accent"
+                                        Command="{Binding AgentPlugins.AddMarketplaceCommand}" IsEnabled="{Binding AgentPlugins.CanChange}"/>
+                            </Grid>
+                            <TextBlock Text="{t:Translate A marketplace lists plugins. Adding it does not install its plugins.}"
+                                       Classes="secondary" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="library-surface" Padding="12" IsVisible="{Binding AgentPlugins.AddingPlugin}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBox x:Name="PluginInput" Text="{Binding AgentPlugins.PluginInput, Mode=TwoWay}"
+                                     PlaceholderText="{t:Translate name@marketplace or /plugin install command}" KeyDown="IdentifierKeyDown"
+                                     automation:AutomationProperties.Name="{t:Translate Plugin to install}"/>
+                            <Button Grid.Column="1" Content="{Binding AgentPlugins.InstallActionLabel}"
+                                    Command="{Binding AgentPlugins.InstallByIdCommand}" IsEnabled="{Binding AgentPlugins.CanChange}"/>
+                        </Grid>
+                    </Border>
+                    <WrapPanel ItemSpacing="10" LineSpacing="8" IsVisible="{Binding ShowPublicDiscovery}">
+                        <CheckBox Content="{t:Translate Search the public skills.sh catalog}"
+                                  IsChecked="{Binding SearchPublicCatalog, Mode=TwoWay}" IsEnabled="{Binding CanNavigate}"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding SearchPublicCatalog}">
+                            <TextBox Text="{Binding CatalogQuery, Mode=TwoWay}" MinWidth="180" MaxWidth="300"
+                                     PlaceholderText="{t:Translate Search skills.sh}" KeyDown="CatalogKeyDown"
+                                     automation:AutomationProperties.Name="{t:Translate Search skills.sh}"/>
+                            <Button Grid.Column="1" Content="{t:Translate Search skills.sh}" Command="{Binding SearchCatalogCommand}"
+                                    IsEnabled="{Binding CanNavigate}"/>
+                        </Grid>
+                    </WrapPanel>
+                    <TextBlock Text="{t:Translate Saved source listings. Use Refresh sources to fetch changes.}"
+                               Classes="secondary" IsVisible="{Binding ShowCachedSourceNotice}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Border Grid.Row="2" Classes="library-surface" IsVisible="{Binding IsLibraryView}">
+                    <Panel>
+                        <ListBox x:Name="LibraryList" Classes="library" ItemsSource="{Binding Items}"
+                                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}" KeyDown="LibraryListKeyDown"
+                                 automation:AutomationProperties.Name="{t:Translate Agent library}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AgentLibraryItem">
+                                    <Grid Classes="library-row" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                        <StackPanel Spacing="4" VerticalAlignment="Center">
+                                            <Button Classes="item-title" HorizontalAlignment="Stretch"
+                                                    ToolTip.Tip="{Binding Name}"
+                                                    Command="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).OpenLibraryItemCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                            </Button>
+                                            <TextBlock Classes="description" Text="{Binding Description}" IsVisible="{Binding HasDescription}"/>
+                                            <Grid Classes="row-metadata" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                                <Border Classes="item-status"><TextBlock Text="{Binding TypeLabel}"/></Border>
+                                                <Border Grid.Column="1" Classes="item-status" Classes.installed="{Binding HasPositiveStatus}"
+                                                        Classes.update="{Binding HasUpdate}" IsVisible="{Binding HasStatus}">
+                                                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="2" Classes="secondary" Text="{Binding SourceSummary}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SourceSummary}"/>
+                                            </Grid>
+                                        </StackPanel>
+                                        <WrapPanel Grid.Column="1" Classes="row-actions" ItemSpacing="8" LineSpacing="6"
+                                                   VerticalAlignment="Center" HorizontalAlignment="Right" MaxWidth="240">
+                                            <Button Content="{t:Translate Install}" IsVisible="{Binding CanInstall}"
+                                                    Command="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).InstallLibraryItemCommand}"
+                                                    CommandParameter="{Binding}" IsEnabled="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).CanChangeLibrary}"/>
+                                            <Button Content="{t:Translate Update}" IsVisible="{Binding CanUpdate}"
+                                                    Command="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).UpdateLibraryItemCommand}"
+                                                    CommandParameter="{Binding}" IsEnabled="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).CanChangeLibrary}"/>
+                                            <Button Content="{t:Translate Enable}" IsVisible="{Binding CanEnable}"
+                                                    Command="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).ToggleLibraryItemCommand}"
+                                                    CommandParameter="{Binding}" IsEnabled="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).CanChangeLibrary}"/>
+                                            <Button Content="{t:Translate Disable}" IsVisible="{Binding CanDisable}"
+                                                    Command="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).ToggleLibraryItemCommand}"
+                                                    CommandParameter="{Binding}" IsEnabled="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).CanChangeLibrary}"/>
+                                        </WrapPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel x:Name="EmptyState" IsVisible="{Binding ShowLibraryEmpty}" Margin="24"
+                                    Spacing="10" MaxWidth="520" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding LibraryEmptyTitle}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding LibraryEmptyDescription}" TextWrapping="Wrap"/>
+                            <Button Content="{t:Translate Retry}" IsVisible="{Binding HasLibraryError}" Command="{Binding ReloadLibraryCommand}"/>
+                        </StackPanel>
+                        <ProgressBar Height="3" VerticalAlignment="Top" IsIndeterminate="True" IsVisible="{Binding IsLibraryBusy}"/>
+                    </Panel>
+                </Border>
+                <Grid Grid.Row="3" ColumnDefinitions="*,Auto" IsVisible="{Binding IsLibraryView}">
+                    <TextBlock Classes="secondary" Text="{Binding LibraryResultCount}"/>
+                    <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding BackgroundStatus}"
+                               IsVisible="{Binding IsDiscoverView}" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+            </Grid>
+            <Border x:Name="DetailsPane" Grid.Column="1" Classes="library-surface" Padding="16" IsVisible="{Binding ShowDetails}">
+                <Grid RowDefinitions="Auto,*" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <StackPanel Spacing="5">
+                            <Button x:Name="BackButton" Content="{t:Translate Back to library}" Click="BackClicked"
+                                    IsEnabled="{Binding CanNavigate}" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding SelectedItem.Name}" FontSize="24" FontWeight="SemiBold"
+                                       TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding SelectedItem.Name}" automation:AutomationProperties.HeadingLevel="2"/>
+                            <WrapPanel ItemSpacing="6">
+                                <Border Classes="item-status"><TextBlock Text="{Binding SelectedItem.TypeLabel}"/></Border>
+                                <Border Classes="item-status" Classes.installed="{Binding SelectedItem.HasPositiveStatus}"
+                                        Classes.update="{Binding SelectedItem.HasUpdate}" IsVisible="{Binding SelectedItem.HasStatus}">
+                                    <TextBlock Text="{Binding SelectedItem.Status}" TextWrapping="Wrap"/>
+                                </Border>
+                            </WrapPanel>
+                        </StackPanel>
+                        <WrapPanel Grid.Column="1" ItemSpacing="6" LineSpacing="6" VerticalAlignment="Top">
+                            <Button Content="{t:Translate Install}" Classes="accent" IsVisible="{Binding SelectedItem.CanInstall}"
+                                    Command="{Binding InstallLibraryItemCommand}" CommandParameter="{Binding SelectedItem}"
+                                    IsEnabled="{Binding CanChangeLibrary}"/>
+                            <Button Content="{t:Translate Update}" Classes="accent" IsVisible="{Binding SelectedItem.CanUpdate}"
+                                    Command="{Binding UpdateLibraryItemCommand}" CommandParameter="{Binding SelectedItem}"
+                                    IsEnabled="{Binding CanChangeLibrary}"/>
+                            <Button Content="{t:Translate Enable}" IsVisible="{Binding SelectedItem.CanEnable}"
+                                    Command="{Binding ToggleLibraryItemCommand}" CommandParameter="{Binding SelectedItem}"
+                                    IsEnabled="{Binding CanChangeLibrary}"/>
+                            <Button Content="{t:Translate Disable}" IsVisible="{Binding SelectedItem.CanDisable}"
+                                    Command="{Binding ToggleLibraryItemCommand}" CommandParameter="{Binding SelectedItem}"
+                                    IsEnabled="{Binding CanChangeLibrary}"/>
+                            <Button Content="{t:Translate Uninstall}" IsVisible="{Binding IsSkillDetails}"
+                                    Click="UninstallClicked" IsEnabled="{Binding CanRemove}"/>
+                            <Button Content="{t:Translate Uninstall}" IsVisible="{Binding SelectedItem.CanPluginUninstall}"
+                                    Command="{Binding UninstallLibraryItemCommand}" CommandParameter="{Binding SelectedItem}"
+                                    IsEnabled="{Binding CanChangeLibrary}"/>
+                            <Button Content="{t:Translate Open source}" Command="{Binding OpenSourceCommand}"
+                                    IsVisible="{Binding IsSkillDetails}" IsEnabled="{Binding CanOpenSource}"/>
+                        </WrapPanel>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="16" MaxWidth="840" HorizontalAlignment="Left" Margin="0,0,12,16">
+                            <TextBlock Text="{Binding SelectedItem.Description}" TextWrapping="Wrap"/>
+                            <StackPanel IsVisible="{Binding IsSkillDetails}" Spacing="6">
+                                <TextBlock Text="{t:Translate Installed in}" FontWeight="SemiBold" IsVisible="{Binding SelectedItem.IsInstalled}"/>
+                                <TextBlock Text="{Binding SelectedItem.Skill.AgentNames}" TextWrapping="Wrap" IsVisible="{Binding SelectedItem.IsInstalled}"/>
+                                <TextBlock Text="{t:Translate Source}" FontWeight="SemiBold"/>
+                                <SelectableTextBlock Text="{Binding SelectedItem.Skill.Source.InstallSource}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{t:Translate Current revision}" FontWeight="SemiBold" IsVisible="{Binding SelectedItem.IsInstalled}"/>
+                                <TextBlock Text="{Binding SelectedItem.Skill.Version}" IsVisible="{Binding SelectedItem.IsInstalled}"/>
+                                <TextBlock Text="{t:Translate Available revision}" FontWeight="SemiBold" IsVisible="{Binding SelectedItem.Skill.HasUpdate}"/>
+                                <TextBlock Text="{Binding SelectedItem.Skill.NewVersion}" IsVisible="{Binding SelectedItem.Skill.HasUpdate}"/>
+                                <Button Content="{t:Translate Preview SKILL.md and files}" Command="{Binding LoadPreviewCommand}"
+                                        IsVisible="{Binding IsDiscover}"
+                                        IsEnabled="{Binding CanLoadPreview}" HorizontalAlignment="Left"/>
+                                <ProgressBar Height="3" IsIndeterminate="True" IsVisible="{Binding IsLoadingPreview}"/>
+                                <TextBlock Text="{Binding PreviewError}" IsVisible="{Binding HasPreviewError}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource StatusErrorForeground}"/>
+                                <StackPanel IsVisible="{Binding HasPreview}" Spacing="10">
+                                    <TextBlock Text="{t:Translate Source preview}" FontSize="18" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{t:Translate This preview comes from the source and does not show local changes.}"
+                                               Classes="secondary" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding PreviewLicense}" IsVisible="{Binding HasPreviewLicense}"/>
+                                    <TextBlock Text="{Binding PreviewCompatibility}" IsVisible="{Binding HasPreviewCompatibility}"
+                                               TextWrapping="Wrap"/>
+                                    <Border Classes="item-status update" IsVisible="{Binding HasPreviewWarnings}">
+                                        <TextBlock Text="{Binding PreviewWarnings}" TextWrapping="Wrap"/>
+                                    </Border>
+                                    <Expander Header="{t:Translate Files}">
+                                        <ItemsControl ItemsSource="{Binding SkillPreview.Files}">
+                                            <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap"/></DataTemplate></ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Expander>
+                                    <TextBlock Text="{t:Translate SKILL.md}" FontWeight="SemiBold"/>
+                                    <SelectableTextBlock Text="{Binding SkillPreview.Markdown}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{t:Translate Preview truncated for display.}"
+                                               IsVisible="{Binding SkillPreview.IsMarkdownTruncated}" Classes="secondary"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel IsVisible="{Binding IsPluginDetails}" Spacing="6">
+                                <TextBlock Text="{t:Translate Plugin identifier}" FontWeight="SemiBold"/>
+                                <SelectableTextBlock Text="{Binding AgentPlugins.SelectedPlugin.Id}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{t:Translate Version}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding AgentPlugins.SelectedPlugin.Version}"/>
+                                <TextBlock Text="{t:Translate Tool}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding SelectedItem.PluginProvider.Name}"/>
+                                <TextBlock Text="{t:Translate Marketplace}" FontWeight="SemiBold" IsVisible="{Binding SelectedItem.HasMarketplace}"/>
+                                <TextBlock Text="{Binding AgentPlugins.SelectedPlugin.Marketplace}" IsVisible="{Binding SelectedItem.HasMarketplace}"/>
+                                <TextBlock Text="{Binding SelectedItem.Notice}" IsVisible="{Binding SelectedItem.HasNotice}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding AgentPlugins.Guidance}" Classes="secondary" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding AgentPlugins.RestartNotice}" Classes="secondary" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+        <Grid Grid.Row="2" x:Name="SourcesWorkspace" IsVisible="{Binding IsSourcesView}" ColumnDefinitions="*,*" ColumnSpacing="16">
+            <Grid x:Name="SkillSourcesPane" RowDefinitions="Auto,*" RowSpacing="8" IsVisible="{Binding ShowSkillSources}">
+                <TextBlock Text="{t:Translate Skill sources}" FontSize="20" FontWeight="SemiBold"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ContentControl x:Name="SourcesHost" HorizontalContentAlignment="Stretch"/>
+                </ScrollViewer>
+            </Grid>
+            <Grid x:Name="PluginMarketplacesPane" Grid.Column="1" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+                  RowSpacing="8" IsVisible="{Binding ShowPluginMarketplaces}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{t:Translate Plugin marketplaces}" FontSize="20" FontWeight="SemiBold"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding ToolOptions}" SelectedItem="{Binding SelectedTool, Mode=TwoWay}"
+                              MinWidth="190" SelectionChanged="ToolFilterChanged"
+                              automation:AutomationProperties.Name="{t:Translate Filter by tool}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AgentLibraryToolOption"><TextBlock Text="{Binding Name}"/></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+                <TextBlock Grid.Row="1" Text="{t:Translate Choose a tool to manage its plugin marketplaces.}" Classes="secondary"
+                           IsVisible="{Binding IsAllTools}" TextWrapping="Wrap"/>
+                <Button Grid.Row="2" Content="{t:Translate Add marketplace}" Command="{Binding AgentPlugins.ShowAddMarketplaceCommand}"
+                        IsVisible="{Binding HasSelectedPluginProvider}" IsEnabled="{Binding AgentPlugins.CanChange}"
+                        HorizontalAlignment="Left"/>
+                <Border Grid.Row="3" Classes="library-surface" Padding="12" IsVisible="{Binding AgentPlugins.AddingMarketplace}">
+                    <StackPanel Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBox x:Name="SourceMarketplaceInput" Text="{Binding AgentPlugins.MarketplaceInput, Mode=TwoWay}"
+                                     PlaceholderText="{t:Translate Repository or Git URL}" KeyDown="MarketplaceKeyDown"
+                                     automation:AutomationProperties.Name="{t:Translate Plugin marketplace source}"/>
+                            <Button Grid.Column="1" Content="{t:Translate Add and browse}" Classes="accent"
+                                    Command="{Binding AgentPlugins.AddMarketplaceCommand}" IsEnabled="{Binding AgentPlugins.CanChange}"/>
+                        </Grid>
+                        <TextBlock Text="{t:Translate A marketplace lists plugins. Adding it does not install its plugins.}"
+                                   Classes="secondary" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <ListBox Grid.Row="4" ItemsSource="{Binding AgentPlugins.Marketplaces}" SelectedItem="{Binding AgentPlugins.SelectedMarketplace, Mode=TwoWay}"
+                         IsVisible="{Binding HasSelectedPluginProvider}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="skills:AgentPluginMarketplace">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Source}" Classes="secondary" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <WrapPanel Grid.Row="5" ItemSpacing="8">
+                    <Button Content="{t:Translate Refresh marketplace}" Command="{Binding AgentPlugins.RefreshMarketplaceCommand}"
+                            IsEnabled="{Binding AgentPlugins.CanRefreshMarketplace}"/>
+                    <Button Content="{t:Translate Remove marketplace}" Command="{Binding AgentPlugins.RemoveMarketplaceCommand}"
+                            IsEnabled="{Binding AgentPlugins.CanRemoveMarketplace}"/>
+                </WrapPanel>
+            </Grid>
+        </Grid>
+        <StackPanel Grid.Row="3" Spacing="6">
+            <Border Classes="library-error" IsVisible="{Binding HasLibraryError}">
+                <TextBlock Text="{Binding LibraryStatus}" TextWrapping="Wrap" automation:AutomationProperties.LiveSetting="Assertive"/>
+            </Border>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="{t:Translate Cancel}" Command="{Binding CancelCommand}"
+                        IsVisible="{Binding IsBusy}"/>
+                <Button DockPanel.Dock="Right" Content="{t:Translate Cancel}" Command="{Binding AgentPlugins.CancelCommand}"
+                        IsVisible="{Binding AgentPlugins.IsWorking}"/>
+                <TextBlock Text="{Binding LibraryStatus}" IsVisible="{Binding !HasLibraryError}" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding LibraryStatus}" VerticalAlignment="Center"
+                           automation:AutomationProperties.LiveSetting="Polite"/>
+            </DockPanel>
+            <Expander Header="{t:Translate View activity}" IsVisible="{Binding HasLibraryActivity}">
+                <ScrollViewer MaxHeight="120"><SelectableTextBlock Text="{Binding LibraryActivity}" TextWrapping="Wrap" Margin="8"/></ScrollViewer>
+            </Expander>
+        </StackPanel>
+    </Grid>
+</UserControl>

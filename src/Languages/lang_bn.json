@@ -135,7 +135,7 @@
   "Close apps": "অ্যাপগুলো বন্ধ করুন",
   "Pre/Post install": "প্রাক/পরবর্তী ইনস্টল",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "এই প্যাকেজটি ইনস্টল, আপডেট বা আনইনস্টল করার আগে বন্ধ করা উচিত এমন প্রক্রিয়াগুলি নির্বাচন করুন।",
-  "Write here the process names here, separated by commas (,)": "এখানে প্রক্রিয়ার নাম লিখুন, কমা (,) দ্বারা পৃথক করা",
+  "Enter the process names here, separated by commas (,)": "এখানে প্রক্রিয়ার নাম লিখুন, কমা (,) দ্বারা পৃথক করা",
   "Try to kill the processes that refuse to close when requested to": "অনুরোধ করলে বন্ধ করতে অস্বীকার করে এমন প্রক্রিয়াগুলি বন্ধ করার চেষ্টা করুন",
   "Run as admin": "এডমিনিস্ট্রেটর হিসেবে চালান",
   "Interactive installation": "ইন্টারেক্টিভ ইনস্টলেশন",

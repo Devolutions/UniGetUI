@@ -93,7 +93,7 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string KillProcessesDescriptionLabel { get; } = CoreTools.Translate(
         "Select the processes that should be closed before this package is installed, updated or uninstalled.");
     public string KillProcessesPlaceholderLabel { get; } = CoreTools.Translate(
-        "Write here the process names here, separated by commas (,)");
+        "Enter the process names here, separated by commas (,)");
     public string ForceKillLabelText { get; } = CoreTools.Translate(
         "Try to kill the processes that refuse to close when requested to");
 

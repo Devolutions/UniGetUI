@@ -135,7 +135,7 @@
   "Close apps": "Sule rakendused",
   "Pre/Post install": "Enne/pärast paigaldamist",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Valige protsessid, mis tuleb sulgeda enne selle paketi paigaldamist, uuendamist või eemaldamist.",
-  "Write here the process names here, separated by commas (,)": "Kirjutage siia protsesside nimed, eraldatuna komadega (,)",
+  "Enter the process names here, separated by commas (,)": "Kirjutage siia protsesside nimed, eraldatuna komadega (,)",
   "Try to kill the processes that refuse to close when requested to": "Proovige tappa protsessid, mis keelduvad sulgemast, kui seda palutakse",
   "Run as admin": "Käivita administraatorina",
   "Interactive installation": "Interaktiivne paigaldus",

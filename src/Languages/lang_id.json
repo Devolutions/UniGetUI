@@ -135,7 +135,7 @@
   "Close apps": "Tutup aplikasi",
   "Pre/Post install": "Pra/Pasca-instalasi",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Pilih proses yang harus ditutup sebelum paket ini diinstal, diperbarui, atau dihapus.",
-  "Write here the process names here, separated by commas (,)": "Tuliskan nama proses di sini, dipisahkan dengan koma (,)",
+  "Enter the process names here, separated by commas (,)": "Tuliskan nama proses di sini, dipisahkan dengan koma (,)",
   "Try to kill the processes that refuse to close when requested to": "Cobalah untuk mematikan proses yang menolak untuk menutup ketika diminta",
   "Run as admin": "Jalankan sebagai admin",
   "Interactive installation": "Pemasangan interaktif",

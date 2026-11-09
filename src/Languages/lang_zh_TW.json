@@ -135,7 +135,7 @@
   "Close apps": "關閉應用程式",
   "Pre/Post install": "安裝前/安裝後",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "選擇在安裝、更新或解除安裝此套件前應關閉的進程。",
-  "Write here the process names here, separated by commas (,)": "在此輸入程式名稱，並以逗號 (,) 分隔",
+  "Enter the process names here, separated by commas (,)": "在此輸入程式名稱，並以逗號 (,) 分隔",
   "Try to kill the processes that refuse to close when requested to": "嘗試停止那些在被要求關閉時拒絕關閉的進程。",
   "Run as admin": "以系統管理員身分執行",
   "Interactive installation": "互動式安裝",

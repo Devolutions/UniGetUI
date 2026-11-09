@@ -511,7 +511,7 @@
   "Close apps": "Close apps",
   "Pre/Post install": "Pre/Post install",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Select the processes that should be closed before this package is installed, updated or uninstalled.",
-  "Write here the process names here, separated by commas (,)": "Write here the process names here, separated by commas (,)",
+  "Enter the process names here, separated by commas (,)": "Enter the process names here, separated by commas (,)",
   "Try to kill the processes that refuse to close when requested to": "Try to kill the processes that refuse to close when requested to",
   "Run as admin": "Run as admin",
   "Interactive installation": "Interactive installation",

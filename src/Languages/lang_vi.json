@@ -135,7 +135,7 @@
   "Close apps": "Đóng ứng dụng",
   "Pre/Post install": "Trước/Sau khi cài đặt",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Chọn các tiến trình cần đóng trước khi gói phần mềm này được cài đặt, cập nhật hoặc gỡ bỏ.",
-  "Write here the process names here, separated by commas (,)": "Viết tên các tiến trình vào đây, cách nhau bằng dấu phẩy (,)",
+  "Enter the process names here, separated by commas (,)": "Viết tên các tiến trình vào đây, cách nhau bằng dấu phẩy (,)",
   "Try to kill the processes that refuse to close when requested to": "Cố gắng kết thúc các tiến trình không chịu đóng khi được yêu cầu",
   "Run as admin": "Chạy với quyền quản trị",
   "Interactive installation": "Cài đặt tương tác",

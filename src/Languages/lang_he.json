@@ -135,7 +135,7 @@
   "Close apps": "סגור יישומים",
   "Pre/Post install": "לפני/אחרי התקנה",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "בחר את התהליכים שיש לסגור לפני החבילה מותקנת, מתעדכנת או מוסרת.",
-  "Write here the process names here, separated by commas (,)": "כתוב כאן את שמות התהליכים, מופרדים בפסיקים (,)",
+  "Enter the process names here, separated by commas (,)": "כתוב כאן את שמות התהליכים, מופרדים בפסיקים (,)",
   "Try to kill the processes that refuse to close when requested to": "נסה להרג את התהליכים המסרבים להיסגר כאשר נדרש מהם",
   "Run as admin": "הפעל כמנהל מערכת",
   "Interactive installation": "התקנה אינטראקטיבית",

@@ -135,7 +135,7 @@
   "Close apps": "Sluit toepassings",
   "Pre/Post install": "Voor-/na-installasie",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Kies die prosesse wat gesluit moet word voordat hierdie pakket geïnstalleer, opgedateer of gedeïnstalleer word.",
-  "Write here the process names here, separated by commas (,)": "Skryf hier die prosesname, geskei deur kommas (,)",
+  "Enter the process names here, separated by commas (,)": "Skryf hier die prosesname, geskei deur kommas (,)",
   "Try to kill the processes that refuse to close when requested to": "Probeer die prosesse beëindig wat weier om te sluit wanneer dit versoek word",
   "Run as admin": "Laat loop as admin",
   "Interactive installation": "Interaktiewe installasie",

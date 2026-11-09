@@ -135,7 +135,7 @@
   "Close apps": "ปิดแอป",
   "Pre/Post install": "ก่อน/หลังการติดตั้ง",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "เลือกกระบวนการที่ควรถูกปิดก่อนติดตั้ง อัปเดต หรือถอนการติดตั้งแพ็กเกจนี้",
-  "Write here the process names here, separated by commas (,)": "เขียนชื่อโปรเซสที่นี่ โดยคั่นด้วยเครื่องหมายจุลภาค (,)",
+  "Enter the process names here, separated by commas (,)": "เขียนชื่อโปรเซสที่นี่ โดยคั่นด้วยเครื่องหมายจุลภาค (,)",
   "Try to kill the processes that refuse to close when requested to": "พยายามปิดโปรเซสที่ปฏิเสธการปิดเมื่อมีการร้องขอ",
   "Run as admin": "รันด้วยสิทธิ์ผู้ดูแลระบบ",
   "Interactive installation": "ติดตั้งแบบอินเตอร์แอคทีฟ",

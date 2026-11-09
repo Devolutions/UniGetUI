@@ -135,7 +135,7 @@
   "Close apps": "Закрыць праграмы",
   "Pre/Post install": "Перад/пасля ўсталявання",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Абярыце працэсы, якія трэба закрыць перад усталяваннем/абнаўленнем/выдаленнем пакета.",
-  "Write here the process names here, separated by commas (,)": "Упішыце назвы працэсаў праз коску",
+  "Enter the process names here, separated by commas (,)": "Упішыце назвы працэсаў праз коску",
   "Try to kill the processes that refuse to close when requested to": "Паспрабаваць забіць працэсы, якія не закрываюцца",
   "Run as admin": "Запусціць як адміністратар",
   "Interactive installation": "Інтэрактыўнае ўсталяванне",

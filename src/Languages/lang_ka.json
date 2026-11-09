@@ -135,7 +135,7 @@
   "Close apps": "აპების დახურვა",
   "Pre/Post install": "ინსტალაციამდე/შემდეგ",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "შეარჩიეთ პროცესები, რომლებიც უნდა დაიხუროს მანამ სანამ ეს პაკეტი დაინსტალირდება, განახლდება ან დეინსტალირდება.",
-  "Write here the process names here, separated by commas (,)": "აქ შეიყვანეთ პროცესების სახელები, გამოყავით მძიმეებით (,)",
+  "Enter the process names here, separated by commas (,)": "აქ შეიყვანეთ პროცესების სახელები, გამოყავით მძიმეებით (,)",
   "Try to kill the processes that refuse to close when requested to": "პროცესების ძალისმიერად გათიშვის ცდა, რომლებიც არ ითიშება მოთხოვნისას",
   "Run as admin": "ადმინისტრატორით გაშვება",
   "Interactive installation": "ინტერაქტიული ინსტალაცია",

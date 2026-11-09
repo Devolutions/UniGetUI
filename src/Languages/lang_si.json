@@ -135,7 +135,7 @@
   "Close apps": "යෙදුම් වසන්න",
   "Pre/Post install": "පෙර/පසු ස්ථාපනය",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "මෙම පැකේජය ස්ථාපනය, යාවත්කාලීන හෝ අස්ථාපනය කිරීමට පෙර වසා දැමිය යුතු processes තෝරන්න.",
-  "Write here the process names here, separated by commas (,)": "මෙහි process නාම comma (,) මගින් වෙන් කර ලියන්න",
+  "Enter the process names here, separated by commas (,)": "මෙහි process නාම comma (,) මගින් වෙන් කර ලියන්න",
   "Try to kill the processes that refuse to close when requested to": "වසා දමන්නැයි ඉල්ලා සිටින විට වසා නොදමන processes අවසන් කිරීමට උත්සාහ කරන්න",
   "Run as admin": "admin ලෙස ධාවනය කරන්න",
   "Interactive installation": "Interactive ස්ථාපනය",

@@ -135,7 +135,7 @@
   "Close apps": "終了させるアプリ",
   "Pre/Post install": "インストール前/後",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "インストール・アップデート・アンインストール時に事前に終了させる必要があるプロセスを選択してください。",
-  "Write here the process names here, separated by commas (,)": "プロセス名をカンマ（,）で区切って入力してください。",
+  "Enter the process names here, separated by commas (,)": "プロセス名をカンマ（,）で区切って入力してください。",
   "Try to kill the processes that refuse to close when requested to": "終了しないプロセスを強制終了する",
   "Run as admin": "管理者として実行",
   "Interactive installation": "対話型インストール",

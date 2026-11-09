@@ -135,7 +135,7 @@
   "Close apps": "Fermi aplikaĵojn",
   "Pre/Post install": "Antaŭ/Post instalado",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Elektu la procezojn, kiuj devus esti fermitaj antaŭ ol ĉi tiu pakaĵo estos instalita, ĝisdatigita aŭ malinstalita.",
-  "Write here the process names here, separated by commas (,)": "Skribu ĉi tie la nomojn de la procezoj, apartigitajn per komoj (,)",
+  "Enter the process names here, separated by commas (,)": "Skribu ĉi tie la nomojn de la procezoj, apartigitajn per komoj (,)",
   "Try to kill the processes that refuse to close when requested to": "Provu ĉesigi la procezojn, kiuj rifuzas fermiĝi laŭpete",
   "Run as admin": "Ruli kiel administranto",
   "Interactive installation": "Interaga instalado",

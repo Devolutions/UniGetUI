@@ -175,7 +175,7 @@
     "Close apps": "Ilovalarni yopish",
     "Pre/Post install": "O‘rnatishdan oldin/keyin",
     "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Ushbu paket o‘rnatilishi, yangilanishi yoki o‘chirilishidan oldin yopilishi kerak bo‘lgan jarayonlarni tanlang.",
-    "Write here the process names here, separated by commas (,)": "Bu yerga jarayon nomlarini vergul (,) bilan ajratib yozing",
+    "Enter the process names here, separated by commas (,)": "Bu yerga jarayon nomlarini vergul (,) bilan ajratib yozing",
     "Try to kill the processes that refuse to close when requested to": "So‘ralganda yopilishdan bosh tortgan jarayonlarni majburan to‘xtatishga urinish",
     "Run as admin": "Administrator sifatida ishga tushirish",
     "Interactive installation": "Interaktiv o‘rnatish",

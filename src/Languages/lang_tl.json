@@ -135,7 +135,7 @@
   "Close apps": "Isara ang mga app",
   "Pre/Post install": "Bago/Pagkatapos ng pag-install",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Piliin ang mga prosesong dapat isara bago ma-install, ma-update, o ma-uninstall ang package na ito.",
-  "Write here the process names here, separated by commas (,)": "Isulat dito ang mga pangalan ng proseso, na pinaghihiwalay ng mga kuwit (,)",
+  "Enter the process names here, separated by commas (,)": "Isulat dito ang mga pangalan ng proseso, na pinaghihiwalay ng mga kuwit (,)",
   "Try to kill the processes that refuse to close when requested to": "Subukang i-kill ang mga prosesong tumatangging magsara kapag hiniling",
   "Run as admin": "Patakbuhin bilang admin",
   "Interactive installation": "Interactive na installation",

@@ -135,7 +135,7 @@
   "Close apps": "Uždaryti programas",
   "Pre/Post install": "Prieš / po diegimo",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Pasirinkite procesus, kurie turi būti uždaryti prieš įdiegiant, atnaujinant ar pašalinant šį paketą.",
-  "Write here the process names here, separated by commas (,)": "Čia įrašykite procesų pavadinimus, atskirtus kableliais (,)",
+  "Enter the process names here, separated by commas (,)": "Čia įrašykite procesų pavadinimus, atskirtus kableliais (,)",
   "Try to kill the processes that refuse to close when requested to": "Bandykite nutraukti procesus, kurie atsisako užsidaryti paprašius",
   "Run as admin": "Vykdyti kaip administratorių",
   "Interactive installation": "Sąveikaujantis įdiegimas",

@@ -135,7 +135,7 @@
   "Close apps": "Alkalmazások bezárása",
   "Pre/Post install": "Telepítés előtt/után",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Válassza ki azokat a folyamatokat, amelyeket a csomag telepítése, frissítése vagy eltávolítása előtt le kell zárni.",
-  "Write here the process names here, separated by commas (,)": "Írja ide a folyamatok neveit vesszővel (,) elválasztva.",
+  "Enter the process names here, separated by commas (,)": "Írja ide a folyamatok neveit vesszővel (,) elválasztva.",
   "Try to kill the processes that refuse to close when requested to": "Próbálja meg leállítani azokat a folyamatokat, amelyek nem hajlandóak bezárni, amikor erre kérik őket.",
   "Run as admin": "Futtatás rendszergazdaként",
   "Interactive installation": "Interaktív telepítés",

@@ -135,7 +135,7 @@
   "Close apps": "بستن برنامه‌ها",
   "Pre/Post install": "پیش‌نصب/پس‌نصب",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "پروسه هایی که بهتره قبل از نصب، بروزرسانی یا حذف نصب این بسته، پایان داده بشن رو انتخاب کن",
-  "Write here the process names here, separated by commas (,)": "نام پروسه ها رو اینجا بنویس، بصورت جدا شده با کاما (,)",
+  "Enter the process names here, separated by commas (,)": "نام پروسه ها رو اینجا بنویس، بصورت جدا شده با کاما (,)",
   "Try to kill the processes that refuse to close when requested to": "سعی کن پروسه هایی که درخواست پایان یافتن رو رد میکنن، به اجبار پایان بدی",
   "Run as admin": "اجرا به عنوان ادمین",
   "Interactive installation": "نصب تعاملی",

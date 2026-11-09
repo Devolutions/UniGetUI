@@ -135,7 +135,7 @@
   "Close apps": "ئەپەکان دابخە",
   "Pre/Post install": "پێش/دوای دامەزراندن",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "ئەو پرۆسەسانە هەڵبژێرە کە دەبێت پێش دامەزراندن، نوێکردنەوە یان لابردنی ئەم پاکێجە دابخرێن.",
-  "Write here the process names here, separated by commas (,)": "ناوەکانی پرۆسەسەکان لێرە بنووسە، بە ویرگول (,) لێک جیاکراونەتەوە",
+  "Enter the process names here, separated by commas (,)": "ناوەکانی پرۆسەسەکان لێرە بنووسە، بە ویرگول (,) لێک جیاکراونەتەوە",
   "Try to kill the processes that refuse to close when requested to": "هەوڵ بدە ئەو پرۆسەسانە بکوژیت کە کاتێک داوای لێدەکرێت دابخرێن ڕەت دەکەن",
   "Run as admin": "وەک بەڕێوەبەر بیخەرە کار",
   "Interactive installation": "دامەزراندنی کارلێککار",

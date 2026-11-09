@@ -947,6 +947,7 @@
                                         <Border CornerRadius="4" Margin="4" Height="70"
                                             HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                            automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                                                 BorderBrush="Transparent" BorderThickness="1" Padding="4">
@@ -1005,6 +1006,7 @@
                                                     <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                               Classes="package-selector"
                                                               automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                                              automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                                               VerticalAlignment="Top"
                                                               HorizontalAlignment="Center"
                                                               MinHeight="0"
@@ -1043,6 +1045,7 @@
                                         <Border CornerRadius="4" Margin="4" Height="142"
                                             HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                            automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                                                 BorderBrush="Transparent" BorderThickness="1" Padding="4">
@@ -1051,6 +1054,7 @@
                                                           Classes="package-selector"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                           automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                                          automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Center"
                                                           MinHeight="0"

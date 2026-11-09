@@ -46,11 +46,40 @@ public static class AvaloniaAppHost
         remove => _secondaryInstanceArgsReceived -= value;
     }
 
-    public static bool LaunchRequestedWhileQuitting { get; set; }
+    private static readonly List<string[]> _launchesWhileQuitting = [];
+
+    public static void RecordLaunchWhileQuitting(string[] args)
+    {
+        lock (_launchesWhileQuitting)
+            _launchesWhileQuitting.Add(args);
+    }
+
+    public static IReadOnlyList<string[]> TakeLaunchesWhileQuitting()
+    {
+        lock (_launchesWhileQuitting)
+        {
+            string[][] launches = [.. _launchesWhileQuitting];
+            _launchesWhileQuitting.Clear();
+            return launches;
+        }
+    }
+
+    public static async Task StopAcceptingLaunchesAsync()
+    {
+        try
+        {
+            await SingleInstanceRedirector.StopListenerAsync();
+        }
+        catch (TimeoutException)
+        {
+            Logger.Warn("Timed out while waiting for forwarded launches to be delivered");
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
+    }
 
     public static void ReleaseSingleInstance()
     {
-        SingleInstanceRedirector.StopListener();
         Interlocked.Exchange(ref _singleInstanceMutex, null)?.Dispose();
         Interlocked.Exchange(ref _singleInstanceLock, null)?.Dispose();
     }

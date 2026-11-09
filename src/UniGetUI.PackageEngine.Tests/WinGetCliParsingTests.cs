@@ -116,6 +116,18 @@ public sealed class WinGetCliParsingTests : IDisposable
         );
     }
 
+    [Fact]
+    public void ReportedDifferentInstallTechnologyRecognisesALocalizedWinGetMessage()
+    {
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(
+                Lines(
+                    "Die Installationstechnologie der angegebenen neueren Version unterscheidet sich von der aktuell installierten Version. Deinstallieren Sie das Paket, und installieren Sie die neuere Version."
+                )
+            )
+        );
+    }
+
     [Theory]
     [InlineData("3.7.9", "4.0.2.263060742", true)]
     [InlineData("4.0.2", "4.0.2", false)]

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO.Pipes;
 using System.Security.Cryptography;
 using System.Text;
@@ -34,6 +35,7 @@ internal static class SingleInstanceRedirector
 
     private static Thread? _listener;
     private static readonly CancellationTokenSource _listenerStop = new();
+    private static readonly ConcurrentDictionary<Task, byte> _deliveries = new();
 
     // The mutex proves a first instance exists, so keep probing this long before giving up.
     private static readonly TimeSpan ForwardBudget = TimeSpan.FromSeconds(5);
@@ -92,11 +94,18 @@ internal static class SingleInstanceRedirector
         _listener.Start();
     }
 
-    public static void StopListener() => _listenerStop.Cancel();
+    public static async Task StopListenerAsync()
+    {
+        _listenerStop.Cancel();
+        if (_listener is { } listener)
+            await Task.Run(() => listener.Join(ReadTimeout)).ConfigureAwait(false);
+
+        await Task.WhenAll(_deliveries.Keys).WaitAsync(ReadTimeout).ConfigureAwait(false);
+    }
 
     private static void HandleConnection(NamedPipeServerStream pipe, Action<string[]> onArgsReceived)
     {
-        _ = Task.Run(async () =>
+        Task delivery = Task.Run(async () =>
         {
             try
             {
@@ -115,6 +124,13 @@ internal static class SingleInstanceRedirector
                 Logger.Warn($"SingleInstanceRedirector read error: {ex.Message}");
             }
         });
+        _deliveries.TryAdd(delivery, 0);
+        _ = delivery.ContinueWith(
+            finished => _deliveries.TryRemove(finished, out _),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default
+        );
     }
 
     /// <summary>

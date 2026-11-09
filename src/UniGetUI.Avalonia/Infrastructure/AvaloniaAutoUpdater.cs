@@ -1055,6 +1055,7 @@ internal static partial class AvaloniaAutoUpdater
             isClosable: false);
 
         await p.WaitForExitAsync();
+        InstallerLaunched = false;
 
         // If we reach here, the installer exited without terminating this process.
         // Distinguish two cases:

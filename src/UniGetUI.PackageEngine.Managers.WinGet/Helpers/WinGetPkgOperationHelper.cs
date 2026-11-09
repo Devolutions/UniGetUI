@@ -698,9 +698,26 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     internal static bool ReportedInstallerHashMismatch(int returnCode) =>
         (uint)returnCode is 0x8A150011;
 
+    private static readonly string[] DifferentInstallTechnologyMessages =
+    [
+        "install technology is different",
+        "Die Installationstechnologie der angegebenen neueren Version unterscheidet sich von der aktuell installierten Version",
+        "La tecnología de instalación de la versión más reciente especificada es diferente de la versión actual instalada",
+        "La technologie d’installation de la version la plus récente spécifiée est différente de la version actuelle installée",
+        "La tecnologia di installazione della versione più recente specificata è diversa dalla versione corrente installata",
+        "指定された新しいバージョンのインストール テクノロジが、現在インストールされているバージョンと異なります",
+        "지정된 최신 버전의 설치 기술이 현재 설치된 버전과 다릅니다",
+        "A tecnologia de instalação da versão mais recente especificada é diferente da versão atual instalada",
+        "Указанная технология установки более новой версии отличается от текущей установленной версии",
+        "指定的较新版本的安装技术与当前安装的版本不同",
+        "指定之較新版本的安裝技術與目前安裝的版本不同",
+    ];
+
     internal static bool ReportedDifferentInstallTechnology(IEnumerable<string> processOutput) =>
         processOutput.Any(line =>
-            line.Contains("install technology is different", StringComparison.OrdinalIgnoreCase)
+            DifferentInstallTechnologyMessages.Any(message =>
+                line.Contains(message, StringComparison.OrdinalIgnoreCase)
+            )
         );
 
     internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>

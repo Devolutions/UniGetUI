@@ -323,7 +323,7 @@ public partial class App : Application
         if (mainWindow.IsQuitting)
         {
             Logger.Warn("UniGetUI is quitting, so a forwarded launch will start it again once it has exited");
-            AvaloniaAppHost.LaunchRequestedWhileQuitting = true;
+            AvaloniaAppHost.RecordLaunchWhileQuitting(args);
             return;
         }
 

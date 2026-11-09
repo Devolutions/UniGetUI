@@ -2409,10 +2409,11 @@ public partial class MainWindow : Window
     {
         Logger.Warn("Quitting UniGetUI");
         await AvaloniaAutoUpdater.WaitForInstallerHandoffAsync();
-        AvaloniaAppHost.ReleaseSingleInstance();
+        bool ipcStopped = false;
         try
         {
             await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            ipcStopped = true;
         }
         catch (TimeoutException ex)
         {
@@ -2424,10 +2425,16 @@ public partial class MainWindow : Window
             Logger.Error(ex);
         }
 
-        if (AvaloniaAppHost.LaunchRequestedWhileQuitting && !AvaloniaAutoUpdater.InstallerLaunched)
-            CoreTools.TryScheduleRelaunchAfterExit(
-                AppRestartHelper.ResolveRestartExecutablePath(AppContext.BaseDirectory)
-            );
+        await AvaloniaAppHost.StopAcceptingLaunchesAsync();
+        if (ipcStopped)
+            AvaloniaAppHost.ReleaseSingleInstance();
+
+        if (!AvaloniaAutoUpdater.InstallerLaunched)
+        {
+            string executablePath = AppRestartHelper.ResolveRestartExecutablePath(AppContext.BaseDirectory);
+            foreach (string[] launch in AvaloniaAppHost.TakeLaunchesWhileQuitting())
+                CoreTools.TryScheduleRelaunchAfterExit(executablePath, launch);
+        }
 
         Environment.Exit(0);
     }

@@ -122,22 +122,39 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_operationBatch.Count > 0
             && _operationBatch.All(o => o.Status is not (OperationStatus.InQueue or OperationStatus.Running)))
         {
-            foreach (var old in _operationBatch)
-                old.StatusChanged -= OnOperationStatusChanged;
             _operationBatch.Clear();
             _batchSummaryShown = false;
         }
 
         if (!_operationBatch.Contains(op))
-        {
             _operationBatch.Add(op);
-            op.StatusChanged += OnOperationStatusChanged;
+
+        WatchOperations();
+    }
+
+    private readonly HashSet<AbstractOperation> _watchedOperations = [];
+
+    private void WatchOperations()
+    {
+        var wanted = Operations.Select(vm => vm.Operation).Concat(_operationBatch).ToHashSet();
+        foreach (var op in _watchedOperations.Where(op => !wanted.Contains(op)).ToList())
+        {
+            op.StatusChanged -= OnOperationStatusChanged;
+            _watchedOperations.Remove(op);
         }
+
+        foreach (var op in wanted.Where(_watchedOperations.Add))
+            op.StatusChanged += OnOperationStatusChanged;
     }
 
     private void OnOperationStatusChanged(object? sender, OperationStatus e)
         => Dispatcher.UIThread.Post(() =>
         {
+            if (sender is AbstractOperation op
+                && op.Status is OperationStatus.InQueue or OperationStatus.Running
+                && !_operationBatch.Contains(op))
+                AddToBatch(op);
+
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
@@ -151,10 +168,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private ShutdownWhenFinishedController CreateShutdownController() => new(
         SystemRestartService.CanShutDown,
-        () => _operationBatch.Select(o => o.Status).ToList(),
+        ShutdownBatchStates,
         () => PendingRebootStore.HasPending,
         RunShutdownCountdownAsync,
         ShowShutdownCanceledByFailureToast);
+
+    private List<BatchOperationState> ShutdownBatchStates() =>
+        _operationBatch
+            .Concat(Operations
+                .Select(vm => vm.Operation)
+                .Where(op => op.Status is OperationStatus.InQueue or OperationStatus.Running))
+            .Distinct()
+            .Select(op => new BatchOperationState(op.Status, op.SystemRestartRequired))
+            .ToList();
 
     private void ShowShutdownCanceledByFailureToast()
     {
@@ -171,12 +197,15 @@ public partial class MainWindowViewModel : ViewModelBase
         ShowToast(toast);
     }
 
-    private static async Task<ShutdownCountdownOutcome> RunShutdownCountdownAsync(bool restart, Func<bool> operationsActive)
+    private static async Task<ShutdownCountdownOutcome> RunShutdownCountdownAsync(
+        bool restart,
+        Func<bool> operationsActive,
+        CancellationToken newWorkStarted)
     {
         if (MainWindow.Instance is not { } owner) return ShutdownCountdownOutcome.Canceled;
 
         owner.ShowFromTray();
-        return await SystemRestartService.CountdownAndShutDownAsync(owner, restart, operationsActive);
+        return await SystemRestartService.CountdownAndShutDownAsync(owner, restart, operationsActive, newWorkStarted);
     }
 
     // Opt-in: one toast summarizing the batch once every operation in it has finished.
@@ -593,6 +622,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (e.NewItems is not null)
                 foreach (OperationViewModel vm in e.NewItems)
                     AddToBatch(vm.Operation);
+            WatchOperations();
             OperationsPanelVisible = Operations.Count > 0;
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));

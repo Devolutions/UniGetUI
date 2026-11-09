@@ -36,14 +36,17 @@ public sealed class ShutdownCountdownTests
     private sealed class FakePresenter
     {
         public ImmersiveConfirmationDialog? Shown;
+        public TimeSpan HoldAfterClose = TimeSpan.Zero;
 
-        public Task Present(Window _, ImmersiveDialog dialog)
+        public async Task Present(Window _, ImmersiveDialog dialog)
         {
             Shown = Assert.IsType<ImmersiveConfirmationDialog>(dialog);
             var closed = new TaskCompletionSource();
             dialog.CloseRequested += (_, _) => closed.TrySetResult();
             dialog.NotifyOpened();
-            return closed.Task;
+            await closed.Task;
+            if (HoldAfterClose > TimeSpan.Zero)
+                await Task.Delay(HoldAfterClose);
         }
     }
 
@@ -230,6 +233,71 @@ public sealed class ShutdownCountdownTests
         }
     });
 
+    [Fact]
+    public Task ATickAfterCancel_CannotTurnItIntoAShutdown() => DispatchAsync(() =>
+    {
+        var countdown = new ShutdownCountdown(restart: false, seconds: 1);
+
+        countdown.Dialog.FindControl<Button>("SecondaryButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.True(countdown.Tick());
+
+        Assert.False(countdown.Dialog.Result);
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public Task CancelOrEsc_StopsTheTimerBeforeTheCloseAnimationEnds() => DispatchAsync(async () =>
+    {
+        var runner = new FakeRunner();
+        var presenter = new FakePresenter { HoldAfterClose = TimeSpan.FromMilliseconds(1500) };
+        var owner = new Window();
+        owner.Show();
+        try
+        {
+            var outcome = await WithFakeShutdown(runner, presenter, seconds: 3, async () =>
+            {
+                var pending = SystemRestartService.CountdownAndShutDownAsync(owner, false, () => false);
+                var dialog = await WaitForDialogAsync(presenter);
+                dialog.FindControl<Button>("SecondaryButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                return await pending;
+            });
+
+            Assert.Equal(ShutdownCountdownOutcome.Canceled, outcome);
+            Assert.Empty(runner.Calls);
+        }
+        finally
+        {
+            owner.Close();
+        }
+    });
+
+    [Fact]
+    public Task NewWorkDuringTheCountdown_ClosesItWithoutShuttingDown() => DispatchAsync(async () =>
+    {
+        var runner = new FakeRunner();
+        var presenter = new FakePresenter();
+        using var newWork = new CancellationTokenSource();
+        var owner = new Window();
+        owner.Show();
+        try
+        {
+            var outcome = await WithFakeShutdown(runner, presenter, seconds: 60, async () =>
+            {
+                var pending = SystemRestartService.CountdownAndShutDownAsync(owner, false, () => false, newWork.Token);
+                await WaitForDialogAsync(presenter);
+                newWork.Cancel();
+                return await pending;
+            });
+
+            Assert.Equal(ShutdownCountdownOutcome.Deferred, outcome);
+            Assert.Empty(runner.Calls);
+        }
+        finally
+        {
+            owner.Close();
+        }
+    });
+
     private sealed class Operations
     {
         public readonly List<UniGetUI.PackageEngine.Enums.OperationStatus> Batch = [];
@@ -240,9 +308,9 @@ public sealed class ShutdownCountdownTests
         {
             Controller = new ShutdownWhenFinishedController(
                 true,
-                () => Batch.ToList(),
+                () => Batch.Select(status => new BatchOperationState(status)).ToList(),
                 () => false,
-                (_, _) =>
+                (_, _, _) =>
                 {
                     Countdowns++;
                     return new TaskCompletionSource<ShutdownCountdownOutcome>().Task;

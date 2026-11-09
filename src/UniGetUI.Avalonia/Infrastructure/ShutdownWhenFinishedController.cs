@@ -4,26 +4,28 @@ using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
+internal readonly record struct BatchOperationState(OperationStatus Status, bool RestartRequired = false);
+
 public sealed class ShutdownWhenFinishedController : ObservableObject
 {
     private readonly ShutdownWhenFinishedArm _arm = new();
-    private readonly Func<IReadOnlyCollection<OperationStatus>> _batchStatuses;
+    private readonly Func<IReadOnlyCollection<BatchOperationState>> _batch;
     private readonly Func<bool> _restartPending;
-    private readonly Func<bool, Func<bool>, Task<ShutdownCountdownOutcome>> _runCountdown;
+    private readonly Func<bool, Func<bool>, CancellationToken, Task<ShutdownCountdownOutcome>> _runCountdown;
     private readonly Action _reportFailedOperations;
     private readonly Action<Action> _post;
-    private bool _countdownRunning;
+    private CancellationTokenSource? _countdownCancellation;
 
     internal ShutdownWhenFinishedController(
         bool isSupported,
-        Func<IReadOnlyCollection<OperationStatus>> batchStatuses,
+        Func<IReadOnlyCollection<BatchOperationState>> batch,
         Func<bool> restartPending,
-        Func<bool, Func<bool>, Task<ShutdownCountdownOutcome>> runCountdown,
+        Func<bool, Func<bool>, CancellationToken, Task<ShutdownCountdownOutcome>> runCountdown,
         Action reportFailedOperations,
         Action<Action>? post = null)
     {
         IsSupported = isSupported;
-        _batchStatuses = batchStatuses;
+        _batch = batch;
         _restartPending = restartPending;
         _runCountdown = runCountdown;
         _reportFailedOperations = reportFailedOperations;
@@ -41,7 +43,7 @@ public sealed class ShutdownWhenFinishedController : ObservableObject
     public bool CanToggle => IsArmed || HasActiveOperations;
 
     internal bool HasActiveOperations =>
-        _batchStatuses().Any(status => status is OperationStatus.InQueue or OperationStatus.Running);
+        _batch().Any(op => op.Status is OperationStatus.InQueue or OperationStatus.Running);
 
     internal Task CountdownTask { get; private set; } = Task.CompletedTask;
 
@@ -59,15 +61,26 @@ public sealed class ShutdownWhenFinishedController : ObservableObject
 
     internal void OnOperationsChanged()
     {
-        Evaluate();
+        if (_countdownCancellation is { } countdown)
+        {
+            if (HasActiveOperations)
+                countdown.Cancel();
+        }
+        else
+        {
+            Evaluate();
+        }
+
         RaiseStateChanged();
     }
 
     private void Evaluate()
     {
-        if (_countdownRunning) return;
+        var batch = _batch();
+        bool restartPending = _restartPending()
+            || batch.Any(op => op.Status is OperationStatus.Succeeded && op.RestartRequired);
 
-        switch (_arm.Evaluate(_batchStatuses(), _restartPending()))
+        switch (_arm.Evaluate(batch.Select(op => op.Status).ToList(), restartPending))
         {
             case ShutdownWhenFinishedDecision.ShutDown:
                 CountdownTask = RunCountdownAsync(restart: false);
@@ -83,16 +96,17 @@ public sealed class ShutdownWhenFinishedController : ObservableObject
 
     private async Task RunCountdownAsync(bool restart)
     {
-        _countdownRunning = true;
+        using var cancellation = new CancellationTokenSource();
+        _countdownCancellation = cancellation;
         try
         {
-            var outcome = await _runCountdown(restart, () => HasActiveOperations);
+            var outcome = await _runCountdown(restart, () => HasActiveOperations, cancellation.Token);
             if (outcome is ShutdownCountdownOutcome.Deferred)
                 _arm.Arm();
         }
         finally
         {
-            _countdownRunning = false;
+            _countdownCancellation = null;
         }
 
         OnOperationsChanged();

@@ -44,9 +44,8 @@ public sealed class ShutdownCommandEndToEndTests
         }
         finally
         {
-            int abort = AbortPendingShutdown();
             if (scheduled)
-                Assert.Equal(0, abort);
+                Assert.Equal(0, AbortPendingShutdown());
         }
     }
 

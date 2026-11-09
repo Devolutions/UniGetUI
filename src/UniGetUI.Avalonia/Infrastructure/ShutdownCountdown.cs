@@ -51,7 +51,7 @@ internal sealed class ShutdownCountdown
 
     public bool Tick()
     {
-        if (Remaining <= 0) return true;
+        if (Remaining <= 0 || Dialog.Result is not null) return true;
 
         Remaining--;
         if (Remaining == 0)

@@ -9,6 +9,8 @@ public class ShutdownWhenFinishedControllerTests
     {
         public readonly List<OperationStatus> Batch = [];
         public bool RestartPending;
+        public readonly HashSet<int> RestartRequiredAt = [];
+        public readonly List<CancellationToken> Tokens = [];
         public readonly List<bool> Countdowns = [];
         public readonly List<Func<bool>> ActiveChecks = [];
         public TaskCompletionSource<ShutdownCountdownOutcome> Pending = new();
@@ -27,12 +29,13 @@ public class ShutdownWhenFinishedControllerTests
         {
             Controller = new ShutdownWhenFinishedController(
                 supported,
-                () => Batch.ToList(),
+                () => Batch.Select((status, i) => new BatchOperationState(status, RestartRequiredAt.Contains(i))).ToList(),
                 () => RestartPending,
-                (restart, active) =>
+                (restart, active, token) =>
                 {
                     Countdowns.Add(restart);
                     ActiveChecks.Add(active);
+                    Tokens.Add(token);
                     return Pending.Task;
                 },
                 () => FailureReports++,
@@ -223,5 +226,70 @@ public class ShutdownWhenFinishedControllerTests
 
         Assert.False(h.Controller.IsArmed);
         Assert.Single(h.Countdowns);
+    }
+
+    [Fact]
+    public void ARestartFlagOnAFinishedOperation_AsksForARestartBeforeTheStoreHasIt()
+    {
+        var h = new Harness();
+        h.Set(OperationStatus.Running, OperationStatus.Running);
+        h.Controller.SetArmed(true);
+
+        h.RestartRequiredAt.Add(1);
+        h.Set(OperationStatus.Succeeded, OperationStatus.Succeeded);
+
+        Assert.Equal([true], h.Countdowns);
+    }
+
+    [Fact]
+    public async Task WorkThatStartsAndFailsDuringTheCountdown_CancelsTheShutdown()
+    {
+        var h = new Harness();
+        h.Set(OperationStatus.Running);
+        h.Controller.SetArmed(true);
+        h.Set(OperationStatus.Succeeded);
+        Assert.False(h.Tokens[0].IsCancellationRequested);
+
+        h.Set(OperationStatus.Succeeded, OperationStatus.InQueue);
+        Assert.True(h.Tokens[0].IsCancellationRequested);
+        await h.FinishCountdownAsync(ShutdownCountdownOutcome.Deferred);
+        Assert.True(h.Controller.IsArmed);
+
+        h.Set(OperationStatus.Succeeded, OperationStatus.Failed);
+
+        Assert.Single(h.Countdowns);
+        Assert.Equal(1, h.FailureReports);
+        Assert.False(h.Controller.IsArmed);
+    }
+
+    [Fact]
+    public async Task WorkThatStartsDuringTheCountdown_ReconsidersARestart()
+    {
+        var h = new Harness();
+        h.Set(OperationStatus.Running);
+        h.Controller.SetArmed(true);
+        h.Set(OperationStatus.Succeeded);
+        Assert.Equal([false], h.Countdowns);
+
+        h.Set(OperationStatus.Succeeded, OperationStatus.Running);
+        await h.FinishCountdownAsync(ShutdownCountdownOutcome.Deferred);
+        h.RestartRequiredAt.Add(1);
+        h.Set(OperationStatus.Succeeded, OperationStatus.Succeeded);
+
+        Assert.Equal([false, true], h.Countdowns);
+    }
+
+    [Fact]
+    public async Task StatusChangesWithoutNewWork_LeaveTheCountdownRunning()
+    {
+        var h = new Harness();
+        h.Set(OperationStatus.Running);
+        h.Controller.SetArmed(true);
+        h.Set(OperationStatus.Succeeded);
+
+        h.Set(OperationStatus.Succeeded);
+
+        Assert.False(h.Tokens[0].IsCancellationRequested);
+        await h.FinishCountdownAsync(ShutdownCountdownOutcome.Canceled);
     }
 }

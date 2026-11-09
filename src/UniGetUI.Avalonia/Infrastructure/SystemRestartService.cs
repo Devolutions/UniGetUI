@@ -89,18 +89,20 @@ internal static class SystemRestartService
     public static async Task<ShutdownCountdownOutcome> CountdownAndShutDownAsync(
         Window owner,
         bool restart,
-        Func<bool> operationsActive)
+        Func<bool> operationsActive,
+        CancellationToken newWorkStarted = default)
     {
         try
         {
-            bool confirmed = await CountdownAsync(owner, restart);
-            if (!confirmed) return ShutdownCountdownOutcome.Canceled;
+            bool confirmed = await CountdownAsync(owner, restart, newWorkStarted);
 
-            if (operationsActive())
+            if (newWorkStarted.IsCancellationRequested || (confirmed && operationsActive()))
             {
                 Logger.Info("New operations started during the shutdown countdown; waiting for them to finish");
                 return ShutdownCountdownOutcome.Deferred;
             }
+
+            if (!confirmed) return ShutdownCountdownOutcome.Canceled;
 
             if (restart ? await RestartAsync() : await ShutDownAsync())
                 return ShutdownCountdownOutcome.Requested;
@@ -117,7 +119,7 @@ internal static class SystemRestartService
         }
     }
 
-    private static async Task<bool> CountdownAsync(Window owner, bool restart)
+    private static async Task<bool> CountdownAsync(Window owner, bool restart, CancellationToken newWorkStarted)
     {
         var countdown = new ShutdownCountdown(restart, CountdownSeconds);
         var timer = new DispatcherTimer { Interval = CountdownTickInterval };
@@ -125,18 +127,22 @@ internal static class SystemRestartService
         {
             if (countdown.Tick()) timer.Stop();
         };
+        countdown.Dialog.CloseRequested += (_, _) => timer.Stop();
 
         timer.Start();
         try
         {
-            await DialogPresenter(owner, countdown.Dialog);
+            using (newWorkStarted.Register(() => Dispatcher.UIThread.Post(countdown.Dialog.Close)))
+            {
+                await DialogPresenter(owner, countdown.Dialog);
+            }
         }
         finally
         {
             timer.Stop();
         }
 
-        return countdown.Dialog.Result is true;
+        return countdown.Dialog.Result is true && !newWorkStarted.IsCancellationRequested;
     }
 
     internal static int CountdownSeconds { get; set; } = DefaultCountdownSeconds;

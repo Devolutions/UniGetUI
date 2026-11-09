@@ -85,6 +85,11 @@ namespace UniGetUI.PackageEngine.Interfaces
         public bool NeedsAttention { get; init; }
     }
 
+    public static class ManagerMaintenanceActionIds
+    {
+        public const string ScoopCleanup = "cleanup-scoop";
+    }
+
     public sealed class ManagerMaintenanceAction
     {
         public required string Id { get; init; }

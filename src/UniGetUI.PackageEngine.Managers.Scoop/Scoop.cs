@@ -54,7 +54,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             };
             yield return new ManagerMaintenanceAction
             {
-                Id = "cleanup-scoop",
+                Id = ManagerMaintenanceActionIds.ScoopCleanup,
                 Title = CoreTools.Translate("Clear cache"),
                 Description = CoreTools.Translate(
                     "Remove old app versions and the download cache, for the current user and machine-wide. Requires administrator rights."

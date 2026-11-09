@@ -6,9 +6,12 @@ using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.PackageLoader;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
@@ -226,12 +229,48 @@ public partial class PackageManagerViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private static void ScoopCleanup()
+    private async Task ScoopCleanup()
     {
-        _ = CoreTools.LaunchBatchFile(
-            Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "scoop_cleanup.cmd"),
-            CoreTools.Translate("Clearing Scoop cache - UniGetUI"),
-            RunAsAdmin: true);
+        string title = CoreTools.Translate("Run cleanup and clear cache");
+        try
+        {
+            bool completed = await RunScoopCleanupAsync(Manager, action => ConfirmationDialog.ShowAsync(
+                CoreTools.Translate("Run \"{0}\" on {1}?", title, Manager.DisplayName) + "\n\n" + action.Description));
+            if (!completed)
+                return;
+
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("{0} completed", title),
+                CoreTools.Translate("{0} will be checked again now.", Manager.DisplayName),
+                MainWindow.RuntimeNotificationLevel.Success);
+            _ = InstalledPackagesLoader.Instance.ReloadPackages();
+            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Scoop cleanup failed on manager {Manager.Name}");
+            Logger.Error(ex);
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("{0} failed", title),
+                ex.Message,
+                MainWindow.RuntimeNotificationLevel.Error);
+        }
+        finally
+        {
+            RefreshState();
+        }
+    }
+
+    internal static async Task<bool> RunScoopCleanupAsync(
+        IPackageManager manager, Func<ManagerMaintenanceAction, Task<bool>> confirm)
+    {
+        ManagerMaintenanceAction action = manager.FindAction(ManagerMaintenanceActionIds.ScoopCleanup)
+            ?? throw new InvalidOperationException(CoreTools.Translate("The selected package manager is not ready."));
+        if (!await confirm(action))
+            return false;
+
+        await manager.RunAsync(action);
+        return true;
     }
 
     // ── Vcpkg root commands ───────────────────────────────────────────────────

@@ -263,7 +263,7 @@ internal sealed class InstallOptionsDialog : FormDialog
             Form.AddHeader(CoreTools.Translate("Close apps") + " " + CoreTools.Translate("before installing"));
             Form.AddNote(CoreTools.Translate("Select the processes that should be closed before this package is installed, updated or uninstalled."));
             Form.AddText(CoreTools.Translate("Processes"), () => _killList, v => _killList = v,
-                CoreTools.Translate("Write here the process names here, separated by commas (,)"), Unlocked);
+                CoreTools.Translate("Enter the process names here, separated by commas (,)"), Unlocked);
             Form.AddCheck(CoreTools.Translate("Try to kill the processes that refuse to close when requested to"),
                 () => _forceKill, v => _forceKill = v);
 

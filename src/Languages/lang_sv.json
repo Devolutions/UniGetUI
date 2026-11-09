@@ -135,7 +135,7 @@
   "Close apps": "Stäng appar",
   "Pre/Post install": "Före-/efterinstallation",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Välj de processer som bör stängas innan paketet installeras, uppdateras eller avinstalleras.",
-  "Write here the process names here, separated by commas (,)": "Skriv in processnamnen här, skilj åt med komma (,)",
+  "Enter the process names here, separated by commas (,)": "Skriv in processnamnen här, skilj åt med komma (,)",
   "Try to kill the processes that refuse to close when requested to": "Försök att avsluta den process som inte vill stänga",
   "Run as admin": "Kör som admin",
   "Interactive installation": "Interaktiv installation",

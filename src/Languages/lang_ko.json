@@ -135,7 +135,7 @@
   "Close apps": "앱 닫기",
   "Pre/Post install": "설치 전/후",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "이 패키지를 설치, 업데이트 또는 제거하기 전에 닫아야 할 프로세스를 선택합니다.",
-  "Write here the process names here, separated by commas (,)": "여기에 프로세스 이름을 쉼표로 구분하여 작성하세요 (, )",
+  "Enter the process names here, separated by commas (,)": "여기에 프로세스 이름을 쉼표로 구분하여 작성하세요 (, )",
   "Try to kill the processes that refuse to close when requested to": "요청 시 종료를 거부하는 프로세스를 제거해 보세요",
   "Run as admin": "관리자 권한으로 실행",
   "Interactive installation": "대화형 설치",

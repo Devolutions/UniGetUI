@@ -135,7 +135,7 @@
   "Close apps": "Chiudi app",
   "Pre/Post install": "Pre/Post installazione",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Seleziona i processi che devono essere chiusi prima che questo pacchetto venga installato, aggiornato o disinstallato.",
-  "Write here the process names here, separated by commas (,)": "Scrivi qui i nomi dei processi, separati da virgole (,)",
+  "Enter the process names here, separated by commas (,)": "Scrivi qui i nomi dei processi, separati da virgole (,)",
   "Try to kill the processes that refuse to close when requested to": "Prova a fermare i processi che rifiutano di chiudersi quando richiesto",
   "Run as admin": "Esegui come amministratore",
   "Interactive installation": "Installazione interattiva",

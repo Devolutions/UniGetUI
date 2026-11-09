@@ -135,7 +135,7 @@
   "Close apps": "Lukk appar",
   "Pre/Post install": "Før/etter installasjon",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Vel prosessane som skal lukka før denne pakka blir installert, oppdatert eller avinstallert.",
-  "Write here the process names here, separated by commas (,)": "Skriv her prosessnamna, separerte med komma (,)",
+  "Enter the process names here, separated by commas (,)": "Skriv her prosessnamna, separerte med komma (,)",
   "Try to kill the processes that refuse to close when requested to": "Forsøk å doda dei prosessane som nektar av lukke seg når dei blir bedt om det",
   "Run as admin": "Køyr som administrator",
   "Interactive installation": "Interaktiv installasjon",

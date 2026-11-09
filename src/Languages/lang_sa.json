@@ -135,7 +135,7 @@
   "Close apps": "अनुप्रयोगान् पिधाय",
   "Pre/Post install": "पूर्व/पश्चात्-स्थापनम्",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "अस्य package स्थापना-अद्यतन-अनस्थापनपूर्वं ये processes पिधातव्याः ते चयनय।",
-  "Write here the process names here, separated by commas (,)": "अत्र process-names लिख, अल्पविरामैः (,) पृथक्कृताः",
+  "Enter the process names here, separated by commas (,)": "अत्र process-names लिख, अल्पविरामैः (,) पृथक्कृताः",
   "Try to kill the processes that refuse to close when requested to": "येषां processes पिधानार्थं अनुरोधे सति अपि न पिधीयन्ते तान् समाप्तुं प्रयतस्व",
   "Run as admin": "admin रूपेण चालय",
   "Interactive installation": "interactive स्थापना",

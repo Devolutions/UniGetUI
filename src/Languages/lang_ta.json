@@ -135,7 +135,7 @@
   "Close apps": "பயன்பாடுகளை மூடு",
   "Pre/Post install": "நிறுவல் முன்/பின்",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "இந்த package install, update அல்லது uninstall ஆகும் முன் மூடப்பட வேண்டிய processes ஐத் தேர்ந்தெடுக்கவும்.",
-  "Write here the process names here, separated by commas (,)": "process பெயர்களை இங்கே comma (,) களைப் பயன்படுத்தி பிரித்து எழுதவும்",
+  "Enter the process names here, separated by commas (,)": "process பெயர்களை இங்கே comma (,) களைப் பயன்படுத்தி பிரித்து எழுதவும்",
   "Try to kill the processes that refuse to close when requested to": "மூடுமாறு கேட்டாலும் மூட மறுக்கும் processes ஐ kill செய்ய முயற்சி செய்",
   "Run as admin": "நிர்வாகியாக இயக்கு",
   "Interactive installation": "இணையச் செயல்பாட்டு நிறுவல்",

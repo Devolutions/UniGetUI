@@ -135,7 +135,7 @@
   "Close apps": "ایپس بند کریں",
   "Pre/Post install": "پری/پوسٹ انسٹال",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "وہ پروسیس منتخب کریں جو اس پیکیج کے انسٹال، اپ ڈیٹ یا ان انسٹال ہونے سے پہلے بند ہونے چاہئیں۔",
-  "Write here the process names here, separated by commas (,)": "یہاں پروسیسز کے نام لکھیں، کوما (,) سے الگ کریں",
+  "Enter the process names here, separated by commas (,)": "یہاں پروسیسز کے نام لکھیں، کوما (,) سے الگ کریں",
   "Try to kill the processes that refuse to close when requested to": "ان پروسیسز کو ختم کرنے کی کوشش کریں جو درخواست کرنے پر بند ہونے سے انکار کرتے ہیں",
   "Run as admin": "ایڈمن کے طور پر چلائیں",
   "Interactive installation": "انٹرایکٹو تنصیب",

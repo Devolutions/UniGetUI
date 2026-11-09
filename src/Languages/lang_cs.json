@@ -135,7 +135,7 @@
   "Close apps": "Zavřít aplikace",
   "Pre/Post install": "Před/po instalaci",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Vyberte procesy, které by měly být ukončeny před instalací, aktualizací nebo odinstalací tohoto balíčku.",
-  "Write here the process names here, separated by commas (,)": "Zde napište názvy procesů oddělené čárkami (,).",
+  "Enter the process names here, separated by commas (,)": "Zde napište názvy procesů oddělené čárkami (,).",
   "Try to kill the processes that refuse to close when requested to": "Pokuste se ukončit procesy, které se odmítají zavřít, když je to požadováno.",
   "Run as admin": "Spustit jako správce",
   "Interactive installation": "Interaktivní instalace",

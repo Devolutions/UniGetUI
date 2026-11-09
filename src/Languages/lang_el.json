@@ -135,7 +135,7 @@
   "Close apps": "Κλείσιμο εφαρμογών",
   "Pre/Post install": "Πριν/Μετά την εγκατάσταση",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Επιλέξτε τις διεργασίες που θα πρέπει να κλείσουν πριν από την εγκατάσταση, την ενημέρωση ή την απεγκατάσταση αυτού του πακέτου.",
-  "Write here the process names here, separated by commas (,)": "Γράψτε εδώ τα ονόματα των διεργασιών, διαχωρισμένα με κόμματα (,)",
+  "Enter the process names here, separated by commas (,)": "Γράψτε εδώ τα ονόματα των διεργασιών, διαχωρισμένα με κόμματα (,)",
   "Try to kill the processes that refuse to close when requested to": "Προσπάθεια αναγκαστικού τερματισμού των διεργασιών που αρνούνται να κλείσουν όταν τους ζητηθεί",
   "Run as admin": "Εκτέλεση ως διαχειριστής",
   "Interactive installation": "Διαδραστική εγκατάσταση",

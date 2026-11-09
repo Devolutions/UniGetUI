@@ -135,7 +135,7 @@
   "Close apps": "Tanca aplicacions",
   "Pre/Post install": "Pre/Postinstal·lació",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Seleccioneu els processos que s'haurien de tancar abans que aquest paquet s'instal·li, s'actualitzi o es desinstal·li.",
-  "Write here the process names here, separated by commas (,)": "Escriviu aquí els noms dels processos, separats per comes (,)",
+  "Enter the process names here, separated by commas (,)": "Escriviu aquí els noms dels processos, separats per comes (,)",
   "Try to kill the processes that refuse to close when requested to": "Intenta matar els processos que refusen tancar-se quan se'ls demani.",
   "Run as admin": "Executa com a administrador",
   "Interactive installation": "Instal·lació interactiva",

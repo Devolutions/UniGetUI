@@ -135,7 +135,7 @@
   "Close apps": "Închide aplicațiile",
   "Pre/Post install": "Pre/Post instalare",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Selectează procesele care ar trebui să fie închise înainte ca acest pachet să fie instalat, actualizat sau dezinstalat.",
-  "Write here the process names here, separated by commas (,)": "Scrie aici numele proceselor, separate de virgule (,)",
+  "Enter the process names here, separated by commas (,)": "Scrie aici numele proceselor, separate de virgule (,)",
   "Try to kill the processes that refuse to close when requested to": "Încearcă să ucizi procesul care refuză a fi închis la cerere.",
   "Run as admin": "Rulează ca administrator",
   "Interactive installation": "Instalare interactivă",

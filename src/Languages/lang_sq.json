@@ -135,7 +135,7 @@
   "Close apps": "Mbyll aplikacionet",
   "Pre/Post install": "Para/Pas instalimit",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Zgjidh proceset që duhet të mbyllen para se kjo paketë të instalohet, përditësohet ose çinstalohet.",
-  "Write here the process names here, separated by commas (,)": "Shkruaj këtu emrat e proceseve, të ndarë me presje (,)",
+  "Enter the process names here, separated by commas (,)": "Shkruaj këtu emrat e proceseve, të ndarë me presje (,)",
   "Try to kill the processes that refuse to close when requested to": "Përpiqu të mbyllësh proceset që refuzojnë të mbyllen kur u kërkohet",
   "Run as admin": "Ekzekuto si administrator",
   "Interactive installation": "Instalim ndërveprues",

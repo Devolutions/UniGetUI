@@ -135,7 +135,7 @@
   "Close apps": "Uygulamaları kapat",
   "Pre/Post install": "Kurulum öncesi/sonrası",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Bu paket yüklenmeden, güncellenmeden veya kaldırılmadan önce kapatılması gereken işlemleri seçin.",
-  "Write here the process names here, separated by commas (,)": "Süreç adlarını buraya virgülle (,) ayırarak yazın",
+  "Enter the process names here, separated by commas (,)": "Süreç adlarını buraya virgülle (,) ayırarak yazın",
   "Try to kill the processes that refuse to close when requested to": "Talep edildiğinde kapatmayı reddeden işlemleri kapatmaya çalışın",
   "Run as admin": "Yönetici olarak çalıştır",
   "Interactive installation": "İnteraktif kurulum",

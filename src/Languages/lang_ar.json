@@ -135,7 +135,7 @@
   "Close apps": "إغلاق التطبيقات",
   "Pre/Post install": "ما قبل/ما بعد التثبيت",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "حدد العمليات التي يجب إغلاقها قبل تثبيت هذه الحزمة أو تحديثها أو إلغاء تثبيتها.",
-  "Write here the process names here, separated by commas (,)": "اكتب هنا أسماء العمليات، مفصولة بفواصل (,)",
+  "Enter the process names here, separated by commas (,)": "اكتب هنا أسماء العمليات، مفصولة بفواصل (,)",
   "Try to kill the processes that refuse to close when requested to": "حاول إنهاء العمليات التي ترفض الإغلاق عند طلب ذلك",
   "Run as admin": "تشغيل كمسؤول",
   "Interactive installation": "تثبيت تفاعلي",

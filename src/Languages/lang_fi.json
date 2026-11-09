@@ -135,7 +135,7 @@
   "Close apps": "Sulje sovellukset",
   "Pre/Post install": "Ennen/jälkeen asennusta",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Valitse prosessit, jotka tulisi sulkea ennen tämän paketin asentamista, päivittämistä tai poistamista.",
-  "Write here the process names here, separated by commas (,)": "Kirjoita tähän prosessien nimet pilkuilla (,) erotettuina.",
+  "Enter the process names here, separated by commas (,)": "Kirjoita tähän prosessien nimet pilkuilla (,) erotettuina.",
   "Try to kill the processes that refuse to close when requested to": "Yritä lopettaa prosessit, jotka kieltäytyvät sulkeutumasta pyydettäessä",
   "Run as admin": "Suorita ylläpitäjänä",
   "Interactive installation": "Interaktiivinen asennus",

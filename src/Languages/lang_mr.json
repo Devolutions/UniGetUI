@@ -135,7 +135,7 @@
   "Close apps": "ॲप्स बंद करा",
   "Pre/Post install": "स्थापनेपूर्वी/नंतर",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "हे पॅकेज स्थापित, अद्ययावत किंवा अनइंस्टॉल करण्यापूर्वी कोणत्या प्रक्रिया बंद करायच्या ते निवडा.",
-  "Write here the process names here, separated by commas (,)": "प्रक्रियांची नावे येथे स्वल्पविरामाने (,) वेगळी करून लिहा",
+  "Enter the process names here, separated by commas (,)": "प्रक्रियांची नावे येथे स्वल्पविरामाने (,) वेगळी करून लिहा",
   "Try to kill the processes that refuse to close when requested to": "बंद करण्यास सांगितल्यावरही बंद न होणाऱ्या प्रक्रिया समाप्त करण्याचा प्रयत्न करा",
   "Run as admin": "प्रशासक म्हणून चालवा",
   "Interactive installation": "परस्परसंवादी स्थापना",

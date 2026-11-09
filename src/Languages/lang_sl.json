@@ -135,7 +135,7 @@
   "Close apps": "Zapri aplikacije",
   "Pre/Post install": "Pred/po namestitvi",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "Izberite procese, ki jih je treba zapreti, preden se ta paket namesti, posodobi ali odstrani.",
-  "Write here the process names here, separated by commas (,)": "Tukaj vnesite imena procesov, ločena z vejicami (,)",
+  "Enter the process names here, separated by commas (,)": "Tukaj vnesite imena procesov, ločena z vejicami (,)",
   "Try to kill the processes that refuse to close when requested to": "Poskusi končati procese, ki se ob zahtevi nočejo zapreti",
   "Run as admin": "Zaženi kot skrbnik",
   "Interactive installation": "Interaktivna namestitev",

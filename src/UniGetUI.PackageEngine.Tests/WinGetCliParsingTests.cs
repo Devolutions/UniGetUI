@@ -169,6 +169,43 @@ public sealed class WinGetCliParsingTests : IDisposable
         Assert.Equal(expected, NativeWinGetHelper.IsNewerVersion(new WinGet(), installed, newest));
     }
 
+    private const string ViberPublisher = "2010-2026 Viber Media S.a.r.l";
+
+    [Theory]
+    [InlineData("Viber", ViberPublisher, "29.4.0.0", "29.3.0.0", true)]
+    [InlineData("viber", ViberPublisher, "29.3.0.0", "29.3.0.0", true)]
+    [InlineData("Viber", ViberPublisher, "29.2.0.0", "29.3.0.0", false)]
+    [InlineData("Viber", "Someone Else", "29.4.0.0", "29.3.0.0", false)]
+    [InlineData("Viber Desktop", ViberPublisher, "29.4.0.0", "29.3.0.0", false)]
+    [InlineData("Viber", ViberPublisher, "Unknown", "29.3.0.0", false)]
+    [InlineData("Viber", ViberPublisher, "29.4.0.0", "Unknown", false)]
+    public void FindInstallAtOrAboveMatchesAnotherCopyOfTheSameApp(
+        string otherName,
+        string otherPublisher,
+        string otherVersion,
+        string newVersion,
+        bool expected
+    )
+    {
+        var stale = new NativeWinGetHelper.InstalledEntry("Viber", ViberPublisher, "29.1.0.0");
+        var other = new NativeWinGetHelper.InstalledEntry(otherName, otherPublisher, otherVersion);
+
+        var match = NativeWinGetHelper.FindInstallAtOrAbove(new WinGet(), stale, newVersion, [stale, other]);
+
+        Assert.Equal(expected ? other : null, match);
+    }
+
+    [Theory]
+    [InlineData("", ViberPublisher)]
+    [InlineData("Viber", "")]
+    public void FindInstallAtOrAboveNeedsANameAndPublisherToMatchOn(string name, string publisher)
+    {
+        var stale = new NativeWinGetHelper.InstalledEntry(name, publisher, "29.1.0.0");
+        var other = new NativeWinGetHelper.InstalledEntry(name, publisher, "29.4.0.0");
+
+        Assert.Null(NativeWinGetHelper.FindInstallAtOrAbove(new WinGet(), stale, "29.3.0.0", [stale, other]));
+    }
+
     [Fact]
     public void ParseInstalledPackagesReadsJapaneseLocalizedTable()
     {

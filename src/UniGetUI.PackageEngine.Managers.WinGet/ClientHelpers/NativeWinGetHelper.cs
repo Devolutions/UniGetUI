@@ -475,6 +475,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
         List<Package> packages = [];
         List<(CatalogPackage Package, PackageVersionInfo Newest)> reinstallCandidates = [];
+        Lazy<IReadOnlyList<InstalledEntry>> installedEntries = new(() => ReadInstalledEntries(nativePackages));
         foreach (var nativePackage in nativePackages)
         {
             try
@@ -513,6 +514,18 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     Logger.Warn(
                         $"WinGet package {nativePackage.Id} has a DefaultInstallVersion with null PackageCatalog or Info, skipping"
                     );
+                    continue;
+                }
+
+                if (
+                    IsSupersededByAnotherInstall(
+                        nativePackage,
+                        nativePackage.DefaultInstallVersion.Version,
+                        installedEntries.Value,
+                        logger
+                    )
+                )
+                {
                     continue;
                 }
 
@@ -562,10 +575,114 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             }
         }
 
-        AddReinstallOnlyUpdates(reinstallCandidates, packages, logger);
+        AddReinstallOnlyUpdates(
+            [
+                .. reinstallCandidates.Where(candidate =>
+                    !IsSupersededByAnotherInstall(
+                        candidate.Package,
+                        candidate.Newest.Version,
+                        installedEntries.Value,
+                        logger
+                    )
+                ),
+            ],
+            packages,
+            logger
+        );
 
         logger.Close(0);
         return packages;
+    }
+
+    internal readonly record struct InstalledEntry(string DisplayName, string Publisher, string Version);
+
+    private static IReadOnlyList<InstalledEntry> ReadInstalledEntries(
+        IReadOnlyList<CatalogPackage> nativePackages
+    )
+    {
+        List<InstalledEntry> entries = [];
+        foreach (var nativePackage in nativePackages)
+        {
+            if (ReadInstalledEntry(nativePackage) is { } entry)
+                entries.Add(entry);
+        }
+
+        return entries;
+    }
+
+    private static InstalledEntry? ReadInstalledEntry(CatalogPackage nativePackage)
+    {
+        try
+        {
+            return nativePackage.InstalledVersion is { } installed
+                ? new InstalledEntry(
+                    installed.DisplayName ?? "",
+                    installed.Publisher ?? "",
+                    installed.Version ?? ""
+                )
+                : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug(
+                $"Could not read the installed entry of {DescribePackage(nativePackage)}: {ex.Message}"
+            );
+            return null;
+        }
+    }
+
+    private bool IsSupersededByAnotherInstall(
+        CatalogPackage nativePackage,
+        string? newVersion,
+        IReadOnlyList<InstalledEntry> installedEntries,
+        INativeTaskLogger logger
+    )
+    {
+        if (
+            ReadInstalledEntry(nativePackage) is not { } candidate
+            || FindInstallAtOrAbove(Manager, candidate, newVersion, installedEntries) is not { } newer
+        )
+        {
+            return false;
+        }
+
+        logger.Log(
+            $"Skipping the update of {DescribePackage(nativePackage)} from {candidate.Version} to {newVersion}, "
+                + $"since {newer.DisplayName} {newer.Version} from {newer.Publisher} is already installed"
+        );
+        return true;
+    }
+
+    internal static InstalledEntry? FindInstallAtOrAbove(
+        IPackageManager manager,
+        InstalledEntry candidate,
+        string? newVersion,
+        IEnumerable<InstalledEntry> installedEntries
+    )
+    {
+        if (
+            string.IsNullOrWhiteSpace(candidate.DisplayName)
+            || string.IsNullOrWhiteSpace(candidate.Publisher)
+            || WinGetPkgOperationHelper.IsUnknownVersion(newVersion)
+        )
+        {
+            return null;
+        }
+
+        foreach (var entry in installedEntries)
+        {
+            if (
+                string.Equals(entry.DisplayName, candidate.DisplayName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(entry.Publisher, candidate.Publisher, StringComparison.OrdinalIgnoreCase)
+                && !WinGetPkgOperationHelper.IsUnknownVersion(entry.Version)
+                && manager.CompareVersions(entry.Version, newVersion!) is >= 0
+            )
+            {
+                return entry;
+            }
+        }
+
+        return null;
     }
 
     private PackageVersionInfo? TryGetReinstallOnlyUpdate(CatalogPackage nativePackage)

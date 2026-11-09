@@ -24,6 +24,7 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.Operations.Reboot;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageOperations;
 
@@ -141,7 +142,42 @@ public partial class MainWindowViewModel : ViewModelBase
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
             MaybeShowBatchSummaryToast();
+            ShutdownController.OnOperationsChanged();
         });
+
+    private ShutdownWhenFinishedController? _shutdownController;
+
+    public ShutdownWhenFinishedController ShutdownController => _shutdownController ??= CreateShutdownController();
+
+    private ShutdownWhenFinishedController CreateShutdownController() => new(
+        SystemRestartService.CanShutDown,
+        () => _operationBatch.Select(o => o.Status).ToList(),
+        () => PendingRebootStore.HasPending,
+        RunShutdownCountdownAsync,
+        ShowShutdownCanceledByFailureToast);
+
+    private void ShowShutdownCanceledByFailureToast()
+    {
+        var toast = new InfoBarViewModel
+        {
+            Title = CoreTools.Translate("Your computer was not shut down"),
+            Message = CoreTools.Translate(
+                "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually."),
+            Severity = InfoBarSeverity.Warning,
+            IsClosable = true,
+            IsOpen = true,
+        };
+        toast.OnClosed = () => DismissToast(toast);
+        ShowToast(toast);
+    }
+
+    private static async Task<ShutdownCountdownOutcome> RunShutdownCountdownAsync(bool restart, Func<bool> operationsActive)
+    {
+        if (MainWindow.Instance is not { } owner) return ShutdownCountdownOutcome.Canceled;
+
+        owner.ShowFromTray();
+        return await SystemRestartService.CountdownAndShutDownAsync(owner, restart, operationsActive);
+    }
 
     // Opt-in: one toast summarizing the batch once every operation in it has finished.
     private void MaybeShowBatchSummaryToast()
@@ -185,7 +221,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ClearFinishedOperations() => AvaloniaOperationRegistry.ClearFinished();
 
     [RelayCommand]
-    private void CancelAllOperations() => AvaloniaOperationRegistry.CancelAll();
+    private void CancelAllOperations()
+    {
+        ShutdownController.SetArmed(false);
+        AvaloniaOperationRegistry.CancelAll();
+    }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────
     public SidebarViewModel Sidebar { get; } = new();
@@ -557,6 +597,7 @@ public partial class MainWindowViewModel : ViewModelBase
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
+            ShutdownController.OnOperationsChanged();
         };
 
         if (OperatingSystem.IsWindows() && CoreTools.IsAdministrator() && !Settings.Get(Settings.K.AlreadyWarnedAboutAdmin))

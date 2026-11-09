@@ -2623,5 +2623,16 @@
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.",
   "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey did not update {0}: version {1} is the newest one its sources offer",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version",
+  "Shut down when finished": "Shut down when finished",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "All operations have finished. Your computer will shut down in {0} seconds.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.",
+  "Save your work and close any open applications first.": "Save your work and close any open applications first.",
+  "Shutting down your computer": "Shutting down your computer",
+  "Restarting your computer": "Restarting your computer",
+  "Shut down now": "Shut down now",
+  "The computer could not be shut down": "The computer could not be shut down",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI could not start the shutdown. Please shut down your computer manually.",
+  "Your computer was not shut down": "Your computer was not shut down",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually."
 }

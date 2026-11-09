@@ -12,6 +12,7 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class SystemRestartService
 {
     private const int ShutdownRequestTimeoutMs = 10000;
+    internal const int DefaultCountdownSeconds = 60;
 
     public static async Task ConfirmAndRestartAsync(Window owner)
     {
@@ -83,11 +84,79 @@ internal static class SystemRestartService
         return dialog.Result is true;
     }
 
-    private static async Task<bool> RestartAsync()
+    public static bool CanShutDown => OperatingSystem.IsWindows();
+
+    public static async Task<ShutdownCountdownOutcome> CountdownAndShutDownAsync(
+        Window owner,
+        bool restart,
+        Func<bool> operationsActive)
+    {
+        try
+        {
+            bool confirmed = await CountdownAsync(owner, restart);
+            if (!confirmed) return ShutdownCountdownOutcome.Canceled;
+
+            if (operationsActive())
+            {
+                Logger.Info("New operations started during the shutdown countdown; waiting for them to finish");
+                return ShutdownCountdownOutcome.Deferred;
+            }
+
+            if (restart ? await RestartAsync() : await ShutDownAsync())
+                return ShutdownCountdownOutcome.Requested;
+
+            if (restart) ReportRestartFailure();
+            else ReportShutDownFailure();
+            return ShutdownCountdownOutcome.Failed;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Failed to shut down the computer after the operations finished:");
+            Logger.Error(ex);
+            return ShutdownCountdownOutcome.Failed;
+        }
+    }
+
+    private static async Task<bool> CountdownAsync(Window owner, bool restart)
+    {
+        var countdown = new ShutdownCountdown(restart, CountdownSeconds);
+        var timer = new DispatcherTimer { Interval = CountdownTickInterval };
+        timer.Tick += (_, _) =>
+        {
+            if (countdown.Tick()) timer.Stop();
+        };
+
+        timer.Start();
+        try
+        {
+            await DialogPresenter(owner, countdown.Dialog);
+        }
+        finally
+        {
+            timer.Stop();
+        }
+
+        return countdown.Dialog.Result is true;
+    }
+
+    internal static int CountdownSeconds { get; set; } = DefaultCountdownSeconds;
+
+    internal static TimeSpan CountdownTickInterval { get; set; } = TimeSpan.FromSeconds(1);
+
+    internal static Func<string, string, Task<bool>> ShutdownCommandRunner { get; set; } = RunShutdownExeAsync;
+
+    internal static Func<Window, ImmersiveDialog, Task> DialogPresenter { get; set; } =
+        (owner, dialog) => dialog.ShowDialog(owner);
+
+    private static Task<bool> RestartAsync() => ShutdownCommandRunner("/r /t 0", "restart");
+
+    private static Task<bool> ShutDownAsync() => ShutdownCommandRunner("/s /t 0", "shutdown");
+
+    internal static async Task<bool> RunShutdownExeAsync(string arguments, string action)
     {
         if (!OperatingSystem.IsWindows())
         {
-            Logger.Warn("A system restart was requested on a platform where UniGetUI cannot trigger one");
+            Logger.Warn($"A system {action} was requested on a platform where UniGetUI cannot trigger one");
             return false;
         }
 
@@ -96,14 +165,14 @@ internal static class SystemRestartService
             using var process = Process.Start(new ProcessStartInfo
             {
                 FileName = Path.Combine(Environment.SystemDirectory, "shutdown.exe"),
-                Arguments = "/r /t 0",
+                Arguments = arguments,
                 UseShellExecute = false,
                 CreateNoWindow = true,
             });
 
             if (process is null)
             {
-                Logger.Error("Could not start shutdown.exe to request a system restart");
+                Logger.Error($"Could not start shutdown.exe to request a system {action}");
                 return false;
             }
 
@@ -114,13 +183,13 @@ internal static class SystemRestartService
             }
             catch (OperationCanceledException)
             {
-                Logger.Warn("shutdown.exe did not return in time; assuming the restart was requested");
+                Logger.Warn($"shutdown.exe did not return in time; assuming the {action} was requested");
                 return true;
             }
 
             if (process.ExitCode != 0)
             {
-                Logger.Error($"shutdown.exe refused the restart request with exit code {process.ExitCode}");
+                Logger.Error($"shutdown.exe refused the {action} request with exit code {process.ExitCode}");
                 return false;
             }
 
@@ -128,7 +197,7 @@ internal static class SystemRestartService
         }
         catch (Exception ex)
         {
-            Logger.Error("Failed to request a system restart:");
+            Logger.Error($"Failed to request a system {action}:");
             Logger.Error(ex);
             return false;
         }
@@ -143,4 +212,22 @@ internal static class SystemRestartService
                     "UniGetUI could not start the restart. Please restart your computer manually."),
                 Views.MainWindow.RuntimeNotificationLevel.Error));
     }
+
+    private static void ReportShutDownFailure()
+    {
+        Dispatcher.UIThread.Post(() =>
+            Views.MainWindow.Instance?.ShowRuntimeNotification(
+                CoreTools.Translate("The computer could not be shut down"),
+                CoreTools.Translate(
+                    "UniGetUI could not start the shutdown. Please shut down your computer manually."),
+                Views.MainWindow.RuntimeNotificationLevel.Error));
+    }
+}
+
+internal enum ShutdownCountdownOutcome
+{
+    Canceled,
+    Deferred,
+    Requested,
+    Failed,
 }

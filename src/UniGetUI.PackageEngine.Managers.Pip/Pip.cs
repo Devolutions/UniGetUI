@@ -17,6 +17,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Managers.Generic.PyPI;
 using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.PackageEngine.Managers.PipManager
@@ -127,45 +128,33 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 + $"@{proxyUri.AbsoluteUri.Replace($"{proxyUri.Scheme}://", "")}";
         }
 
-        // In-memory cache of all PyPI package names, shared across searches
-        private static string[]? _cachedNames;
-        private static DateTime _cacheTimestamp = DateTime.MinValue;
-        private static readonly object _cacheLock = new();
-        private const int CacheMaxAgeHours = 24;
-        private const int MaxSearchResults = 20;
+        private static readonly ConcurrentDictionary<
+            (string Interpreter, string PackageId),
+            CachedResolution
+        > _latestVersionCache = new();
 
-        // Shared HTTP client and bounded concurrency for version fetches
-        private static readonly HttpClient _httpClient = CreateSharedHttpClient();
-        private static readonly SemaphoreSlim _versionFetchSemaphore = new(6, 6);
+        private readonly record struct CachedResolution(string ETag, string? Version);
 
-        private static HttpClient CreateSharedHttpClient()
-        {
-            var client = new HttpClient(CoreTools.GenericHttpClientParameters);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            return client;
-        }
+        internal readonly record struct VersionResolution(string? Version, bool Failed);
 
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
             INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
             try
             {
-                string[] allNames = GetOrRefreshIndex(logger);
-
-                string[] matches = SelectSearchMatches(query, allNames);
+                string[] matches = PyPIIndexClient.SelectSearchMatches(
+                    query,
+                    PyPIIndexClient.GetProjectNames(logger)
+                );
 
                 logger.Log($"Matched {matches.Length} packages for query '{query}'");
 
-                // Fetch latest version for each match in parallel, bounded to 6 concurrent requests
-                var versionTasks = matches
-                    .Select(FetchLatestVersionAsync)
-                    .ToArray();
-                Task.WhenAll(versionTasks).GetAwaiter().GetResult();
+                Dictionary<string, string?> latestVersions = PyPIProjectClient.FetchLatestVersions(matches);
 
                 List<Package> packages = [];
                 for (int i = 0; i < matches.Length; i++)
                 {
-                    string version = versionTasks[i].Result ?? "latest";
+                    string version = latestVersions.GetValueOrDefault(matches[i]) ?? "latest";
                     packages.Add(new Package(
                         CoreTools.FormatAsName(matches[i]),
                         matches[i],
@@ -186,123 +175,6 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 throw;
             }
         }
-
-        private static string[] GetOrRefreshIndex(INativeTaskLogger logger)
-        {
-            lock (_cacheLock)
-            {
-                if (_cachedNames is not null && (DateTime.Now - _cacheTimestamp).TotalHours < CacheMaxAgeHours)
-                    return _cachedNames;
-            }
-
-            string cacheFile = Path.Join(CoreData.UniGetUICacheDirectory_Data, "pip_simple_index.cache");
-
-            // Use file cache if fresh enough
-            if (File.Exists(cacheFile) && (DateTime.Now - File.GetLastWriteTime(cacheFile)).TotalHours < CacheMaxAgeHours)
-            {
-                logger.Log($"Loading PyPI index from file cache ({File.GetLastWriteTime(cacheFile):g})");
-                string[] cached = File.ReadAllLines(cacheFile);
-                if (cached.Length > 0)
-                {
-                    lock (_cacheLock) { _cachedNames = cached; _cacheTimestamp = File.GetLastWriteTime(cacheFile); }
-                    return cached;
-                }
-                logger.Error("PyPI index file cache was empty, re-downloading...");
-            }
-
-            // Download fresh index
-            logger.Log("Downloading PyPI simple index (one-time ~38 MB download, cached for 24 h)...");
-            using HttpClient client = new(CoreTools.GenericHttpClientParameters);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            client.DefaultRequestHeaders.Add("Accept", "application/vnd.pypi.simple.v1+json");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, "https://pypi.org/simple/");
-            using HttpResponseMessage response = client.Send(request);
-            if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException($"PyPI simple index returned {(int)response.StatusCode} {response.ReasonPhrase}");
-
-            string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            string[] names = ParseSimpleIndexProjectNames(json);
-
-            logger.Log($"Downloaded {names.Length} package names from PyPI");
-
-            // Update memory cache before attempting file write so searches work even if file write fails
-            lock (_cacheLock) { _cachedNames = names; _cacheTimestamp = DateTime.Now; }
-
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-                File.WriteAllLines(cacheFile, names);
-            }
-            catch (Exception e)
-            {
-                logger.Error($"Could not write PyPI index file cache to {cacheFile}: {e.Message}");
-            }
-
-            return names;
-        }
-
-        internal static string[] ParseSimpleIndexProjectNames(string json)
-        {
-            var projects = (JsonNode.Parse(json) as JsonObject)?["projects"] as JsonArray;
-            string[] names = projects?
-                .Select(p => p?["name"]?.GetValue<string>())
-                .Where(n => !string.IsNullOrEmpty(n))
-                .Select(n => n!)
-                .ToArray() ?? [];
-
-            if (names.Length == 0)
-                throw new InvalidDataException("PyPI simple index returned 0 packages — response may be malformed");
-
-            return names;
-        }
-
-        internal static string[] SelectSearchMatches(string query, IEnumerable<string> allNames)
-        {
-            string queryLower = query.ToLowerInvariant();
-            return allNames
-                .Where(n => n.Contains(queryLower, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(n => n.StartsWith(queryLower, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(n => n.Length)
-                .Take(MaxSearchResults)
-                .ToArray();
-        }
-
-        private static async Task<string?> FetchLatestVersionAsync(string packageName)
-        {
-            await _versionFetchSemaphore.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                using var request = new HttpRequestMessage(
-                    HttpMethod.Get,
-                    $"https://pypi.org/pypi/{Uri.EscapeDataString(packageName)}/json"
-                );
-                using HttpResponseMessage response = await _httpClient
-                    .SendAsync(request)
-                    .ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return (JsonNode.Parse(json) as JsonObject)?["info"]?["version"]?.GetValue<string>();
-            }
-            catch
-            {
-                return null;
-            }
-            finally
-            {
-                _versionFetchSemaphore.Release();
-            }
-        }
-
-        private static readonly ConcurrentDictionary<
-            (string Interpreter, string PackageId),
-            CachedResolution
-        > _latestVersionCache = new();
-
-        private readonly record struct CachedResolution(string ETag, string? Version);
-
-        internal readonly record struct VersionResolution(string? Version, bool Failed);
-
         private readonly object _indexUpdateCheckLock = new();
         private bool _indexUpdateCheckProbed;
         private bool _indexUpdateCheckSupported;
@@ -1317,23 +1189,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 EnvironmentVariableTarget.Process
             );
 
-            // Pre-warm the package name index in the background so the first search doesn't
-            // need to wait for the ~38 MB download inside the search timeout window.
-            Task.Run(() =>
-            {
-                var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
-                try
-                {
-                    GetOrRefreshIndex(logger);
-                    logger.Close(0);
-                }
-                catch (Exception e)
-                {
-                    logger.Error(e);
-                    logger.Close(1);
-                    Logger.Warn($"Pip: background index pre-warm failed: {e.Message}");
-                }
-            });
+            _ = PyPIIndexClient.PreWarmIndexAsync();
         }
     }
 }

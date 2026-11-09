@@ -4,6 +4,7 @@ using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Tests;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Managers.Generic.PyPI;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
@@ -374,12 +375,12 @@ public sealed class PipManagerTests : IDisposable
     [Fact]
     public void SearchHelpersParseSimpleIndexAndRankPrefixMatchesFirst()
     {
-        var names = Pip.ParseSimpleIndexProjectNames(
+        var names = PyPIIndexClient.ParseSimpleIndexProjectNames(
 
             PackageEngineFixtureFiles.ReadAllText(Path.Combine("Pip", "simple-index.json"))
         );
 
-        var matches = Pip.SelectSearchMatches("req", names);
+        var matches = PyPIIndexClient.SelectSearchMatches("req", names);
 
         Assert.Equal(
             ["req", "requests", "requestium", "requests-cache", "django-reqtools"],

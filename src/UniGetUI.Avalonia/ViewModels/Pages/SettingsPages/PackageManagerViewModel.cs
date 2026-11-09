@@ -11,7 +11,6 @@ using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
-using UniGetUI.PackageEngine.Managers.ScoopManager;
 using UniGetUI.PackageEngine.PackageLoader;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
@@ -265,7 +264,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     internal static async Task<bool> RunScoopCleanupAsync(
         IPackageManager manager, Func<ManagerMaintenanceAction, Task<bool>> confirm)
     {
-        ManagerMaintenanceAction action = manager.FindAction(Scoop.CleanupActionId)
+        ManagerMaintenanceAction action = manager.FindAction(ManagerMaintenanceActionIds.ScoopCleanup)
             ?? throw new InvalidOperationException(CoreTools.Translate("The selected package manager is not ready."));
         if (!await confirm(action))
             return false;

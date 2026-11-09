@@ -1,7 +1,6 @@
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
-using UniGetUI.PackageEngine.Managers.ScoopManager;
 
 namespace UniGetUI.Tests;
 
@@ -73,7 +72,7 @@ public class ScoopCleanupCommandTests
                 [
                     new ManagerMaintenanceAction
                     {
-                        Id = Scoop.CleanupActionId,
+                        Id = ManagerMaintenanceActionIds.ScoopCleanup,
                         Title = "Clear cache",
                         Description = "Remove old app versions and the download cache.",
                         RunAsync = () =>

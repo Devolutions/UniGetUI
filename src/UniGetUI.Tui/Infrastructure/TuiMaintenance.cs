@@ -28,6 +28,7 @@ internal static class TuiMaintenanceScheduler
     private static bool _started;
     private static volatile bool _updatesWereLoaded;
     private static DateTime? _pendingInstallSince;
+    private static DateTime? _pendingCheckSince;
 
     public static event Action<MaintenanceTaskKind>? TaskFinished;
 
@@ -58,23 +59,30 @@ internal static class TuiMaintenanceScheduler
     {
         if (_pendingInstallSince is { } since && DateTime.Now - since > PendingInstallLifetime)
             _pendingInstallSince = null;
+        if (_pendingCheckSince is { } checkSince && DateTime.Now - checkSince > PendingInstallLifetime)
+            _pendingCheckSince = null;
         var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
         if (!schedule.Enabled)
         {
-            _pendingInstallSince = null;
+            MarkAutoInstallHandled();
             return false;
         }
 
         if (schedule.Frequency is ScheduleFrequency.AfterEveryUpdateCheck)
-        {
             _pendingInstallSince = null;
-            return true;
-        }
 
-        return _pendingInstallSince is not null;
+        return ScheduleEvaluator.IsAutoInstallDue(
+            schedule,
+            MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates),
+            _pendingInstallSince is not null,
+            _pendingCheckSince is not null);
     }
 
-    public static void MarkAutoInstallHandled() => _pendingInstallSince = null;
+    public static void MarkAutoInstallHandled()
+    {
+        _pendingInstallSince = null;
+        _pendingCheckSince = null;
+    }
 
     public static bool ShouldRunAtAppStart(MaintenanceTaskKind kind)
     {
@@ -121,6 +129,7 @@ internal static class TuiMaintenanceScheduler
         switch (kind)
         {
             case MaintenanceTaskKind.CheckForUpdates:
+                _pendingCheckSince = DateTime.Now;
                 await ReloadUpdatesAsync();
                 break;
             case MaintenanceTaskKind.InstallUpdates:

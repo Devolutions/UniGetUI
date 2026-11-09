@@ -30,9 +30,10 @@ public static class OperationHistoryStore
         {
             if (File.Exists(FilePath))
             {
-                string json = File.ReadAllText(FilePath);
                 var typeInfo = OperationHistoryJsonContext.Default.ListOperationHistoryRecord;
-                _cache = JsonSerializer.Deserialize(json, typeInfo) ?? [];
+                using (var stream = File.OpenRead(FilePath))
+                    _cache = JsonSerializer.Deserialize(stream, typeInfo) ?? [];
+                ClampLoadedRecordsUnlocked(_cache);
             }
             else
             {
@@ -49,6 +50,30 @@ public static class OperationHistoryStore
             _cache = [];
         }
         return _cache;
+    }
+
+    private static void ClampLoadedRecordsUnlocked(List<OperationHistoryRecord> records)
+    {
+        int clamped = 0;
+        foreach (var record in records)
+        {
+            try
+            {
+                if (record is not null && record.ClampStoredOutput())
+                    clamped++;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Failed to trim the output of operation history record {record?.Id}");
+                Logger.Warn(ex);
+            }
+        }
+
+        if (clamped > 0)
+        {
+            Logger.Info($"Trimmed oversized output from {clamped} operation history records");
+            SaveUnlocked();
+        }
     }
 
     private static bool SaveUnlocked()
@@ -152,6 +177,7 @@ public static class OperationHistoryStore
                     })
                     .ToList(),
             };
+            record.ClampStoredOutput();
             cache.Add(record);
 
             // Only delete the user's only history copy after a verifiably successful save. If the save

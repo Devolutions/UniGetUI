@@ -373,7 +373,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 restoreSelection
                 && _rememberedSelection.TryGetValue(HashPackage(package), out bool wasChecked)
                     ? wasChecked
-                    : PACKAGES_CHECKED_BY_DEFAULT;
+                    : PACKAGES_CHECKED_BY_DEFAULT && !package.RequiresReinstallToUpdate;
             await WhenAddingPackage(package);
             PackageReference.TryAdd(HashPackage(package), package);
         }

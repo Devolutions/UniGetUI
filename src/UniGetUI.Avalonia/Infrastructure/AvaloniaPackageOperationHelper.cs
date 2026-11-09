@@ -47,6 +47,7 @@ internal static class AvaloniaPackageOperationHelper
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
+            if (PackageOperation.IsLeftOutOfBulkUpdates(pkg, opts)) continue;
             var op = new UpdatePackageOperation(pkg, opts) { IsBackgroundOperation = background };
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);

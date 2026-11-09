@@ -75,6 +75,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public virtual bool HasConcreteVersion => true;
         public bool InstalledVersionIsUnverified { get; init; }
+        public bool RequiresReinstallToUpdate { get; init; }
         public CoreTools.Version NormalizedVersion { get; }
         public CoreTools.Version NormalizedNewVersion { get; }
         public bool IsPopulated { get; set; }

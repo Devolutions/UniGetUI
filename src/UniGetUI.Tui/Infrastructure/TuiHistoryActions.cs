@@ -6,6 +6,7 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageOperations;
 using UniGetUI.Tui.Views.Dialogs;
@@ -108,10 +109,15 @@ internal static class TuiHistoryActions
         {
             "install-package" => new InstallPackageOperation(new Package(name, record.PackageId, InstalledVersion(record), source, manager), options),
             "uninstall-package" => new UninstallPackageOperation(new Package(name, record.PackageId, InstalledVersion(record), source, manager), options),
-            "update-package" => new UpdatePackageOperation(new Package(name, record.PackageId, record.VersionBefore, record.VersionAfter, source, manager), options),
+            "update-package" => new UpdatePackageOperation(LiveUpdateOr(new Package(name, record.PackageId, record.VersionBefore, record.VersionAfter, source, manager)), options),
             _ => null,
         };
     }
+
+    private static IPackage LiveUpdateOr(IPackage rebuilt) =>
+        UpgradablePackagesLoader.Instance?.GetEquivalentPackage(rebuilt) is { RequiresReinstallToUpdate: true } live
+            ? live
+            : rebuilt;
 
     private static void Launch(AbstractOperation? op)
     {

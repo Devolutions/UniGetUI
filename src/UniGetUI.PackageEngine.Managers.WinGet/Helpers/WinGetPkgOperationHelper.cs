@@ -41,6 +41,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
     private static bool DropsArchAndScope(IPackage package) =>
         package.OverridenOptions.WinGet_DropArchAndScope
+        || package.RequiresReinstallToUpdate
         || GetSelectedLocalIdentifier(package) is not null;
 
     private static bool OperationIsBrokered(IPackage package) =>
@@ -474,7 +475,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 }
             }
 
-            if (operation is OperationType.Update)
+            if (operation is OperationType.Update && !ReportedDifferentInstallTechnology(processOutput))
                 SuppressPhantomUpgrade(package);
 
             Logger.Warn(
@@ -696,6 +697,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
     internal static bool ReportedInstallerHashMismatch(int returnCode) =>
         (uint)returnCode is 0x8A150011;
+
+    internal static bool ReportedDifferentInstallTechnology(IEnumerable<string> processOutput) =>
+        processOutput.Any(line =>
+            line.Contains("install technology is different", StringComparison.OrdinalIgnoreCase)
+        );
 
     internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>
         (uint)returnCode is 0x8A150101 or 0x8A150103 or 0x8A150111;

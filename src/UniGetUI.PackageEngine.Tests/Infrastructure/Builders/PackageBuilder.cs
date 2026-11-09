@@ -10,6 +10,7 @@ public sealed class PackageBuilder
     private string _id = "Contoso.Test";
     private string _installedVersion = "1.0.0";
     private string? _availableVersion;
+    private bool _requiresReinstallToUpdate;
     private IManagerSource? _source;
     private IPackageManager? _manager;
     private OverridenInstallationOptions? _options;
@@ -56,6 +57,12 @@ public sealed class PackageBuilder
         return this;
     }
 
+    public PackageBuilder RequiringReinstallToUpdate()
+    {
+        _requiresReinstallToUpdate = true;
+        return this;
+    }
+
     public Package Build()
     {
         var manager = _manager ?? new PackageManagerBuilder().Build();
@@ -63,6 +70,9 @@ public sealed class PackageBuilder
 
         return _availableVersion is null
             ? new Package(_name, _id, _installedVersion, source, manager, _options)
-            : new Package(_name, _id, _installedVersion, _availableVersion, source, manager, _options);
+            : new Package(_name, _id, _installedVersion, _availableVersion, source, manager, _options)
+            {
+                RequiresReinstallToUpdate = _requiresReinstallToUpdate,
+            };
     }
 }

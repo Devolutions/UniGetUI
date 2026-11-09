@@ -5,6 +5,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Tui.Infrastructure;
@@ -268,20 +269,21 @@ internal static class TuiUpdatesPolicy
             {
                 TuiMaintenanceScheduler.MarkAutoInstallHandled();
                 bool markedOnly = MaintenanceScheduleStore.GetInstallTargets() is ScheduleInstallTargets.MarkedPackagesOnly;
-                var targets = upgradable.Where(p => !markedOnly || AutoUpdatesDatabase.IsAutoUpdated(p)).ToList();
+                var targets = await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(
+                    upgradable.Where(p => !markedOnly || AutoUpdatesDatabase.IsAutoUpdated(p)));
                 if (targets.Count > 0)
                 {
-                    await TuiPackageActions.UpdateAsync(targets);
+                    await TuiPackageActions.UpdateAsync(targets, bulk: true);
                     ShowUpgrading(targets);
                 }
 
-                var skipped = upgradable.Except(targets).ToList();
+                var skipped = upgradable.Where(p => !targets.Contains(p, ReferenceEqualityComparer.Instance)).ToList();
                 if (skipped.Count > 0) ShowAvailable(skipped);
             }
             else if (firstLoad && TuiStartup.Current?.UpdateAppsOnStart == true)
             {
                 await TuiPackageActions.UpdateAllAsync();
-                ShowUpgrading(upgradable);
+                ShowUpgrading(await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(upgradable));
             }
             else
             {

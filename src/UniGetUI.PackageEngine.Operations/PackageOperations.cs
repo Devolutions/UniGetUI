@@ -1381,6 +1381,15 @@ namespace UniGetUI.PackageEngine.Operations
             if (!winget.ReportedUpdateNotApplicable(output, returnCode))
                 return;
 
+            if (winget.ReportedDifferentInstallTechnology(output))
+            {
+                Metadata.FailureMessage = CoreTools.Translate(
+                    "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again",
+                    new Dictionary<string, object?> { { "package", Package.Name } }
+                );
+                return;
+            }
+
             Metadata.FailureMessage = CoreTools.Translate(
                 "{package} may already be up to date, or no installer matches this system",
                 new Dictionary<string, object?> { { "package", Package.Name } }
@@ -1573,6 +1582,31 @@ namespace UniGetUI.PackageEngine.Operations
             )
             && !IsBrokerEligible(package);
 
+        public static bool IsLeftOutOfBulkUpdates(IPackage package, InstallOptions options) =>
+            package.RequiresReinstallToUpdate && !options.UninstallBeforeUpdate;
+
+        public static async Task<IReadOnlyList<IPackage>> WithoutUpdatesLeftOutOfBulkAsync(
+            IEnumerable<IPackage> packages
+        )
+        {
+            List<IPackage> kept = [];
+            foreach (IPackage package in packages)
+            {
+                if (
+                    !package.RequiresReinstallToUpdate
+                    || !IsLeftOutOfBulkUpdates(
+                        package,
+                        await InstallOptionsFactory.LoadApplicableAsync(package)
+                    )
+                )
+                {
+                    kept.Add(package);
+                }
+            }
+
+            return kept;
+        }
+
         private static bool IsKnownToBeUninstalled(IPackage package)
         {
             if (InstalledPackagesLoader.Instance is not { IsLoaded: true } installed)
@@ -1593,7 +1627,7 @@ namespace UniGetUI.PackageEngine.Operations
             OperationType role
         ) =>
             role is OperationType.Update
-            && opts.UninstallBeforeUpdate
+            && (opts.UninstallBeforeUpdate || package.RequiresReinstallToUpdate)
             && package.IsUpgradable
             && SupportsUninstallBeforeUpdate(package);
 

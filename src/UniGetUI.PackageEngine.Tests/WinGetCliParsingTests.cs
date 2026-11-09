@@ -1,9 +1,12 @@
 #if WINDOWS
 using UniGetUI.Core.Data;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
+using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -33,6 +36,101 @@ public sealed class WinGetCliParsingTests : IDisposable
 
     private static string[] Lines(string output) =>
         output.Replace("\r\n", "\n").Split('\n', StringSplitOptions.None);
+
+    [Fact]
+    public void ParsePinsReadsTheIdOfEveryPin()
+    {
+        IReadOnlyList<string> pins = WinGetPins.Parse(
+            Lines(
+                """
+                Name                                 Id              Version Source Pin type
+                ----------------------------------------------------------------------------
+                Tessl CLI 0.113.0                    tessl.tessl     0.113.0 winget Pinning
+                Rustup: the Rust toolchain installer Rustlang.Rustup 1.29.1  winget Blocking
+                """
+            )
+        );
+
+        Assert.Equal(["tessl.tessl", "Rustlang.Rustup"], pins);
+    }
+
+    [Fact]
+    public void ParsePinsReturnsNothingWhenNoPinIsConfigured()
+    {
+        Assert.Empty(WinGetPins.Parse(Lines("There are no pins configured.")));
+    }
+
+    [Theory]
+    [InlineData("Audacity.Audacity", true)]
+    [InlineData("audacity.audacity", true)]
+    [InlineData("Audacity.AudacityBeta", false)]
+    [InlineData("MoonlightGameStreamingProject.Moonlight", true)]
+    [InlineData("Moonlight.Other", false)]
+    public void IsPinnedMatchesIdsCaseInsensitivelyAndTruncatedIdsByPrefix(string packageId, bool expected)
+    {
+        Assert.Equal(
+            expected,
+            WinGetPins.IsPinned(["Audacity.Audacity", "MoonlightGameStreamingPro…"], packageId)
+        );
+    }
+
+    [Theory]
+    [InlineData(false, "machine")]
+    [InlineData(true, null)]
+    public void AnUpdateThatNeedsAReinstallIsNotHeldToTheSavedScope(bool requiresReinstall, string? expectedScope)
+    {
+        var builder = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId("MoonlightGameStreamingProject.Moonlight")
+            .WithVersion("6.1.0.0")
+            .WithNewVersion("6.2.0.0");
+        if (requiresReinstall)
+            builder.RequiringReinstallToUpdate();
+
+        Assert.Equal(
+            expectedScope,
+            WinGetPkgOperationHelper.GetEffectiveScope(
+                builder.Build(),
+                new InstallOptions { InstallationScope = PackageScope.Machine }
+            )
+        );
+    }
+
+    [Fact]
+    public void ReportedDifferentInstallTechnologyRecognisesTheWinGetMessage()
+    {
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(
+                Lines(
+                    """
+                    Found Audacity [Audacity.Audacity] Version 4.0.2.263060742
+                    A newer version was found, but the install technology is different from the current version installed. Please uninstall the package and install the newer version.
+                    """
+                )
+            )
+        );
+        Assert.False(
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(
+                Lines("No applicable upgrade found.")
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData("3.7.9", "4.0.2.263060742", true)]
+    [InlineData("4.0.2", "4.0.2", false)]
+    [InlineData("5.0", "4.0.2", false)]
+    [InlineData("Unknown", "4.0.2", false)]
+    [InlineData("", "4.0.2", false)]
+    [InlineData("3.7.9", "", false)]
+    public void IsNewerVersionOnlyAcceptsAKnownOlderInstalledVersion(
+        string installed,
+        string newest,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, NativeWinGetHelper.IsNewerVersion(new WinGet(), installed, newest));
+    }
 
     [Fact]
     public void ParseInstalledPackagesReadsJapaneseLocalizedTable()

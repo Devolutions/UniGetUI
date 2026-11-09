@@ -420,6 +420,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
+            if (background && PackageOperation.IsLeftOutOfBulkUpdates(pkg, opts)) continue;
             var op = new UpdatePackageOperation(pkg, opts)
             {
                 IsBackgroundOperation = background,
@@ -518,7 +519,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             else if (CoreData.GetProcessArguments().Contains("--updateapps"))
             {
                 Task updateAll = AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
-                ShowUpgradingPackagesNotification(upgradable);
+                ShowUpgradingPackagesNotification(await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(upgradable));
                 Logger.Warn("Automatic install of updates has been enabled via Command Line (user settings have been overriden)");
                 QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(updateAll);
             }
@@ -538,15 +539,18 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         bool markedOnly = MaintenanceScheduleStore.GetInstallTargets()
             is ScheduleInstallTargets.MarkedPackagesOnly;
 
-        List<IPackage> targets = [];
+        List<IPackage> candidates = [];
         List<IPackage> skipped = [];
         foreach (var package in upgradable)
         {
             if (!markedOnly || AutoUpdatesDatabase.IsAutoUpdated(package))
-                targets.Add(package);
+                candidates.Add(package);
             else
                 skipped.Add(package);
         }
+
+        var targets = await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(candidates);
+        skipped.AddRange(candidates.Where(package => !targets.Contains(package, ReferenceEqualityComparer.Instance)));
 
         if (targets.Count > 0)
         {

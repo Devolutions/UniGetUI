@@ -46,6 +46,15 @@ public static class AvaloniaAppHost
         remove => _secondaryInstanceArgsReceived -= value;
     }
 
+    public static bool LaunchRequestedWhileQuitting { get; set; }
+
+    public static void ReleaseSingleInstance()
+    {
+        SingleInstanceRedirector.StopListener();
+        Interlocked.Exchange(ref _singleInstanceMutex, null)?.Dispose();
+        Interlocked.Exchange(ref _singleInstanceLock, null)?.Dispose();
+    }
+
     private static void RaiseSecondaryInstanceArgs(string[] args)
     {
         if (_secondaryInstanceArgsReceived is null)

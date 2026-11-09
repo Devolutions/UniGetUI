@@ -2409,6 +2409,7 @@ public partial class MainWindow : Window
     {
         Logger.Warn("Quitting UniGetUI");
         await AvaloniaAutoUpdater.WaitForInstallerHandoffAsync();
+        AvaloniaAppHost.ReleaseSingleInstance();
         try
         {
             await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
@@ -2422,6 +2423,11 @@ public partial class MainWindow : Window
         {
             Logger.Error(ex);
         }
+
+        if (AvaloniaAppHost.LaunchRequestedWhileQuitting && !AvaloniaAutoUpdater.InstallerLaunched)
+            CoreTools.TryScheduleRelaunchAfterExit(
+                AppRestartHelper.ResolveRestartExecutablePath(AppContext.BaseDirectory)
+            );
 
         Environment.Exit(0);
     }

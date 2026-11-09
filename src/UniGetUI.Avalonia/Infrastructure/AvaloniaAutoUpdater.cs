@@ -433,6 +433,8 @@ internal static partial class AvaloniaAutoUpdater
     private static readonly InstallerHandoffTracker InstallerHandoffs = new();
     private static readonly TimeSpan InstallerHandoffTimeout = TimeSpan.FromMinutes(2);
 
+    internal static bool InstallerLaunched { get; private set; }
+
     internal static bool IsBusy
         => Volatile.Read(ref _activeAttempts) > Volatile.Read(ref _attemptsAwaitingConsent);
 
@@ -1042,6 +1044,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         LogUpdateInfo($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
+        InstallerLaunched = true;
         WindowsAppNotificationBridge.RemoveSelfUpdateAvailableNotification();
         InstallerHandoffs.Complete(handoff);
 

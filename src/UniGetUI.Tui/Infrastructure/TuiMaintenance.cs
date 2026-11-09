@@ -42,7 +42,7 @@ internal static class TuiMaintenanceScheduler
             loader.FinishedLoading += (_, _) =>
             {
                 _updatesWereLoaded = true;
-                MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
+                RecordUpdateLoad(DateTime.Now);
             };
         }
 
@@ -68,9 +68,6 @@ internal static class TuiMaintenanceScheduler
             return false;
         }
 
-        if (schedule.Frequency is ScheduleFrequency.AfterEveryUpdateCheck)
-            _pendingInstallSince = null;
-
         return ScheduleEvaluator.IsAutoInstallDue(
             schedule,
             MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates),
@@ -82,6 +79,16 @@ internal static class TuiMaintenanceScheduler
     {
         _pendingInstallSince = null;
         _pendingCheckSince = null;
+    }
+
+    internal static void RecordUpdateLoad(DateTime nowLocal)
+    {
+        var check = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
+        if (ScheduleEvaluator.IsTimeBased(check.Frequency)
+            && ScheduleEvaluator.IsDue(check, MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.CheckForUpdates), nowLocal))
+            _pendingCheckSince = DateTime.Now;
+
+        MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
     }
 
     public static bool ShouldRunAtAppStart(MaintenanceTaskKind kind)

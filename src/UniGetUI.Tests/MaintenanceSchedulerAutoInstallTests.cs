@@ -74,6 +74,35 @@ public sealed class MaintenanceSchedulerAutoInstallTests : IDisposable
     }
 
     [Fact]
+    public async Task RunningTheInstallTaskNowInstallsWhenUpdateChecksRunAtAScheduledTime()
+    {
+        InstallAfterEveryUpdateCheck();
+        CheckForUpdates(ScheduleFrequency.Daily, 0);
+
+        await MaintenanceScheduler.RunAsync(MaintenanceTaskKind.InstallUpdates);
+
+        Assert.True(MaintenanceScheduler.IsAutoInstallDue());
+        MaintenanceScheduler.MarkAutoInstallHandled();
+        Assert.False(MaintenanceScheduler.IsAutoInstallDue());
+    }
+
+    [Theory]
+    [InlineData(MaintenanceTaskSchedule.UnlimitedGrace, true)]
+    [InlineData(0, false)]
+    public void AnUpdateLoadThatCatchesUpAMissedCheckInstallsOnlyWithinTheGracePeriod(
+        int graceMinutes,
+        bool expectedDue)
+    {
+        InstallAfterEveryUpdateCheck();
+        CheckForUpdates(ScheduleFrequency.Daily, graceMinutes);
+
+        MaintenanceScheduler.RecordUpdateLoad(DateTime.Now.Date.AddDays(1).AddHours(12));
+
+        Assert.Equal(expectedDue, MaintenanceScheduler.IsAutoInstallDue());
+        Assert.NotNull(MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.CheckForUpdates));
+    }
+
+    [Fact]
     public void EveryUpdateLoadInstallsWhenUpdateChecksRunOnAnInterval()
     {
         InstallAfterEveryUpdateCheck();

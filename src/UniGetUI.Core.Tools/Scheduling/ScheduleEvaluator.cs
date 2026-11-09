@@ -101,8 +101,11 @@ public static class ScheduleEvaluator
         if (!installSchedule.Enabled)
             return false;
 
+        if (installRunPending)
+            return true;
+
         if (installSchedule.Frequency is not ScheduleFrequency.AfterEveryUpdateCheck)
-            return installRunPending;
+            return false;
 
         return !(checkSchedule.Enabled && IsTimeBased(checkSchedule.Frequency)) || checkRunPending;
     }

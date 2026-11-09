@@ -69,6 +69,7 @@ public sealed class CargoOperationHelperTests
         Assert.Equal(expected, manager.OperationHelper.GetParameters(package, options, operation));
         Assert.Equal(expected, manager.OperationHelper.GetStandaloneParameters(package, options, operation));
 
+        options.VersionIsExplicit = true;
         options.Version = "15.0.0-rc.2";
         expected[3] = CoreTools.EscapeCommandLineArgument("15.0.0-rc.2");
         Assert.Equal(expected, manager.OperationHelper.GetParameters(package, options, operation));

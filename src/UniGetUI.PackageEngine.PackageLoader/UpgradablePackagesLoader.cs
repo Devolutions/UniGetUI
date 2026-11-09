@@ -115,6 +115,28 @@ namespace UniGetUI.PackageEngine.PackageLoader
         protected override bool DidManagerReportFailure(IPackageManager manager)
             => manager.LastUpdatesListingFailed;
 
+        protected virtual TimeSpan InstalledListingWaitLimit => TimeSpan.FromMinutes(2);
+
+        protected override async Task WaitBeforeLoadingFromManagerAsync(IPackageManager manager)
+        {
+            Task installedListing =
+                InstalledPackagesLoader.Instance?.WaitForManagerAsync(manager) ?? Task.CompletedTask;
+            if (installedListing.IsCompleted)
+                return;
+
+            Logger.Info($"Waiting for the installed packages of {manager.Name} before checking its updates");
+            try
+            {
+                await installedListing.WaitAsync(InstalledListingWaitLimit);
+            }
+            catch (TimeoutException)
+            {
+                Logger.Warn(
+                    $"The installed packages of {manager.Name} were still loading after {InstalledListingWaitLimit.TotalSeconds:0} seconds, checking its updates anyway"
+                );
+            }
+        }
+
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
             return manager.GetAvailableUpdates();

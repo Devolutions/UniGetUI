@@ -15,8 +15,8 @@ internal static class TuiWinGetRepair
         if (winget is null || repair is null) return Task.CompletedTask;
         return RepairAsync(() => winget.RunAsync(repair), () =>
         {
-            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
             _ = InstalledPackagesLoader.Instance.ReloadPackages();
+            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
         });
     }
 

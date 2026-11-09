@@ -267,8 +267,8 @@ internal static class AvaloniaPackageOperationHelper
                 CoreTools.Translate("It is recommended to restart UniGetUI after WinGet has been repaired"),
                 MainWindow.RuntimeNotificationLevel.Success);
 
-            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
             _ = InstalledPackagesLoader.Instance.ReloadPackages();
+            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
         }
         catch (Exception ex)
         {

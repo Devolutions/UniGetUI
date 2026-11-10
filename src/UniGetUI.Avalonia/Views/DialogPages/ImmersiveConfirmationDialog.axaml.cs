@@ -67,6 +67,8 @@ public partial class ImmersiveConfirmationDialog : ImmersiveDialog
         Close();
     }
 
+    internal void Accept() => Complete(true);
+
     internal void CancelPendingChoice()
     {
         RequireChoice = false;

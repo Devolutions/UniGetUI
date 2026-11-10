@@ -127,7 +127,10 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         if (!_operationBatch.Contains(op))
+        {
             _operationBatch.Add(op);
+            ShutdownController.OnOperationJoined();
+        }
 
         WatchOperations();
     }
@@ -151,7 +154,7 @@ public partial class MainWindowViewModel : ViewModelBase
         => Dispatcher.UIThread.Post(() =>
         {
             if (sender is AbstractOperation op
-                && op.Status is OperationStatus.InQueue or OperationStatus.Running
+                && e is OperationStatus.InQueue or OperationStatus.Running
                 && !_operationBatch.Contains(op))
                 AddToBatch(op);
 

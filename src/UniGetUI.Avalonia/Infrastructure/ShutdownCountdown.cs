@@ -8,12 +8,14 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal sealed class ShutdownCountdown
 {
     private readonly bool _restart;
+    private readonly int _seconds;
     private readonly TextBlock _message;
 
     public ShutdownCountdown(bool restart, int seconds)
     {
         _restart = restart;
-        Remaining = Math.Max(1, seconds);
+        _seconds = Math.Max(1, seconds);
+        Remaining = _seconds;
 
         _message = new TextBlock
         {
@@ -48,6 +50,14 @@ internal sealed class ShutdownCountdown
     public int Remaining { get; private set; }
 
     public string MessageText => _message.Text ?? "";
+
+    public void Restart()
+    {
+        if (Dialog.Result is not null) return;
+
+        Remaining = _seconds;
+        _message.Text = Message();
+    }
 
     public bool Tick()
     {

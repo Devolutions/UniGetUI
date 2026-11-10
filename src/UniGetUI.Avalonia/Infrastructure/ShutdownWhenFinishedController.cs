@@ -59,6 +59,8 @@ public sealed class ShutdownWhenFinishedController : ObservableObject
             _post(OnOperationsChanged);
     }
 
+    internal void OnOperationJoined() => _countdownCancellation?.Cancel();
+
     internal void OnOperationsChanged()
     {
         if (_countdownCancellation is { } countdown)

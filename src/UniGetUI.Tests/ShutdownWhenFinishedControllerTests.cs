@@ -292,4 +292,37 @@ public class ShutdownWhenFinishedControllerTests
         Assert.False(h.Tokens[0].IsCancellationRequested);
         await h.FinishCountdownAsync(ShutdownCountdownOutcome.Canceled);
     }
+
+    [Fact]
+    public async Task AnOperationThatFailsBeforeItIsSeen_StillCancelsTheCountdown()
+    {
+        var h = new Harness();
+        h.Set(OperationStatus.Running);
+        h.Controller.SetArmed(true);
+        h.Set(OperationStatus.Succeeded);
+
+        h.Batch.Clear();
+        h.Batch.Add(OperationStatus.Failed);
+        h.Controller.OnOperationJoined();
+        Assert.True(h.Tokens[0].IsCancellationRequested);
+
+        await h.FinishCountdownAsync(ShutdownCountdownOutcome.Deferred);
+
+        Assert.Single(h.Countdowns);
+        Assert.Equal(1, h.FailureReports);
+        Assert.False(h.Controller.IsArmed);
+    }
+
+    [Fact]
+    public void AnOperationJoiningOutsideACountdown_ChangesNothing()
+    {
+        var h = new Harness();
+        h.Set(OperationStatus.Running);
+        h.Controller.SetArmed(true);
+
+        h.Controller.OnOperationJoined();
+
+        Assert.True(h.Controller.IsArmed);
+        Assert.Empty(h.Countdowns);
+    }
 }

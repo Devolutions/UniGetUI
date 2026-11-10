@@ -94,15 +94,14 @@ internal static class SystemRestartService
     {
         try
         {
-            bool confirmed = await CountdownAsync(owner, restart, newWorkStarted);
+            var end = await CountdownAsync(owner, restart, newWorkStarted);
+            if (end is CountdownEnd.Dismissed) return ShutdownCountdownOutcome.Canceled;
 
-            if (newWorkStarted.IsCancellationRequested || (confirmed && operationsActive()))
+            if (end is CountdownEnd.Interrupted || newWorkStarted.IsCancellationRequested || operationsActive())
             {
                 Logger.Info("New operations started during the shutdown countdown; waiting for them to finish");
                 return ShutdownCountdownOutcome.Deferred;
             }
-
-            if (!confirmed) return ShutdownCountdownOutcome.Canceled;
 
             if (restart ? await RestartAsync() : await ShutDownAsync())
                 return ShutdownCountdownOutcome.Requested;
@@ -119,20 +118,45 @@ internal static class SystemRestartService
         }
     }
 
-    private static async Task<bool> CountdownAsync(Window owner, bool restart, CancellationToken newWorkStarted)
+    private enum CountdownEnd
+    {
+        Confirmed,
+        Dismissed,
+        Interrupted,
+    }
+
+    private static async Task<CountdownEnd> CountdownAsync(Window owner, bool restart, CancellationToken newWorkStarted)
     {
         var countdown = new ShutdownCountdown(restart, CountdownSeconds);
+        CountdownEnd? end = null;
+        bool closingForNewWork = false;
+
         var timer = new DispatcherTimer { Interval = CountdownTickInterval };
         timer.Tick += (_, _) =>
         {
+            if (TopLevel.GetTopLevel(countdown.Dialog) is null) return;
             if (countdown.Tick()) timer.Stop();
         };
-        countdown.Dialog.CloseRequested += (_, _) => timer.Stop();
+        countdown.Dialog.AttachedToVisualTree += (_, _) => countdown.Restart();
+        countdown.Dialog.CloseRequested += (_, _) =>
+        {
+            timer.Stop();
+            end ??= closingForNewWork
+                ? CountdownEnd.Interrupted
+                : countdown.Dialog.Result is true ? CountdownEnd.Confirmed : CountdownEnd.Dismissed;
+        };
+
+        void CloseForNewWork()
+        {
+            if (end is not null) return;
+            closingForNewWork = true;
+            countdown.Dialog.Close();
+        }
 
         timer.Start();
         try
         {
-            using (newWorkStarted.Register(() => Dispatcher.UIThread.Post(countdown.Dialog.Close)))
+            using (newWorkStarted.Register(() => Dispatcher.UIThread.Post(CloseForNewWork)))
             {
                 await DialogPresenter(owner, countdown.Dialog);
             }
@@ -142,7 +166,7 @@ internal static class SystemRestartService
             timer.Stop();
         }
 
-        return countdown.Dialog.Result is true && !newWorkStarted.IsCancellationRequested;
+        return end ?? (countdown.Dialog.Result is true ? CountdownEnd.Confirmed : CountdownEnd.Dismissed);
     }
 
     internal static int CountdownSeconds { get; set; } = DefaultCountdownSeconds;

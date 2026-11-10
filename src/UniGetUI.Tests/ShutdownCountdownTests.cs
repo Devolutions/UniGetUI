@@ -38,15 +38,18 @@ public sealed class ShutdownCountdownTests
         public ImmersiveConfirmationDialog? Shown;
         public TimeSpan HoldAfterClose = TimeSpan.Zero;
 
-        public async Task Present(Window _, ImmersiveDialog dialog)
+        public async Task Present(Window owner, ImmersiveDialog dialog)
         {
             Shown = Assert.IsType<ImmersiveConfirmationDialog>(dialog);
             var closed = new TaskCompletionSource();
             dialog.CloseRequested += (_, _) => closed.TrySetResult();
+            owner.Content = dialog;
             dialog.NotifyOpened();
             await closed.Task;
             if (HoldAfterClose > TimeSpan.Zero)
                 await Task.Delay(HoldAfterClose);
+            if (ReferenceEquals(owner.Content, dialog))
+                owner.Content = null;
         }
     }
 
@@ -290,6 +293,74 @@ public sealed class ShutdownCountdownTests
             });
 
             Assert.Equal(ShutdownCountdownOutcome.Deferred, outcome);
+            Assert.Empty(runner.Calls);
+        }
+        finally
+        {
+            owner.Close();
+        }
+    });
+
+    private static string MessageOf(ImmersiveConfirmationDialog dialog)
+    {
+        var body = Assert.IsType<StackPanel>(dialog.FindControl<ContentControl>("BodyPresenter")!.Content);
+        return Assert.IsType<TextBlock>(body.Children[0]).Text ?? "";
+    }
+
+    [Fact]
+    public Task CancelPressedBeforeNewWorkStarts_StaysCanceled() => DispatchAsync(async () =>
+    {
+        var runner = new FakeRunner();
+        var presenter = new FakePresenter { HoldAfterClose = TimeSpan.FromMilliseconds(500) };
+        using var newWork = new CancellationTokenSource();
+        var owner = new Window();
+        owner.Show();
+        try
+        {
+            var outcome = await WithFakeShutdown(runner, presenter, seconds: 60, async () =>
+            {
+                var pending = SystemRestartService.CountdownAndShutDownAsync(owner, false, () => false, newWork.Token);
+                var dialog = await WaitForDialogAsync(presenter);
+                dialog.FindControl<Button>("SecondaryButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                newWork.Cancel();
+                return await pending;
+            });
+
+            Assert.Equal(ShutdownCountdownOutcome.Canceled, outcome);
+            Assert.Empty(runner.Calls);
+        }
+        finally
+        {
+            owner.Close();
+        }
+    });
+
+    [Fact]
+    public Task ACoveredCountdown_PausesAndStartsOverWhenItIsShownAgain() => DispatchAsync(async () =>
+    {
+        var runner = new FakeRunner();
+        var presenter = new FakePresenter();
+        var owner = new Window();
+        owner.Show();
+        try
+        {
+            var outcome = await WithFakeShutdown(runner, presenter, seconds: 3, async () =>
+            {
+                var pending = SystemRestartService.CountdownAndShutDownAsync(owner, false, () => false);
+                var dialog = await WaitForDialogAsync(presenter);
+
+                owner.Content = new TextBlock { Text = "Manage shortcuts" };
+                await Task.Delay(1500);
+                Assert.False(pending.IsCompleted);
+                Assert.Empty(runner.Calls);
+
+                owner.Content = dialog;
+                Assert.Contains("shut down in 3 seconds", MessageOf(dialog));
+                dialog.FindControl<Button>("SecondaryButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                return await pending;
+            });
+
+            Assert.Equal(ShutdownCountdownOutcome.Canceled, outcome);
             Assert.Empty(runner.Calls);
         }
         finally

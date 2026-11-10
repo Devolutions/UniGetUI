@@ -45,7 +45,8 @@ internal static class AvaloniaPackageOperationHelper
         List<AbstractOperation> started = [];
         foreach (var listed in packages)
         {
-            var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed) ?? listed;
+            var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed);
+            if (pkg is null) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
             if (PackageOperation.IsLeftOutOfBulkUpdates(pkg, opts)) continue;
@@ -69,7 +70,8 @@ internal static class AvaloniaPackageOperationHelper
             return;
         }
 
-        var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed) ?? listed;
+        var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed);
+        if (pkg is null) return;
 
         var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
         if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) return;

@@ -1092,7 +1092,11 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
         var pkg = _vm.Package;
         if (role is OperationType.Update)
-            pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(pkg) ?? pkg;
+        {
+            if (await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(pkg) is not { } resolved)
+                return;
+            pkg = resolved;
+        }
         var opts = await InstallOptionsFactory.LoadApplicableAsync(
             pkg,
             elevated: elevated,

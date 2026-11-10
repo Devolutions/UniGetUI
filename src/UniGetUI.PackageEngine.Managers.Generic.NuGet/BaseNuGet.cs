@@ -47,7 +47,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         protected override bool? IsEligibleUpdateTarget(IPackage update, string version)
         {
-            if (!NuGetV3ServiceIndex.IsV3Source(update.Source))
+            if (NuGetLocalFeed.TryGetDirectory(update.Source, out _) || !NuGetV3ServiceIndex.IsV3Source(update.Source))
                 return true;
 
             if (NuGetV3ServiceIndex.Resolve(update.Source) is not { } index)

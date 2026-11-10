@@ -1705,7 +1705,13 @@ namespace UniGetUI.PackageEngine.Operations
                 pinned,
                 OperationType.Update
             );
-            if (pinned.Version.Length > 0 && capabilities.SupportsCustomVersionsOnUpdate)
+            if (
+                pinned.Version.Length > 0
+                && (
+                    capabilities.SupportsCustomVersionsOnUpdate
+                    || UpdateVersionPin.HasHonoredExplicitVersion(package, pinned)
+                )
+            )
                 return pinned;
             pinned.Version =
                 package.IsUpgradable && capabilities.SupportsCustomVersions

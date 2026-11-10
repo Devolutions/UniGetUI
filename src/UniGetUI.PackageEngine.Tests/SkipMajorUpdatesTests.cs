@@ -2,6 +2,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -335,8 +336,98 @@ public sealed class SkipMajorUpdatesTests : IDisposable
         pinned.OverridenOptions.PinUpdateToNewVersion = true;
         await loader.AddForeign(pinned);
 
-        Assert.Null(await loader.ResolveSkippedMajorUpdateAsync(pinned));
+        Assert.Same(pinned, await loader.ResolveSkippedMajorUpdateAsync(pinned));
         Assert.Empty(loader.Packages);
+    }
+
+    [Theory]
+    [InlineData(PackageTag.OnQueue)]
+    [InlineData(PackageTag.BeingProcessed)]
+    public async Task ResolveSkippedMajorUpdateAsync_LeavesARowWithAPendingOperationAlone(PackageTag tag)
+    {
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        var loader = CreateLoaders(manager);
+        var pinnedBeta = PinnedRow(manager, "5.11.0-beta");
+        await loader.AddForeign(pinnedBeta);
+        pinnedBeta.Tag = tag;
+
+        Assert.Same(pinnedBeta, await loader.ResolveSkippedMajorUpdateAsync(pinnedBeta));
+        Assert.Same(pinnedBeta, Assert.Single(loader.Packages));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ResolveSkippedMajorUpdateAsync_KeepsTheRowsSelection(bool isChecked)
+    {
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        var loader = CreateLoaders(manager);
+        var pinnedBeta = PinnedRow(manager, "5.11.0-beta");
+        await loader.AddForeign(pinnedBeta);
+        pinnedBeta.IsChecked = isChecked;
+
+        IPackage? resolved = await loader.ResolveSkippedMajorUpdateAsync(pinnedBeta);
+
+        Assert.NotSame(pinnedBeta, resolved);
+        Assert.Equal(isChecked, resolved!.IsChecked);
+    }
+
+    [Fact]
+    public async Task ResolveSkippedMajorUpdateAsync_DropsAPinnedRowWhoseTargetNoLongerQualifies()
+    {
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        manager.UpdateTargetEligibility = (_, _) => false;
+        var loader = CreateLoaders(manager);
+        var pinnedBeta = PinnedRow(manager, "5.11.0-beta");
+        await loader.AddForeign(pinnedBeta);
+
+        Assert.Null(await loader.ResolveSkippedMajorUpdateAsync(pinnedBeta));
+        Assert.Empty(loader.Packages);
+    }
+
+    [Fact]
+    public void UpdateOperation_KeepsAnExplicitVersionWhenItReinstallsOnAManagerThatPinsThroughItsCommand()
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsCustomVersionsOnUpdate = false;
+                return capabilities;
+            })
+            .Build();
+        manager.CanUpdateToExactVersionOverride = true;
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("6.0.0")
+            .Build();
+
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions
+            {
+                SkipMajorUpdates = true,
+                UninstallBeforeUpdate = true,
+                Version = "5.3.0",
+                VersionIsExplicit = true,
+            },
+            IgnoreParallelInstalls: true
+        );
+
+        Assert.Equal("5.3.0", operation.Options.Version);
+    }
+
+    private static Package PinnedRow(TestPackageManager manager, string newVersion)
+    {
+        var row = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion(newVersion)
+            .Build();
+        row.OverridenOptions.PinUpdateToNewVersion = true;
+        return row;
     }
 
     [Fact]

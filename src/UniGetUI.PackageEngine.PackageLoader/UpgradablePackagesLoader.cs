@@ -152,7 +152,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public async Task<IPackage?> ResolveSkippedMajorUpdateAsync(IPackage package)
         {
-            if (!package.IsUpgradable)
+            if (!package.IsUpgradable || IsPending(package))
                 return package;
 
             bool pinned = package.OverridenOptions.PinUpdateToNewVersion;
@@ -160,28 +160,35 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (pinned && !skipsMajorUpdates)
             {
                 Remove(package);
-                return null;
+                return package;
             }
 
             if (!skipsMajorUpdates || !(pinned || package.IsUpdateMajor()))
                 return package;
 
             var resolved = await Task.Run(() => package.Manager.ResolveSkippedMajorUpdate(package));
-            if (ReferenceEquals(resolved, package))
+            if (IsPending(package) || (pinned && ReferenceEquals(resolved, package)))
+                return package;
+
+            if (resolved is null || ReferenceEquals(resolved, package) || !await IsPackageValid(resolved))
             {
-                if (pinned)
-                    return package;
-                Remove(package);
+                if (!IsPending(package))
+                    Remove(package);
                 return null;
             }
 
-            Remove(package);
-            if (resolved is null || !await IsPackageValid(resolved))
-                return null;
+            if (IsPending(package))
+                return package;
 
+            bool wasChecked = package.IsChecked;
+            Remove(package);
             await AddForeign(resolved);
+            resolved.IsChecked = wasChecked;
             return resolved;
         }
+
+        private static bool IsPending(IPackage package) =>
+            package.Tag is PackageTag.OnQueue or PackageTag.BeingProcessed;
 
         protected override Task WhenAddingPackage(IPackage package)
         {

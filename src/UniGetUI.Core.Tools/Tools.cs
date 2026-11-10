@@ -830,6 +830,30 @@ namespace UniGetUI.Core.Tools
                 : BigInteger.Zero;
         }
 
+        public static BigInteger? GetMajorVersion(string version)
+        {
+            ReadOnlySpan<char> text = version.AsSpan().Trim().TrimStart("<>= ");
+            int epoch = text.IndexOfAny(':', '!');
+            if (epoch > 0 && !text[..epoch].ContainsAnyExceptInRange('0', '9'))
+                text = text[(epoch + 1)..];
+            if (text.Length > 1 && text[0] is 'v' or 'V' && char.IsAsciiDigit(text[1]))
+                text = text[1..];
+
+            int end = text.IndexOfAnyExceptInRange('0', '9');
+            ReadOnlySpan<char> digits = end < 0 ? text : text[..end];
+            if (digits.IsEmpty)
+                return null;
+            return BigInteger.Parse(digits, NumberStyles.None, CultureInfo.InvariantCulture);
+        }
+
+        public static BigInteger? MajorVersionOf(string version)
+        {
+            Version parsed = VersionStringToStruct(version);
+            return parsed != Version.Null && version.AsSpan().ContainsAnyInRange('0', '9')
+                ? parsed.Major
+                : GetMajorVersion(version);
+        }
+
         public static System.Version NormalizeVersionForComparison(System.Version version)
         {
             return version.Revision >= 0

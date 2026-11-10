@@ -1,7 +1,9 @@
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Operations;
@@ -132,9 +134,16 @@ public sealed class SkipMajorUpdatesTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, "5.10.0")]
-    [InlineData(false, "")]
-    public void UpdateOperation_PinsAPinnedUpdateOnlyWhileMajorUpdatesAreSkipped(bool skipsMajorUpdates, string version)
+    [InlineData(true, "", "5.10.0", true)]
+    [InlineData(false, "", "", false)]
+    [InlineData(true, "5.3.0", "5.3.0", true)]
+    [InlineData(true, "6.0.0", "6.0.0", true)]
+    public void UpdateOperation_PinsTheUpdateWhileMajorUpdatesAreSkipped(
+        bool skipsMajorUpdates,
+        string requestedVersion,
+        string expectedVersion,
+        bool expectedExplicit
+    )
     {
         var manager = new PackageManagerBuilder().Build();
         var package = new PackageBuilder()
@@ -143,16 +152,91 @@ public sealed class SkipMajorUpdatesTests : IDisposable
             .WithVersion("5.2.0")
             .WithNewVersion("5.10.0")
             .Build();
-        package.OverridenOptions.PinUpdateToNewVersion = true;
+        var options = new InstallOptions { Version = "4.0.0", SkipMajorUpdates = skipsMajorUpdates };
+        if (requestedVersion.Length > 0)
+        {
+            options.Version = requestedVersion;
+            options.VersionIsExplicit = true;
+        }
 
-        using var operation = new UpdatePackageOperation(
+        using var operation = new UpdatePackageOperation(package, options, IgnoreParallelInstalls: true);
+
+        Assert.Equal(expectedVersion, operation.Options.Version);
+        Assert.Equal(expectedExplicit, operation.Options.VersionIsExplicit);
+    }
+
+    [Theory]
+    [InlineData(true, "5.10.0")]
+    [InlineData(false, "")]
+    public void StandaloneUpdateCommandsTargetThePinnedVersion(bool skipsMajorUpdates, string version)
+    {
+        string? built = null;
+        var manager = new PackageManagerBuilder()
+            .ConfigureOperation(helper =>
+                helper.ParametersFactory = (_, options, _) =>
+                {
+                    built = options.Version;
+                    return [];
+                }
+            )
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("5.10.0")
+            .Build();
+
+        manager.OperationHelper.GetStandaloneParameters(
             package,
-            new InstallOptions { Version = "4.0.0", SkipMajorUpdates = skipsMajorUpdates },
-            IgnoreParallelInstalls: true
+            new InstallOptions { SkipMajorUpdates = skipsMajorUpdates },
+            OperationType.Update
         );
 
-        Assert.Equal(version, operation.Options.Version);
-        Assert.Equal(skipsMajorUpdates, operation.Options.VersionIsExplicit);
+        Assert.Equal(version, built);
+    }
+
+    [Fact]
+    public async Task ResolveSkippedMajorUpdateAsync_ReevaluatesAPinnedRowWithTheCurrentOptions()
+    {
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        var loader = CreateLoaders(manager);
+        var pinnedBeta = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("5.11.0-beta")
+            .Build();
+        pinnedBeta.OverridenOptions.PinUpdateToNewVersion = true;
+        await loader.AddForeign(pinnedBeta);
+
+        IPackage? resolved = await loader.ResolveSkippedMajorUpdateAsync(pinnedBeta);
+
+        Assert.Equal("5.10.0", resolved?.NewVersionString);
+        Assert.Equal("5.10.0", Assert.Single(loader.Packages).NewVersionString);
+    }
+
+    [Fact]
+    public void GetAvailableUpdates_SkipsWithdrawnReleasesWithinTheMajor()
+    {
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        manager.UpdateTargetEligibility = (_, version) => version != "5.10.0";
+
+        Assert.Equal("5.3.1", Assert.Single(manager.GetAvailableUpdates()).NewVersionString);
+    }
+
+    [Fact]
+    public async Task AMajorUpdateFromAnInstalledPreReleaseIsStillSkipped()
+    {
+        var (manager, reported) = CreateManager(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
+            installedVersion: "5.2.0rc1"
+        );
+        var loader = CreateLoaders(manager);
+
+        Assert.True(reported.IsUpdateMajor());
+        Assert.False(await loader.EvaluatePackageAsync(reported));
+        Assert.Equal("5", CoreTools.MajorVersionOf("5.2.0rc1")?.ToString());
     }
 
     [Fact]
@@ -222,9 +306,14 @@ public sealed class SkipMajorUpdatesTests : IDisposable
         PackageManager.VersionLookupTimeout = TimeSpan.FromMilliseconds(200);
         try
         {
+            int lookups = 0;
             var (manager, _) = CreateManager(
                 new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
-                onLookup: () => Thread.Sleep(TimeSpan.FromSeconds(5))
+                onLookup: () =>
+                {
+                    Interlocked.Increment(ref lookups);
+                    Thread.Sleep(TimeSpan.FromSeconds(5));
+                }
             );
 
             var timer = System.Diagnostics.Stopwatch.StartNew();
@@ -232,6 +321,10 @@ public sealed class SkipMajorUpdatesTests : IDisposable
 
             Assert.Equal("6.0.0", update.NewVersionString);
             Assert.True(timer.Elapsed < TimeSpan.FromSeconds(4));
+            Assert.Equal(1, lookups);
+
+            manager.GetAvailableUpdates();
+            Assert.Equal(1, lookups);
         }
         finally
         {

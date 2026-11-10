@@ -155,19 +155,28 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (!package.IsUpgradable)
                 return package;
 
+            bool pinned = package.OverridenOptions.PinUpdateToNewVersion;
             bool skipsMajorUpdates = (await package.GetInstallOptions()).SkipMajorUpdates;
-            if (package.OverridenOptions.PinUpdateToNewVersion && !skipsMajorUpdates)
+            if (pinned && !skipsMajorUpdates)
             {
                 Remove(package);
                 return null;
             }
 
-            if (!skipsMajorUpdates || !package.IsUpdateMajor())
+            if (!skipsMajorUpdates || !(pinned || package.IsUpdateMajor()))
                 return package;
 
             var resolved = await Task.Run(() => package.Manager.ResolveSkippedMajorUpdate(package));
+            if (ReferenceEquals(resolved, package))
+            {
+                if (pinned)
+                    return package;
+                Remove(package);
+                return null;
+            }
+
             Remove(package);
-            if (ReferenceEquals(resolved, package) || !await IsPackageValid(resolved))
+            if (resolved is null || !await IsPackageValid(resolved))
                 return null;
 
             await AddForeign(resolved);

@@ -54,10 +54,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         public virtual bool IdentifiersAreQuotedOnCommandLine => false;
 
-        protected virtual bool CanUpdateToExactVersion =>
+        public virtual bool CanUpdateToExactVersion =>
             Capabilities.SupportsCustomVersions
             && Capabilities.SupportsCustomVersionsOnUpdate
             && Capabilities.CanListVersions;
+
+        protected virtual bool IsEligibleUpdateTarget(IPackage update, string version) => true;
 
         private IReadOnlyList<Package> OfferUpdatesWithinSkippedMajors(IReadOnlyList<Package> updates)
         {
@@ -67,6 +69,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             Package[]? resolved = null;
             for (int i = 0; i < updates.Count; i++)
             {
+                if (!updates[i].IsUpdateMajor())
+                    continue;
                 if (UpdateWithinSkippedMajor(updates[i]) is { } withinMajor)
                     (resolved ??= [.. updates])[i] = withinMajor;
             }
@@ -74,18 +78,22 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             return resolved ?? updates;
         }
 
-        public IPackage ResolveSkippedMajorUpdate(IPackage update) =>
-            CanUpdateToExactVersion && update is Package package && UpdateWithinSkippedMajor(package) is { } withinMajor
-                ? withinMajor
-                : update;
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update)
+        {
+            if (
+                !CanUpdateToExactVersion
+                || update is not Package package
+                || !(package.IsUpdateMajor() || package.OverridenOptions.PinUpdateToNewVersion)
+            )
+                return update;
+
+            return UpdateWithinSkippedMajor(package);
+        }
 
         private Package? UpdateWithinSkippedMajor(Package update)
         {
             try
             {
-                if (!update.IsUpdateMajor())
-                    return null;
-
                 var options = InstallOptionsFactory.LoadApplicable(update);
                 if (!options.SkipMajorUpdates)
                     return null;
@@ -115,27 +123,39 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         private static readonly TimeSpan VersionListLifetime = TimeSpan.FromMinutes(30);
 
+        private static readonly TimeSpan VersionLookupBackoff = TimeSpan.FromMinutes(5);
+
         private readonly ConcurrentDictionary<long, (string ReportedVersion, DateTime FetchedAt, IReadOnlyList<string> Versions)> _skippedMajorVersionLists = new();
+
+        private readonly ConcurrentDictionary<long, DateTime> _skippedMajorLookupTimeouts = new();
 
         private IReadOnlyList<string>? VersionsForSkippedMajor(Package update)
         {
             long key = update.GetHash();
             if (
                 _skippedMajorVersionLists.TryGetValue(key, out var cached)
-                && cached.ReportedVersion == update.NewVersionString
+                && (cached.ReportedVersion == update.NewVersionString || update.OverridenOptions.PinUpdateToNewVersion)
                 && DateTime.UtcNow - cached.FetchedAt < VersionListLifetime
             )
                 return cached.Versions;
 
+            if (
+                _skippedMajorLookupTimeouts.TryGetValue(key, out DateTime timedOutAt)
+                && DateTime.UtcNow - timedOutAt < VersionLookupBackoff
+            )
+                return null;
+
             var lookup = Task.Run(() => DetailsHelper.GetVersions(update));
             if (!lookup.Wait(VersionLookupTimeout))
             {
+                _skippedMajorLookupTimeouts[key] = DateTime.UtcNow;
                 Logger.Warn(
                     $"Listing the versions of {update.Id} took longer than {VersionLookupTimeout.TotalSeconds:0} seconds; its major update stays skipped"
                 );
                 return null;
             }
 
+            _skippedMajorLookupTimeouts.TryRemove(key, out _);
             if (lookup.Result.Count > 0)
                 _skippedMajorVersionLists[key] = (update.NewVersionString, DateTime.UtcNow, lookup.Result);
             return lookup.Result;
@@ -143,27 +163,30 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         internal string? NewestVersionWithinMajor(IPackage update, IEnumerable<string> versions, bool includePreReleases)
         {
-            if (update.NormalizedVersion == CoreTools.Version.Null)
+            if (CoreTools.MajorVersionOf(update.VersionString) is not { } installedMajor)
                 return null;
 
-            string? newest = null;
+            List<string> candidates = [];
             foreach (string version in versions)
             {
                 if (!includePreReleases && PreReleaseVersion.IsPreRelease(version))
                     continue;
-
-                var parsed = CoreTools.VersionStringToStruct(version);
-                if (parsed == CoreTools.Version.Null || parsed.Major != update.NormalizedVersion.Major)
+                if (CoreTools.MajorVersionOf(version) != installedMajor)
                     continue;
-
                 if (CompareVersions(version, update.VersionString) is not > 0)
                     continue;
-
-                if (newest is null || CompareVersions(version, newest) is > 0)
-                    newest = version;
+                candidates.Add(version);
             }
 
-            return newest;
+            candidates.Sort((left, right) => CompareVersions(right, left) ?? 0);
+            foreach (string candidate in candidates)
+            {
+                if (IsEligibleUpdateTarget(update, candidate))
+                    return candidate;
+                Logger.Debug($"Skipping {update.Id} {candidate} as an update within the installed major: the feed has withdrawn it");
+            }
+
+            return null;
         }
 
         public virtual int? CompareVersions(string versionA, string versionB)

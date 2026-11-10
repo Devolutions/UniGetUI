@@ -48,7 +48,9 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public int? CompareVersions(string versionA, string versionB);
 
-        public IPackage ResolveSkippedMajorUpdate(IPackage update);
+        public bool CanUpdateToExactVersion { get; }
+
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update);
 
         /// <summary>
         /// Initializes the Package Manager (asynchronously). Must be run before using any other method of the manager.

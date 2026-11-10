@@ -741,6 +741,36 @@ public sealed class PackageOperationsTests
         Assert.True(UpgradablePackagesLoader.Instance.Contains(package));
     }
 
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("1.5.0", true)]
+    public async Task AnUpdateWithNoKnownTargetIsRefusedWhileMajorUpdatesAreSkipped(string requestedVersion, bool runs)
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var manager = CreateRecordingProcessManager(executed, _ => true);
+        var installedOnly = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("1.0.0")
+            .Build();
+        InitializeLoaders();
+        var options = new InstallOptions { SkipMajorUpdates = true };
+        if (requestedVersion.Length > 0)
+        {
+            options.Version = requestedVersion;
+            options.VersionIsExplicit = true;
+        }
+        using var operation = new UpdatePackageOperation(installedOnly, options, IgnoreParallelInstalls: true);
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(runs ? OperationStatus.Succeeded : OperationStatus.Failed, operation.Status);
+        Assert.Equal(runs, executed.Count > 0);
+    }
+
     [Fact]
     public async Task APinnedUpdateIsRefusedWhenANewerVersionIsAlreadyInstalled()
     {

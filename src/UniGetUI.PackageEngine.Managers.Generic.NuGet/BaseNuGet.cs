@@ -45,6 +45,18 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         public override bool InstallerUrlFollowsPackageVersion => true;
 
+        protected override bool IsEligibleUpdateTarget(IPackage update, string version)
+        {
+            if (!NuGetV3ServiceIndex.IsV3Source(update.Source))
+                return true;
+
+            if (NuGetV3ServiceIndex.Resolve(update.Source) is not { } index)
+                return false;
+
+            return index.RegistrationsBaseUrl is null
+                || NuGetV3Client.GetListedStatus(index, update.Id, version) is ListedStatus.Listed;
+        }
+
         public override int? CompareVersions(string versionA, string versionB)
         {
             if (

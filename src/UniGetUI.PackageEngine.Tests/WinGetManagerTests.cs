@@ -2098,43 +2098,68 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, true, true)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    public void APinnedUpdateTargetsItsNewVersionOnlyWhileMajorUpdatesAreSkipped(
-        bool pinned,
+    [InlineData(true, "", "1.5.0")]
+    [InlineData(false, "", null)]
+    [InlineData(true, "1.2.0", "1.2.0")]
+    public void AnUpdateTargetsAVersionOnlyWhileMajorUpdatesAreSkipped(
         bool skipsMajorUpdates,
-        bool targetsVersion
+        string requestedVersion,
+        string? targetedVersion
     )
     {
-        var (manager, package) = CreateTrustTestPackage($"Contoso.Pinned{pinned}{skipsMajorUpdates}");
-        package.OverridenOptions.PinUpdateToNewVersion = pinned;
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId($"Contoso.Pinned{skipsMajorUpdates}{requestedVersion}")
+            .WithVersion("1.0.0")
+            .WithNewVersion("1.5.0")
+            .Build();
+        var options = new InstallOptions { SkipMajorUpdates = skipsMajorUpdates };
+        if (requestedVersion.Length > 0)
+        {
+            options.Version = requestedVersion;
+            options.VersionIsExplicit = true;
+        }
+
+        var parameters = RecordTrustedHostsParameters(manager, package, OperationType.Update, options);
+        var standalone = manager.OperationHelper.GetStandaloneParameters(package, options, OperationType.Update);
+
+        foreach (var built in new[] { parameters, standalone })
+        {
+            int index = built.ToList().IndexOf("--version");
+            if (targetedVersion is null)
+                Assert.Equal(-1, index);
+            else
+                Assert.Equal(CoreTools.EscapeCommandLineArgument(targetedVersion), built[index + 1]);
+        }
+    }
+
+    [Fact]
+    public void AMajorUpdateIsNeverPinned()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.MajorNotPinned");
 
         var parameters = RecordTrustedHostsParameters(
             manager,
             package,
             OperationType.Update,
-            new InstallOptions { SkipMajorUpdates = skipsMajorUpdates }
+            new InstallOptions { SkipMajorUpdates = true }
         );
 
-        int index = parameters.ToList().IndexOf("--version");
-        if (targetsVersion)
-            Assert.Equal(CoreTools.EscapeCommandLineArgument("2.0.0"), parameters[index + 1]);
-        else
-            Assert.Equal(-1, index);
+        Assert.DoesNotContain("--version", parameters);
     }
 
     [Fact]
-    public void APinnedUpdateIsRefusedUnderPinget()
+    public void ARequestedUpdateVersionIsRefusedUnderPinget()
     {
         var (manager, package) = CreateTrustTestPackage("Contoso.PinnedPinget");
         SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
-        package.OverridenOptions.PinUpdateToNewVersion = true;
 
         Assert.Throws<InvalidOperationException>(
             () => manager.OperationHelper.GetParameters(
                 package,
-                new InstallOptions { SkipMajorUpdates = true },
+                new InstallOptions { SkipMajorUpdates = true, Version = "1.2.0", VersionIsExplicit = true },
                 OperationType.Update
             )
         );
@@ -2145,15 +2170,10 @@ public sealed class WinGetManagerTests : IDisposable
     [InlineData(false)]
     public void UpdatesWithinTheMajorAreOfferedOnlyThroughSystemWinGet(bool systemWinGet)
     {
-        var manager = new EligibilityProbeWinGet();
+        var manager = new WinGet();
         SetCliToolKind(manager, systemWinGet ? WinGetCliToolKind.SystemWinGet : WinGetCliToolKind.BundledPinget);
 
-        Assert.Equal(systemWinGet, manager.ProbeCanUpdateToExactVersion);
-    }
-
-    private sealed class EligibilityProbeWinGet : WinGet
-    {
-        public bool ProbeCanUpdateToExactVersion => CanUpdateToExactVersion;
+        Assert.Equal(systemWinGet, manager.CanUpdateToExactVersion);
     }
 
     private static IReadOnlyList<string> RecordTrustedHostsParameters(

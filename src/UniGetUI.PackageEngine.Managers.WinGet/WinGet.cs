@@ -331,7 +331,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
         public bool HonorsIntegrityCheckSkipWhenElevated =>
             SelectedCliToolKind is WinGetCliToolKind.BundledPinget;
 
-        protected override bool CanUpdateToExactVersion =>
+        public override bool CanUpdateToExactVersion =>
             SelectedCliToolKind is WinGetCliToolKind.SystemWinGet
             && Capabilities.SupportsCustomVersions
             && Capabilities.CanListVersions;

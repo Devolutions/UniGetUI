@@ -1497,7 +1497,7 @@
   "Standard": "Standard",
   "Elevated": "Me privilegje të ngritura",
   "Use the font configured in the system instead of the default interface font": "Përdor fontin e konfiguruar në sistem në vend të fontit të parazgjedhur të ndërfaqes",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Mbyll UniGetUI pasi të kenë përfunduar përditësimet automatike, nëse dritarja e tij nuk është e hapur",
+  "Quit UniGetUI once automatic updates have finished": "Mbyll UniGetUI pasi të kenë përfunduar përditësimet automatike, nëse dritarja e tij nuk është e hapur",
   "Case sensitive": "Dallim mes shkronjave të mëdha dhe të vogla",
   "Search options": "Opsionet e kërkimit",
   "{package} is currently running. Close it and try again": "{package} është aktualisht në ekzekutim. Mbylle dhe provo sërish",

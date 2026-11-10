@@ -1497,7 +1497,7 @@
   "Standard": "मानक",
   "Elevated": "उन्नत",
   "Use the font configured in the system instead of the default interface font": "डीफॉल्ट इंटरफेस फॉन्टऐवजी सिस्टममध्ये कॉन्फिगर केलेला फॉन्ट वापरा",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "UniGetUI विंडो उघडी नसल्यास स्वयंचलित अद्यतने पूर्ण झाल्यावर UniGetUI बंद करा",
+  "Quit UniGetUI once automatic updates have finished": "UniGetUI विंडो उघडी नसल्यास स्वयंचलित अद्यतने पूर्ण झाल्यावर UniGetUI बंद करा",
   "Case sensitive": "अक्षरांचे केस महत्त्वाचे",
   "Search options": "शोध पर्याय",
   "{package} is currently running. Close it and try again": "{package} सध्या चालू आहे. ते बंद करा आणि पुन्हा प्रयत्न करा",

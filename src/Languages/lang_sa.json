@@ -1497,7 +1497,7 @@
   "Standard": "मानकम्",
   "Elevated": "वर्धिताधिकारयुक्तम्",
   "Use the font configured in the system instead of the default interface font": "मूल-अन्तरफलक-अक्षरशैल्याः स्थाने तन्त्रे विन्यस्ताम् अक्षरशैलीम् उपयुज्यताम्",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "स्वचालित-अद्यतनानि समाप्तानि चेत्, तस्य गवाक्षं न उद्घाटितं स्यात्, UniGetUI निर्गमय",
+  "Quit UniGetUI once automatic updates have finished": "स्वचालित-अद्यतनानि समाप्तानि चेत्, तस्य गवाक्षं न उद्घाटितं स्यात्, UniGetUI निर्गमय",
   "Case sensitive": "अक्षर-मात्रा-संवेदनशीलम्",
   "Search options": "अन्वेषण-विकल्पाः",
   "{package} is currently running. Close it and try again": "{package} अधुना चलति। तत् पिधाय पुनः प्रयतस्व",

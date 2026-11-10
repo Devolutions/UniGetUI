@@ -1497,7 +1497,7 @@
   "Standard": "Standardní",
   "Elevated": "Se zvýšenými oprávněními",
   "Use the font configured in the system instead of the default interface font": "Použít systémové písmo místo výchozího písma rozhraní",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Po dokončení automatických aktualizací ukončit UniGetUI, pokud jeho okno není otevřené",
+  "Quit UniGetUI once automatic updates have finished": "Po dokončení automatických aktualizací ukončit UniGetUI, pokud jeho okno není otevřené",
   "Case sensitive": "Rozlišovat malá a velká písmena",
   "Search options": "Možnosti hledání",
   "{package} is currently running. Close it and try again": "{package} je právě spuštěn. Zavřete ho a zkuste to znovu",

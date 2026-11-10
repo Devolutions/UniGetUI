@@ -1497,7 +1497,7 @@
   "Standard": "Τυπικό",
   "Elevated": "Με αυξημένα δικαιώματα",
   "Use the font configured in the system instead of the default interface font": "Χρήση της γραμματοσειράς του συστήματος αντί της προεπιλεγμένης γραμματοσειράς περιβάλλοντος",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Έξοδος από το UniGetUI μόλις ολοκληρωθούν οι αυτόματες ενημερώσεις, αν το παράθυρό του δεν είναι ανοιχτό",
+  "Quit UniGetUI once automatic updates have finished": "Έξοδος από το UniGetUI μόλις ολοκληρωθούν οι αυτόματες ενημερώσεις, αν το παράθυρό του δεν είναι ανοιχτό",
   "Case sensitive": "Διάκριση πεζών-κεφαλαίων",
   "Search options": "Επιλογές αναζήτησης",
   "{package} is currently running. Close it and try again": "Το {package} εκτελείται αυτήν τη στιγμή. Κλείστε το και δοκιμάστε ξανά",

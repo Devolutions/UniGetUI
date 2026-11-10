@@ -11,24 +11,39 @@ internal static class QuitAfterAutomaticUpdates
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
-    private static int _waiting;
+    private static readonly AutomaticQuitRequest Request = new();
 
-    public static void QuitWhenOperationsFinish(Task? launching = null)
+    public static void QuitWhenOperationsFinish(Task? launching = null, bool nothingToInstall = false)
     {
-        if (!Settings.Get(Settings.K.QuitAfterAutomaticUpdates))
+        if (!IsEnabled(nothingToInstall))
+        {
+            if (!nothingToInstall)
+                Request.NoteUpdatePass();
+            return;
+        }
+
+        if (!Request.TryBegin(nothingToInstall))
             return;
 
-        if (Interlocked.Exchange(ref _waiting, 1) == 1)
-            return;
-
+        if (nothingToInstall)
+            Logger.Info("Automatic updates found nothing to install, UniGetUI will quit once its other tasks have finished");
         _ = WaitAndQuitAsync(launching);
     }
 
+    public static void NoteUpdatesLaunched() => Request.NoteUpdatePass();
+
+    private static bool IsEnabled(bool nothingToInstall)
+        => AutomaticQuitMonitor.IsQuitEnabled(
+            Settings.Get(Settings.K.QuitAfterAutomaticUpdates),
+            Settings.Get(Settings.K.QuitWhenNothingToInstall),
+            nothingToInstall);
+
     private static async Task WaitAndQuitAsync(Task? launching)
     {
+        AutomaticQuitDecision decision = AutomaticQuitDecision.Cancelled;
         try
         {
-            AutomaticQuitDecision decision = await AutomaticQuitMonitor.RunAsync(
+            decision = await AutomaticQuitMonitor.RunAsync(
                 launching,
                 () => Task.Delay(PollInterval),
                 decide => Dispatcher.UIThread.InvokeAsync(decide).GetTask(),
@@ -51,18 +66,20 @@ internal static class QuitAfterAutomaticUpdates
         }
         finally
         {
-            Interlocked.Exchange(ref _waiting, 0);
+            if (Request.End() is { } lateNothingToInstall && decision is not AutomaticQuitDecision.Quit)
+                QuitWhenOperationsFinish(nothingToInstall: lateNothingToInstall);
         }
     }
 
     private static AutomaticQuitSnapshot? Sample()
     {
+        Request.MarkSampled();
         if (MainWindow.Instance is not { } window)
             return null;
 
         return new AutomaticQuitSnapshot(
             IsBusy: IsBusy(),
-            IsEnabled: Settings.Get(Settings.K.QuitAfterAutomaticUpdates),
+            IsEnabled: IsEnabled(Request.NothingToInstall),
             IsAlreadyQuitting: window.IsQuitting,
             IsWindowVisible: window.IsVisible,
             HasUnsavedWork: window.HasUnsavedWork);

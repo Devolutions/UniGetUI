@@ -1497,7 +1497,7 @@
   "Standard": "Standard",
   "Elevated": "Forhøjet",
   "Use the font configured in the system instead of the default interface font": "Brug den skrifttype, der er konfigureret i systemet, i stedet for standardskrifttypen i brugerfladen",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Afslut UniGetUI, når automatiske opdateringer er færdige, hvis vinduet ikke er åbent",
+  "Quit UniGetUI once automatic updates have finished": "Afslut UniGetUI, når automatiske opdateringer er færdige, hvis vinduet ikke er åbent",
   "Case sensitive": "Forskel på store og små bogstaver",
   "Search options": "Søgeindstillinger",
   "{package} is currently running. Close it and try again": "{package} kører i øjeblikket. Luk det, og prøv igen",

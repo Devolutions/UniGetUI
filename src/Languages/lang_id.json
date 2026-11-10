@@ -1497,7 +1497,7 @@
   "Standard": "Standar",
   "Elevated": "Ditingkatkan",
   "Use the font configured in the system instead of the default interface font": "Gunakan font yang dikonfigurasi di sistem, bukan font antarmuka default",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Keluar dari UniGetUI setelah pembaruan otomatis selesai jika jendelanya tidak terbuka",
+  "Quit UniGetUI once automatic updates have finished": "Keluar dari UniGetUI setelah pembaruan otomatis selesai jika jendelanya tidak terbuka",
   "Case sensitive": "Peka huruf besar-kecil",
   "Search options": "Opsi pencarian",
   "{package} is currently running. Close it and try again": "{package} sedang berjalan. Tutup dan coba lagi",

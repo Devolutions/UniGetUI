@@ -1497,7 +1497,7 @@
   "Standard": "Standard",
   "Elevated": "Cu drepturi elevate",
   "Use the font configured in the system instead of the default interface font": "Folosește fontul configurat în sistem în locul fontului implicit al interfeței",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Închide UniGetUI după finalizarea actualizărilor automate, dacă fereastra nu este deschisă",
+  "Quit UniGetUI once automatic updates have finished": "Închide UniGetUI după finalizarea actualizărilor automate, dacă fereastra nu este deschisă",
   "Case sensitive": "Distinge între majuscule și minuscule",
   "Search options": "Opțiuni de căutare",
   "{package} is currently running. Close it and try again": "{package} rulează în prezent. Închide-l și încearcă din nou",

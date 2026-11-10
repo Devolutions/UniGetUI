@@ -1493,7 +1493,7 @@
   "Standard": "표준",
   "Elevated": "상승됨",
   "Use the font configured in the system instead of the default interface font": "기본 인터페이스 글꼴 대신 시스템에서 설정한 글꼴 사용",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "창이 열려 있지 않은 경우 자동 업데이트가 완료되면 UniGetUI 종료",
+  "Quit UniGetUI once automatic updates have finished": "창이 열려 있지 않은 경우 자동 업데이트가 완료되면 UniGetUI 종료",
   "Case sensitive": "대/소문자 구분",
   "Search options": "검색 옵션",
   "{package} is currently running. Close it and try again": "현재 {package}이(가) 실행 중입니다. 종료한 다음 다시 시도하세요",

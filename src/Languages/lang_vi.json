@@ -1497,7 +1497,7 @@
   "Standard": "Tiêu chuẩn",
   "Elevated": "Có quyền nâng cao",
   "Use the font configured in the system instead of the default interface font": "Dùng phông chữ được cấu hình trong hệ thống thay cho phông chữ giao diện mặc định",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Thoát UniGetUI sau khi cập nhật tự động hoàn tất nếu cửa sổ ứng dụng không mở",
+  "Quit UniGetUI once automatic updates have finished": "Thoát UniGetUI sau khi cập nhật tự động hoàn tất nếu cửa sổ ứng dụng không mở",
   "Case sensitive": "Phân biệt chữ hoa chữ thường",
   "Search options": "Tùy chọn tìm kiếm",
   "{package} is currently running. Close it and try again": "{package} hiện đang chạy. Hãy đóng ứng dụng rồi thử lại",

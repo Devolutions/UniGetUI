@@ -1497,7 +1497,7 @@
   "Standard": "มาตรฐาน",
   "Elevated": "ยกระดับสิทธิ์แล้ว",
   "Use the font configured in the system instead of the default interface font": "ใช้แบบอักษรที่กำหนดไว้ในระบบแทนแบบอักษรเริ่มต้นของอินเทอร์เฟซ",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "ออกจาก UniGetUI เมื่อการอัปเดตอัตโนมัติเสร็จสิ้น หากหน้าต่างไม่ได้เปิดอยู่",
+  "Quit UniGetUI once automatic updates have finished": "ออกจาก UniGetUI เมื่อการอัปเดตอัตโนมัติเสร็จสิ้น หากหน้าต่างไม่ได้เปิดอยู่",
   "Case sensitive": "แยกตัวพิมพ์เล็กและตัวพิมพ์ใหญ่",
   "Search options": "ตัวเลือกการค้นหา",
   "{package} is currently running. Close it and try again": "{package} กำลังทำงานอยู่ ปิดแล้วลองอีกครั้ง",

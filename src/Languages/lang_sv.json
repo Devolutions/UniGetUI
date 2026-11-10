@@ -1497,7 +1497,7 @@
   "Standard": "Standard",
   "Elevated": "Med förhöjda behörigheter",
   "Use the font configured in the system instead of the default interface font": "Använd systemets konfigurerade teckensnitt i stället för standardteckensnittet i gränssnittet",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Avsluta UniGetUI när automatiska uppdateringar är klara, om dess fönster inte är öppet",
+  "Quit UniGetUI once automatic updates have finished": "Avsluta UniGetUI när automatiska uppdateringar är klara, om dess fönster inte är öppet",
   "Case sensitive": "Skiftlägeskänslig",
   "Search options": "Sökalternativ",
   "{package} is currently running. Close it and try again": "{package} körs för närvarande. Stäng det och försök igen",

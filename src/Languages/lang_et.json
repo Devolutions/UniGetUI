@@ -1497,7 +1497,7 @@
   "Standard": "Tavaline",
   "Elevated": "Kõrgendatud õigustega",
   "Use the font configured in the system instead of the default interface font": "Kasuta liidese vaikefondi asemel süsteemis määratud fonti",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Sulge UniGetUI pärast automaatsete uuenduste lõppu, kui selle aken pole avatud",
+  "Quit UniGetUI once automatic updates have finished": "Sulge UniGetUI pärast automaatsete uuenduste lõppu, kui selle aken pole avatud",
   "Case sensitive": "Tõstutundlik",
   "Search options": "Otsingusätted",
   "{package} is currently running. Close it and try again": "{package} töötab praegu. Sule see ja proovi uuesti",

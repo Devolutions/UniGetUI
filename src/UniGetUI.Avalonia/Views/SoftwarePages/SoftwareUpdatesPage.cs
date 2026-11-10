@@ -478,11 +478,16 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
     // ─── Auto-update on load ──────────────────────────────────────────────────
 
+    private static readonly OneTimeClaim UpdateAppsPassHandled = new();
+
     private static async Task WhenPackagesLoaded()
     {
         try
         {
             bool shouldAutoInstall = MaintenanceScheduler.IsAutoInstallDue();
+            bool checkSucceeded = UpgradablePackagesLoader.Instance
+                is { IsLoaded: true, LastLoadReportedFailures: false, AnyManagerReady: true };
+            bool hasUpdateAppsArgument = CoreData.GetProcessArguments().Contains("--updateapps");
 
             var upgradable = UpgradablePackagesLoader.Instance.Packages
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
@@ -490,9 +495,12 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
             if (upgradable.Count == 0)
             {
-                if (OperatingSystem.IsWindows()
-                    && UpgradablePackagesLoader.Instance is { IsLoaded: true, LastLoadReportedFailures: false, AnyManagerReady: true })
+                if (OperatingSystem.IsWindows() && checkSucceeded)
                     WindowsAppNotificationBridge.RemoveUpdatesAvailableNotification();
+                bool firstUpdateAppsPass = AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: false, UpdateAppsPassHandled);
+                if (AutomaticQuitMonitor.ShouldQuitAfterEmptyPass(checkSucceeded, shouldAutoInstall, firstUpdateAppsPass))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: true);
                 return;
             }
 
@@ -514,15 +522,24 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             else if (shouldAutoInstall)
             {
                 MaintenanceScheduler.MarkAutoInstallHandled();
-                if (await LaunchScheduledUpdate(upgradable))
-                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish();
+                AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: true, UpdateAppsPassHandled);
+                bool launched = await LaunchScheduledUpdate(upgradable);
+                if (AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: !launched);
             }
-            else if (CoreData.GetProcessArguments().Contains("--updateapps"))
+            else if (hasUpdateAppsArgument)
             {
-                Task updateAll = AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
+                bool firstUpdateAppsPass = AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: true, UpdateAppsPassHandled);
+                var started = await AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
+                bool launched = started.Count > 0;
                 ShowUpgradingPackagesNotification(await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(upgradable));
                 Logger.Warn("Automatic install of updates has been enabled via Command Line (user settings have been overriden)");
-                QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(updateAll);
+                if (firstUpdateAppsPass && AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: !launched);
+                else if (launched)
+                    QuitAfterAutomaticUpdates.NoteUpdatesLaunched();
             }
             else
             {

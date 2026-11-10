@@ -1497,7 +1497,7 @@
   "Standard": "Standaard",
   "Elevated": "Verhoogd",
   "Use the font configured in the system instead of the default interface font": "Gebruik het systeemlettertype in plaats van het standaardlettertype van de interface",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "UniGetUI afsluiten zodra automatische updates zijn voltooid, als het venster niet is geopend",
+  "Quit UniGetUI once automatic updates have finished": "UniGetUI afsluiten zodra automatische updates zijn voltooid, als het venster niet is geopend",
   "Case sensitive": "Hoofdlettergevoelig",
   "Search options": "Zoekopties",
   "{package} is currently running. Close it and try again": "{package} is momenteel actief. Sluit het en probeer het opnieuw",

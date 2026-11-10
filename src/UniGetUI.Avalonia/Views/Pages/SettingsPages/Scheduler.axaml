@@ -331,7 +331,15 @@
 
             <settings:CheckboxCard x:Name="QuitAfterAutomaticUpdatesCard"
                                    SettingName="QuitAfterAutomaticUpdates"
-                                   Text="{t:Translate Text='Quit UniGetUI once automatic updates have finished, if its window is not open'}"
+                                   Text="{t:Translate Text='Quit UniGetUI once automatic updates have finished'}"
+                                   Description="{t:Translate Text='Only when UniGetUI is running in the background with its window closed.'}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="QuitWhenNothingToInstallCard"
+                                   SettingName="QuitWhenNothingToInstall"
+                                   Text="{t:Translate Text='Quit UniGetUI when automatic updates find nothing to install'}"
+                                   Description="{t:Translate Text='Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.'}"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"/>
 

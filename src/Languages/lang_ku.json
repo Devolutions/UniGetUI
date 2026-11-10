@@ -1497,7 +1497,7 @@
   "Standard": "ستاندارد",
   "Elevated": "بەرزکراوە",
   "Use the font configured in the system instead of the default interface font": "لە جیاتی فۆنتی بنەڕەتیی ڕووکار، ئەو فۆنتە بەکاربهێنە کە لە سیستەمدا ڕێکخراوە",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "ئەگەر پەنجەرەی UniGetUI کراوە نییە، دوای تەواوبوونی نوێکردنەوە خۆکارەکان بیبەستە",
+  "Quit UniGetUI once automatic updates have finished": "ئەگەر پەنجەرەی UniGetUI کراوە نییە، دوای تەواوبوونی نوێکردنەوە خۆکارەکان بیبەستە",
   "Case sensitive": "جیاوازیی پیتی گەورە و بچووک",
   "Search options": "هەڵبژاردەکانی گەڕان",
   "{package} is currently running. Close it and try again": "{package} ئێستا لە کاردایە. دایبخە و دووبارە هەوڵ بدەوە",

@@ -1497,7 +1497,7 @@
   "Standard": "සාමාන්‍ය",
   "Elevated": "උසස් අවසර සහිත",
   "Use the font configured in the system instead of the default interface font": "පෙරනිමි අතුරුමුහුණත් අකුරු වෙනුවට පද්ධතියේ වින්‍යාස කර ඇති අකුරු භාවිතා කරන්න",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "UniGetUI කවුළුව විවෘතව නොමැති නම්, ස්වයංක්‍රීය යාවත්කාලීන අවසන් වූ පසු UniGetUI වෙතින් පිටවන්න",
+  "Quit UniGetUI once automatic updates have finished": "UniGetUI කවුළුව විවෘතව නොමැති නම්, ස්වයංක්‍රීය යාවත්කාලීන අවසන් වූ පසු UniGetUI වෙතින් පිටවන්න",
   "Case sensitive": "අකුරු විශාල/කුඩා බව සලකන්න",
   "Search options": "සෙවුම් විකල්ප",
   "{package} is currently running. Close it and try again": "{package} දැනට ක්‍රියාත්මකයි. එය වසා නැවත උත්සාහ කරන්න",

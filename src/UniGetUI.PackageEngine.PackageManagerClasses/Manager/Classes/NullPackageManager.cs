@@ -35,6 +35,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
         public bool IdentifiersAreQuotedOnCommandLine => false;
 
+        public IPackage ResolveSkippedMajorUpdate(IPackage update) => update;
+
         public int? CompareVersions(string versionA, string versionB)
         {
             var parsedA = CoreTools.VersionStringToStruct(versionA);

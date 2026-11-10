@@ -63,6 +63,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return false;
             }
 
+            if (installOptions.SkipMajorUpdates && package.IsUpdateMajor())
+            {
+                Logger.Info(
+                    $"Ignoring package {package.Id} because it is a major update ({package.VersionString} -> {package.NewVersionString}) and SkipMajorUpdates is set to true."
+                );
+                return false;
+            }
+
             if (await package.HasUpdatesIgnoredAsync(package.NewVersionString))
             {
                 IgnoredPackages[package.Id] = package;
@@ -140,6 +148,30 @@ namespace UniGetUI.PackageEngine.PackageLoader
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
             return manager.GetAvailableUpdates();
+        }
+
+        public async Task<IPackage?> ResolveSkippedMajorUpdateAsync(IPackage package)
+        {
+            if (!package.IsUpgradable)
+                return package;
+
+            bool skipsMajorUpdates = (await package.GetInstallOptions()).SkipMajorUpdates;
+            if (package.OverridenOptions.PinUpdateToNewVersion && !skipsMajorUpdates)
+            {
+                Remove(package);
+                return null;
+            }
+
+            if (!skipsMajorUpdates || !package.IsUpdateMajor())
+                return package;
+
+            var resolved = await Task.Run(() => package.Manager.ResolveSkippedMajorUpdate(package));
+            Remove(package);
+            if (ReferenceEquals(resolved, package) || !await IsPackageValid(resolved))
+                return null;
+
+            await AddForeign(resolved);
+            return resolved;
         }
 
         protected override Task WhenAddingPackage(IPackage package)

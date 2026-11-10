@@ -411,6 +411,12 @@ namespace UniGetUI.PackageEngine.PackageClasses
             return changed >= level;
         }
 
+        public virtual bool IsUpdateMajor() =>
+            IsUpgradable
+            && VersionString.AsSpan().ContainsAnyInRange('0', '9')
+            && NewVersionString.AsSpan().ContainsAnyInRange('0', '9')
+            && HighestChangedVersionComponent() == 1;
+
         public virtual Task<InstallOptions> GetInstallOptions() =>
             InstallOptionsFactory.LoadApplicableAsync(this);
 

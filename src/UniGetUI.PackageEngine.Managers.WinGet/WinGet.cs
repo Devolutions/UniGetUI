@@ -331,6 +331,11 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
         public bool HonorsIntegrityCheckSkipWhenElevated =>
             SelectedCliToolKind is WinGetCliToolKind.BundledPinget;
 
+        protected override bool CanUpdateToExactVersion =>
+            SelectedCliToolKind is WinGetCliToolKind.SystemWinGet
+            && Capabilities.SupportsCustomVersions
+            && Capabilities.CanListVersions;
+
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
             return WinGetHelper.Instance.FindPackages_UnSafe(query);

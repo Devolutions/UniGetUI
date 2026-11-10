@@ -182,6 +182,21 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 ["--version", CoreTools.EscapeCommandLineArgument(options.Version)]
             );
         }
+        else if (
+            operation is OperationType.Update
+            && package.IsUpgradable
+            && package.OverridenOptions.PinUpdateToNewVersion
+            && options.SkipMajorUpdates
+        )
+        {
+            if (usePinget)
+                throw new InvalidOperationException(
+                    $"Refusing to update {package.Id} to {package.NewVersionString} with Pinget: its upgrade command cannot target a version, so it would install the latest one instead."
+                );
+            parameters.AddRange(
+                ["--version", CoreTools.EscapeCommandLineArgument(package.NewVersionString)]
+            );
+        }
 
         if (usePinget && operation is OperationType.Update)
         {

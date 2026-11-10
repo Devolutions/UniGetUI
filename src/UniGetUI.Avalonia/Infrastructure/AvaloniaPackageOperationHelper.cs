@@ -43,8 +43,9 @@ internal static class AvaloniaPackageOperationHelper
         IReadOnlyList<IPackage> packages, bool background = false)
     {
         List<AbstractOperation> started = [];
-        foreach (var pkg in packages)
+        foreach (var listed in packages)
         {
+            var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed) ?? listed;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
             if (PackageOperation.IsLeftOutOfBulkUpdates(pkg, opts)) continue;
@@ -61,12 +62,14 @@ internal static class AvaloniaPackageOperationHelper
 
     public static async Task UpdateForIdAsync(string packageId)
     {
-        var pkg = UpgradablePackagesLoader.Instance.Packages.FirstOrDefault(p => p.Id == packageId);
-        if (pkg is null)
+        var listed = UpgradablePackagesLoader.Instance.Packages.FirstOrDefault(p => p.Id == packageId);
+        if (listed is null)
         {
             Logger.Warn($"BackgroundApi: no upgradable package found with id={packageId}");
             return;
         }
+
+        var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed) ?? listed;
 
         var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
         if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) return;

@@ -2097,6 +2097,77 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Empty(recorded);
     }
 
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    public void APinnedUpdateTargetsItsNewVersionOnlyWhileMajorUpdatesAreSkipped(
+        bool pinned,
+        bool skipsMajorUpdates,
+        bool targetsVersion
+    )
+    {
+        var (manager, package) = CreateTrustTestPackage($"Contoso.Pinned{pinned}{skipsMajorUpdates}");
+        package.OverridenOptions.PinUpdateToNewVersion = pinned;
+
+        var parameters = RecordTrustedHostsParameters(
+            manager,
+            package,
+            OperationType.Update,
+            new InstallOptions { SkipMajorUpdates = skipsMajorUpdates }
+        );
+
+        int index = parameters.ToList().IndexOf("--version");
+        if (targetsVersion)
+            Assert.Equal(CoreTools.EscapeCommandLineArgument("2.0.0"), parameters[index + 1]);
+        else
+            Assert.Equal(-1, index);
+    }
+
+    [Fact]
+    public void APinnedUpdateIsRefusedUnderPinget()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.PinnedPinget");
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        package.OverridenOptions.PinUpdateToNewVersion = true;
+
+        Assert.Throws<InvalidOperationException>(
+            () => manager.OperationHelper.GetParameters(
+                package,
+                new InstallOptions { SkipMajorUpdates = true },
+                OperationType.Update
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void UpdatesWithinTheMajorAreOfferedOnlyThroughSystemWinGet(bool systemWinGet)
+    {
+        var manager = new EligibilityProbeWinGet();
+        SetCliToolKind(manager, systemWinGet ? WinGetCliToolKind.SystemWinGet : WinGetCliToolKind.BundledPinget);
+
+        Assert.Equal(systemWinGet, manager.ProbeCanUpdateToExactVersion);
+    }
+
+    private sealed class EligibilityProbeWinGet : WinGet
+    {
+        public bool ProbeCanUpdateToExactVersion => CanUpdateToExactVersion;
+    }
+
+    private static IReadOnlyList<string> RecordTrustedHostsParameters(
+        WinGet manager,
+        IPackage package,
+        OperationType operation,
+        InstallOptions options
+    )
+    {
+        IReadOnlyList<string> parameters = [];
+        RecordTrustedHosts(() => parameters = manager.OperationHelper.GetParameters(package, options, operation));
+        return parameters;
+    }
+
     private static (WinGet Manager, IPackage Package) CreateTrustTestPackage(string id)
     {
         var manager = new WinGet();

@@ -43,8 +43,11 @@ internal static class TuiPackageActions
         bool? interactive = null, bool? skipHash = null, bool keepUpdatesPaused = false, bool bulk = false)
     {
         int started = 0;
-        foreach (IPackage pkg in packages)
+        foreach (IPackage listed in packages)
         {
+            IPackage pkg = keepUpdatesPaused
+                ? listed
+                : await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed) ?? listed;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg, elevated: elevated,
                 interactive: interactive, no_integrity: skipHash);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;

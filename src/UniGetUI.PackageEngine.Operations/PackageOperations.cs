@@ -137,6 +137,12 @@ namespace UniGetUI.PackageEngine.Operations
             Role = role;
             if (role is OperationType.Update)
                 options = options.WithoutSavedVersion();
+            if (IsPinnedUpdate(package, options, role))
+            {
+                options = options.Copy();
+                options.Version = package.NewVersionString;
+                options.VersionIsExplicit = true;
+            }
             if (ReinstallsOnUpdate(package, options, role))
             {
                 Options = PinReinstallVersion(package, options);
@@ -1624,6 +1630,38 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             return kept;
+        }
+
+        private static bool IsPinnedUpdate(IPackage package, InstallOptions options, OperationType role) =>
+            role is OperationType.Update
+            && package.IsUpgradable
+            && package.OverridenOptions.PinUpdateToNewVersion
+            && options.SkipMajorUpdates;
+
+        protected override string? RefusalBeforeStart()
+        {
+            if (Role is not OperationType.Update)
+                return null;
+
+            if (IsPinnedUpdate(Package, Options, Role) && Package.NewerVersionIsInstalled())
+                return CoreTools.Translate(
+                    "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.",
+                    Package.Name,
+                    Package.NewVersionString
+                );
+
+            if (
+                Options.SkipMajorUpdates
+                && !(Options.VersionIsExplicit && Options.Version.Length > 0)
+                && Package.IsUpdateMajor()
+            )
+                return CoreTools.Translate(
+                    "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.",
+                    Package.Name,
+                    Package.NewVersionString
+                );
+
+            return null;
         }
 
         private static bool IsKnownToBeUninstalled(IPackage package)

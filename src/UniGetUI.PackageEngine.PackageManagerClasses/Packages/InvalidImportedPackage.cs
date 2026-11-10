@@ -211,6 +211,11 @@ namespace UniGetUI.PackageEngine.PackageClasses
             return false;
         }
 
+        public bool IsUpdateMajor()
+        {
+            return false;
+        }
+
         public async Task RemoveFromIgnoredUpdatesAsync()
         {
             return;

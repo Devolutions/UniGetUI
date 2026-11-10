@@ -2619,5 +2619,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex에서 잘못된 마켓플레이스의 플러그인을 반환했습니다.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Codex 앱에서 제공하며 제거해도 복원됩니다. 계속해서 사용하거나 사용하지 않도록 설정할 수 있습니다.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "지원되지 않는 Codex 마켓플레이스 목록입니다. Codex CLI를 업데이트한 다음 다시 시도하세요.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot 앱에서 마켓플레이스 또는 플러그인 확인 양식을 여세요. GitHub Copilot에서 로컬 설치 목록을 관리하세요."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot 앱에서 마켓플레이스 또는 플러그인 확인 양식을 여세요. GitHub Copilot에서 로컬 설치 목록을 관리하세요.",
+  "[... {0} characters omitted ...]": "[... {0}자 생략됨 ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "{package}의 새 버전은 현재 설치된 버전과 다른 방식으로 설치되어 있습니다. 설치 옵션에서 \"업데이트 시 제거 후 다시 설치\"를 켠 다음 다시 업데이트하세요",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "이 버전은 현재 설치된 버전과 다른 방식으로 설치되어 있으므로, 업데이트하면 현재 버전을 먼저 제거합니다. 이 패키지에 대해 \"업데이트 시 제거 후 다시 설치\"를 켜지 않으면 자동 업데이트와 모두 업데이트에서 제외됩니다.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey에서 {0}을(를) 업데이트하지 않았습니다: 소스에서 제공하는 최신 버전이 {1}입니다",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey에서 {0}을(를) 업데이트하지 않았습니다. 패키지가 고정되어 있거나 소스에서 더 최신 버전을 제공하지 않을 수 있습니다."
 }

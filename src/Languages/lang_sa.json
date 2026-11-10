@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex अन्यस्य marketplace कृते plugin प्रत्यदात्।",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Codex app द्वारा प्रदत्तम्, निष्कासिते पुनः स्थापयति च। तथापि भवान् तत् सक्रियं निष्क्रियं वा कर्तुं शक्नोति।",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "असमर्थितं Codex marketplace विवरणम्। Codex CLI अद्यतनयित्वा पुनः प्रयतताम्।",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot app मध्ये marketplace अथवा plugin अनुमोदन-प्रपत्रम् उद्घाटयतु। स्थानीय-स्थापितं विवरणं GitHub Copilot मध्ये प्रबन्धयतु।"
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot app मध्ये marketplace अथवा plugin अनुमोदन-प्रपत्रम् उद्घाटयतु। स्थानीय-स्थापितं विवरणं GitHub Copilot मध्ये प्रबन्धयतु।",
+  "[... {0} characters omitted ...]": "[... {0} अक्षराणि लोपितानि ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "नवीनं {package} संस्करणं भवतः विद्यमानात् भिन्नरीत्या स्थापितम् अस्ति। तस्य स्थापन-विकल्पेषु \"अद्यतनकाले विस्थाप्य पुनः स्थापयतु\" इति सक्रियं कुर्वन्तु, ततः पुनः अद्यतनयतु।",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "एतत् संस्करणं भवतः विद्यमानात् भिन्नरीत्या स्थापितम् अस्ति, अतः अद्यतनात् पूर्वं वर्तमानं संस्करणं विस्थाप्यते। अस्य पुटकस्य कृते \"अद्यतनकाले विस्थाप्य पुनः स्थापयतु\" इति सक्रियं न कृतं चेत्, स्वचालित-अद्यतनानि तथा \"सर्वाणि अद्यतनयतु\" इत्येतौ एतत् वर्जयतः।",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey इत्यनेन {0} अद्यतनं न कृतम्: तस्य स्रोतांसि {1} इत्येतत् नवीनतमं संस्करणं प्रददति।",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey इत्यनेन {0} अद्यतनं न कृतम्। पुटकं स्थिरीकृतं स्यात्, अथवा तस्य स्रोतांसि नवीनतरं संस्करणं न प्रददति।"
 }

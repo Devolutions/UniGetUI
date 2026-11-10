@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex ভুল মার্কেটপ্লেসের একটি প্লাগইন দিয়েছে।",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Codex অ্যাপ থেকে দেওয়া হয়; সরানো হলে অ্যাপটি আবার ফিরিয়ে আনে। তবু আপনি এটি চালু বা বন্ধ করতে পারেন।",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Codex-এর মার্কেটপ্লেস তালিকা সমর্থিত নয়। Codex CLI আপডেট করে আবার চেষ্টা করুন।",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot অ্যাপে মার্কেটপ্লেস বা প্লাগইন নিশ্চিতকরণ ফর্ম খুলুন। GitHub Copilot-এ স্থানীয় ইনস্টল করা তালিকা পরিচালনা করুন।"
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot অ্যাপে মার্কেটপ্লেস বা প্লাগইন নিশ্চিতকরণ ফর্ম খুলুন। GitHub Copilot-এ স্থানীয় ইনস্টল করা তালিকা পরিচালনা করুন।",
+  "[... {0} characters omitted ...]": "[... {0}টি অক্ষর বাদ দেওয়া হয়েছে ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "আপনার কাছে থাকা সংস্করণের থেকে {package}-এর নতুন সংস্করণটি ভিন্নভাবে ইনস্টল করা হয়েছে। এর ইনস্টলেশন বিকল্পে \"আপডেট হলে আনইনস্টল করে পুনরায় ইনস্টল করুন\" চালু করুন, তারপর আবার আপডেট করুন।",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "আপনার কাছে থাকা সংস্করণের থেকে এই সংস্করণটি ভিন্নভাবে ইনস্টল করা হয়েছে, তাই আপডেট করার সময় প্রথমে বর্তমান সংস্করণটি আনইনস্টল হবে। এই প্যাকেজের জন্য \"আপডেট হলে আনইনস্টল করে পুনরায় ইনস্টল করুন\" চালু না থাকলে স্বয়ংক্রিয় আপডেট এবং সব আপডেট করুন থেকে এটি বাদ থাকবে।",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey {0} আপডেট করেনি: সংস্করণ {1} এর সোর্সগুলোতে উপলব্ধ সর্বশেষ সংস্করণ",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey {0} আপডেট করেনি। প্যাকেজটি পিন করা থাকতে পারে, অথবা এর সোর্সগুলোতে কোনো নতুন সংস্করণ উপলব্ধ নাও থাকতে পারে"
 }

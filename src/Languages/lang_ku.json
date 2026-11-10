@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex پێوەکراوێکی بۆ بازاڕێکی هەڵە گەڕاندەوە.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "لە ئەپی Codex ـەوە دابین کراوە و ئەگەر لاببرێت ئەپەکە دەیگەڕێنێتەوە. هێشتا دەتوانیت چالاکی یان ناچالاکی بکەیت.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "لیستی بازاڕی Codex پشتگیری ناکرێت. Codex CLI نوێ بکەرەوە و دووبارە هەوڵ بدەوە.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "فۆڕمی پشتڕاستکردنەوەی بازاڕ یان پێوەکراو لە ئەپی Copilot بکەرەوە. لیستی ناوخۆیی دامەزراو لە GitHub Copilot بەڕێوە ببە."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "فۆڕمی پشتڕاستکردنەوەی بازاڕ یان پێوەکراو لە ئەپی Copilot بکەرەوە. لیستی ناوخۆیی دامەزراو لە GitHub Copilot بەڕێوە ببە.",
+  "[... {0} characters omitted ...]": "[... {0} پیت لادرا ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "وەشانی نوێی {package} بە شێوەیەکی جیاواز لە وەشانی ئێستات دامەزراوە. لە هەڵبژاردەکانی دامەزراندنی ئەو، «لەکاتی نوێکردنەوەدا بسڕەوە و دووبارە دایبمەزرێنە» چالاک بکە، پاشان دووبارە نوێی بکەرەوە",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "ئەم وەشانە بە شێوەیەکی جیاواز لە وەشانی ئێستات دامەزراوە، بۆیە نوێکردنەوەی ئەو سەرەتا وەشانی ئێستا دەسڕێتەوە. نوێکردنەوەی خۆکار و «هەمووی نوێ بکەرەوە» ئەمە وەلا دەنێن، مەگەر «لەکاتی نوێکردنەوەدا بسڕەوە و دووبارە دایبمەزرێنە» بۆ ئەم پاکێجە چالاک بکرێت.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey {0}ی نوێ نەکردەوە: وەشانی {1} نوێترین وەشانە کە سەرچاوەکانی پێشکەشی دەکەن",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey {0}ی نوێ نەکردەوە. لەوانەیە پاکێجەکە پین کراو بێت، یان سەرچاوەکانی هیچ وەشانێکی نوێتریان پێشکەش نەکەن"
 }

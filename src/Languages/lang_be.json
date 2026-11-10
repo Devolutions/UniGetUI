@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex вярнуў убудову не з таго маркетплэйса.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Прапанавана праграмай Codex, якая адновіць яе пасля выдалення. Вы ўсё яшчэ можаце ўключаць і выключаць яе.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Фармат спіса маркетплэйсаў Codex не падтрымліваецца. Абнавіце Codex CLI і паспрабуйце зноў.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Адкрыць форму пацвярджэння маркетплэйса або ўбудовы ў праграме Copilot. Кіруйце спісам лакальна ўсталяваных убудоў у GitHub Copilot."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Адкрыць форму пацвярджэння маркетплэйса або ўбудовы ў праграме Copilot. Кіруйце спісам лакальна ўсталяваных убудоў у GitHub Copilot.",
+  "[... {0} characters omitted ...]": "[... прапушчана {0} сімвалаў ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Новая версія {package} усталявана не так, як тая, што ў вас. У параметрах усталявання ўключыце для яе «Спачатку выдаліць, потым пераўсталяваць пры абнаўленні», а затым паўтарыце абнаўленне",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Гэтая версія ўсталявана не так, як тая, што ў вас, таму пры абнаўленні бягучая версія спачатку выдаляецца. Аўтаматычныя абнаўленні і «Абнавіць усё» прапускаюць яе, калі для гэтага пакета не ўключана «Спачатку выдаліць, потым пераўсталяваць пры абнаўленні».",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey не абнавіў {0}: версія {1} — найноўшая з прапанаваных яго крыніцамі",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey не абнавіў {0}. Магчыма, пакет замацаваны або яго крыніцы не прапануюць навейшую версію"
 }

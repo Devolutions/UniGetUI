@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex je vrnil vtičnik za napačno tržnico.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Priloži ga aplikacija Codex, ki ga ob odstranitvi obnovi. Še vedno ga lahko vklopite ali izklopite.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Nepodprt seznam tržnic Codex. Posodobite Codex CLI in poskusite znova.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Odprite potrditveni obrazec za tržnico ali vtičnik v aplikaciji Copilot. Lokalni seznam nameščenih elementov upravljajte v GitHub Copilot."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Odprite potrditveni obrazec za tržnico ali vtičnik v aplikaciji Copilot. Lokalni seznam nameščenih elementov upravljajte v GitHub Copilot.",
+  "[... {0} characters omitted ...]": "[... izpuščenih {0} znakov ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Nova različica paketa {package} je nameščena drugače od različice, ki jo imate. V možnostih namestitve zanjo vklopite »Odstrani in nato znova namesti ob posodobitvi« ter jo nato znova posodobite",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Ta različica je nameščena drugače od tiste, ki jo imate, zato se ob posodobitvi najprej odstrani trenutna različica. Samodejne posodobitve in »Posodobi vse« jo izpustijo, razen če je za ta paket vklopljena možnost »Odstrani in nato znova namesti ob posodobitvi«.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey ni posodobil {0}: različica {1} je najnovejša, ki jo ponujajo njegovi viri",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey ni posodobil {0}. Paket je morda pripet ali pa njegovi viri ne ponujajo novejše različice"
 }

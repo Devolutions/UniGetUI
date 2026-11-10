@@ -2624,5 +2624,9 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex 傳回了來自錯誤市集的外掛程式。",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "由 Codex 應用程式提供；若移除此項目，應用程式會將其還原。您仍可將其開啟或關閉。",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Codex 市集清單不受支援。請更新 Codex CLI，然後再試一次。",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "在 Copilot 應用程式中開啟市集或外掛程式確認表單。在 GitHub Copilot 中管理本機已安裝項目清單。"
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "在 Copilot 應用程式中開啟市集或外掛程式確認表單。在 GitHub Copilot 中管理本機已安裝項目清單。",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "{package} 的新版本與目前安裝的版本採用不同的安裝方式。請在該套件的安裝選項中啟用「更新時先解除安裝，再重新安裝」，然後再次更新。",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "此版本與目前安裝的版本採用不同的安裝方式，因此更新時會先解除安裝目前版本。除非為此套件啟用「更新時先解除安裝，再重新安裝」，否則自動更新和「全部更新」都會略過此套件。",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey 未更新 {0}：其來源提供的最新版本為 {1}",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey 未更新 {0}。此套件可能已固定版本，或其來源沒有提供較新的版本。"
 }

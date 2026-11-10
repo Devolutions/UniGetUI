@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex החזיר תוסף עבור זירת מסחר שגויה.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "מסופק על ידי אפליקציית Codex, שתשחזר אותו אם יוסר. עדיין אפשר להפעיל או להשבית אותו.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "רשימת זירות המסחר של Codex אינה נתמכת. עדכן את Codex CLI ונסה שוב.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "פתח טופס אישור של זירת מסחר או תוסף באפליקציית Copilot. נהל את רשימת הפריטים המותקנים המקומית ב-GitHub Copilot."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "פתח טופס אישור של זירת מסחר או תוסף באפליקציית Copilot. נהל את רשימת הפריטים המותקנים המקומית ב-GitHub Copilot.",
+  "[... {0} characters omitted ...]": "[... הושמטו {0} תווים ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "הגרסה החדשה של {package} מותקנת באופן שונה מהגרסה שברשותך. הפעל עבורה באפשרויות ההתקנה שלה את האפשרות \"הסר התקנה ולאחר מכן התקן מחדש בעת עדכון\", ואז עדכן אותה שוב",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "גרסה זו מותקנת באופן שונה מהגרסה שברשותך, ולכן עדכון שלה מסיר תחילה את הגרסה הנוכחית. עדכונים אוטומטיים ו\"עדכן הכל\" מדלגים עליה, אלא אם האפשרות \"הסר התקנה ולאחר מכן התקן מחדש בעת עדכון\" מופעלת עבור חבילה זו.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey לא עדכן את {0}: גרסה {1} היא החדשה ביותר שהמקורות שלו מציעים",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey לא עדכן את {0}. ייתכן שהחבילה נעולה לגרסה מסוימת, או שהמקורות שלה אינם מציעים גרסה חדשה יותר"
 }

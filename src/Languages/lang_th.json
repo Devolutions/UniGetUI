@@ -2623,5 +2623,9 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex ส่งปลั๊กอินจากมาร์เก็ตเพลสที่ไม่ถูกต้องกลับมา",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "แอป Codex เป็นผู้จัดเตรียมและจะกู้คืนหากถูกนำออก คุณยังสามารถเปิดหรือปิดใช้งานได้",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "รายการมาร์เก็ตเพลส Codex ไม่รองรับ อัปเดต Codex CLI แล้วลองอีกครั้ง",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "เปิดแบบฟอร์มยืนยันมาร์เก็ตเพลสหรือปลั๊กอินในแอป Copilot จัดการรายการที่ติดตั้งในเครื่องได้ใน GitHub Copilot"
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "เปิดแบบฟอร์มยืนยันมาร์เก็ตเพลสหรือปลั๊กอินในแอป Copilot จัดการรายการที่ติดตั้งในเครื่องได้ใน GitHub Copilot",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "เวอร์ชันใหม่ของ {package} ติดตั้งแตกต่างจากเวอร์ชันที่คุณมีอยู่ ให้เปิดตัวเลือก \"ถอนการติดตั้งแล้วติดตั้งใหม่เมื่อมีการอัปเดต\" ในตัวเลือกการติดตั้งของแพ็กเกจนี้ แล้วอัปเดตอีกครั้ง",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "เวอร์ชันนี้ติดตั้งแตกต่างจากเวอร์ชันที่คุณมีอยู่ ดังนั้นการอัปเดตจะถอนการติดตั้งเวอร์ชันปัจจุบันก่อน การอัปเดตอัตโนมัติและอัปเดตทั้งหมดจะไม่รวมแพ็กเกจนี้ เว้นแต่จะเปิดตัวเลือก \"ถอนการติดตั้งแล้วติดตั้งใหม่เมื่อมีการอัปเดต\" สำหรับแพ็กเกจนี้",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey ไม่ได้อัปเดต {0}: เวอร์ชัน {1} เป็นเวอร์ชันล่าสุดที่แหล่งแพ็กเกจมีให้",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey ไม่ได้อัปเดต {0} แพ็กเกจนี้อาจถูกปักหมุด หรือแหล่งแพ็กเกจอาจไม่มีเวอร์ชันที่ใหม่กว่า"
 }

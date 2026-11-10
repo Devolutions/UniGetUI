@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex liveris kromprogramon por malĝusta bazaro.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Provizita de la Codex-aplikaĵo, kiu restarigas ĝin se ĝi estas forigita. Vi tamen povas ŝalti aŭ malŝalti ĝin.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Nesubtenata listo de Codex-bazaroj. Ĝisdatigu la Codex CLI kaj reprovu.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Malfermu konfirmilon pri bazaro aŭ kromprogramo en la Copilot-aplikaĵo. Administru la lokan liston de instalitaĵoj en GitHub Copilot."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Malfermu konfirmilon pri bazaro aŭ kromprogramo en la Copilot-aplikaĵo. Administru la lokan liston de instalitaĵoj en GitHub Copilot.",
+  "[... {0} characters omitted ...]": "[... {0} signoj preterlasitaj ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "La nova versio de {package} estas instalita alimaniere ol tiu, kiun vi havas. Ŝaltu \"Malinstali, poste reinstali dum ĝisdatigo\" por ĝi en ĝiaj instalaj opcioj, poste ĝisdatigu ĝin denove",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Ĉi tiu versio estas instalita alimaniere ol tiu, kiun vi havas, do ĝisdatigi ĝin unue malinstalas la nunan version. Aŭtomataj ĝisdatigoj kaj Ĝisdatigi ĉion preterlasas ĝin, krom se \"Malinstali, poste reinstali dum ĝisdatigo\" estas ŝaltita por ĉi tiu pakaĵo.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey ne ĝisdatigis {0}: versio {1} estas la plej nova, kiun ĝiaj fontoj ofertas",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey ne ĝisdatigis {0}. La pakaĵo eble estas fiksita, aŭ ĝiaj fontoj eble ne ofertas pli novan version"
 }

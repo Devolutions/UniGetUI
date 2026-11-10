@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex trả về plugin thuộc marketplace không đúng.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Do ứng dụng Codex cung cấp và sẽ khôi phục nếu bị xóa. Bạn vẫn có thể bật hoặc tắt plugin này.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Danh sách marketplace Codex không được hỗ trợ. Hãy cập nhật Codex CLI rồi thử lại.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Mở biểu mẫu xác nhận marketplace hoặc plugin trong ứng dụng Copilot. Quản lý danh sách đã cài đặt cục bộ trong GitHub Copilot."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Mở biểu mẫu xác nhận marketplace hoặc plugin trong ứng dụng Copilot. Quản lý danh sách đã cài đặt cục bộ trong GitHub Copilot.",
+  "[... {0} characters omitted ...]": "[... đã lược bỏ {0} ký tự ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Phiên bản mới của {package} được cài đặt khác với phiên bản bạn đang có. Bật \"Gỡ cài đặt rồi cài đặt lại khi cập nhật\" trong tùy chọn cài đặt của gói, sau đó cập nhật lại.",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Phiên bản này được cài đặt khác với phiên bản bạn đang có, vì vậy khi cập nhật, phiên bản hiện tại sẽ được gỡ cài đặt trước. Cập nhật tự động và Cập nhật tất cả sẽ bỏ qua gói này trừ khi bật \"Gỡ cài đặt rồi cài đặt lại khi cập nhật\" cho gói.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey không cập nhật {0}: phiên bản {1} là phiên bản mới nhất mà các nguồn của nó cung cấp",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey không cập nhật {0}. Gói có thể đã được ghim hoặc các nguồn của gói không có phiên bản mới hơn."
 }

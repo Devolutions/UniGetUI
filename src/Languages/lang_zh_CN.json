@@ -2654,5 +2654,9 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex 返回的插件所属市场不正确。",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "由 Codex 应用提供，移除后会由应用恢复。您仍可将其启用或禁用。",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Codex 市场清单不受支持。请更新 Codex CLI，然后重试。",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "在 Copilot 应用中打开市场或插件确认表单。在 GitHub Copilot 中管理本地已安装清单。"
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "在 Copilot 应用中打开市场或插件确认表单。在 GitHub Copilot 中管理本地已安装清单。",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "{package} 的新版本与当前版本的安装方式不同。请在其安装选项中启用“更新时先卸载再重新安装”，然后再次更新。",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "此版本与当前版本的安装方式不同，因此更新时会先卸载当前版本。除非为此软件包启用了“更新时先卸载再重新安装”，否则自动更新和“全部更新”不会包含它。",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey 未更新 {0}：其软件源提供的最新版本为 {1}",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey 未更新 {0}。该软件包可能已固定版本，或者其软件源没有提供更新版本。"
 }

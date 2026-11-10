@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex پلاگینی را برای بازارچهٔ نادرست برگرداند.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "توسط برنامهٔ Codex ارائه شده و در صورت حذف، دوباره بازیابی می‌شود. همچنان می‌توانید آن را روشن یا خاموش کنید.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "فهرست بازارچهٔ Codex پشتیبانی نمی‌شود. Codex CLI را به‌روزرسانی و دوباره امتحان کنید.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "فرم تأیید بازارچه یا پلاگین را در برنامهٔ Copilot باز کنید. فهرست موارد نصب‌شدهٔ محلی را در GitHub Copilot مدیریت کنید."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "فرم تأیید بازارچه یا پلاگین را در برنامهٔ Copilot باز کنید. فهرست موارد نصب‌شدهٔ محلی را در GitHub Copilot مدیریت کنید.",
+  "[... {0} characters omitted ...]": "[... {0} نویسه حذف شد ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "نسخهٔ جدید {package} با نسخه‌ای که نصب دارید متفاوت نصب شده است. گزینهٔ «حذف نصب، سپس نصب دوباره هنگام به‌روزرسانی» را در گزینه‌های نصب آن فعال کنید و سپس دوباره آن را به‌روزرسانی کنید.",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "این نسخه متفاوت از نسخه‌ای که نصب دارید نصب شده است؛ بنابراین هنگام به‌روزرسانی، ابتدا نسخهٔ فعلی حذف نصب می‌شود. به‌روزرسانی‌های خودکار و «به‌روزرسانی همه» آن را شامل نمی‌شوند، مگر اینکه گزینهٔ «حذف نصب، سپس نصب دوباره هنگام به‌روزرسانی» برای این بسته فعال باشد.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey، {0} را به‌روزرسانی نکرد: نسخهٔ {1} جدیدترین نسخه‌ای است که منابع آن ارائه می‌کنند.",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey، {0} را به‌روزرسانی نکرد. ممکن است این بسته سنجاق شده باشد یا منابع آن نسخهٔ جدیدتری ارائه نکنند."
 }

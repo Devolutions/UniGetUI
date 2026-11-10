@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "Codex نے غلط مارکیٹ پلیس کا پلگ ان واپس کیا۔",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "Codex ایپ کی فراہم کردہ؛ ہٹانے پر ایپ اسے بحال کر دیتی ہے۔ آپ پھر بھی اسے فعال یا غیر فعال کر سکتے ہیں۔",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "Codex مارکیٹ پلیسز کی فہرست معاون نہیں ہے۔ Codex CLI اپ ڈیٹ کریں اور دوبارہ کوشش کریں۔",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot ایپ میں مارکیٹ پلیس یا پلگ ان کا تصدیقی فارم کھولیں۔ مقامی انسٹال شدہ فہرست GitHub Copilot میں منظم کریں۔"
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "Copilot ایپ میں مارکیٹ پلیس یا پلگ ان کا تصدیقی فارم کھولیں۔ مقامی انسٹال شدہ فہرست GitHub Copilot میں منظم کریں۔",
+  "[... {0} characters omitted ...]": "[... {0} حروف حذف کیے گئے ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "{package} کا نیا ورژن آپ کے موجودہ ورژن سے مختلف طریقے سے انسٹال ہے۔ اس کی انسٹالیشن کی ترتیبات میں \"اپ ڈیٹ ہونے پر پہلے اَن انسٹال کریں، پھر دوبارہ انسٹال کریں\" فعال کریں، پھر اسے دوبارہ اپ ڈیٹ کریں۔",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "یہ ورژن آپ کے موجودہ ورژن سے مختلف طریقے سے انسٹال ہے، اس لیے اسے اپ ڈیٹ کرنے سے پہلے موجودہ ورژن اَن انسٹال ہو جاتا ہے۔ خودکار اپ ڈیٹس اور سب کو اپ ڈیٹ کریں اسے نظرانداز کرتے ہیں، جب تک کہ اس پیکیج کے لیے \"اپ ڈیٹ ہونے پر پہلے اَن انسٹال کریں، پھر دوبارہ انسٹال کریں\" فعال نہ ہو۔",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey نے {0} کو اپ ڈیٹ نہیں کیا: ورژن {1} اس کے ذرائع میں دستیاب تازہ ترین ورژن ہے۔",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey نے {0} کو اپ ڈیٹ نہیں کیا۔ ممکن ہے پیکیج پن کیا گیا ہو، یا اس کے ذرائع میں کوئی نیا ورژن دستیاب نہ ہو۔"
 }

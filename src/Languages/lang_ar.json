@@ -2623,5 +2623,10 @@
   "Codex returned a plugin for the wrong marketplace.": "أعاد Codex إضافة تابعة لسوق غير صحيح.",
   "Provided by the Codex app, which restores it if removed. You can still turn it on or off.": "يوفرها تطبيق Codex ويعيدها إذا أُزيلت. لا يزال بإمكانك تشغيلها أو إيقافها.",
   "Unsupported Codex marketplace inventory. Update the Codex CLI and try again.": "قائمة أسواق Codex غير مدعومة. حدّث Codex CLI وحاول مجددًا.",
-  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "افتح نموذج تأكيد سوق أو إضافة في تطبيق Copilot. أدر قائمة الإضافات المحلية المثبّتة في GitHub Copilot."
+  "Open a marketplace or plugin confirmation form in the Copilot app. Manage the local installed inventory in GitHub Copilot.": "افتح نموذج تأكيد سوق أو إضافة في تطبيق Copilot. أدر قائمة الإضافات المحلية المثبّتة في GitHub Copilot.",
+  "[... {0} characters omitted ...]": "[... تم حذف {0} حرفًا ...]",
+  "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "تم تثبيت الإصدار الجديد من {package} بطريقة مختلفة عن الإصدار المثبّت لديك. فعّل خيار \"إلغاء التثبيت، ثم إعادة التثبيت عند التحديث\" ضمن خيارات التثبيت الخاصة به، ثم حدّثه مرة أخرى",
+  "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "هذا الإصدار مثبت بطريقة مختلفة عن الإصدار لديك، لذا يؤدي تحديثه إلى إلغاء تثبيت الإصدار الحالي أولًا. لا تشمل التحديثات التلقائية وخيار \"تحديث الكل\" هذا الإصدار ما لم يتم تفعيل خيار \"إلغاء التثبيت، ثم إعادة التثبيت عند التحديث\" لهذه الحزمة.",
+  "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "لم يحدّث Chocolatey {0}: الإصدار {1} هو أحدث إصدار توفره مصادره",
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "لم يحدّث Chocolatey {0}. قد تكون الحزمة مقفلة على إصدار محدد، أو قد لا توفر مصادرها إصدارًا أحدث"
 }

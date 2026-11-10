@@ -97,7 +97,7 @@ public static class AutomaticQuitMonitor
     public static bool ShouldQuitAfterEmptyPass(bool checkSucceeded, bool installDue, bool firstUpdateAppsPass)
         => checkSucceeded && (installDue || firstUpdateAppsPass);
 
-    public static bool ShouldQuitAfterScheduledPass(bool launched, bool checkSucceeded)
+    public static bool ShouldQuitAfterInstallPass(bool launched, bool checkSucceeded)
         => launched || checkSucceeded;
 
     public static bool IsFirstUpdateAppsPass(bool hasUpdateAppsArgument, bool checkSucceeded, bool foundUpdates, OneTimeClaim handled)

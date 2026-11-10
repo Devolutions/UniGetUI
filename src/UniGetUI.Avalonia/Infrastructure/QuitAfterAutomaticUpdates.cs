@@ -30,6 +30,8 @@ internal static class QuitAfterAutomaticUpdates
         _ = WaitAndQuitAsync(launching);
     }
 
+    public static void NoteUpdatesLaunched() => Request.NoteUpdatePass();
+
     private static bool IsEnabled(bool nothingToInstall)
         => AutomaticQuitMonitor.IsQuitEnabled(
             Settings.Get(Settings.K.QuitAfterAutomaticUpdates),

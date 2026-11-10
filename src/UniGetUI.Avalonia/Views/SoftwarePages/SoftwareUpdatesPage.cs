@@ -522,18 +522,24 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             else if (shouldAutoInstall)
             {
                 MaintenanceScheduler.MarkAutoInstallHandled();
+                AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: true, UpdateAppsPassHandled);
                 bool launched = await LaunchScheduledUpdate(upgradable);
-                if (AutomaticQuitMonitor.ShouldQuitAfterScheduledPass(launched, checkSucceeded))
+                if (AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded))
                     QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: !launched);
             }
             else if (hasUpdateAppsArgument)
             {
-                Task updateAll = AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
+                bool firstUpdateAppsPass = AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: true, UpdateAppsPassHandled);
+                var started = await AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
+                bool launched = started.Count > 0;
                 ShowUpgradingPackagesNotification(await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(upgradable));
                 Logger.Warn("Automatic install of updates has been enabled via Command Line (user settings have been overriden)");
-                if (AutomaticQuitMonitor.IsFirstUpdateAppsPass(
-                        hasUpdateAppsArgument, checkSucceeded, foundUpdates: true, UpdateAppsPassHandled))
-                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(updateAll);
+                if (firstUpdateAppsPass && AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: !launched);
+                else if (launched)
+                    QuitAfterAutomaticUpdates.NoteUpdatesLaunched();
             }
             else
             {

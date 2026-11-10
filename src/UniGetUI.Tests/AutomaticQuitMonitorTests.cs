@@ -288,9 +288,9 @@ public class AutomaticQuitMonitorTests
     [InlineData(true, false, true)]
     [InlineData(false, true, true)]
     [InlineData(false, false, false)]
-    public void AScheduledPassThatLaunchedNothingNeedsASuccessfulCheck(bool launched, bool checkSucceeded, bool expected)
+    public void AnInstallPassThatLaunchedNothingNeedsASuccessfulCheck(bool launched, bool checkSucceeded, bool expected)
     {
-        Assert.Equal(expected, AutomaticQuitMonitor.ShouldQuitAfterScheduledPass(launched, checkSucceeded));
+        Assert.Equal(expected, AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded));
     }
 
     [Fact]

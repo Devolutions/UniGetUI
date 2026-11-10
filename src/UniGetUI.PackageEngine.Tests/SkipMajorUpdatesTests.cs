@@ -134,12 +134,14 @@ public sealed class SkipMajorUpdatesTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, "", "5.10.0", true)]
-    [InlineData(false, "", "", false)]
-    [InlineData(true, "5.3.0", "5.3.0", true)]
-    [InlineData(true, "6.0.0", "6.0.0", true)]
-    public void UpdateOperation_PinsTheUpdateWhileMajorUpdatesAreSkipped(
+    [InlineData(true, true, "", "5.10.0", true)]
+    [InlineData(false, true, "", "", false)]
+    [InlineData(true, false, "", "", false)]
+    [InlineData(true, true, "5.3.0", "5.3.0", true)]
+    [InlineData(true, true, "6.0.0", "6.0.0", true)]
+    public void UpdateOperation_PinsARowPinnedWithinTheMajorWhileMajorUpdatesAreSkipped(
         bool skipsMajorUpdates,
+        bool pinnedWithinMajor,
         string requestedVersion,
         string expectedVersion,
         bool expectedExplicit
@@ -152,6 +154,7 @@ public sealed class SkipMajorUpdatesTests : IDisposable
             .WithVersion("5.2.0")
             .WithNewVersion("5.10.0")
             .Build();
+        package.OverridenOptions.PinUpdateToNewVersion = pinnedWithinMajor;
         var options = new InstallOptions { Version = "4.0.0", SkipMajorUpdates = skipsMajorUpdates };
         if (requestedVersion.Length > 0)
         {
@@ -186,6 +189,7 @@ public sealed class SkipMajorUpdatesTests : IDisposable
             .WithVersion("5.2.0")
             .WithNewVersion("5.10.0")
             .Build();
+        package.OverridenOptions.PinUpdateToNewVersion = true;
 
         manager.OperationHelper.GetStandaloneParameters(
             package,
@@ -214,6 +218,59 @@ public sealed class SkipMajorUpdatesTests : IDisposable
 
         Assert.Equal("5.10.0", resolved?.NewVersionString);
         Assert.Equal("5.10.0", Assert.Single(loader.Packages).NewVersionString);
+    }
+
+    [Fact]
+    public void HistoryRetryKeepsTheRecordedTargetWhileMajorUpdatesAreSkipped()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        var rebuilt = UpdateVersionPin.KeepRecordedTarget(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Licensed")
+                .WithVersion("5.2.0")
+                .WithNewVersion("5.10.0")
+                .Build(),
+            new InstallOptions { SkipMajorUpdates = true, Version = "5.10.0" }
+        );
+
+        using var operation = new UpdatePackageOperation(
+            rebuilt,
+            new InstallOptions { SkipMajorUpdates = true, Version = "5.10.0" },
+            IgnoreParallelInstalls: true
+        );
+
+        Assert.Equal("5.10.0", operation.Options.Version);
+        Assert.True(operation.Options.VersionIsExplicit);
+    }
+
+    [Fact]
+    public void GetAvailableUpdates_OffersNothingWithinTheMajorWhenAReleaseStatusIsUnknown()
+    {
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        manager.UpdateTargetEligibility = (_, version) => version == "5.10.0" ? null : true;
+
+        IPackage update = Assert.Single(manager.GetAvailableUpdates());
+
+        Assert.Equal("6.0.0", update.NewVersionString);
+        Assert.False(update.OverridenOptions.PinUpdateToNewVersion);
+    }
+
+    [Fact]
+    public void GetAvailableUpdates_ReusesEligibilityChecks()
+    {
+        int checks = 0;
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        manager.UpdateTargetEligibility = (_, _) =>
+        {
+            checks++;
+            return true;
+        };
+
+        manager.GetAvailableUpdates();
+        manager.GetAvailableUpdates();
+
+        Assert.Equal(1, checks);
     }
 
     [Fact]

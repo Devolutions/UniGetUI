@@ -772,6 +772,56 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task ARequestedVersionTheManagerCannotTargetDoesNotLetAMajorUpdateThrough()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var manager = new PackageManagerBuilder()
+            .WithName($"RecordingManager{Guid.NewGuid():N}")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsCustomVersionsOnUpdate = false;
+                return capabilities;
+            })
+            .ConfigureManager(fake =>
+            {
+                fake.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                fake.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (package, options, operation) => ["echo", $"RAN-{operation}"];
+                helper.ResultFactory = (_, operation, _, _) =>
+                {
+                    lock (executed)
+                        executed.Add(operation.ToString());
+                    return OperationVeredict.Success;
+                };
+            })
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { SkipMajorUpdates = true, Version = "1.5.0", VersionIsExplicit = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.False(manager.CanUpdateToExactVersion);
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Empty(executed);
+    }
+
+    [Fact]
     public async Task APinnedUpdateIsRefusedWhenANewerVersionIsAlreadyInstalled()
     {
         if (!OperatingSystem.IsWindows())

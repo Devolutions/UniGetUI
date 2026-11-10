@@ -194,7 +194,7 @@ public partial class Cargo : PackageManager
         callArguments = "";
     }
 
-    protected override bool IsEligibleUpdateTarget(IPackage update, string version) =>
+    protected override bool? IsEligibleUpdateTarget(IPackage update, string version) =>
         CratesIOClient.GetManifest(update.Id).Item2.versions.Any(release => release.num == version && !release.yanked);
 
     public override int? CompareVersions(string versionA, string versionB)

@@ -59,7 +59,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             && Capabilities.SupportsCustomVersionsOnUpdate
             && Capabilities.CanListVersions;
 
-        protected virtual bool IsEligibleUpdateTarget(IPackage update, string version) => true;
+        protected virtual bool? IsEligibleUpdateTarget(IPackage update, string version) => true;
 
         private IReadOnlyList<Package> OfferUpdatesWithinSkippedMajors(IReadOnlyList<Package> updates)
         {
@@ -119,7 +119,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
         }
 
-        internal static TimeSpan VersionLookupTimeout { get; set; } = TimeSpan.FromSeconds(30);
+        internal static TimeSpan VersionLookupTimeout { get; set; } = TimeSpan.FromSeconds(35);
 
         private static readonly TimeSpan VersionListLifetime = TimeSpan.FromMinutes(30);
 
@@ -128,6 +128,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         private readonly ConcurrentDictionary<long, (string ReportedVersion, DateTime FetchedAt, IReadOnlyList<string> Versions)> _skippedMajorVersionLists = new();
 
         private readonly ConcurrentDictionary<long, DateTime> _skippedMajorLookupTimeouts = new();
+
+        private readonly ConcurrentDictionary<(long Package, string Version), (DateTime CheckedAt, bool Eligible)> _skippedMajorEligibility = new();
 
         private IReadOnlyList<string>? VersionsForSkippedMajor(Package update)
         {
@@ -155,15 +157,20 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 return null;
             }
 
+            if (lookup.Result.Count is 0)
+            {
+                _skippedMajorLookupTimeouts[key] = DateTime.UtcNow;
+                return lookup.Result;
+            }
+
             _skippedMajorLookupTimeouts.TryRemove(key, out _);
-            if (lookup.Result.Count > 0)
-                _skippedMajorVersionLists[key] = (update.NewVersionString, DateTime.UtcNow, lookup.Result);
+            _skippedMajorVersionLists[key] = (update.NewVersionString, DateTime.UtcNow, lookup.Result);
             return lookup.Result;
         }
 
         internal string? NewestVersionWithinMajor(IPackage update, IEnumerable<string> versions, bool includePreReleases)
         {
-            if (CoreTools.MajorVersionOf(update.VersionString) is not { } installedMajor)
+            if ((CoreTools.GetMajorVersion(update.VersionString) ?? CoreTools.MajorVersionOf(update.VersionString)) is not { } installedMajor)
                 return null;
 
             List<string> candidates = [];
@@ -171,7 +178,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             {
                 if (!includePreReleases && PreReleaseVersion.IsPreRelease(version))
                     continue;
-                if (CoreTools.MajorVersionOf(version) != installedMajor)
+                if (CoreTools.GetMajorVersion(version) != installedMajor)
                     continue;
                 if (CompareVersions(version, update.VersionString) is not > 0)
                     continue;
@@ -181,12 +188,35 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             candidates.Sort((left, right) => CompareVersions(right, left) ?? 0);
             foreach (string candidate in candidates)
             {
-                if (IsEligibleUpdateTarget(update, candidate))
-                    return candidate;
-                Logger.Debug($"Skipping {update.Id} {candidate} as an update within the installed major: the feed has withdrawn it");
+                switch (CachedEligibility(update, candidate))
+                {
+                    case true:
+                        return candidate;
+                    case false:
+                        Logger.Debug($"Skipping {update.Id} {candidate} as an update within the installed major: the feed has withdrawn it");
+                        continue;
+                    default:
+                        Logger.Warn($"Could not tell whether {update.Id} {candidate} is still published; offering no update within the major this time");
+                        return null;
+                }
             }
 
             return null;
+        }
+
+        private bool? CachedEligibility(IPackage update, string version)
+        {
+            var key = (update.GetHash(), version);
+            if (
+                _skippedMajorEligibility.TryGetValue(key, out var cached)
+                && DateTime.UtcNow - cached.CheckedAt < VersionListLifetime
+            )
+                return cached.Eligible;
+
+            bool? eligible = IsEligibleUpdateTarget(update, version);
+            if (eligible is { } known)
+                _skippedMajorEligibility[key] = (DateTime.UtcNow, known);
+            return eligible;
         }
 
         public virtual int? CompareVersions(string versionA, string versionB)

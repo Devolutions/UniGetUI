@@ -527,6 +527,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
             try
             {
                 p.Kill(entireProcessTree: true);
+                reading.Wait(TimeSpan.FromSeconds(5));
             }
             catch (Exception ex)
             {
@@ -540,7 +541,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
         return versions;
     }
 
-    internal static TimeSpan VersionListingTimeout { get; set; } = TimeSpan.FromSeconds(60);
+    internal static TimeSpan VersionListingTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public IReadOnlyList<IManagerSource> GetSources_UnSafe()
     {

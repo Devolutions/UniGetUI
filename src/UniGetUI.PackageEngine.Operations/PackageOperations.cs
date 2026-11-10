@@ -1643,7 +1643,7 @@ namespace UniGetUI.PackageEngine.Operations
                     Package.NewVersionString
                 );
 
-            if (!Options.SkipMajorUpdates || (!_autoPinned && UpdateVersionPin.HasExplicitVersion(Options)))
+            if (!Options.SkipMajorUpdates || (!_autoPinned && UpdateVersionPin.HasHonoredExplicitVersion(Package, Options)))
                 return null;
 
             if (Package.IsUpdateMajor())
@@ -1897,7 +1897,7 @@ namespace UniGetUI.PackageEngine.Operations
                 !string.IsNullOrWhiteSpace(Options.Version)
                 && (
                     Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate
-                    || (Options.SkipMajorUpdates && UpdateVersionPin.HasExplicitVersion(Options))
+                    || (Options.SkipMajorUpdates && UpdateVersionPin.HasHonoredExplicitVersion(Package, Options))
                 );
             string targetVersion = explicitVersionRequested
                 ? Options.Version

@@ -2098,11 +2098,13 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, "", "1.5.0")]
-    [InlineData(false, "", null)]
-    [InlineData(true, "1.2.0", "1.2.0")]
-    public void AnUpdateTargetsAVersionOnlyWhileMajorUpdatesAreSkipped(
+    [InlineData(true, true, "", "1.5.0")]
+    [InlineData(false, true, "", null)]
+    [InlineData(true, false, "", null)]
+    [InlineData(true, true, "1.2.0", "1.2.0")]
+    public void AnUpdateTargetsAVersionOnlyWhenPinnedWhileMajorUpdatesAreSkipped(
         bool skipsMajorUpdates,
+        bool pinnedWithinMajor,
         string requestedVersion,
         string? targetedVersion
     )
@@ -2111,10 +2113,11 @@ public sealed class WinGetManagerTests : IDisposable
         SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
         var package = new PackageBuilder()
             .WithManager(manager)
-            .WithId($"Contoso.Pinned{skipsMajorUpdates}{requestedVersion}")
+            .WithId($"Contoso.Pinned{skipsMajorUpdates}{pinnedWithinMajor}{requestedVersion}")
             .WithVersion("1.0.0")
             .WithNewVersion("1.5.0")
             .Build();
+        package.OverridenOptions.PinUpdateToNewVersion = pinnedWithinMajor;
         var options = new InstallOptions { SkipMajorUpdates = skipsMajorUpdates };
         if (requestedVersion.Length > 0)
         {

@@ -1497,7 +1497,7 @@
   "Standard": "استاندارد",
   "Elevated": "با دسترسی ارتقایافته",
   "Use the font configured in the system instead of the default interface font": "استفاده از قلم تنظیم‌شده در سیستم به‌جای قلم پیش‌فرض رابط کاربری",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "اگر پنجره UniGetUI باز نیست، پس از پایان به‌روزرسانی‌های خودکار از برنامه خارج شوید",
+  "Quit UniGetUI once automatic updates have finished": "اگر پنجره UniGetUI باز نیست، پس از پایان به‌روزرسانی‌های خودکار از برنامه خارج شوید",
   "Case sensitive": "حساس به بزرگی و کوچکی حروف",
   "Search options": "گزینه‌های جستجو",
   "{package} is currently running. Close it and try again": "{package} اکنون در حال اجرا است. آن را ببندید و دوباره تلاش کنید",

@@ -1497,7 +1497,7 @@
   "Standard": "Стандартний",
   "Elevated": "З підвищеними правами",
   "Use the font configured in the system instead of the default interface font": "Використовувати системний шрифт замість типового шрифту інтерфейсу",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Закривати UniGetUI після завершення автоматичних оновлень, якщо його вікно не відкрите",
+  "Quit UniGetUI once automatic updates have finished": "Закривати UniGetUI після завершення автоматичних оновлень, якщо його вікно не відкрите",
   "Case sensitive": "З урахуванням регістру",
   "Search options": "Параметри пошуку",
   "{package} is currently running. Close it and try again": "{package} зараз запущено. Закрийте його та спробуйте ще раз",

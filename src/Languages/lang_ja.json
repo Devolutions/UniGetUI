@@ -1497,7 +1497,7 @@
   "Standard": "標準",
   "Elevated": "昇格済み",
   "Use the font configured in the system instead of the default interface font": "既定のインターフェイスフォントの代わりに、システムで設定されているフォントを使用する",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "UniGetUI のウィンドウが開いていない場合、自動更新の完了後に UniGetUI を終了する",
+  "Quit UniGetUI once automatic updates have finished": "UniGetUI のウィンドウが開いていない場合、自動更新の完了後に UniGetUI を終了する",
   "Case sensitive": "大文字と小文字を区別",
   "Search options": "検索オプション",
   "{package} is currently running. Close it and try again": "{package} は現在実行中です。終了してから、もう一度お試しください",

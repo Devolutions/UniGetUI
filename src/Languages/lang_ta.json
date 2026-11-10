@@ -1497,7 +1497,7 @@
   "Standard": "தரநிலை",
   "Elevated": "உயர்த்தப்பட்ட உரிமைகளுடன்",
   "Use the font configured in the system instead of the default interface font": "இயல்புநிலை இடைமுக எழுத்துருவுக்குப் பதிலாக கணினியில் அமைக்கப்பட்ட எழுத்துருவைப் பயன்படுத்து",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "தானியங்கிப் புதுப்பிப்புகள் முடிந்ததும், UniGetUI சாளரம் திறக்கப்படவில்லை என்றால் அதை மூடு",
+  "Quit UniGetUI once automatic updates have finished": "தானியங்கிப் புதுப்பிப்புகள் முடிந்ததும், UniGetUI சாளரம் திறக்கப்படவில்லை என்றால் அதை மூடு",
   "Case sensitive": "எழுத்துப் பெரிய/சிறிய வேறுபாட்டைக் கருது",
   "Search options": "தேடல் விருப்பங்கள்",
   "{package} is currently running. Close it and try again": "{package} தற்போது இயங்குகிறது. அதை மூடிவிட்டு மீண்டும் முயற்சிக்கவும்",

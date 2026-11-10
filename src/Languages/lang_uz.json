@@ -1409,7 +1409,7 @@
     "Standard": "Standart",
     "Elevated": "Ko‘tarilgan",
     "Use the font configured in the system instead of the default interface font": "Standart interfeys shrifti o‘rniga tizimda sozlangan shriftdan foydalanish",
-    "Quit UniGetUI once automatic updates have finished, if its window is not open": "Oynasi ochiq bo‘lmasa, avtomatik yangilanishlar tugagach UniGetUI’dan chiqish",
+    "Quit UniGetUI once automatic updates have finished": "Oynasi ochiq bo‘lmasa, avtomatik yangilanishlar tugagach UniGetUI’dan chiqish",
     "Case sensitive": "Katta-kichik harflarni farqlash",
     "Search options": "Qidiruv parametrlari",
     "{package} is currently running. Close it and try again": "{package} hozir ishlamoqda. Uni yoping va qayta urinib ko‘ring",

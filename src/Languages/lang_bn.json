@@ -1497,7 +1497,7 @@
   "Standard": "সাধারণ",
   "Elevated": "উন্নীত",
   "Use the font configured in the system instead of the default interface font": "ডিফল্ট ইন্টারফেস ফন্টের বদলে সিস্টেমে নির্ধারিত ফন্ট ব্যবহার করুন",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "স্বয়ংক্রিয় আপডেট শেষ হলে UniGetUI-এর উইন্ডো খোলা না থাকলে অ্যাপটি বন্ধ করুন",
+  "Quit UniGetUI once automatic updates have finished": "স্বয়ংক্রিয় আপডেট শেষ হলে UniGetUI-এর উইন্ডো খোলা না থাকলে অ্যাপটি বন্ধ করুন",
   "Case sensitive": "বড়-ছোট অক্ষর সংবেদনশীল",
   "Search options": "অনুসন্ধানের বিকল্প",
   "{package} is currently running. Close it and try again": "{package} বর্তমানে চলছে। এটি বন্ধ করে আবার চেষ্টা করুন",

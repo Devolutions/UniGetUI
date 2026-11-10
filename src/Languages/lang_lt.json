@@ -1497,7 +1497,7 @@
   "Standard": "Įprastos teisės",
   "Elevated": "Padidintos teisės",
   "Use the font configured in the system instead of the default interface font": "Naudoti sistemoje nustatytą šriftą vietoj numatytojo sąsajos šrifto",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Pasibaigus automatiniams naujinimams uždaryti „UniGetUI“, jei jos langas neatidarytas",
+  "Quit UniGetUI once automatic updates have finished": "Pasibaigus automatiniams naujinimams uždaryti „UniGetUI“, jei jos langas neatidarytas",
   "Case sensitive": "Skirti didžiąsias ir mažąsias raides",
   "Search options": "Paieškos parinktys",
   "{package} is currently running. Close it and try again": "{package} šiuo metu veikia. Uždarykite ją ir bandykite dar kartą",

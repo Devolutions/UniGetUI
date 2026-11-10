@@ -1497,7 +1497,7 @@
   "Standard": "Standart",
   "Elevated": "Yükseltilmiş",
   "Use the font configured in the system instead of the default interface font": "Varsayılan arayüz yazı tipi yerine sistemde yapılandırılmış yazı tipini kullan",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Penceresi açık değilse, otomatik güncellemeler tamamlandığında UniGetUI'den çık",
+  "Quit UniGetUI once automatic updates have finished": "Penceresi açık değilse, otomatik güncellemeler tamamlandığında UniGetUI'den çık",
   "Case sensitive": "Büyük/küçük harfe duyarlı",
   "Search options": "Arama seçenekleri",
   "{package} is currently running. Close it and try again": "{package} şu anda çalışıyor. Kapatıp yeniden deneyin",

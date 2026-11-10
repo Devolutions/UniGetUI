@@ -1497,7 +1497,7 @@
   "Standard": "ಸಾಮಾನ್ಯ",
   "Elevated": "ಎಲಿವೇಟ್ ಮಾಡಲಾಗಿದೆ",
   "Use the font configured in the system instead of the default interface font": "ಡೀಫಾಲ್ಟ್ ಇಂಟರ್ಫೇಸ್ ಫಾಂಟ್ ಬದಲಿಗೆ ಸಿಸ್ಟಮ್‌ನಲ್ಲಿ ಹೊಂದಿಸಿರುವ ಫಾಂಟ್ ಬಳಸಿ",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "UniGetUI ವಿಂಡೋ ತೆರೆದಿಲ್ಲದಿದ್ದರೆ, ಸ್ವಯಂಚಾಲಿತ ನವೀಕರಣಗಳು ಮುಗಿದ ನಂತರ UniGetUI ತ್ಯಜಿಸಿ",
+  "Quit UniGetUI once automatic updates have finished": "UniGetUI ವಿಂಡೋ ತೆರೆದಿಲ್ಲದಿದ್ದರೆ, ಸ್ವಯಂಚಾಲಿತ ನವೀಕರಣಗಳು ಮುಗಿದ ನಂತರ UniGetUI ತ್ಯಜಿಸಿ",
   "Case sensitive": "ಅಕ್ಷರ ಗಾತ್ರ-ಸಂವೇದಿ",
   "Search options": "ಹುಡುಕಾಟ ಆಯ್ಕೆಗಳು",
   "{package} is currently running. Close it and try again": "{package} ಪ್ರಸ್ತುತ ಚಾಲನೆಯಲ್ಲಿದೆ. ಅದನ್ನು ಮುಚ್ಚಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",

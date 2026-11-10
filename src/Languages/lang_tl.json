@@ -1497,7 +1497,7 @@
   "Standard": "Standard",
   "Elevated": "May mataas na pribilehiyo",
   "Use the font configured in the system instead of the default interface font": "Gamitin ang font na naka-configure sa system sa halip na ang default na font ng interface",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Isara ang UniGetUI kapag natapos na ang mga awtomatikong update kung hindi bukas ang window nito",
+  "Quit UniGetUI once automatic updates have finished": "Isara ang UniGetUI kapag natapos na ang mga awtomatikong update kung hindi bukas ang window nito",
   "Case sensitive": "May pagkakaiba ang malaki at maliit na titik",
   "Search options": "Mga opsyon sa paghahanap",
   "{package} is currently running. Close it and try again": "Kasalukuyang tumatakbo ang {package}. Isara ito at subukang muli",

@@ -1497,7 +1497,7 @@
   "Standard": "معيار",
   "Elevated": "مرتفعة",
   "Use the font configured in the system instead of the default interface font": "استخدم الخط الذي تم تكوينه في النظام بدلاً من خط الواجهة الافتراضي",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "قم بإنهاء UniGetUI بمجرد انتهاء التحديثات التلقائية، إذا لم تكن نافذتها مفتوحة",
+  "Quit UniGetUI once automatic updates have finished": "قم بإنهاء UniGetUI بمجرد انتهاء التحديثات التلقائية، إذا لم تكن نافذتها مفتوحة",
   "Case sensitive": "حساسية الموضوع",
   "Search options": "خيارات البحث",
   "{package} is currently running. Close it and try again": "{package} قيد التشغيل حاليًا. أغلقه وحاول مرة أخرى",

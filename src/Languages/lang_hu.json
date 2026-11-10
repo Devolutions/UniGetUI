@@ -1497,7 +1497,7 @@
   "Standard": "Normál",
   "Elevated": "Emelt jogosultságú",
   "Use the font configured in the system instead of the default interface font": "A rendszerben beállított betűtípus használata az alapértelmezett felületi betűtípus helyett",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Az automatikus frissítések befejezése után lépjen ki az UniGetUI-ból, ha az ablaka nincs megnyitva",
+  "Quit UniGetUI once automatic updates have finished": "Az automatikus frissítések befejezése után lépjen ki az UniGetUI-ból, ha az ablaka nincs megnyitva",
   "Case sensitive": "Kis- és nagybetűk megkülönböztetése",
   "Search options": "Keresési beállítások",
   "{package} is currently running. Close it and try again": "A(z) {package} jelenleg fut. Zárja be, majd próbálja újra",

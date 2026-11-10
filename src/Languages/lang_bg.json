@@ -1497,7 +1497,7 @@
   "Standard": "Стандартни",
   "Elevated": "Повишени",
   "Use the font configured in the system instead of the default interface font": "Използване на системния шрифт вместо шрифта по подразбиране на интерфейса",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Изход от UniGetUI след завършване на автоматичните актуализации, ако прозорецът му не е отворен",
+  "Quit UniGetUI once automatic updates have finished": "Изход от UniGetUI след завършване на автоматичните актуализации, ако прозорецът му не е отворен",
   "Case sensitive": "Разлика между главни и малки букви",
   "Search options": "Опции за търсене",
   "{package} is currently running. Close it and try again": "{package} работи в момента. Затворете го и опитайте отново",

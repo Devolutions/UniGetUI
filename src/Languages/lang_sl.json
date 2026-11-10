@@ -1497,7 +1497,7 @@
   "Standard": "Standardno",
   "Elevated": "Povišano",
   "Use the font configured in the system instead of the default interface font": "Uporabi sistemsko nastavljeno pisavo namesto privzete pisave vmesnika",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Ko so samodejne posodobitve končane, zapri UniGetUI, če njegovo okno ni odprto",
+  "Quit UniGetUI once automatic updates have finished": "Ko so samodejne posodobitve končane, zapri UniGetUI, če njegovo okno ni odprto",
   "Case sensitive": "Razlikovanje med velikimi in malimi črkami",
   "Search options": "Možnosti iskanja",
   "{package} is currently running. Close it and try again": "{package} se trenutno izvaja. Zaprite ga in poskusite znova",

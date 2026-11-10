@@ -1497,7 +1497,7 @@
   "Standard": "სტანდარტული",
   "Elevated": "ამაღლებული",
   "Use the font configured in the system instead of the default interface font": "ნაგულისხმევი ინტერფეისის შრიფტის ნაცვლად გამოიყენეთ სისტემაში კონფიგურირებული შრიფტი",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "ავტომატური განახლებების დასრულების შემდეგ დახურეთ UniGetUI, თუ მისი ფანჯარა გახსნილი არ არის",
+  "Quit UniGetUI once automatic updates have finished": "ავტომატური განახლებების დასრულების შემდეგ დახურეთ UniGetUI, თუ მისი ფანჯარა გახსნილი არ არის",
   "Case sensitive": "რეგისტრის გათვალისწინება",
   "Search options": "ძიების პარამეტრები",
   "{package} is currently running. Close it and try again": "{package} ამჟამად გაშვებულია. დახურეთ და სცადეთ ხელახლა",

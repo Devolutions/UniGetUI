@@ -1497,7 +1497,7 @@
   "Standard": "معیاری",
   "Elevated": "بلند اختیارات کے ساتھ",
   "Use the font configured in the system instead of the default interface font": "ڈیفالٹ انٹرفیس فونٹ کے بجائے سسٹم میں ترتیب دیا گیا فونٹ استعمال کریں",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "خودکار اپ ڈیٹس مکمل ہونے پر UniGetUI بند کریں، اگر اس کی ونڈو کھلی نہ ہو",
+  "Quit UniGetUI once automatic updates have finished": "خودکار اپ ڈیٹس مکمل ہونے پر UniGetUI بند کریں، اگر اس کی ونڈو کھلی نہ ہو",
   "Case sensitive": "حروف کے بڑے یا چھوٹے ہونے کا لحاظ رکھیں",
   "Search options": "تلاش کے اختیارات",
   "{package} is currently running. Close it and try again": "{package} فی الحال چل رہا ہے۔ اسے بند کریں اور دوبارہ کوشش کریں",

@@ -1497,7 +1497,7 @@
   "Standard": "Tavallinen",
   "Elevated": "Korotetut oikeudet",
   "Use the font configured in the system instead of the default interface font": "Käytä järjestelmään määritettyä fonttia käyttöliittymän oletusfontin sijaan",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Sulje UniGetUI automaattisten päivitysten valmistuttua, jos sen ikkuna ei ole auki",
+  "Quit UniGetUI once automatic updates have finished": "Sulje UniGetUI automaattisten päivitysten valmistuttua, jos sen ikkuna ei ole auki",
   "Case sensitive": "Kirjainkoon erottelu",
   "Search options": "Hakuasetukset",
   "{package} is currently running. Close it and try again": "{package} on parhaillaan käynnissä. Sulje se ja yritä uudelleen",

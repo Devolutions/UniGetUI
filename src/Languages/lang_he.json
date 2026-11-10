@@ -1497,7 +1497,7 @@
   "Standard": "רגיל",
   "Elevated": "עם הרשאות מוגברות",
   "Use the font configured in the system instead of the default interface font": "שימוש בגופן שהוגדר במערכת במקום בגופן ברירת המחדל של הממשק",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "יציאה מ-UniGetUI לאחר סיום העדכונים האוטומטיים, אם החלון שלו אינו פתוח",
+  "Quit UniGetUI once automatic updates have finished": "יציאה מ-UniGetUI לאחר סיום העדכונים האוטומטיים, אם החלון שלו אינו פתוח",
   "Case sensitive": "תלוי רישיות",
   "Search options": "אפשרויות חיפוש",
   "{package} is currently running. Close it and try again": "{package} פועל כעת. סגור אותו ונסה שוב",

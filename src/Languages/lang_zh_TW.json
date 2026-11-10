@@ -1498,7 +1498,7 @@
   "Standard": "標準",
   "Elevated": "已提高權限",
   "Use the font configured in the system instead of the default interface font": "使用系統設定的字型，而非預設介面字型",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "若視窗未開啟，請在自動更新完成後結束 UniGetUI",
+  "Quit UniGetUI once automatic updates have finished": "若視窗未開啟，請在自動更新完成後結束 UniGetUI",
   "Case sensitive": "區分大小寫",
   "Search options": "搜尋選項",
   "{package} is currently running. Close it and try again": "{package} 目前正在執行。請關閉後再試一次",

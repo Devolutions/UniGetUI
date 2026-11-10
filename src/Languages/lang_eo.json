@@ -1497,7 +1497,7 @@
   "Standard": "Normala",
   "Elevated": "Altigita",
   "Use the font configured in the system instead of the default interface font": "Uzi la tiparon agorditan en la sistemo anstataŭ la defaŭltan tiparon de la interfaco",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "Eliri el UniGetUI post finiĝo de aŭtomataj ĝisdatigoj, se ĝia fenestro ne estas malfermita",
+  "Quit UniGetUI once automatic updates have finished": "Eliri el UniGetUI post finiĝo de aŭtomataj ĝisdatigoj, se ĝia fenestro ne estas malfermita",
   "Case sensitive": "Distingi majusklojn",
   "Search options": "Serĉopcioj",
   "{package} is currently running. Close it and try again": "{package} nun ruliĝas. Fermu ĝin kaj reprovu",

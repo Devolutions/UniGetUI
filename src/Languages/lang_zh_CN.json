@@ -1501,7 +1501,7 @@
   "Elevated": "已提升",
   "Use the font configured in the system instead of the default interface font": "使用系统配置的字体，而非默认界面字体",
   "If Python cannot be found or is not listing packages but is installed on the system, ": "如果系统已安装 Python，但找不到 Python 或无法列出软件包，",
-  "Quit UniGetUI once automatic updates have finished, if its window is not open": "自动更新完成后退出 UniGetUI（如果其窗口未打开）",
+  "Quit UniGetUI once automatic updates have finished": "自动更新完成后退出 UniGetUI（如果其窗口未打开）",
   "Case sensitive": "区分大小写",
   "Search options": "搜索选项",
   "{package} is currently running. Close it and try again": "{package} 当前正在运行。请将其关闭后重试",

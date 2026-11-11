@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "نسخهٔ جدید {package} با نسخه‌ای که نصب دارید متفاوت نصب شده است. گزینهٔ «حذف نصب، سپس نصب دوباره هنگام به‌روزرسانی» را در گزینه‌های نصب آن فعال کنید و سپس دوباره آن را به‌روزرسانی کنید.",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "این نسخه متفاوت از نسخه‌ای که نصب دارید نصب شده است؛ بنابراین هنگام به‌روزرسانی، ابتدا نسخهٔ فعلی حذف نصب می‌شود. به‌روزرسانی‌های خودکار و «به‌روزرسانی همه» آن را شامل نمی‌شوند، مگر اینکه گزینهٔ «حذف نصب، سپس نصب دوباره هنگام به‌روزرسانی» برای این بسته فعال باشد.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey، {0} را به‌روزرسانی نکرد: نسخهٔ {1} جدیدترین نسخه‌ای است که منابع آن ارائه می‌کنند.",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey، {0} را به‌روزرسانی نکرد. ممکن است این بسته سنجاق شده باشد یا منابع آن نسخهٔ جدیدتری ارائه نکنند."
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey، {0} را به‌روزرسانی نکرد. ممکن است این بسته سنجاق شده باشد یا منابع آن نسخهٔ جدیدتری ارائه نکنند.",
+  "Only when UniGetUI is running in the background with its window closed.": "فقط زمانی که UniGetUI در پس‌زمینه اجرا می‌شود و پنجره‌اش بسته است.",
+  "Quit UniGetUI when automatic updates find nothing to install": "وقتی به‌روزرسانی‌های خودکار موردی برای نصب پیدا نمی‌کنند، از UniGetUI خارج شوید",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "فقط زمانی که UniGetUI در پس‌زمینه اجرا می‌شود و پنجره‌اش بسته است. تا زمانی که UniGetUI دوباره اجرا نشود، بررسی به‌روزرسانی‌ها یا پشتیبان‌گیری دیگری انجام نخواهد شد.",
+  "Shut down when finished": "خاموش کردن پس از پایان کار",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "همه عملیات به پایان رسیده‌اند. رایانه شما تا {0} ثانیه دیگر خاموش می‌شود.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "همه عملیات به پایان رسیده‌اند. برخی بسته‌ها برای تکمیل به راه‌اندازی مجدد نیاز دارند، بنابراین رایانه شما تا {0} ثانیه دیگر راه‌اندازی مجدد می‌شود.",
+  "Save your work and close any open applications first.": "ابتدا کارهای خود را ذخیره و همه برنامه‌های باز را ببندید.",
+  "Shutting down your computer": "در حال خاموش کردن رایانه",
+  "Restarting your computer": "در حال راه‌اندازی مجدد رایانه",
+  "Shut down now": "اکنون خاموش شود",
+  "The computer could not be shut down": "رایانه خاموش نشد",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI نتوانست خاموش‌کردن رایانه را آغاز کند. لطفاً رایانه خود را به‌صورت دستی خاموش کنید.",
+  "Your computer was not shut down": "رایانه شما خاموش نشد",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "برخی عملیات ناموفق بودند، بنابراین UniGetUI رایانه شما را خاموش نکرد. عملیات ناموفق را بررسی کنید و سپس رایانه را به‌صورت دستی خاموش کنید."
 }

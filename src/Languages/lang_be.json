@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Новая версія {package} усталявана не так, як тая, што ў вас. У параметрах усталявання ўключыце для яе «Спачатку выдаліць, потым пераўсталяваць пры абнаўленні», а затым паўтарыце абнаўленне",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Гэтая версія ўсталявана не так, як тая, што ў вас, таму пры абнаўленні бягучая версія спачатку выдаляецца. Аўтаматычныя абнаўленні і «Абнавіць усё» прапускаюць яе, калі для гэтага пакета не ўключана «Спачатку выдаліць, потым пераўсталяваць пры абнаўленні».",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey не абнавіў {0}: версія {1} — найноўшая з прапанаваных яго крыніцамі",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey не абнавіў {0}. Магчыма, пакет замацаваны або яго крыніцы не прапануюць навейшую версію"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey не абнавіў {0}. Магчыма, пакет замацаваны або яго крыніцы не прапануюць навейшую версію",
+  "Only when UniGetUI is running in the background with its window closed.": "Толькі калі UniGetUI працуе ў фонавым рэжыме з закрытым акном.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Выйсці з UniGetUI, калі аўтаматычнае абнаўленне не знаходзіць абнаўленняў для ўсталявання",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Толькі калі UniGetUI працуе ў фонавым рэжыме з закрытым акном. Да наступнага запуску UniGetUI праверкі абнаўленняў і рэзервовае капіраванне не будуць выконвацца.",
+  "Shut down when finished": "Выключыць пасля завяршэння",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Усе аперацыі завершаны. Камп'ютар выключыцца праз {0} с.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Усе аперацыі завершаны. Для завяршэння працы некаторых пакетаў патрэбны перазапуск, таму камп'ютар перазапусціцца праз {0} с.",
+  "Save your work and close any open applications first.": "Спачатку захавайце працу і закрыйце ўсе адкрытыя праграмы.",
+  "Shutting down your computer": "Выключэнне камп'ютара",
+  "Restarting your computer": "Перазапуск камп'ютара",
+  "Shut down now": "Выключыць зараз",
+  "The computer could not be shut down": "Не ўдалося выключыць камп'ютар",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI не ўдалося пачаць выключэнне. Выключыце камп'ютар уручную.",
+  "Your computer was not shut down": "Камп'ютар не быў выключаны",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некаторыя аперацыі не выканаліся, таму UniGetUI не выключыў камп'ютар. Праверце аперацыі, якія не выканаліся, а затым выключыце камп'ютар уручную."
 }

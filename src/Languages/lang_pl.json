@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Nowa wersja pakietu {package} została zainstalowana w inny sposób niż obecna. W opcjach instalacji pakietu włącz opcję „Odinstaluj, a po aktualizacji zainstaluj ponownie”, a następnie ponów aktualizację.",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Ta wersja jest zainstalowana w inny sposób niż obecna, dlatego jej aktualizacja najpierw odinstaluje obecną wersję. Automatyczne aktualizacje i opcja Zaktualizuj wszystko pomijają ten pakiet, chyba że włączono dla niego opcję „Odinstaluj, a po aktualizacji zainstaluj ponownie”.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey nie zaktualizowało {0}: wersja {1} jest najnowszą dostępną w jego źródłach",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey nie zaktualizowało {0}. Pakiet może być przypięty albo jego źródła mogą nie oferować nowszej wersji."
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey nie zaktualizowało {0}. Pakiet może być przypięty albo jego źródła mogą nie oferować nowszej wersji.",
+  "Only when UniGetUI is running in the background with its window closed.": "Tylko wtedy, gdy UniGetUI działa w tle przy zamkniętym oknie.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Zamknij UniGetUI, gdy automatyczne aktualizacje nie znajdą niczego do zainstalowania",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Tylko wtedy, gdy UniGetUI działa w tle przy zamkniętym oknie. Do czasu ponownego uruchomienia UniGetUI nie będą sprawdzane aktualizacje ani tworzone kopie zapasowe.",
+  "Shut down when finished": "Wyłącz komputer po zakończeniu",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Wszystkie operacje zostały zakończone. Komputer zostanie wyłączony za {0} s.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Wszystkie operacje zostały zakończone. Niektóre pakiety wymagają ponownego uruchomienia, aby dokończyć instalację, dlatego komputer zostanie uruchomiony ponownie za {0} s.",
+  "Save your work and close any open applications first.": "Najpierw zapisz swoją pracę i zamknij wszystkie otwarte aplikacje.",
+  "Shutting down your computer": "Wyłączanie komputera",
+  "Restarting your computer": "Ponowne uruchamianie komputera",
+  "Shut down now": "Wyłącz teraz",
+  "The computer could not be shut down": "Nie można było wyłączyć komputera",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nie mogło rozpocząć wyłączania komputera. Wyłącz komputer ręcznie.",
+  "Your computer was not shut down": "Komputer nie został wyłączony",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Niektóre operacje zakończyły się niepowodzeniem, dlatego UniGetUI nie wyłączyło komputera. Sprawdź nieudane operacje, a następnie wyłącz komputer ręcznie."
 }

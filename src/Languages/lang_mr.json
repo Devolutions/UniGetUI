@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "{package} ची नवीन आवृत्ती तुमच्याकडे असलेल्या आवृत्तीपेक्षा वेगळ्या पद्धतीने स्थापित केली आहे. तिच्या स्थापना पर्यायांमध्ये \"अद्यतनित करताना विस्थापित करा, नंतर पुन्हा स्थापित करा\" हा पर्याय सुरू करा आणि मग तिला पुन्हा अद्यतनित करा.",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "ही आवृत्ती तुमच्याकडे असलेल्या आवृत्तीपेक्षा वेगळ्या पद्धतीने स्थापित केली आहे, त्यामुळे अद्यतनित करताना सध्याची आवृत्ती आधी विस्थापित केली जाते. या पॅकेजसाठी \"अद्यतनित करताना विस्थापित करा, नंतर पुन्हा स्थापित करा\" हा पर्याय सुरू नसेल, तर स्वयंचलित अद्यतने आणि सर्व अद्यतनित करा यामध्ये ते समाविष्ट केले जात नाही.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey ने {0} अद्यतनित केले नाही: त्याच्या स्रोतांवर उपलब्ध {1} ही सर्वात नवीन आवृत्ती आहे.",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey ने {0} अद्यतनित केले नाही. पॅकेज पिन केलेले असू शकते किंवा त्याच्या स्रोतांवर यापेक्षा नवीन आवृत्ती उपलब्ध नसेल."
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey ने {0} अद्यतनित केले नाही. पॅकेज पिन केलेले असू शकते किंवा त्याच्या स्रोतांवर यापेक्षा नवीन आवृत्ती उपलब्ध नसेल.",
+  "Only when UniGetUI is running in the background with its window closed.": "UniGetUI ची विंडो बंद असताना तो पार्श्वभूमीत चालू असेल तेव्हाच.",
+  "Quit UniGetUI when automatic updates find nothing to install": "स्वयंचलित अद्यतनांमध्ये स्थापित करण्यासाठी काहीही आढळले नाही, तेव्हा UniGetUI बंद करा",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "UniGetUI ची विंडो बंद असताना तो पार्श्वभूमीत चालू असेल तेव्हाच. UniGetUI पुन्हा सुरू होईपर्यंत अद्यतनांची तपासणी किंवा बॅकअप घेणे सुरू होणार नाही.",
+  "Shut down when finished": "पूर्ण झाल्यावर संगणक बंद करा",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "सर्व क्रिया पूर्ण झाल्या. तुमचा संगणक {0} सेकंदांत बंद होईल.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "सर्व क्रिया पूर्ण झाल्या. काही पॅकेजेसना पूर्ण होण्यासाठी रीस्टार्ट आवश्यक आहे, त्यामुळे तुमचा संगणक {0} सेकंदांत रीस्टार्ट होईल.",
+  "Save your work and close any open applications first.": "तुमचे काम जतन करा आणि आधी उघडे असलेले अनुप्रयोग बंद करा.",
+  "Shutting down your computer": "तुमचा संगणक बंद होत आहे",
+  "Restarting your computer": "तुमचा संगणक रीस्टार्ट होत आहे",
+  "Shut down now": "आता संगणक बंद करा",
+  "The computer could not be shut down": "संगणक बंद करता आला नाही",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI ला संगणक बंद करण्याची प्रक्रिया सुरू करता आली नाही. कृपया संगणक स्वतः बंद करा.",
+  "Your computer was not shut down": "तुमचा संगणक बंद झाला नाही",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "काही क्रिया अयशस्वी झाल्यामुळे UniGetUI ने तुमचा संगणक बंद केला नाही. अयशस्वी क्रियांचा आढावा घ्या, त्यानंतर संगणक स्वतः बंद करा."
 }

@@ -2627,5 +2627,20 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "A nova versión de {package} está instalada dun xeito distinto á que tes. Activa «Desinstalar e volver instalar ao actualizar» nas opcións de instalación dese paquete e, a continuación, actualízao de novo.",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Esta versión está instalada dun xeito distinto á que tes, polo que ao actualizala desinstálase primeiro a versión actual. As actualizacións automáticas e «Actualizar todo» omiten este paquete a menos que se active «Desinstalar e volver instalar ao actualizar» para este paquete.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey non actualizou {0}: a versión {1} é a máis recente que ofrecen as súas fontes",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey non actualizou {0}. É posible que o paquete estea fixado ou que as súas fontes non ofrezan ningunha versión máis recente"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey non actualizou {0}. É posible que o paquete estea fixado ou que as súas fontes non ofrezan ningunha versión máis recente",
+  "[... {0} characters omitted ...]": "[... {0} caracteres omitidos ...]",
+  "Only when UniGetUI is running in the background with its window closed.": "Só cando UniGetUI se está executando en segundo plano coa xanela pechada.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Pechar UniGetUI cando as actualizacións automáticas non atopen nada que instalar",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Só cando UniGetUI se está executando en segundo plano coa xanela pechada. Non se volverán comprobar actualizacións nin realizar copias de seguranza ata que se inicie UniGetUI de novo.",
+  "Shut down when finished": "Apagar ao rematar",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Todas as operacións remataron. O equipo apagarase dentro de {0} segundos.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Todas as operacións remataron. Algúns paquetes necesitan un reinicio para completarse, polo que o equipo reiniciarase dentro de {0} segundos.",
+  "Save your work and close any open applications first.": "Garda o teu traballo e pecha todas as aplicacións abertas antes.",
+  "Shutting down your computer": "Apagando o equipo",
+  "Restarting your computer": "Reiniciando o equipo",
+  "Shut down now": "Apagar agora",
+  "The computer could not be shut down": "Non se puido apagar o equipo",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI non puido iniciar o apagado. Apaga o equipo manualmente.",
+  "Your computer was not shut down": "O equipo non se apagou",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algunhas operacións fallaron, polo que UniGetUI non apagou o equipo. Revisa as operacións que fallaron e apágao manualmente."
 }

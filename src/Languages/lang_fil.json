@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Iba ang paraan ng pag-install ng bagong bersyon ng {package} kumpara sa naka-install sa iyo. I-on ang \"I-uninstall, pagkatapos ay muling i-install kapag na-update\" sa mga opsyon sa pag-install nito, pagkatapos ay i-update itong muli",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Iba ang paraan ng pag-install ng bersyong ito kumpara sa naka-install sa iyo, kaya ia-uninstall muna ang kasalukuyang bersyon kapag nag-update. Hindi ito isasama sa mga awtomatikong update at sa I-update lahat maliban kung naka-on para sa package na ito ang \"I-uninstall, pagkatapos ay muling i-install kapag na-update\".",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Hindi na-update ng Chocolatey ang {0}: ang bersyong {1} ang pinakabago sa mga iniaalok ng mga source nito",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Hindi na-update ng Chocolatey ang {0}. Maaaring naka-pin ang package, o walang mas bagong bersyon na iniaalok ang mga source nito"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Hindi na-update ng Chocolatey ang {0}. Maaaring naka-pin ang package, o walang mas bagong bersyon na iniaalok ang mga source nito",
+  "Only when UniGetUI is running in the background with its window closed.": "Kapag tumatakbo lang ang UniGetUI sa background at nakasara ang window nito.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Isara ang UniGetUI kapag walang nakitang mai-install na update ang mga awtomatikong update",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Kapag tumatakbo lang ang UniGetUI sa background at nakasara ang window nito. Wala nang susuriin para sa mga update o gagawing backup hanggang sa muling simulan ang UniGetUI.",
+  "Shut down when finished": "I-shutdown kapag tapos na",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Tapos na ang lahat ng operasyon. Magshu-shutdown ang computer mo sa loob ng {0} segundo.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Tapos na ang lahat ng operasyon. Kailangang mag-restart ang ilang package para makumpleto, kaya magre-restart ang computer mo sa loob ng {0} segundo.",
+  "Save your work and close any open applications first.": "I-save muna ang iyong ginagawa at isara ang lahat ng bukas na application.",
+  "Shutting down your computer": "Sini-shutdown ang computer mo",
+  "Restarting your computer": "Nire-restart ang computer mo",
+  "Shut down now": "I-shutdown ngayon",
+  "The computer could not be shut down": "Hindi ma-shutdown ang computer",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "Hindi masimulan ng UniGetUI ang pag-shutdown. Paki-shutdown nang manu-mano ang computer mo.",
+  "Your computer was not shut down": "Hindi na-shutdown ang computer mo",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "May ilang operasyong nabigo, kaya hindi na-shutdown ng UniGetUI ang computer mo. Suriin ang mga nabigong operasyon, pagkatapos ay i-shutdown ito nang manu-mano."
 }

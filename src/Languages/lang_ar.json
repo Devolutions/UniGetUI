@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "تم تثبيت الإصدار الجديد من {package} بطريقة مختلفة عن الإصدار المثبّت لديك. فعّل خيار \"إلغاء التثبيت، ثم إعادة التثبيت عند التحديث\" ضمن خيارات التثبيت الخاصة به، ثم حدّثه مرة أخرى",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "هذا الإصدار مثبت بطريقة مختلفة عن الإصدار لديك، لذا يؤدي تحديثه إلى إلغاء تثبيت الإصدار الحالي أولًا. لا تشمل التحديثات التلقائية وخيار \"تحديث الكل\" هذا الإصدار ما لم يتم تفعيل خيار \"إلغاء التثبيت، ثم إعادة التثبيت عند التحديث\" لهذه الحزمة.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "لم يحدّث Chocolatey {0}: الإصدار {1} هو أحدث إصدار توفره مصادره",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "لم يحدّث Chocolatey {0}. قد تكون الحزمة مقفلة على إصدار محدد، أو قد لا توفر مصادرها إصدارًا أحدث"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "لم يحدّث Chocolatey {0}. قد تكون الحزمة مقفلة على إصدار محدد، أو قد لا توفر مصادرها إصدارًا أحدث",
+  "Only when UniGetUI is running in the background with its window closed.": "فقط عندما يكون UniGetUI قيد التشغيل في الخلفية ونافذته مغلقة.",
+  "Quit UniGetUI when automatic updates find nothing to install": "إنهاء UniGetUI عندما لا تعثر التحديثات التلقائية على شيء لتثبيته",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "فقط عندما يكون UniGetUI قيد التشغيل في الخلفية ونافذته مغلقة. لن تُجرى أي عمليات تحقق من التحديثات أو نسخ احتياطي أخرى حتى يتم تشغيل UniGetUI مجددًا.",
+  "Shut down when finished": "إيقاف التشغيل عند الانتهاء",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "اكتملت جميع العمليات. سيتم إيقاف تشغيل الكمبيوتر خلال {0} ثانية.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "اكتملت جميع العمليات. تتطلب بعض الحزم إعادة التشغيل لإكمالها، لذا ستتم إعادة تشغيل الكمبيوتر خلال {0} ثانية.",
+  "Save your work and close any open applications first.": "احفظ عملك وأغلق أي تطبيقات مفتوحة أولًا.",
+  "Shutting down your computer": "جارٍ إيقاف تشغيل الكمبيوتر",
+  "Restarting your computer": "جارٍ إعادة تشغيل الكمبيوتر",
+  "Shut down now": "إيقاف التشغيل الآن",
+  "The computer could not be shut down": "تعذّر إيقاف تشغيل الكمبيوتر",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "تعذّر على UniGetUI بدء إيقاف التشغيل. يُرجى إيقاف تشغيل الكمبيوتر يدويًا.",
+  "Your computer was not shut down": "لم يتم إيقاف تشغيل الكمبيوتر",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "فشلت بعض العمليات، لذا لم يُوقف UniGetUI تشغيل الكمبيوتر. راجع العمليات الفاشلة، ثم أوقف تشغيله يدويًا."
 }

@@ -23,7 +23,7 @@ internal static partial class UvToolListParser
     /// data simply stays null on the entry. Lines that are neither a tool header nor an
     /// executable line are ignored, so notices on stdout like "No tools installed" cannot
     /// corrupt the listing. An executable line before any header is dropped.
-    /// Verified against uv 0.13.7; see docs/UV_ARCHITECTURE.md.
+    /// Verified against uv 0.13.7.
     /// </summary>
     internal static IReadOnlyList<UvTool> Parse(IEnumerable<string> lines)
     {

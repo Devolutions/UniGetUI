@@ -53,6 +53,7 @@ macOS, the first terminal emulator UniGetUI finds on Linux).
 | [PowerShell 5.x](#powershell-5x) | Yes | | |
 | [PowerShell 7.x](#powershell-7x) | Yes | Yes | Yes |
 | [Pip](#pip) | Yes | Yes | Yes |
+| [Uv](#uv) | Yes | Yes | Yes |
 | [Npm](#npm) | Yes | Yes | Yes |
 | [Bun](#bun) | Yes | Yes | Yes |
 | [.NET Tool](#net-tool) | Yes | Yes | Yes |

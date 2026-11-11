@@ -140,6 +140,27 @@ retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path 
 V3 has no `IsLatestVersion`, so the client picks "latest" itself using the comparator described
 in the next section.
 
+## Uv (uv tool)
+
+`UniGetUI.PackageEngine.Managers.Uv` (id `uv`) runs Astral's `uv tool` subcommand to manage
+Python CLI tools installed into uv's isolated tool environments.
+
+- The shared `UniGetUI.PackageEngine.Managers.Generic.PyPI` project backs both uv and Pip:
+  `PyPIIndexClient` serves the `/simple` project-name list and search matches,
+  `PyPIProjectClient` serves latest-version lookups. Pip and uv each hold their own cache
+  files under that service, so neither manager's index behaviour leaks into the other's.
+- `uv python list --output-format json` is the interpreter catalogue; a row with a non-null
+  `path` is installed, one with a non-null `url` is downloadable. `UvPythonService` parses it
+  and `UvPkgOperationHelper.ListPythonInterpreters()` exposes it to the install-options dialog
+  through the `ManagerCapabilities.SupportsCustomPythonInterpreters` capability.
+- The Python a tool runs on is persisted as `InstallOptions.Uv_PythonRequest`,
+  `Uv_ManagedPython` (tri-state string, "" lets uv decide) and `Uv_NoPythonDownloads`;
+  `ApplyOperationOverrides` (called from the top of `PackageOperations.PerformOperation`, so
+  both the local and the agent-broker paths) copies them into `package.OverridenOptions`, and
+  `UvToolInstallRecords` remembers the original request so an upgrade reuses it.
+- Tests drive the parser and option plumbing through fake `uv` script fixtures; the
+  `UvToolInstallRecords.TestPathOverride` hook keeps the records file inside the test sandbox.
+
 ## macOS installer packages (.pkg, .dmg and .zip)
 
 `UniGetUI.PackageEngine.Managers.MacPkg` (id `pkg`, macOS only) installs IT-published `.pkg` and
@@ -255,7 +276,7 @@ usual negative/zero/positive, or `null` when two versions cannot be meaningfully
   allowed. Used by `BaseNuGet` (so Chocolatey, .NET Tool, Windows PowerShell and PowerShell 7),
   npm, Bun and Cargo.
 - **`PythonVersion`** in `UniGetUI.Core.Tools` - PEP 440, matching Python's packaging library.
-  Used by Pip.
+  Used by Pip and Uv.
 - **`AlpmVersion`** in the Pacman manager project - a port of libalpm's `alpm_pkg_vercmp`
   (epoch, then version and release through rpmvercmp), so `1.0.1-1` is newer than `1.0-2` and an
   epoch outranks any version. Used by Pacman and AUR. It accepts every string, so it never falls

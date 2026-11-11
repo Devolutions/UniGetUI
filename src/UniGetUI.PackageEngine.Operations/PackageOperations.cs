@@ -1899,14 +1899,12 @@ namespace UniGetUI.PackageEngine.Operations
             UpgradablePackagesLoader.Instance.Remove(Package);
             InstalledPackagesLoader.Instance.Remove(Package);
 
-            bool explicitVersionRequested =
-                !string.IsNullOrWhiteSpace(Options.Version)
-                && (
-                    Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate
-                    || (Options.SkipMajorUpdates && UpdateVersionPin.HasHonoredExplicitVersion(Package, Options))
-                );
-            string targetVersion = explicitVersionRequested
-                ? Options.Version
+            string? honoredVersion = string.IsNullOrWhiteSpace(Options.Version)
+                ? null
+                : UpdateVersionPin.HonoredUpdateVersion(Package, Options);
+            bool explicitVersionRequested = honoredVersion is not null;
+            string targetVersion = honoredVersion is not null
+                ? honoredVersion
                 : string.IsNullOrWhiteSpace(Package.NewVersionString)
                     ? Package.VersionString
                     : Package.NewVersionString;

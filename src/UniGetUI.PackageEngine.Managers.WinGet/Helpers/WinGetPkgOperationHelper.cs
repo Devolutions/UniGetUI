@@ -445,7 +445,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             if (operation is OperationType.Update or OperationType.Install)
             {
                 // Pending-restart sticks after reboot; don't count it as a phantom no-op (#5042).
-                MarkUpgradeAsDone(package, countTowardStuckLoop: false);
+                MarkUpgradeAsDone(package, countTowardStuckLoop: false, pendingTrust?.Version);
                 if (uintCode is 0x8A150109 && pendingTrust is not null)
                     QueueTrustedInstallerHostsRecord(package, pendingTrust);
             }
@@ -506,7 +506,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         { // Application is already installed
             if (operation is OperationType.Update or OperationType.Install)
                 // Only updates feed the stuck-update counter; installs must not (#5158).
-                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update);
+                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update, pendingTrust?.Version);
             return OperationVeredict.Success;
         }
 
@@ -515,7 +515,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             if (operation is OperationType.Update or OperationType.Install)
             {
                 // Only updates feed the stuck-update counter; installs must not (#5158).
-                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update);
+                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update, pendingTrust?.Version);
                 if (pendingTrust is not null)
                     QueueTrustedInstallerHostsRecord(package, pendingTrust);
             }
@@ -595,11 +595,17 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             ? v
             : DefaultStuckUpgradeThreshold;
 
-    private static void MarkUpgradeAsDone(IPackage package, bool countTowardStuckLoop = true)
+    private static void MarkUpgradeAsDone(
+        IPackage package,
+        bool countTowardStuckLoop = true,
+        string? installedVersion = null
+    )
     {
         var options = InstallOptionsFactory.LoadApplicable(package);
         string version;
-        if (package.IsUpgradable)
+        if (installedVersion is { Length: > 0 })
+            version = installedVersion;
+        else if (package.IsUpgradable)
             version = package.NewVersionString;
         else if (options.Version != "")
             version = options.Version;
@@ -626,6 +632,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     private static string GetRequestedVersion(IPackage package, InstallOptions options, OperationType operation)
     {
         if (operation is OperationType.Install && options.Version != "")
+            return options.Version;
+        if (operation is OperationType.Update && options.SkipMajorUpdates && UpdateVersionPin.HasExplicitVersion(options))
             return options.Version;
         return package.IsUpgradable ? package.NewVersionString : package.VersionString;
     }

@@ -15,6 +15,15 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public static bool HasHonoredExplicitVersion(IPackage package, InstallOptions options) =>
             HasExplicitVersion(options) && HonorsVersionOnUpdate(package.Manager);
 
+        public static string? HonoredUpdateVersion(IPackage package, InstallOptions options) =>
+            options.Version.Length > 0
+            && (
+                package.Manager.Capabilities.SupportsCustomVersionsOnUpdate
+                || (options.SkipMajorUpdates && HasHonoredExplicitVersion(package, options))
+            )
+                ? options.Version
+                : null;
+
         public static bool Applies(IPackage package, InstallOptions options, OperationType operation) =>
             operation is OperationType.Update
             && options.SkipMajorUpdates

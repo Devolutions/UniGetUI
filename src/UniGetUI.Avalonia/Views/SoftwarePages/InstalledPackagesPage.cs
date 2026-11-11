@@ -418,7 +418,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
     {
         // Updates must run on the upgradable instance: the installed one reports
         // NewVersionString == VersionString, which managers read as "nothing to do".
-        if (package?.GetUpgradablePackage() is not { } upgradable) return;
+        if (package?.GetUpgradablePackage() is not { } listed) return;
+        if (await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed) is not { } upgradable) return;
         var opts = await InstallOptionsFactory.LoadApplicableAsync(upgradable, elevated: elevated);
         if (PackageOperation.HasPendingOperation(upgradable, OperationType.Update)) return;
         var op = new UpdatePackageOperation(upgradable, opts);

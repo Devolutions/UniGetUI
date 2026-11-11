@@ -2042,6 +2042,25 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void AnExplicitUpdateVersionIsTheOneTrustedAndRecordedAsUpgraded()
+    {
+        var (manager, package) = CreateTrustTestPackage("Contoso.ExplicitTarget");
+        var options = new InstallOptions { SkipMajorUpdates = true, Version = "1.2.0", VersionIsExplicit = true };
+
+        var recorded = RecordTrustedHosts(() =>
+        {
+            manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        });
+
+        Assert.Equal("1.2.0", Assert.Single(recorded).Version);
+        Assert.Equal(
+            "1.2.0",
+            Settings.GetDictionaryItem<string, string>(Settings.K.WinGetAlreadyUpgradedPackages, package.Id)
+        );
+    }
+
+    [Fact]
     public void ARebootToFinishTheInstallStillTrustsItsHost()
     {
         var (manager, package) = CreateTrustTestPackage("Contoso.RebootToFinish");

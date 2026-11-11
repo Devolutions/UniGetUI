@@ -54,6 +54,28 @@ public sealed class IndeterminateProgressBarsTests
     }, CancellationToken.None);
 
     [Fact]
+    public Task OnlyBarsWithoutTheCompositorClassFadeBetweenModes() => _session.Dispatch(() =>
+    {
+        PrepareStyles();
+        var plain = Bar();
+        var handedOff = Bar();
+        handedOff.Classes.Add(IndeterminateProgressBars.CompositorClass);
+        var window = Show(new StackPanel { Spacing = 10, Children = { plain, handedOff } });
+
+        Assert.NotEmpty(Root(plain, "DeterminateRoot").Transitions!);
+        Assert.NotEmpty(Root(plain, "IndeterminateRoot").Transitions!);
+        Assert.Null(Root(handedOff, "DeterminateRoot").Transitions);
+        Assert.Null(Root(handedOff, "IndeterminateRoot").Transitions);
+
+        handedOff.IsIndeterminate = false;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(1, Root(handedOff, "DeterminateRoot").Opacity);
+        Assert.Equal(0, Root(handedOff, "IndeterminateRoot").Opacity);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
     public Task SnapshotDescribesTheBarWhereItIsDrawn() => _session.Dispatch(() =>
     {
         PrepareStyles();
@@ -179,6 +201,9 @@ public sealed class IndeterminateProgressBarsTests
 
     private static Border Indicator(ProgressBar bar)
         => bar.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "IndeterminateProgressBarIndicator");
+
+    private static Panel Root(ProgressBar bar, string name)
+        => bar.GetVisualDescendants().OfType<Panel>().Single(p => p.Name == name);
 
     private static double IndicatorOffset(ProgressBar bar)
         => Indicator(bar).RenderTransform?.Value.M31 ?? 0;

@@ -796,6 +796,12 @@
             </Animation>
         </Style.Animations>
     </Style>
+    <Style Selector="ProgressBar.compositor-indeterminate /template/ Panel#DeterminateRoot">
+        <Setter Property="Transitions" Value="{x:Null}"/>
+    </Style>
+    <Style Selector="ProgressBar.compositor-indeterminate /template/ Panel#IndeterminateRoot">
+        <Setter Property="Transitions" Value="{x:Null}"/>
+    </Style>
     <Style Selector="ProgressBar.compositor-indeterminate /template/ Border#IndeterminateProgressBarIndicator">
         <Setter Property="Opacity" Value="0"/>
     </Style>

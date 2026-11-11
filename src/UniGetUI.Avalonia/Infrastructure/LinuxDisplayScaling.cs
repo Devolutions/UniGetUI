@@ -239,6 +239,12 @@ public static partial class LinuxDisplayScaling
         xsettingsDpi1024 = null;
         resources = null;
 
+        // Xlib requires XInitThreads before any other Xlib call in a process that uses it from
+        // several threads, as Avalonia does. Avalonia calls it when its X11 platform starts, which
+        // is after this probe; libX11 1.8 and later do it implicitly, but older ones do not.
+        // Calling it again later does nothing.
+        XInitThreads();
+
         nint display = XOpenDisplay(0);
         if (display == 0)
         {
@@ -259,30 +265,7 @@ public static partial class LinuxDisplayScaling
             }
 
             nint settingsAtom = XInternAtom(display, "_XSETTINGS_SETTINGS", 0);
-            int status = XGetWindowProperty(
-                display, owner, settingsAtom,
-                0, MaxPropertyLongs, 0, settingsAtom,
-                out _, out int format, out nuint itemCount, out _, out nint property);
-
-            if (status != 0 || property == 0)
-            {
-                return true;
-            }
-
-            try
-            {
-                if (format == 8 && itemCount > 0 && itemCount <= int.MaxValue)
-                {
-                    byte[] data = new byte[(int)itemCount];
-                    Marshal.Copy(property, data, 0, data.Length);
-                    xsettingsDpi1024 = TryParseXSettingsInteger(data, "Xft/DPI");
-                }
-            }
-            finally
-            {
-                XFree(property);
-            }
-
+            xsettingsDpi1024 = ReadXSettingsDpi(display, owner, settingsAtom);
             return true;
         }
         finally
@@ -291,10 +274,76 @@ public static partial class LinuxDisplayScaling
         }
     }
 
+    private static int _trappedXErrors;
+
+    /// <summary>
+    /// Reads Xft/DPI from the settings manager's window. The manager can exit or restart after
+    /// <c>XGetSelectionOwner</c> returned its window, and the request then fails with BadWindow.
+    /// Avalonia has not installed its X error handler yet, and libX11's default one ends the
+    /// process, so errors are trapped here for the length of the request and a vanished manager
+    /// reads as no settings.
+    /// </summary>
+    private static unsafe int? ReadXSettingsDpi(nint display, nint owner, nint settingsAtom)
+    {
+        _trappedXErrors = 0;
+        nint previousHandler = XSetErrorHandler((nint)(delegate* unmanaged<nint, nint, int>)&TrapXError);
+        nint property = 0;
+        try
+        {
+            int status = XGetWindowProperty(
+                display, owner, settingsAtom,
+                0, MaxPropertyLongs, 0, settingsAtom,
+                out _, out int format, out nuint itemCount, out _, out property);
+
+            // Wait for the server to process the request, so an error it raises reaches the
+            // handler above and not the one restored below.
+            XSync(display, 0);
+
+            if (_trappedXErrors > 0 || status != 0 || property == 0)
+            {
+                return null;
+            }
+
+            if (format != 8 || itemCount == 0 || itemCount > int.MaxValue)
+            {
+                return null;
+            }
+
+            byte[] data = new byte[(int)itemCount];
+            Marshal.Copy(property, data, 0, data.Length);
+            return TryParseXSettingsInteger(data, "Xft/DPI");
+        }
+        finally
+        {
+            if (property != 0)
+            {
+                XFree(property);
+            }
+
+            XSetErrorHandler(previousHandler);
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    private static int TrapXError(nint display, nint errorEvent)
+    {
+        _trappedXErrors++;
+        return 0;
+    }
+
     private const string X11Library = "libX11.so.6";
 
     // In 32-bit units: 256 KiB, far more than any XSETTINGS manager publishes.
     private const nint MaxPropertyLongs = 0x10000;
+
+    [LibraryImport(X11Library)]
+    private static partial int XInitThreads();
+
+    [LibraryImport(X11Library)]
+    private static partial nint XSetErrorHandler(nint handler);
+
+    [LibraryImport(X11Library)]
+    private static partial int XSync(nint display, int discard);
 
     [LibraryImport(X11Library)]
     private static partial nint XOpenDisplay(nint displayName);

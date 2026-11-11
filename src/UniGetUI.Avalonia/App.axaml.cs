@@ -36,6 +36,7 @@ public partial class App : Application
         TabControlFocusGuard.Install();
         UiAutomationGuard.Install();
         SmoothScrollManager.Install();
+        IndeterminateProgressBars.Install(this);
         if (!MacGlassWindowHelper.IsGlassEnabled())
             Styles.Add(new ScrollBarStyles());
 

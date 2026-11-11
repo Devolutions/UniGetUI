@@ -174,7 +174,7 @@
                             <TextBlock Text="{Binding LibraryEmptyDescription}" TextWrapping="Wrap"/>
                             <Button Content="{t:Translate Retry}" IsVisible="{Binding HasLibraryError}" Command="{Binding ReloadLibraryCommand}"/>
                         </StackPanel>
-                        <ProgressBar Height="3" VerticalAlignment="Top" IsIndeterminate="True" IsVisible="{Binding IsLibraryBusy}"/>
+                        <ProgressBar Height="3" VerticalAlignment="Top" IsIndeterminate="{Binding IsLibraryBusy}" IsVisible="{Binding IsLibraryBusy}"/>
                     </Panel>
                 </Border>
                 <Grid Grid.Row="3" ColumnDefinitions="*,Auto" IsVisible="{Binding IsLibraryView}">
@@ -237,7 +237,7 @@
                                 <Button Content="{t:Translate Preview SKILL.md and files}" Command="{Binding LoadPreviewCommand}"
                                         IsVisible="{Binding IsDiscover}"
                                         IsEnabled="{Binding CanLoadPreview}" HorizontalAlignment="Left"/>
-                                <ProgressBar Height="3" IsIndeterminate="True" IsVisible="{Binding IsLoadingPreview}"/>
+                                <ProgressBar Height="3" IsIndeterminate="{Binding IsLoadingPreview}" IsVisible="{Binding IsLoadingPreview}"/>
                                 <TextBlock Text="{Binding PreviewError}" IsVisible="{Binding HasPreviewError}" TextWrapping="Wrap"
                                            Foreground="{DynamicResource StatusErrorForeground}"/>
                                 <StackPanel IsVisible="{Binding HasPreview}" Spacing="10">

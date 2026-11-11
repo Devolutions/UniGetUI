@@ -175,6 +175,9 @@ public static class AvaloniaAppHost
             return;
         }
 
+        // Before Avalonia's X11 platform starts, since that is when it reads the scale.
+        LinuxDisplayScaling.ApplyXSettingsScale();
+
         try
         {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

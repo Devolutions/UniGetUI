@@ -2627,5 +2627,20 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Versioni i ri i {package} është instaluar ndryshe nga ai që ke. Aktivizo \"Çinstalo, më pas instaloje përsëri kur të përditësohet\" te opsionet e instalimit dhe përditësoje përsëri.",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Ky version është instaluar ndryshe nga ai që ke, ndaj gjatë përditësimit versioni aktual çinstalohet fillimisht. Përditësimet automatike dhe Përditëso të gjitha e anashkalojnë, përveç rastit kur për këtë paketë aktivizohet \"Çinstalo, më pas instaloje përsëri kur të përditësohet\".",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey nuk e përditësoi {0}: versioni {1} është më i fundit që ofrojnë burimet e tij",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey nuk e përditësoi {0}. Paketa mund të jetë e fiksuar, ose burimet e saj mund të mos ofrojnë një version më të ri"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey nuk e përditësoi {0}. Paketa mund të jetë e fiksuar, ose burimet e saj mund të mos ofrojnë një version më të ri",
+  "[... {0} characters omitted ...]": "[... u hoqën {0} karaktere ...]",
+  "Only when UniGetUI is running in the background with its window closed.": "Vetëm kur UniGetUI po ekzekutohet në sfond me dritaren e mbyllur.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Mbylle UniGetUI kur përditësimet automatike nuk gjejnë asgjë për të instaluar",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Vetëm kur UniGetUI po ekzekutohet në sfond me dritaren e mbyllur. Nuk do të kryhen më kontrolle për përditësime ose kopje rezervë derisa UniGetUI të niset përsëri.",
+  "Shut down when finished": "Fike kur të përfundojë",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Të gjitha veprimet përfunduan. Kompjuteri do të fiket pas {0} sekondash.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Të gjitha veprimet përfunduan. Disa paketa kërkojnë rinisje për të përfunduar, prandaj kompjuteri do të riniset pas {0} sekondash.",
+  "Save your work and close any open applications first.": "Ruaj punën dhe mbyll fillimisht çdo aplikacion të hapur.",
+  "Shutting down your computer": "Po fiket kompjuteri",
+  "Restarting your computer": "Po riniset kompjuteri",
+  "Shut down now": "Fike tani",
+  "The computer could not be shut down": "Kompjuteri nuk mund të fiket",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nuk mundi të nisë fikjen. Fike kompjuterin manualisht.",
+  "Your computer was not shut down": "Kompjuteri yt nuk u fik",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Disa veprime dështuan, ndaj UniGetUI nuk e fiku kompjuterin. Shqyrto veprimet e dështuara dhe më pas fike manualisht."
 }

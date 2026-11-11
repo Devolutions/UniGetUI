@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "{package} का नया संस्करण आपके मौजूदा संस्करण से अलग तरीके से इंस्टॉल है। इसके इंस्टॉलेशन विकल्पों में \"अपडेट होने पर पहले अनइंस्टॉल करें, फिर दोबारा इंस्टॉल करें\" चालू करें, फिर इसे फिर से अपडेट करें।",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "यह संस्करण आपके मौजूदा संस्करण से अलग तरीके से इंस्टॉल है, इसलिए इसे अपडेट करने पर पहले मौजूदा संस्करण अनइंस्टॉल हो जाता है। इस पैकेज के लिए \"अपडेट होने पर पहले अनइंस्टॉल करें, फिर दोबारा इंस्टॉल करें\" चालू न होने पर स्वचालित अपडेट और सभी अपडेट करें इसे छोड़ देते हैं।",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey ने {0} को अपडेट नहीं किया: संस्करण {1} उसके स्रोतों में उपलब्ध सबसे नया संस्करण है।",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey ने {0} को अपडेट नहीं किया। हो सकता है कि पैकेज पिन किया गया हो या उसके स्रोतों में कोई नया संस्करण उपलब्ध न हो।"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey ने {0} को अपडेट नहीं किया। हो सकता है कि पैकेज पिन किया गया हो या उसके स्रोतों में कोई नया संस्करण उपलब्ध न हो।",
+  "Only when UniGetUI is running in the background with its window closed.": "केवल तभी, जब UniGetUI बैकग्राउंड में चल रहा हो और उसकी विंडो बंद हो।",
+  "Quit UniGetUI when automatic updates find nothing to install": "जब स्वचालित अपडेट में इंस्टॉल करने के लिए कुछ न मिले, तो UniGetUI बंद करें",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "केवल तभी, जब UniGetUI बैकग्राउंड में चल रहा हो और उसकी विंडो बंद हो। UniGetUI फिर से शुरू होने तक अपडेट की जाँच या बैकअप नहीं होगा।",
+  "Shut down when finished": "पूरा होने पर कंप्यूटर बंद करें",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "सभी कार्य पूरे हो गए हैं। आपका कंप्यूटर {0} सेकंड में बंद हो जाएगा।",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "सभी कार्य पूरे हो गए हैं। कुछ पैकेजों को पूरा होने के लिए रीस्टार्ट करना आवश्यक है, इसलिए आपका कंप्यूटर {0} सेकंड में रीस्टार्ट होगा।",
+  "Save your work and close any open applications first.": "पहले अपना काम सेव करें और खुले हुए ऐप्लिकेशन बंद करें।",
+  "Shutting down your computer": "आपका कंप्यूटर बंद हो रहा है",
+  "Restarting your computer": "आपका कंप्यूटर रीस्टार्ट हो रहा है",
+  "Shut down now": "अभी बंद करें",
+  "The computer could not be shut down": "कंप्यूटर बंद नहीं किया जा सका",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI कंप्यूटर बंद करना शुरू नहीं कर सका। कृपया कंप्यूटर को मैन्युअल रूप से बंद करें।",
+  "Your computer was not shut down": "आपका कंप्यूटर बंद नहीं हुआ",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "कुछ कार्य विफल हो गए, इसलिए UniGetUI ने आपका कंप्यूटर बंद नहीं किया। विफल कार्यों की समीक्षा करें, फिर कंप्यूटर को मैन्युअल रूप से बंद करें।"
 }

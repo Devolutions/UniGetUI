@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "નવું {package} સંસ્કરણ તમે હાલમાં ઇન્સ્ટોલ કરેલા સંસ્કરણથી અલગ રીતે ઇન્સ્ટોલ થાય છે. તેની ઇન્સ્ટોલેશન વિકલ્પોમાં \"અપડેટ કરતી વખતે પહેલાં અનઇન્સ્ટોલ કરો, પછી ફરી ઇન્સ્ટોલ કરો\" ચાલુ કરો, પછી તેને ફરી અપડેટ કરો.",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "આ સંસ્કરણ તમે હાલમાં ઇન્સ્ટોલ કરેલા સંસ્કરણથી અલગ રીતે ઇન્સ્ટોલ થાય છે, તેથી તેને અપડેટ કરતાં પહેલાં હાલનું સંસ્કરણ અનઇન્સ્ટોલ થાય છે. આ પેકેજ માટે \"અપડેટ કરતી વખતે પહેલાં અનઇન્સ્ટોલ કરો, પછી ફરી ઇન્સ્ટોલ કરો\" ચાલુ ન હોય ત્યાં સુધી સ્વચાલિત અપડેટ્સ અને બધું અપડેટ કરો તેને છોડી દે છે.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey એ {0} અપડેટ કર્યું નથી: તેના સ્રોતોમાં {1} સૌથી નવી આવૃત્તિ છે",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey એ {0} અપડેટ કર્યું નથી. પેકેજ પિન કરેલું હોઈ શકે છે અથવા તેના સ્રોતોમાં વધુ નવી આવૃત્તિ ઉપલબ્ધ ન હોય."
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey એ {0} અપડેટ કર્યું નથી. પેકેજ પિન કરેલું હોઈ શકે છે અથવા તેના સ્રોતોમાં વધુ નવી આવૃત્તિ ઉપલબ્ધ ન હોય.",
+  "Only when UniGetUI is running in the background with its window closed.": "જ્યારે UniGetUI પૃષ્ઠભૂમિમાં ચાલી રહ્યું હોય અને તેની વિન્ડો બંધ હોય ત્યારે જ.",
+  "Quit UniGetUI when automatic updates find nothing to install": "સ્વચાલિત અપડેટ્સને ઇન્સ્ટોલ કરવા માટે કંઈ ન મળે ત્યારે UniGetUI બંધ કરો",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "જ્યારે UniGetUI પૃષ્ઠભૂમિમાં ચાલી રહ્યું હોય અને તેની વિન્ડો બંધ હોય ત્યારે જ. UniGetUI ફરી શરૂ ન થાય ત્યાં સુધી અપડેટ્સની તપાસ કે બેકઅપ ચાલશે નહીં.",
+  "Shut down when finished": "પૂર્ણ થયા પછી કમ્પ્યુટર બંધ કરો",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "બધી ક્રિયાઓ પૂર્ણ થઈ ગઈ છે. તમારું કમ્પ્યુટર {0} સેકન્ડમાં બંધ થઈ જશે.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "બધી ક્રિયાઓ પૂર્ણ થઈ ગઈ છે. કેટલીક ક્રિયાઓ પૂર્ણ કરવા માટે કેટલાક પેકેજોને પુનઃપ્રારંભની જરૂર છે, તેથી તમારું કમ્પ્યુટર {0} સેકન્ડમાં પુનઃપ્રારંભ થશે.",
+  "Save your work and close any open applications first.": "પહેલાં તમારું કામ સાચવો અને ખુલ્લી એપ્લિકેશનો બંધ કરો.",
+  "Shutting down your computer": "તમારું કમ્પ્યુટર બંધ થઈ રહ્યું છે",
+  "Restarting your computer": "તમારું કમ્પ્યુટર પુનઃપ્રારંભ થઈ રહ્યું છે",
+  "Shut down now": "હમણાં કમ્પ્યુટર બંધ કરો",
+  "The computer could not be shut down": "કમ્પ્યુટર બંધ કરી શકાયું નહીં",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI કમ્પ્યુટર બંધ કરવાની પ્રક્રિયા શરૂ કરી શક્યું નહીં. કૃપા કરીને તમારું કમ્પ્યુટર જાતે બંધ કરો.",
+  "Your computer was not shut down": "તમારું કમ્પ્યુટર બંધ થયું નથી",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "કેટલીક ક્રિયાઓ નિષ્ફળ ગઈ, તેથી UniGetUI એ તમારું કમ્પ્યુટર બંધ કર્યું નથી. નિષ્ફળ ગયેલી ક્રિયાઓની સમીક્ષા કરો, પછી કમ્પ્યુટર જાતે બંધ કરો."
 }

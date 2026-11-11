@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Nauja {package} versija įdiegta kitaip nei turima. Diegimo parinktyse įjunkite jai parinktį „Atnaujinus pašalinti ir įdiegti iš naujo“, tada bandykite atnaujinti dar kartą",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Ši versija įdiegta kitaip nei turima, todėl ją atnaujinant pirmiausia pašalinama dabartinė versija. Automatiniai (at-)naujinimai ir „Atnaujinti visus“ jos neįtrauks, nebent šiam paketui įjungta parinktis „Atnaujinus pašalinti ir įdiegti iš naujo“.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey neatnaujino {0}: versija {1} yra naujausia, kurią siūlo jo šaltiniai",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey neatnaujino {0}. Paketas gali būti prisegtas arba jo šaltiniai gali nesiūlyti naujesnės versijos"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey neatnaujino {0}. Paketas gali būti prisegtas arba jo šaltiniai gali nesiūlyti naujesnės versijos",
+  "Only when UniGetUI is running in the background with its window closed.": "Tik tada, kai „UniGetUI“ veikia fone, o jos langas uždarytas.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Uždaryti „UniGetUI“, kai automatiniai naujinimai neranda, ko įdiegti",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Tik tada, kai „UniGetUI“ veikia fone, o jos langas uždarytas. Kol „UniGetUI“ vėl nebus paleista, nebus tikrinama, ar yra naujinimų, ir nebus kuriamos atsarginės kopijos.",
+  "Shut down when finished": "Išjungti baigus",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Visos operacijos baigtos. Kompiuteris bus išjungtas po {0} sekundžių.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Visos operacijos baigtos. Kai kuriems paketams užbaigti reikia paleisti sistemą iš naujo, todėl kompiuteris bus paleistas iš naujo po {0} sekundžių.",
+  "Save your work and close any open applications first.": "Išsaugokite savo darbą ir pirmiausia uždarykite visas atidarytas programas.",
+  "Shutting down your computer": "Kompiuterio išjungimas",
+  "Restarting your computer": "Kompiuterio paleidimas iš naujo",
+  "Shut down now": "Išjungti dabar",
+  "The computer could not be shut down": "Nepavyko išjungti kompiuterio",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "„UniGetUI“ nepavyko pradėti kompiuterio išjungimo. Išjunkite kompiuterį rankiniu būdu.",
+  "Your computer was not shut down": "Kompiuteris nebuvo išjungtas",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Kai kurių operacijų nepavyko atlikti, todėl „UniGetUI“ neišjungė kompiuterio. Peržiūrėkite nepavykusias operacijas, tada išjunkite kompiuterį rankiniu būdu."
 }

@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Η νέα έκδοση του {package} εγκαθίσταται διαφορετικά από την έκδοση που έχετε. Ενεργοποιήστε την επιλογή «Κατάργηση εγκατάστασης και επανεγκατάσταση κατά την ενημέρωση» για αυτό στις επιλογές εγκατάστασής του και, στη συνέχεια, ενημερώστε το ξανά",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Αυτή η έκδοση εγκαθίσταται διαφορετικά από την έκδοση που έχετε, επομένως η ενημέρωσή της καταργεί πρώτα την τρέχουσα έκδοση. Οι αυτόματες ενημερώσεις και η επιλογή «Ενημέρωση όλων» παραλείπουν αυτό το πακέτο, εκτός αν ενεργοποιηθεί η επιλογή «Κατάργηση εγκατάστασης και επανεγκατάσταση κατά την ενημέρωση» για αυτό.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Το Chocolatey δεν ενημέρωσε το {0}: η έκδοση {1} είναι η πιο πρόσφατη που προσφέρουν οι πηγές του",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Το Chocolatey δεν ενημέρωσε το {0}. Το πακέτο μπορεί να είναι καρφιτσωμένο ή οι πηγές του να μην προσφέρουν νεότερη έκδοση"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Το Chocolatey δεν ενημέρωσε το {0}. Το πακέτο μπορεί να είναι καρφιτσωμένο ή οι πηγές του να μην προσφέρουν νεότερη έκδοση",
+  "Only when UniGetUI is running in the background with its window closed.": "Μόνο όταν το UniGetUI εκτελείται στο παρασκήνιο με κλειστό παράθυρο.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Τερματισμός του UniGetUI όταν οι αυτόματες ενημερώσεις δεν εντοπίζουν τίποτα προς εγκατάσταση",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Μόνο όταν το UniGetUI εκτελείται στο παρασκήνιο με κλειστό παράθυρο. Δεν θα εκτελεστούν άλλοι έλεγχοι ενημερώσεων ή δημιουργίες αντιγράφων ασφαλείας μέχρι να ξεκινήσει ξανά το UniGetUI.",
+  "Shut down when finished": "Τερματισμός λειτουργίας μετά την ολοκλήρωση",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Ολοκληρώθηκαν όλες οι λειτουργίες. Ο υπολογιστής σας θα τερματιστεί σε {0} δευτερόλεπτα.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Ολοκληρώθηκαν όλες οι λειτουργίες. Ορισμένα πακέτα χρειάζονται επανεκκίνηση για να ολοκληρωθεί η εγκατάσταση, επομένως ο υπολογιστής σας θα επανεκκινηθεί σε {0} δευτερόλεπτα.",
+  "Save your work and close any open applications first.": "Αποθηκεύστε την εργασία σας και κλείστε πρώτα όλες τις ανοιχτές εφαρμογές.",
+  "Shutting down your computer": "Τερματισμός λειτουργίας του υπολογιστή σας",
+  "Restarting your computer": "Επανεκκίνηση του υπολογιστή σας",
+  "Shut down now": "Τερματισμός λειτουργίας τώρα",
+  "The computer could not be shut down": "Δεν ήταν δυνατός ο τερματισμός λειτουργίας του υπολογιστή",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "Δεν ήταν δυνατή η έναρξη του τερματισμού λειτουργίας από το UniGetUI. Τερματίστε τη λειτουργία του υπολογιστή σας μη αυτόματα.",
+  "Your computer was not shut down": "Ο υπολογιστής σας δεν τερματίστηκε.",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Ορισμένες λειτουργίες απέτυχαν, επομένως το UniGetUI δεν τερμάτισε τη λειτουργία του υπολογιστή σας. Ελέγξτε τις αποτυχημένες λειτουργίες και, στη συνέχεια, τερματίστε τη λειτουργία του υπολογιστή σας μη αυτόματα."
 }

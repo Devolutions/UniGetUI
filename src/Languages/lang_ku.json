@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "وەشانی نوێی {package} بە شێوەیەکی جیاواز لە وەشانی ئێستات دامەزراوە. لە هەڵبژاردەکانی دامەزراندنی ئەو، «لەکاتی نوێکردنەوەدا بسڕەوە و دووبارە دایبمەزرێنە» چالاک بکە، پاشان دووبارە نوێی بکەرەوە",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "ئەم وەشانە بە شێوەیەکی جیاواز لە وەشانی ئێستات دامەزراوە، بۆیە نوێکردنەوەی ئەو سەرەتا وەشانی ئێستا دەسڕێتەوە. نوێکردنەوەی خۆکار و «هەمووی نوێ بکەرەوە» ئەمە وەلا دەنێن، مەگەر «لەکاتی نوێکردنەوەدا بسڕەوە و دووبارە دایبمەزرێنە» بۆ ئەم پاکێجە چالاک بکرێت.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey {0}ی نوێ نەکردەوە: وەشانی {1} نوێترین وەشانە کە سەرچاوەکانی پێشکەشی دەکەن",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey {0}ی نوێ نەکردەوە. لەوانەیە پاکێجەکە پین کراو بێت، یان سەرچاوەکانی هیچ وەشانێکی نوێتریان پێشکەش نەکەن"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey {0}ی نوێ نەکردەوە. لەوانەیە پاکێجەکە پین کراو بێت، یان سەرچاوەکانی هیچ وەشانێکی نوێتریان پێشکەش نەکەن",
+  "Only when UniGetUI is running in the background with its window closed.": "تەنها کاتێک UniGetUI لە پشتەوە کار دەکات و پەنجەرەکەی داخراوە.",
+  "Quit UniGetUI when automatic updates find nothing to install": "کاتێک نوێکردنەوە خۆکارەکان هیچ شتێک بۆ دامەزراندن نەدۆزنەوە، UniGetUI دابخە",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "تەنها کاتێک UniGetUI لە پشتەوە کار دەکات و پەنجەرەکەی داخراوە. تا UniGetUI دووبارە دەست پێ بکاتەوە، هیچ پشکنینێکی نوێکردنەوە یان پاشەکەوتکردنێک ناکرێت.",
+  "Shut down when finished": "کاتێک تەواو بوو، کۆمپیوتەرەکەت خامۆش بکەرەوە",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "هەموو کردارەکان تەواو بوون. کۆمپیوتەرەکەت دوای {0} چرکە خامۆش دەبێتەوە.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "هەموو کردارەکان تەواو بوون. هەندێک پاکێج بۆ تەواوبوون پێویستیان بە دووبارە دەستپێکردنەوەیە، بۆیە کۆمپیوتەرەکەت دوای {0} چرکە دووبارە دەست پێ دەکاتەوە.",
+  "Save your work and close any open applications first.": "سەرەتا کارەکانت پاشەکەوت بکە و هەر بەرنامەیەکی کراوە دابخە.",
+  "Shutting down your computer": "کۆمپیوتەرەکەت خامۆش دەکرێتەوە",
+  "Restarting your computer": "کۆمپیوتەرەکەت دووبارە دەست پێ دەکاتەوە",
+  "Shut down now": "ئێستا کۆمپیوتەرەکەت خامۆش بکەرەوە",
+  "The computer could not be shut down": "نەکرا کۆمپیوتەرەکە خامۆش بکرێتەوە",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI نەیتوانی دەست بە خامۆشکردنی کۆمپیوتەرەکەت بکات. تکایە بە دەستی کۆمپیوتەرەکەت خامۆش بکەرەوە.",
+  "Your computer was not shut down": "کۆمپیوتەرەکەت خامۆش نەکرایەوە",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "هەندێک کردار شکستیان هێنا، بۆیە UniGetUI کۆمپیوتەرەکەت خامۆش نەکردەوە. کردارە شکست‌هێناوەکان بپشکنە، پاشان بە دەستی کۆمپیوتەرەکەت خامۆش بکەرەوە."
 }

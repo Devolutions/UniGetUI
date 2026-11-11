@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Nová verzia balíka {package} je nainštalovaná iným spôsobom než aktuálna verzia. V možnostiach inštalácie zapnite možnosť „Odinštalovať a potom po aktualizácii znova nainštalovať“ a následne balík znova aktualizujte.",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Táto verzia je nainštalovaná iným spôsobom než aktuálna verzia, takže pri aktualizácii sa najprv odinštaluje aktuálna verzia. Automatické aktualizácie a funkcia Aktualizovať všetko tento balík vynechajú, pokiaľ preň nie je zapnutá možnosť „Odinštalovať a potom po aktualizácii znova nainštalovať“.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey neaktualizoval {0}: verzia {1} je najnovšia, ktorú ponúkajú jeho zdroje",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey neaktualizoval {0}. Balík môže byť pripnutý alebo jeho zdroje nemusia ponúkať novšiu verziu"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey neaktualizoval {0}. Balík môže byť pripnutý alebo jeho zdroje nemusia ponúkať novšiu verziu",
+  "Only when UniGetUI is running in the background with its window closed.": "Iba keď UniGetUI beží na pozadí so zatvoreným oknom.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Ukončiť UniGetUI, keď automatické aktualizácie nenájdu nič na inštaláciu",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Iba keď UniGetUI beží na pozadí so zatvoreným oknom. Kým UniGetUI znova nespustíte, nebudú sa vykonávať ďalšie kontroly aktualizácií ani zálohovanie.",
+  "Shut down when finished": "Po dokončení vypnúť počítač",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Všetky operácie sa dokončili. Počítač sa vypne o {0} sekúnd.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Všetky operácie sa dokončili. Niektoré balíky vyžadujú reštart na dokončenie, preto sa počítač reštartuje o {0} sekúnd.",
+  "Save your work and close any open applications first.": "Najprv uložte svoju prácu a zatvorte všetky otvorené aplikácie.",
+  "Shutting down your computer": "Vypínanie počítača",
+  "Restarting your computer": "Reštartovanie počítača",
+  "Shut down now": "Vypnúť teraz",
+  "The computer could not be shut down": "Počítač sa nepodarilo vypnúť",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nedokázal spustiť vypnutie počítača. Vypnite počítač manuálne.",
+  "Your computer was not shut down": "Počítač nebol vypnutý",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Niektoré operácie zlyhali, preto UniGetUI nevypol počítač. Skontrolujte neúspešné operácie a potom počítač vypnite manuálne."
 }

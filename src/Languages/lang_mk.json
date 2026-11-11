@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Новата верзија на {package} е инсталирана на поинаков начин од верзијата што ја имате. Вклучете ја опцијата „Деинсталирај, па инсталирај повторно при ажурирање“ во опциите за инсталација на пакетот, а потоа ажурирајте го повторно",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Оваа верзија е инсталирана на поинаков начин од верзијата што ја имате, па при нејзино ажурирање прво ќе се деинсталира тековната верзија. Автоматските ажурирања и „Ажурирај ги сите“ ќе го изостават пакетот, освен ако за овој пакет не е вклучено „Деинсталирај, па инсталирај повторно при ажурирање“.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey не го ажурираше {0}: верзијата {1} е најновата што ја нудат неговите извори",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey не го ажурираше {0}. Пакетот можеби е закачен или неговите извори можеби не нудат понова верзија"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey не го ажурираше {0}. Пакетот можеби е закачен или неговите извори можеби не нудат понова верзија",
+  "Only when UniGetUI is running in the background with its window closed.": "Само кога UniGetUI работи во заднина со затворен прозорец.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Затвори го UniGetUI кога автоматските ажурирања нема да најдат ништо за инсталирање",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Само кога UniGetUI работи во заднина со затворен прозорец. Нема да се вршат дополнителни проверки за ажурирања или резервни копии додека UniGetUI не се стартува повторно.",
+  "Shut down when finished": "Исклучи го компјутерот по завршувањето",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Сите операции завршија. Компјутерот ќе се исклучи за {0} секунди.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Сите операции завршија. На некои пакети им треба рестартирање за да завршат, затоа компјутерот ќе се рестартира за {0} секунди.",
+  "Save your work and close any open applications first.": "Зачувајте ја работата и прво затворете ги сите отворени апликации.",
+  "Shutting down your computer": "Компјутерот се исклучува",
+  "Restarting your computer": "Компјутерот се рестартира",
+  "Shut down now": "Исклучи го компјутерот сега",
+  "The computer could not be shut down": "Компјутерот не можеше да се исклучи",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI не можеше да го започне исклучувањето. Исклучете го компјутерот рачно.",
+  "Your computer was not shut down": "Компјутерот не беше исклучен",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некои операции не успеаја, па UniGetUI не го исклучи компјутерот. Проверете ги неуспешните операции, а потоа исклучете го компјутерот рачно."
 }

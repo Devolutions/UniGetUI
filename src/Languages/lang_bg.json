@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "Новата версия на {package} е инсталирана по различен начин от текущата. Включете „Деинсталиране, след което преинсталиране при актуализация“ в опциите за инсталиране на пакета, след което го актуализирайте отново",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "Тази версия е инсталирана по различен начин от текущата, затова при актуализирането първо се деинсталира текущата версия. Автоматичните актуализации и „Актуализирай всички“ пропускат този пакет, освен ако за него не е включено „Деинсталиране, след което преинсталиране при актуализация“.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey не актуализира {0}: версия {1} е най-новата, предлагана от източниците му",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey не актуализира {0}. Пакетът може да е фиксиран или източниците му да не предлагат по-нова версия"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey не актуализира {0}. Пакетът може да е фиксиран или източниците му да не предлагат по-нова версия",
+  "Only when UniGetUI is running in the background with its window closed.": "Само когато UniGetUI работи във фонов режим със затворен прозорец.",
+  "Quit UniGetUI when automatic updates find nothing to install": "Изход от UniGetUI, когато при автоматичните актуализации няма нищо за инсталиране",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "Само когато UniGetUI работи във фонов режим със затворен прозорец. Няма да се изпълняват проверки за актуализации или архивирания, докато UniGetUI не бъде стартиран отново.",
+  "Shut down when finished": "Изключване след приключване",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "Всички операции приключиха. Компютърът ще се изключи след {0} секунди.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "Всички операции приключиха. Някои пакети изискват рестартиране, за да завърши инсталацията, затова компютърът ще се рестартира след {0} секунди.",
+  "Save your work and close any open applications first.": "Първо запазете работата си и затворете всички отворени приложения.",
+  "Shutting down your computer": "Изключване на компютъра",
+  "Restarting your computer": "Рестартиране на компютъра",
+  "Shut down now": "Изключване сега",
+  "The computer could not be shut down": "Компютърът не можа да бъде изключен",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI не можа да започне изключването. Моля, изключете компютъра ръчно.",
+  "Your computer was not shut down": "Компютърът не беше изключен",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Някои операции бяха неуспешни, затова UniGetUI не изключи компютъра. Прегледайте неуспешните операции, след което изключете компютъра ръчно."
 }

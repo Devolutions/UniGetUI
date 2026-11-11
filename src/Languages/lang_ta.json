@@ -2628,5 +2628,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "நீங்கள் வைத்திருப்பதிலிருந்து வேறுபட்ட முறையில் {package} இன் புதிய பதிப்பு நிறுவப்பட்டுள்ளது. அதன் நிறுவல் விருப்பங்களில் \"புதுப்பிக்கும்போது நிறுவல் நீக்கி, மீண்டும் நிறுவு\" என்பதை இயக்கி, பிறகு அதை மீண்டும் புதுப்பிக்கவும்",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "இந்தப் பதிப்பு நீங்கள் வைத்திருப்பதிலிருந்து வேறுபட்ட முறையில் நிறுவப்பட்டுள்ளது; எனவே இதைப் புதுப்பிக்கும்போது தற்போதைய பதிப்பு முதலில் நிறுவல் நீக்கப்படும். இந்தத் தொகுப்புக்கு \"புதுப்பிக்கும்போது நிறுவல் நீக்கி, மீண்டும் நிறுவு\" என்பதை இயக்காவிட்டால், தானியங்கி புதுப்பிப்புகளிலும் அனைத்தையும் புதுப்பி செயல்பாட்டிலும் இது சேர்க்கப்படாது.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey {0} ஐப் புதுப்பிக்கவில்லை: அதன் மூலங்கள் வழங்கும் சமீபத்திய பதிப்பு {1}",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey {0} ஐப் புதுப்பிக்கவில்லை. தொகுப்பு பதிப்பு பூட்டப்பட்டிருக்கலாம் அல்லது அதன் மூலங்களில் புதிய பதிப்பு எதுவும் இல்லாமல் இருக்கலாம்"
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey {0} ஐப் புதுப்பிக்கவில்லை. தொகுப்பு பதிப்பு பூட்டப்பட்டிருக்கலாம் அல்லது அதன் மூலங்களில் புதிய பதிப்பு எதுவும் இல்லாமல் இருக்கலாம்",
+  "Only when UniGetUI is running in the background with its window closed.": "UniGetUI பின்னணியில் இயங்கி, அதன் சாளரம் மூடப்பட்டிருக்கும்போது மட்டும்.",
+  "Quit UniGetUI when automatic updates find nothing to install": "தானியங்கி புதுப்பிப்புகளில் நிறுவ எதுவும் இல்லை எனக் கண்டறியப்பட்டால் UniGetUI இலிருந்து வெளியேறு",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "UniGetUI பின்னணியில் இயங்கி, அதன் சாளரம் மூடப்பட்டிருக்கும்போது மட்டும். UniGetUI மீண்டும் தொடங்கப்படும் வரை புதுப்பிப்புகள் சரிபார்க்கப்படாது, காப்புப்பிரதிகளும் இயங்காது.",
+  "Shut down when finished": "முடிந்ததும் கணினியை அணை",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "அனைத்து செயல்பாடுகளும் முடிந்துவிட்டன. உங்கள் கணினி {0} வினாடிகளில் அணைக்கப்படும்.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "அனைத்து செயல்பாடுகளும் முடிந்துவிட்டன. சில தொகுப்புகளின் செயல்முறையை முடிக்க மறுதொடக்கம் தேவை. எனவே உங்கள் கணினி {0} வினாடிகளில் மறுதொடக்கம் செய்யப்படும்.",
+  "Save your work and close any open applications first.": "முதலில் உங்கள் பணியைச் சேமித்து, திறந்திருக்கும் பயன்பாடுகள் அனைத்தையும் மூடவும்.",
+  "Shutting down your computer": "உங்கள் கணினி அணைக்கப்படுகிறது",
+  "Restarting your computer": "உங்கள் கணினி மறுதொடக்கம் செய்யப்படுகிறது",
+  "Shut down now": "இப்போது கணினியை அணை",
+  "The computer could not be shut down": "கணினியை அணைக்க முடியவில்லை",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "கணினியை அணைக்கும் செயல்முறையை UniGetUI தொடங்க முடியவில்லை. உங்கள் கணினியை கைமுறையாக அணைக்கவும்.",
+  "Your computer was not shut down": "உங்கள் கணினி அணைக்கப்படவில்லை",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "சில செயல்பாடுகள் தோல்வியடைந்ததால், UniGetUI உங்கள் கணினியை அணைக்கவில்லை. தோல்வியடைந்த செயல்பாடுகளைப் பார்த்த பிறகு, கணினியை கைமுறையாக அணைக்கவும்."
 }

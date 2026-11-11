@@ -2624,5 +2624,19 @@
   "The new version of {package} is installed differently from the one you have. Turn on \"Uninstall, then reinstall when updated\" for it in its installation options, then update it again": "{package}의 새 버전은 현재 설치된 버전과 다른 방식으로 설치되어 있습니다. 설치 옵션에서 \"업데이트 시 제거 후 다시 설치\"를 켠 다음 다시 업데이트하세요",
   "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package.": "이 버전은 현재 설치된 버전과 다른 방식으로 설치되어 있으므로, 업데이트하면 현재 버전을 먼저 제거합니다. 이 패키지에 대해 \"업데이트 시 제거 후 다시 설치\"를 켜지 않으면 자동 업데이트와 모두 업데이트에서 제외됩니다.",
   "Chocolatey did not update {0}: version {1} is the newest one its sources offer": "Chocolatey에서 {0}을(를) 업데이트하지 않았습니다: 소스에서 제공하는 최신 버전이 {1}입니다",
-  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey에서 {0}을(를) 업데이트하지 않았습니다. 패키지가 고정되어 있거나 소스에서 더 최신 버전을 제공하지 않을 수 있습니다."
+  "Chocolatey did not update {0}. The package may be pinned, or its sources may offer no newer version": "Chocolatey에서 {0}을(를) 업데이트하지 않았습니다. 패키지가 고정되어 있거나 소스에서 더 최신 버전을 제공하지 않을 수 있습니다.",
+  "Only when UniGetUI is running in the background with its window closed.": "UniGetUI가 백그라운드에서 실행 중이고 창이 닫혀 있을 때만 적용됩니다.",
+  "Quit UniGetUI when automatic updates find nothing to install": "자동 업데이트에서 설치할 항목이 없으면 UniGetUI 종료",
+  "Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.": "UniGetUI가 백그라운드에서 실행 중이고 창이 닫혀 있을 때만 적용됩니다. UniGetUI를 다시 시작할 때까지 추가 업데이트 확인이나 백업이 실행되지 않습니다.",
+  "Shut down when finished": "완료 후 컴퓨터 종료",
+  "All operations have finished. Your computer will shut down in {0} seconds.": "모든 작업이 완료되었습니다. {0}초 후 컴퓨터가 종료됩니다.",
+  "All operations have finished. Some packages need a restart to finish, so your computer will restart in {0} seconds.": "모든 작업이 완료되었습니다. 일부 패키지는 완료하려면 다시 시작해야 하므로 {0}초 후 컴퓨터가 다시 시작됩니다.",
+  "Save your work and close any open applications first.": "작업을 저장하고 열려 있는 앱을 모두 먼저 닫으세요.",
+  "Shutting down your computer": "컴퓨터를 종료하는 중",
+  "Restarting your computer": "컴퓨터를 다시 시작하는 중",
+  "Shut down now": "지금 종료",
+  "The computer could not be shut down": "컴퓨터를 종료할 수 없습니다",
+  "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI에서 종료를 시작할 수 없습니다. 컴퓨터를 수동으로 종료하세요.",
+  "Your computer was not shut down": "컴퓨터가 종료되지 않았습니다",
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "일부 작업이 실패하여 UniGetUI에서 컴퓨터를 종료하지 않았습니다. 실패한 작업을 확인한 다음 컴퓨터를 수동으로 종료하세요."
 }

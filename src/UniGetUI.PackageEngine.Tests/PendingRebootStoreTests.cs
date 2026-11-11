@@ -254,6 +254,40 @@ public sealed class PendingRebootStoreTests : IDisposable
         Assert.True(PendingRebootStore.IsPending("choco", "Contoso.ThisBoot"));
     }
 
+    [Fact]
+    public void ASurvivingLegacyEntryIsClearedByTheNextRebootWhateverTheStartupTime()
+    {
+        const string bootEntryGuid = "68e0e37c055911f1bc13c70d14f1b93c";
+        File.WriteAllText(_tempFile,
+            "[{\"PackageId\":\"Contoso.Legacy\",\"ManagerName\":\"choco\",\"BootId\":\"" + bootEntryGuid
+            + "\",\"UptimeTicks\":" + TimeSpan.FromSeconds(60).Ticks + "}]");
+
+        PendingRebootStore.InvalidateCache();
+        Assert.Equal(1, PendingRebootStore.PendingCount);
+        Assert.DoesNotContain(bootEntryGuid, File.ReadAllText(_tempFile));
+
+        BootSession.TestIdOverride = BootB;
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(0, PendingRebootStore.PendingCount);
+    }
+
+    [Fact]
+    public void AnEntryRecordedWithoutABootIdAdoptsTheCurrentOne()
+    {
+        BootSession.TestIdOverride = "";
+        PendingRebootStore.Record(Package(), OperationType.Install);
+
+        BootSession.TestIdOverride = BootA;
+        PendingRebootStore.InvalidateCache();
+        Assert.Equal(BootA, PendingRebootStore.GetPending()[0].BootId);
+
+        BootSession.TestIdOverride = BootB;
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(0, PendingRebootStore.PendingCount);
+    }
+
     [WindowsFact]
     public void AMatchingRealWindowsBootIdKeepsAnEntryWithoutAnUptimeStamp()
     {

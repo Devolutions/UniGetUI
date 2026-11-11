@@ -215,7 +215,18 @@ public static class PendingRebootStore
             entry => RecordedBeforeCurrentBoot(entry, currentBootId, currentUptime));
         if (removed > 0)
             Logger.Info($"Discarded {removed} pending-reboot entries recorded before the current boot");
-        return removed > 0;
+
+        int adopted = 0;
+        if (currentBootId.Length > 0)
+        {
+            foreach (var entry in _cache.Where(entry => entry.BootId.Length == 0))
+            {
+                entry.BootId = currentBootId;
+                adopted++;
+            }
+        }
+
+        return removed > 0 || adopted > 0;
     }
 
     private static bool RecordedBeforeCurrentBoot(

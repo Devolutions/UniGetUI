@@ -233,6 +233,11 @@ public static class AvaloniaAppHost
             FontFallbacks = UiFontPolicy.ResolveFontFallbacks(),
         };
 
+    public const long GpuResourceCacheBytes = 128L * 1024 * 1024;
+
+    public static SkiaOptions BuildSkiaOptions()
+        => new() { MaxGpuResourceSizeBytes = GpuResourceCacheBytes };
+
     public static AppBuilder BuildAvaloniaApp()
     {
         AppBuilder builder = AppBuilder.Configure<App>()
@@ -259,6 +264,8 @@ public static class AvaloniaAppHost
             });
         }
 #endif
+
+        builder = builder.With(BuildSkiaOptions());
 
         return builder.LogToTrace();
     }

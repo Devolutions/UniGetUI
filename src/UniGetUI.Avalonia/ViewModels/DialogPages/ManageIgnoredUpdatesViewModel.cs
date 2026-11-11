@@ -147,6 +147,7 @@ internal static class ManagerIconResolver
             "pacman" => "pacman",
             "aur" => "pacman",
             "skills" => "skills",
+            "uv" => "uv",
             _ => "ms_store",
         };
         return $"avares://UniGetUI/Assets/Symbols/{name}.svg";

@@ -41,8 +41,8 @@ public sealed class Uv : PackageManager
             Description = CoreTools.Translate(
                 "Astral's uv tool runner. Installs Python command-line tools into isolated tool environments<br>Contains: <b>Python CLI tools</b>"
             ),
-            IconId = IconType.Python,
-            ColorIconId = "pip_color",
+            IconId = IconType.Uv,
+            ColorIconId = "uv_color",
             ExecutableFriendlyName = "uv tool",
             InstallVerb = "install",
             UpdateVerb = "upgrade",

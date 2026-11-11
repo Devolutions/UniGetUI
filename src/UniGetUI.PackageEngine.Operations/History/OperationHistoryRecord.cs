@@ -2,6 +2,7 @@ using System.Globalization;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.PackageEngine.Operations.History;
@@ -102,11 +103,11 @@ public sealed class OperationHistoryRecord
                     record.VersionAfter = pop.Role switch
                     {
                         OperationType.Uninstall => "",
-                        _ when pop.Options.Version is { Length: > 0 } pinnedVersion
-                            && (
-                                pop.Role is not OperationType.Update
-                                || pop.Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate
-                            ) => pinnedVersion,
+                        OperationType.Update
+                            when UpdateVersionPin.HonoredUpdateVersion(pop.Package, pop.Options) is { } honoredVersion
+                            => honoredVersion,
+                        not OperationType.Update when pop.Options.Version is { Length: > 0 } pinnedVersion
+                            => pinnedVersion,
                         OperationType.Update => pop.Package.NewVersionString,
                         _ => pop.Package.VersionString,
                     };

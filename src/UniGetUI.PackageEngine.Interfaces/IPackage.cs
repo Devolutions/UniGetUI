@@ -168,6 +168,8 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// <returns>False if the most significant changed component is more significant than <paramref name="level"/> or the update doesn't exist, true otherwise</returns>
         public bool IsUpdateMinor(int level = InstallOptions.DefaultSkipMinorLevel);
 
+        public bool IsUpdateMajor();
+
         /// <summary>
         /// Gets the applicable install options for this package
         /// </summary>

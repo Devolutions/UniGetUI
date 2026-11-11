@@ -3,6 +3,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
@@ -56,7 +57,7 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
     )
     {
         if (operation is OperationType.Update)
-            options = options.WithoutSavedVersion();
+            options = UpdateVersionPin.Apply(package, options.WithoutSavedVersion(), operation);
 
         // Every manager concatenates these onto a command line, so an identifier that looks like
         // an option is smuggled in as one even where no shell is involved: a Pip identifier of

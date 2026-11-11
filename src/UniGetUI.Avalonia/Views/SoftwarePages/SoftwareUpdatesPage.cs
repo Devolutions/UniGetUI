@@ -364,8 +364,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             package, OperationType.Update, TEL_InstallReferral.ALREADY_INSTALLED);
         await dialog.ShowDialog(win);
 
-        if (dialog.ShouldProceedWithOperation)
-            await LaunchUpdate([package]);
+        var update = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(package);
+        if (dialog.ShouldProceedWithOperation && update is not null)
+            await LaunchUpdate([update]);
     }
 
     protected override async Task ShowInstallationOptionsForPackage(IPackage? package)
@@ -378,8 +379,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         await dialog.ShowDialog(win);
         await InstallOptionsFactory.SaveForPackageAsync(opts, package);
 
-        if (dialog.ShouldProceedWithOperation)
-            await LaunchUpdate([package]);
+        var update = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(package);
+        if (dialog.ShouldProceedWithOperation && update is not null)
+            await LaunchUpdate([update]);
     }
 
     // ─── Page-specific actions ────────────────────────────────────────────────
@@ -416,8 +418,12 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         Action<UpdatePackageOperation>? beforeStart = null)
     {
         List<UpdatePackageOperation> started = [];
-        foreach (var pkg in packages)
+        foreach (var listed in packages)
         {
+            var pkg = keepUpdatesPaused
+                ? listed
+                : await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed);
+            if (pkg is null) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;

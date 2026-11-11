@@ -86,6 +86,7 @@ namespace UniGetUI.PackageEngine.Operations
         public readonly OperationType Role;
         private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
         private bool _reinstallsThisAttempt;
+        private readonly bool _autoPinned;
         private OperationType CommandRole => _reinstallsThisAttempt ? OperationType.Install : Role;
 
         internal void AdoptReinstallStepFailure()
@@ -136,7 +137,11 @@ namespace UniGetUI.PackageEngine.Operations
             Package = package;
             Role = role;
             if (role is OperationType.Update)
-                options = options.WithoutSavedVersion();
+            {
+                var unpinned = options.WithoutSavedVersion();
+                options = UpdateVersionPin.Apply(package, unpinned, role);
+                _autoPinned = !ReferenceEquals(options, unpinned);
+            }
             if (ReinstallsOnUpdate(package, options, role))
             {
                 Options = PinReinstallVersion(package, options);
@@ -1626,6 +1631,45 @@ namespace UniGetUI.PackageEngine.Operations
             return kept;
         }
 
+        protected override string? RefusalBeforeStart()
+        {
+            if (Role is not OperationType.Update)
+                return null;
+
+            if (_autoPinned && Package.NewerVersionIsInstalled())
+                return CoreTools.Translate(
+                    "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.",
+                    Package.Name,
+                    Package.NewVersionString
+                );
+
+            if (!Options.SkipMajorUpdates || (!_autoPinned && UpdateVersionPin.HasHonoredExplicitVersion(Package, Options)))
+                return null;
+
+            if (Package.IsUpdateMajor())
+                return CoreTools.Translate(
+                    "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.",
+                    Package.Name,
+                    Package.NewVersionString
+                );
+
+            if (!Package.IsUpgradable)
+                return CoreTools.Translate(
+                    "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.",
+                    Package.Name
+                );
+
+            if (Package.OverridenOptions.PinUpdateToNewVersion && !_autoPinned)
+                return CoreTools.Translate(
+                    "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.",
+                    Package.Name,
+                    Package.NewVersionString,
+                    Package.Manager.DisplayName
+                );
+
+            return null;
+        }
+
         private static bool IsKnownToBeUninstalled(IPackage package)
         {
             if (InstalledPackagesLoader.Instance is not { IsLoaded: true } installed)
@@ -1661,7 +1705,13 @@ namespace UniGetUI.PackageEngine.Operations
                 pinned,
                 OperationType.Update
             );
-            if (pinned.Version.Length > 0 && capabilities.SupportsCustomVersionsOnUpdate)
+            if (
+                pinned.Version.Length > 0
+                && (
+                    capabilities.SupportsCustomVersionsOnUpdate
+                    || UpdateVersionPin.HasHonoredExplicitVersion(package, pinned)
+                )
+            )
                 return pinned;
             pinned.Version =
                 package.IsUpgradable && capabilities.SupportsCustomVersions
@@ -1849,11 +1899,12 @@ namespace UniGetUI.PackageEngine.Operations
             UpgradablePackagesLoader.Instance.Remove(Package);
             InstalledPackagesLoader.Instance.Remove(Package);
 
-            bool explicitVersionRequested =
-                !string.IsNullOrWhiteSpace(Options.Version)
-                && Package.Manager.Capabilities.SupportsCustomVersionsOnUpdate;
-            string targetVersion = explicitVersionRequested
-                ? Options.Version
+            string? honoredVersion = string.IsNullOrWhiteSpace(Options.Version)
+                ? null
+                : UpdateVersionPin.HonoredUpdateVersion(Package, Options);
+            bool explicitVersionRequested = honoredVersion is not null;
+            string targetVersion = honoredVersion is not null
+                ? honoredVersion
                 : string.IsNullOrWhiteSpace(Package.NewVersionString)
                     ? Package.VersionString
                     : Package.NewVersionString;

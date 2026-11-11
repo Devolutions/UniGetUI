@@ -68,6 +68,61 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
         Assert.False(await loader.EvaluatePackageAsync(package));
     }
 
+    [Theory]
+    [InlineData("5.2.0", "5.3.1", true)]
+    [InlineData("5.2.0", "5.2.1", true)]
+    [InlineData("5.2.0", "6.0.0", false)]
+    [InlineData("v5.2", "v12.0", false)]
+    [InlineData("5.2.0.1", "5.9.0.0", true)]
+    [InlineData("Unknown", "6.0.0", true)]
+    [InlineData("5.2.0", "latest", true)]
+    public async Task EvaluatePackageAsync_SkipMajorUpdatesHidesOnlyMajorUpdates(
+        string installedVersion,
+        string newVersion,
+        bool offered
+    )
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion(installedVersion)
+            .WithNewVersion(newVersion)
+            .Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
+            package
+        );
+
+        Assert.Equal(offered, await loader.EvaluatePackageAsync(package));
+    }
+
+    [Fact]
+    public async Task EvaluatePackageAsync_OffersMajorUpdatesUnlessSkipMajorIsSet()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("6.0.0")
+            .Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMinorUpdates = true, SkipMinorUpdatesLevel = 2 },
+            package
+        );
+
+        Assert.True(await loader.EvaluatePackageAsync(package));
+    }
+
     [Fact]
     public async Task EvaluatePackageAsync_RespectsSkipMinorLevel()
     {

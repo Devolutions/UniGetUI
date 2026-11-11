@@ -140,6 +140,17 @@ public sealed class TestPackageManager : PackageManager
     public Task RunMaintenanceCommandForTestAsync(string fileName, string arguments) =>
         RunMaintenanceCommandAsync(fileName, arguments);
 
+    public bool? CanUpdateToExactVersionOverride { get; set; }
+
+    public override bool CanUpdateToExactVersion => CanUpdateToExactVersionOverride ?? base.CanUpdateToExactVersion;
+
+    public Func<IPackage, string, bool?>? UpdateTargetEligibility { get; set; }
+
+    protected override bool? IsEligibleUpdateTarget(IPackage update, string version) =>
+        UpdateTargetEligibility is { } eligibility
+            ? eligibility(update, version)
+            : base.IsEligibleUpdateTarget(update, version);
+
     public override bool InstallerUrlFollowsPackageVersion => _installerUrlFollowsPackageVersion;
 
     public override bool CommandLineIsShellInterpreted => _commandLineIsShellInterpreted;

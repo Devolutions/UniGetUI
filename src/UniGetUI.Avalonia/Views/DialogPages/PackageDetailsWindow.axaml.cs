@@ -22,6 +22,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageOperations;
 
@@ -1052,13 +1053,23 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         if (IsEmbedded)
         {
+            await SaveInstallOptionsIfChangedAsync();
             MainActionRequested?.Invoke(this, EventArgs.Empty);
             return;
         }
 
         if (!await ConfirmUninstallAsync(_vm.OperationRole)) return;
+        await SaveInstallOptionsIfChangedAsync();
         ShouldProceedWithOperation = true;
         Close();
+    }
+
+    private async Task SaveInstallOptionsIfChangedAsync()
+    {
+        if (_installVm is null || _installOpts is null) return;
+        _installVm.ApplyChanges();
+        if (_installOpts.AsJsonString() != _installOptsSnapshot)
+            await SaveInstallOptionsAsync();
     }
 
     // Uninstalling cannot be undone: confirm on top of this dialog (the main window stacks them), which
@@ -1076,9 +1087,16 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         bool? remove_data = null)
     {
         if (!await ConfirmUninstallAsync(role)) return;
+        await SaveInstallOptionsIfChangedAsync();
         Close();
 
         var pkg = _vm.Package;
+        if (role is OperationType.Update)
+        {
+            if (await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(pkg) is not { } resolved)
+                return;
+            pkg = resolved;
+        }
         var opts = await InstallOptionsFactory.LoadApplicableAsync(
             pkg,
             elevated: elevated,

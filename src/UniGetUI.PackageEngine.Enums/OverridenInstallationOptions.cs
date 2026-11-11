@@ -11,6 +11,7 @@ public struct OverridenInstallationOptions
     public bool Pip_BreakSystemPackages = false;
     public bool WinGet_DropArchAndScope = false;
     public bool WinGet_UseLocalIdentifier = false;
+    public bool PinUpdateToNewVersion = false;
 
     public OverridenInstallationOptions(string? scope = null, bool? runAsAdministrator = null)
     {
@@ -20,6 +21,6 @@ public struct OverridenInstallationOptions
 
     public override string ToString()
     {
-        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter};PS_AllowClobber={PowerShell_AllowClobber};PS_UpdateThroughInstall={PowerShell_UpdateThroughInstall};Pip_BreakSystemPackages={Pip_BreakSystemPackages};WG_DropArchAndScope={WinGet_DropArchAndScope};WG_UseLocalId={WinGet_UseLocalIdentifier}>";
+        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter};PS_AllowClobber={PowerShell_AllowClobber};PS_UpdateThroughInstall={PowerShell_UpdateThroughInstall};Pip_BreakSystemPackages={Pip_BreakSystemPackages};WG_DropArchAndScope={WinGet_DropArchAndScope};WG_UseLocalId={WinGet_UseLocalIdentifier};PinUpdate={PinUpdateToNewVersion}>";
     }
 }

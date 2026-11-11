@@ -607,6 +607,36 @@ public sealed class OperationHistoryTests : IDisposable
         Assert.Equal("1.8.2", record.VersionAfter);
     }
 
+    [Theory]
+    [InlineData(true, "1.2.0")]
+    [InlineData(false, "2.0.0")]
+    public void FromOperation_Update_RecordsAnExplicitVersionTheManagerHonors(bool canUpdateToExactVersion, string recorded)
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsCustomVersionsOnUpdate = false;
+                return capabilities;
+            })
+            .Build();
+        manager.CanUpdateToExactVersionOverride = canUpdateToExactVersion;
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        using var op = new UpdatePackageOperation(
+            package,
+            new InstallOptions { SkipMajorUpdates = true, Version = "1.2.0", VersionIsExplicit = true },
+            IgnoreParallelInstalls: true
+        );
+        var record = OperationHistoryRecord.FromOperation(op, OperationHistoryRecord.StatusSucceeded);
+
+        Assert.Equal(recorded, record.VersionAfter);
+    }
+
     [Fact]
     public void FromOperation_Update_CapturesVersionTransition()
     {

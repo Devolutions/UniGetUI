@@ -188,6 +188,22 @@ public class TestInstallOptions
         Assert.Equal(ver, o2.Version);
     }
 
+    [Fact]
+    public void SkipMajorUpdatesRoundTripsAndDefaultsToOff()
+    {
+        Assert.False(new InstallOptions().SkipMajorUpdates);
+        Assert.False(new InstallOptions(JsonNode.Parse("""{ "SkipMinorUpdates": true }""")!).SkipMajorUpdates);
+
+        var options = new InstallOptions { SkipMajorUpdates = true };
+        Assert.True(options.DiffersFromDefault());
+        Assert.True(JsonNode.Parse(options.AsJsonString())!["SkipMajorUpdates"]!.GetValue<bool>());
+
+        var reloaded = new InstallOptions();
+        reloaded.LoadFromJson(JsonNode.Parse(options.AsJsonString())!);
+        Assert.True(reloaded.SkipMajorUpdates);
+        Assert.True(options.Copy().SkipMajorUpdates);
+    }
+
     [Theory]
     [InlineData(13345)]
     [InlineData(219574)]

@@ -4,6 +4,7 @@ using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Interfaces
 {
@@ -50,7 +51,7 @@ namespace UniGetUI.PackageEngine.Interfaces
 
         public bool CanUpdateToExactVersion { get; }
 
-        public IPackage? ResolveSkippedMajorUpdate(IPackage update);
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update, InstallOptions? options = null);
 
         /// <summary>
         /// Initializes the Package Manager (asynchronously). Must be run before using any other method of the manager.

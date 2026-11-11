@@ -418,6 +418,74 @@ public sealed class SkipMajorUpdatesTests : IDisposable
         Assert.Equal("5.3.0", operation.Options.Version);
     }
 
+    [Fact]
+    public async Task ResolveSkippedMajorUpdateAsync_KeepsAReplacementAnotherLauncherAlreadyQueued()
+    {
+        var (manager, _) = CreateManager(new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true });
+        var loader = CreateLoaders(manager);
+        var staleRow = PinnedRow(manager, "5.11.0-beta");
+        await loader.AddForeign(staleRow);
+
+        IPackage? first = await loader.ResolveSkippedMajorUpdateAsync(staleRow);
+        first!.Tag = PackageTag.OnQueue;
+        IPackage? second = await loader.ResolveSkippedMajorUpdateAsync(staleRow);
+
+        Assert.Same(first, second);
+        Assert.Same(first, Assert.Single(loader.Packages));
+    }
+
+    [Fact]
+    public void GetAvailableUpdates_KeepsTheNeedToReinstall()
+    {
+        var (manager, _) = CreateManager(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
+            requiresReinstallToUpdate: true
+        );
+
+        IPackage update = Assert.Single(manager.GetAvailableUpdates());
+
+        Assert.Equal("5.10.0", update.NewVersionString);
+        Assert.True(update.RequiresReinstallToUpdate);
+    }
+
+    [Fact]
+    public async Task ResolveSkippedMajorUpdateAsync_UsesTheOptionsItIsGiven()
+    {
+        var (manager, _) = CreateManager(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true, PreRelease = true }
+        );
+        var loader = CreateLoaders(manager);
+        var pinnedBeta = PinnedRow(manager, "5.11.0-beta");
+        await loader.AddForeign(pinnedBeta);
+
+        IPackage? resolved = await loader.ResolveSkippedMajorUpdateAsync(
+            pinnedBeta,
+            new InstallOptions { SkipMajorUpdates = true, PreRelease = false }
+        );
+
+        Assert.Equal("5.10.0", resolved?.NewVersionString);
+    }
+
+    [Fact]
+    public void GetAvailableUpdates_ListsVersionsAgainWhenPreReleasesAreToggled()
+    {
+        int lookups = 0;
+        var (manager, reported) = CreateManager(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
+            onLookup: () => lookups++
+        );
+
+        manager.GetAvailableUpdates();
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true, PreRelease = true },
+            reported
+        );
+        IPackage update = Assert.Single(manager.GetAvailableUpdates());
+
+        Assert.Equal(2, lookups);
+        Assert.Equal("5.11.0-beta", update.NewVersionString);
+    }
+
     private static Package PinnedRow(TestPackageManager manager, string newVersion)
     {
         var row = new PackageBuilder()
@@ -563,7 +631,8 @@ public sealed class SkipMajorUpdatesTests : IDisposable
         InstallOptions options,
         Action? onLookup = null,
         bool supportsVersionsOnUpdate = true,
-        string installedVersion = "5.2.0"
+        string installedVersion = "5.2.0",
+        bool requiresReinstallToUpdate = false
     )
     {
         Package? reported = null;
@@ -583,12 +652,14 @@ public sealed class SkipMajorUpdatesTests : IDisposable
             .WithAvailableUpdates(m => [reported!])
             .Build();
 
-        reported = new PackageBuilder()
+        var builder = new PackageBuilder()
             .WithManager(manager)
             .WithId("Contoso.Licensed")
             .WithVersion(installedVersion)
-            .WithNewVersion("6.0.0")
-            .Build();
+            .WithNewVersion("6.0.0");
+        if (requiresReinstallToUpdate)
+            builder = builder.RequiringReinstallToUpdate();
+        reported = builder.Build();
         InstallOptionsFactory.SaveForPackage(options, reported);
         return (manager, reported);
     }

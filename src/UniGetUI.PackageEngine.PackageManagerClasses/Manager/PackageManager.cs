@@ -14,6 +14,7 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 {
@@ -61,6 +62,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         protected virtual bool? IsEligibleUpdateTarget(IPackage update, string version) => true;
 
+        protected virtual IReadOnlyList<string> ListVersionsForUpdateSelection(IPackage update, bool includePreReleases) =>
+            DetailsHelper.GetVersions(update);
+
         private IReadOnlyList<Package> OfferUpdatesWithinSkippedMajors(IReadOnlyList<Package> updates)
         {
             if (!CanUpdateToExactVersion)
@@ -78,7 +82,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             return resolved ?? updates;
         }
 
-        public IPackage? ResolveSkippedMajorUpdate(IPackage update)
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update, InstallOptions? options = null)
         {
             if (
                 !CanUpdateToExactVersion
@@ -87,19 +91,19 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             )
                 return update;
 
-            return UpdateWithinSkippedMajor(package);
+            return UpdateWithinSkippedMajor(package, options);
         }
 
-        private Package? UpdateWithinSkippedMajor(Package update)
+        private Package? UpdateWithinSkippedMajor(Package update, InstallOptions? options = null)
         {
             try
             {
-                var options = InstallOptionsFactory.LoadApplicable(update);
+                options ??= InstallOptionsFactory.LoadApplicable(update);
                 if (!options.SkipMajorUpdates)
                     return null;
 
                 if (
-                    VersionsForSkippedMajor(update) is not { } versions
+                    VersionsForSkippedMajor(update, options.PreRelease) is not { } versions
                     || NewestVersionWithinMajor(update, versions, options.PreRelease) is not { } target
                 )
                     return null;
@@ -109,7 +113,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 );
                 var overrides = update.OverridenOptions;
                 overrides.PinUpdateToNewVersion = true;
-                return new Package(update.Name, update.Id, update.VersionString, target, update.Source, this, overrides);
+                return new Package(update.Name, update.Id, update.VersionString, target, update.Source, this, overrides)
+                {
+                    RequiresReinstallToUpdate = update.RequiresReinstallToUpdate,
+                };
             }
             catch (Exception ex)
             {
@@ -125,17 +132,18 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         private static readonly TimeSpan VersionLookupBackoff = TimeSpan.FromMinutes(5);
 
-        private readonly ConcurrentDictionary<long, (string ReportedVersion, DateTime FetchedAt, IReadOnlyList<string> Versions)> _skippedMajorVersionLists = new();
+        private readonly ConcurrentDictionary<long, (string ReportedVersion, bool PreReleases, DateTime FetchedAt, IReadOnlyList<string> Versions)> _skippedMajorVersionLists = new();
 
         private readonly ConcurrentDictionary<long, DateTime> _skippedMajorLookupTimeouts = new();
 
         private readonly ConcurrentDictionary<(long Package, string Version), (DateTime CheckedAt, bool Eligible)> _skippedMajorEligibility = new();
 
-        private IReadOnlyList<string>? VersionsForSkippedMajor(Package update)
+        private IReadOnlyList<string>? VersionsForSkippedMajor(Package update, bool includePreReleases)
         {
             long key = update.GetHash();
             if (
                 _skippedMajorVersionLists.TryGetValue(key, out var cached)
+                && cached.PreReleases == includePreReleases
                 && (cached.ReportedVersion == update.NewVersionString || update.OverridenOptions.PinUpdateToNewVersion)
                 && DateTime.UtcNow - cached.FetchedAt < VersionListLifetime
             )
@@ -147,7 +155,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             )
                 return null;
 
-            var lookup = Task.Run(() => DetailsHelper.GetVersions(update));
+            var lookup = Task.Run(() => ListVersionsForUpdateSelection(update, includePreReleases));
             if (!lookup.Wait(VersionLookupTimeout))
             {
                 _skippedMajorLookupTimeouts[key] = DateTime.UtcNow;
@@ -164,7 +172,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
 
             _skippedMajorLookupTimeouts.TryRemove(key, out _);
-            _skippedMajorVersionLists[key] = (update.NewVersionString, DateTime.UtcNow, lookup.Result);
+            _skippedMajorVersionLists[key] = (update.NewVersionString, includePreReleases, DateTime.UtcNow, lookup.Result);
             return lookup.Result;
         }
 

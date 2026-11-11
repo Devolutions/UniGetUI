@@ -419,7 +419,7 @@ internal sealed class AgentSkillsSettingsLocalManager : IPackageManager
     public bool LastInstalledListingFailed => false;
     public int? CompareVersions(string versionA, string versionB) => throw new NotSupportedException();
     public bool CanUpdateToExactVersion => false;
-    public IPackage? ResolveSkippedMajorUpdate(IPackage update) => update;
+    public IPackage? ResolveSkippedMajorUpdate(IPackage update, UniGetUI.PackageEngine.Serializable.InstallOptions? options = null) => update;
     public void Initialize() => throw new NotSupportedException("No initialization is permitted.");
     public bool IsEnabled() => true;
     public bool IsReady() => false;

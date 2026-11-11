@@ -1260,6 +1260,11 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             callArguments = "-m pip ";
         }
 
+        protected override IReadOnlyList<string> ListVersionsForUpdateSelection(IPackage update, bool includePreReleases) =>
+            includePreReleases && DetailsHelper is PipPkgDetailsHelper pip
+                ? pip.GetVersionsIncludingPreReleases(update)
+                : base.ListVersionsForUpdateSelection(update, includePreReleases);
+
         public override int? CompareVersions(string versionA, string versionB)
         {
             if (

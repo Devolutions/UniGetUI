@@ -37,7 +37,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
         public bool CanUpdateToExactVersion => false;
 
-        public IPackage? ResolveSkippedMajorUpdate(IPackage update) => update;
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update, InstallOptions? options = null) => update;
 
         public int? CompareVersions(string versionA, string versionB)
         {

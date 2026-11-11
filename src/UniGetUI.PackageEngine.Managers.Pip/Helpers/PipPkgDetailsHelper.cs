@@ -143,7 +143,16 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             );
         }
 
-        protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
+        protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package) =>
+            ListVersions(package, includePreReleases: false);
+
+        internal IReadOnlyList<string> GetVersionsIncludingPreReleases(IPackage package)
+        {
+            RequireShellSafeId(package);
+            return ListVersions(package, includePreReleases: true);
+        }
+
+        private IReadOnlyList<string> ListVersions(IPackage package, bool includePreReleases)
         {
             using Process p = new()
             {
@@ -153,6 +162,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                     Arguments =
                         Manager.Status.ExecutableCallArgs
                         + " index versions "
+                        + (includePreReleases ? "--pre " : "")
                         + package.Id
                         + " "
                         + Pip.GetProxyArgument(),

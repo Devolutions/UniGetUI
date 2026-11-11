@@ -4,6 +4,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.PackageLoader
 {
@@ -150,23 +151,45 @@ namespace UniGetUI.PackageEngine.PackageLoader
             return manager.GetAvailableUpdates();
         }
 
-        public async Task<IPackage?> ResolveSkippedMajorUpdateAsync(IPackage package)
+        private readonly ConcurrentDictionary<long, SemaphoreSlim> _resolutionGates = new();
+
+        public async Task<IPackage?> ResolveSkippedMajorUpdateAsync(IPackage package, InstallOptions? options = null)
         {
-            if (!package.IsUpgradable || IsPending(package))
+            if (!package.IsUpgradable)
+                return package;
+
+            var gate = _resolutionGates.GetOrAdd(HashPackage(package), _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync();
+            try
+            {
+                return await ResolveSkippedMajorUpdateExclusivelyAsync(package, options);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+        private async Task<IPackage?> ResolveSkippedMajorUpdateExclusivelyAsync(IPackage package, InstallOptions? options)
+        {
+            if (PackageReference.TryGetValue(HashPackage(package), out var current))
+                package = current;
+
+            if (IsPending(package))
                 return package;
 
             bool pinned = package.OverridenOptions.PinUpdateToNewVersion;
-            bool skipsMajorUpdates = (await package.GetInstallOptions()).SkipMajorUpdates;
-            if (pinned && !skipsMajorUpdates)
+            options ??= await package.GetInstallOptions();
+            if (pinned && !options.SkipMajorUpdates)
             {
                 Remove(package);
                 return package;
             }
 
-            if (!skipsMajorUpdates || !(pinned || package.IsUpdateMajor()))
+            if (!options.SkipMajorUpdates || !(pinned || package.IsUpdateMajor()))
                 return package;
 
-            var resolved = await Task.Run(() => package.Manager.ResolveSkippedMajorUpdate(package));
+            var resolved = await Task.Run(() => package.Manager.ResolveSkippedMajorUpdate(package, options));
             if (IsPending(package) || (pinned && ReferenceEquals(resolved, package)))
                 return package;
 

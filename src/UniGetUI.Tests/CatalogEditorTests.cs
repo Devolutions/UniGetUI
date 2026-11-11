@@ -681,7 +681,7 @@ public class CatalogEditorTests : IDisposable
         public void InvalidateInstalledPackages() { }
         public int? CompareVersions(string versionA, string versionB) => throw new NotSupportedException();
         public bool CanUpdateToExactVersion => false;
-        public IPackage? ResolveSkippedMajorUpdate(IPackage update) => update;
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update, UniGetUI.PackageEngine.Serializable.InstallOptions? options = null) => update;
         public void Initialize() => throw new NotSupportedException();
         public bool IsEnabled() => true;
         public bool IsReady() => true;

@@ -203,8 +203,10 @@ public static class IpcPackageApi
             && UpgradablePackagesLoader.Instance is { } loader
         )
         {
+            var effectiveOptions = await InstallOptionsFactory.LoadApplicableAsync(package);
+            ApplyRequestOptions(effectiveOptions, request);
             package =
-                await loader.ResolveSkippedMajorUpdateAsync(package)
+                await loader.ResolveSkippedMajorUpdateAsync(package, effectiveOptions)
                 ?? throw new InvalidOperationException(
                     $"No update of {package.Id} is available within its installed major version, and major updates are skipped for it."
                 );

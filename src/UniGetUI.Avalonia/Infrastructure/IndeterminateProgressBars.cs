@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Styling;
 
@@ -11,6 +12,7 @@ internal static class IndeterminateProgressBars
     public const string CompositorClass = "compositor-indeterminate";
 
     private static bool _installed;
+    private static IndeterminateBarRegistry? _registry;
 
     public static void Install(Application app)
     {
@@ -22,13 +24,19 @@ internal static class IndeterminateProgressBars
 
 #if WINDOWS
         if (CompositorProgressBars.IsSupported())
-        {
-            Control.LoadedEvent.AddClassHandler<ProgressBar>(OnLoaded);
-            Control.UnloadedEvent.AddClassHandler<ProgressBar>(OnUnloaded);
-            ProgressBar.IsIndeterminateProperty.Changed.AddClassHandler<ProgressBar>(
-                (_, _) => CompositorProgressBars.Refresh());
-        }
+            Attach(new IndeterminateBarRegistry(CompositorProgressBars.CreateSurface));
 #endif
+    }
+
+    internal static void Attach(IndeterminateBarRegistry registry)
+    {
+        _registry = registry;
+        Control.LoadedEvent.AddClassHandler<ProgressBar>(OnLoaded);
+        Control.UnloadedEvent.AddClassHandler<ProgressBar>(OnUnloaded);
+        ProgressBar.IsIndeterminateProperty.Changed.AddClassHandler<ProgressBar>(OnChanged);
+        ProgressBar.OrientationProperty.Changed.AddClassHandler<ProgressBar>(OnChanged);
+        TemplatedControl.ForegroundProperty.Changed.AddClassHandler<ProgressBar>(OnChanged);
+        TemplatedControl.CornerRadiusProperty.Changed.AddClassHandler<ProgressBar>(OnChanged);
     }
 
     public static int RemoveThemeAnimations(IResourceHost host)
@@ -66,9 +74,9 @@ internal static class IndeterminateProgressBars
         return removed;
     }
 
-#if WINDOWS
-    private static void OnLoaded(ProgressBar bar, RoutedEventArgs e) => CompositorProgressBars.Register(bar);
+    private static void OnLoaded(ProgressBar bar, RoutedEventArgs e) => _registry?.Register(bar);
 
-    private static void OnUnloaded(ProgressBar bar, RoutedEventArgs e) => CompositorProgressBars.Unregister(bar);
-#endif
+    private static void OnUnloaded(ProgressBar bar, RoutedEventArgs e) => _registry?.Unregister(bar);
+
+    private static void OnChanged(ProgressBar bar, AvaloniaPropertyChangedEventArgs e) => _registry?.Refresh();
 }

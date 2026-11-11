@@ -2,106 +2,34 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Threading;
-using UniGetUI.Core.Logging;
 using Windows.UI.Composition;
 using Windows.UI.Composition.Desktop;
 using WinRT;
-using AvaloniaColor = Avalonia.Media.Color;
+using Rect = Avalonia.Rect;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
 internal static partial class CompositorProgressBars
 {
     private static readonly TimeSpan Cycle = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan SyncInterval = TimeSpan.FromMilliseconds(250);
     private static readonly StrategyBasedComWrappers ComWrappers = new();
 
-    private static readonly Dictionary<ProgressBar, Entry> _entries = [];
-    private static readonly Dictionary<Window, Host> _hosts = [];
     private static nint _dispatcherQueueController;
     private static Compositor? _compositor;
-    private static DispatcherTimer? _timer;
-    private static bool _disabled;
-    private static bool _syncPosted;
 
     public static bool IsSupported()
         => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 17763)
            && !Design.IsDesignMode
            && !WindowsAvaloniaRenderingPolicy.ShouldUseSoftwareRendering;
 
-    public static void Register(ProgressBar bar)
+    public static IIndeterminateBarSurface? CreateSurface(Window window)
     {
-        if (_disabled || _entries.ContainsKey(bar) || TopLevel.GetTopLevel(bar) is not Window window)
-            return;
-
-        Host? host = GetOrCreateHost(window);
-        if (host is null)
-            return;
-
-        _entries[bar] = new Entry(bar, host);
-        bar.Classes.Add(IndeterminateProgressBars.CompositorClass);
-        PostSync();
-    }
-
-    public static void Refresh()
-    {
-        if (_entries.Count > 0)
-            PostSync();
-    }
-
-    public static void Unregister(ProgressBar bar)
-    {
-        if (!_entries.Remove(bar, out Entry? entry))
-            return;
-
-        bar.Classes.Remove(IndeterminateProgressBars.CompositorClass);
-        entry.Dispose();
-        if (_entries.Count == 0)
-            _timer?.Stop();
-    }
-
-    private static void UpdateTimer(bool anyAnimating)
-    {
-        if (!anyAnimating)
-        {
-            _timer?.Stop();
-            return;
-        }
-
-        _timer ??= new DispatcherTimer(SyncInterval, DispatcherPriority.Background, (_, _) => SyncAll());
-        if (!_timer.IsEnabled)
-            _timer.Start();
-    }
-
-    private static Host? GetOrCreateHost(Window window)
-    {
-        if (_hosts.TryGetValue(window, out Host? existing))
-            return existing;
-
-        try
-        {
-            if (window.TryGetPlatformHandle()?.Handle is not { } hwnd || hwnd == 0)
-                return null;
-
-            Compositor compositor = GetCompositor();
-            var host = new Host(window, compositor, CreateTopmostTarget(compositor, hwnd));
-            _hosts[window] = host;
-            window.LayoutUpdated += OnLayoutUpdated;
-            window.Closed += OnWindowClosed;
-            return host;
-        }
-        catch (Exception ex)
-        {
-            _disabled = true;
-            Logger.Warn("Could not animate progress bars in the system compositor; using the Avalonia animation instead");
-            Logger.Warn(ex);
-            foreach (ProgressBar bar in _entries.Keys.ToList())
-                Unregister(bar);
+        if (window.TryGetPlatformHandle()?.Handle is not { } hwnd || hwnd == 0)
             return null;
-        }
+
+        Compositor compositor = GetCompositor();
+        return new Surface(compositor, CreateTopmostTarget(compositor, hwnd));
     }
 
     private static Compositor GetCompositor()
@@ -149,173 +77,140 @@ internal static partial class CompositorProgressBars
         }
     }
 
-    private static void OnLayoutUpdated(object? sender, EventArgs e) => PostSync();
-
-    private static void PostSync()
+    private sealed class Surface : IIndeterminateBarSurface
     {
-        if (_syncPosted)
-            return;
-        _syncPosted = true;
-        Dispatcher.UIThread.Post(() =>
+        private readonly Compositor _compositor;
+        private readonly DesktopWindowTarget _target;
+        private readonly ContainerVisual _root;
+
+        public Surface(Compositor compositor, DesktopWindowTarget target)
         {
-            _syncPosted = false;
-            SyncAll();
-        }, DispatcherPriority.Background);
-    }
-
-    private static void SyncAll()
-    {
-        bool anyAnimating = false;
-        foreach (Entry entry in _entries.Values)
-            anyAnimating |= entry.Sync();
-        UpdateTimer(anyAnimating);
-    }
-
-    private static void OnWindowClosed(object? sender, EventArgs e)
-    {
-        if (sender is not Window window || !_hosts.Remove(window, out Host? host))
-            return;
-
-        window.LayoutUpdated -= OnLayoutUpdated;
-        window.Closed -= OnWindowClosed;
-        foreach (ProgressBar bar in _entries.Where(pair => pair.Value.Host == host).Select(pair => pair.Key).ToList())
-            Unregister(bar);
-        host.Dispose();
-    }
-
-    private sealed class Host(Window window, Compositor compositor, DesktopWindowTarget target) : IDisposable
-    {
-        public Window Window { get; } = window;
-        public Compositor Compositor { get; } = compositor;
-        public ContainerVisual Root { get; } = CreateRoot(compositor, target);
-
-        private static ContainerVisual CreateRoot(Compositor compositor, DesktopWindowTarget target)
-        {
-            ContainerVisual root = compositor.CreateContainerVisual();
-            target.Root = root;
-            return root;
+            _compositor = compositor;
+            _target = target;
+            _root = compositor.CreateContainerVisual();
+            _target.Root = _root;
         }
+
+        public IIndeterminateBarLayer CreateLayer() => new Layer(_compositor, _root);
 
         public void Dispose()
         {
-            target.Root = null;
-            Root.Dispose();
-            target.Dispose();
+            _target.Root = null;
+            _root.Dispose();
+            _target.Dispose();
         }
     }
 
-    private sealed class Entry : IDisposable
+    private sealed class Layer : IIndeterminateBarLayer
     {
-        private readonly ProgressBar _bar;
+        private readonly Compositor _compositor;
+        private readonly ContainerVisual _root;
         private readonly ContainerVisual _clip;
         private readonly ContainerVisual _track;
         private readonly CompositionRoundedRectangleGeometry _trackShape;
         private readonly CompositionColorBrush _brush;
-        private readonly ShapeVisual _first;
-        private readonly ShapeVisual _second;
-        private readonly CompositionRoundedRectangleGeometry _firstShape;
-        private readonly CompositionRoundedRectangleGeometry _secondShape;
+        private readonly Indicator _first;
+        private readonly Indicator _second;
         private IndeterminateBarSnapshot? _animated;
         private double _animatedScale;
 
-        public Entry(ProgressBar bar, Host host)
+        public Layer(Compositor compositor, ContainerVisual root)
         {
-            _bar = bar;
-            Host = host;
-            Compositor c = host.Compositor;
+            _compositor = compositor;
+            _root = root;
 
-            _clip = c.CreateContainerVisual();
-            _clip.Clip = c.CreateInsetClip();
+            _clip = compositor.CreateContainerVisual();
+            _clip.Clip = compositor.CreateInsetClip();
             _clip.IsVisible = false;
 
-            _trackShape = c.CreateRoundedRectangleGeometry();
-            _track = c.CreateContainerVisual();
-            _track.Clip = c.CreateGeometricClip(_trackShape);
+            _trackShape = compositor.CreateRoundedRectangleGeometry();
+            _track = compositor.CreateContainerVisual();
+            _track.Clip = compositor.CreateGeometricClip(_trackShape);
             _clip.Children.InsertAtTop(_track);
 
-            _brush = c.CreateColorBrush();
-            (_first, _firstShape) = CreateIndicator(c, _brush);
-            (_second, _secondShape) = CreateIndicator(c, _brush);
-            _track.Children.InsertAtTop(_first);
-            _track.Children.InsertAtTop(_second);
+            _brush = compositor.CreateColorBrush();
+            _first = new Indicator(compositor, _brush);
+            _second = new Indicator(compositor, _brush);
+            _track.Children.InsertAtTop(_first.Visual);
+            _track.Children.InsertAtTop(_second.Visual);
 
-            host.Root.Children.InsertAtTop(_clip);
+            root.Children.InsertAtTop(_clip);
         }
 
-        public Host Host { get; }
-
-        private static (ShapeVisual, CompositionRoundedRectangleGeometry) CreateIndicator(Compositor c, CompositionBrush brush)
+        public void Show(IndeterminateBarSnapshot snapshot, double scale)
         {
-            CompositionRoundedRectangleGeometry geometry = c.CreateRoundedRectangleGeometry();
-            CompositionSpriteShape shape = c.CreateSpriteShape(geometry);
-            shape.FillBrush = brush;
-            ShapeVisual visual = c.CreateShapeVisual();
-            visual.Shapes.Add(shape);
-            return (visual, geometry);
-        }
-
-        public bool Sync()
-        {
-            IndeterminateBarSnapshot? snapshot = IndeterminateBarSnapshot.Capture(_bar, Host.Window);
-            if (snapshot is null)
-            {
-                _clip.IsVisible = false;
-                return _bar.IsIndeterminate;
-            }
-
-            float scale = (float)Host.Window.RenderScaling;
+            float s = (float)scale;
             Rect clip = snapshot.Clip;
-            _clip.Offset = new Vector3((float)(clip.X * scale), (float)(clip.Y * scale), 0);
-            _clip.Size = new Vector2((float)(clip.Width * scale), (float)(clip.Height * scale));
+            _clip.Offset = new Vector3((float)(clip.X * s), (float)(clip.Y * s), 0);
+            _clip.Size = new Vector2((float)(clip.Width * s), (float)(clip.Height * s));
             _clip.Opacity = (float)snapshot.Opacity;
 
             Rect track = snapshot.Track;
-            _track.Offset = new Vector3((float)((track.X - clip.X) * scale), (float)((track.Y - clip.Y) * scale), 0);
-            _track.Size = new Vector2((float)(track.Width * scale), (float)(track.Height * scale));
-            _trackShape.Size = _track.Size;
-            float radius = (float)(snapshot.CornerRadius * scale);
-            _trackShape.CornerRadius = new Vector2(radius, radius);
+            _track.Offset = new Vector3((float)((track.X - clip.X) * s), (float)((track.Y - clip.Y) * s), 0);
+            _track.Size = new Vector2((float)(track.Width * s), (float)(track.Height * s));
+            ApplyShape(_trackShape, snapshot.TrackShape, s);
 
-            AvaloniaColor color = snapshot.Color;
-            _brush.Color = Windows.UI.Color.FromArgb(255, color.R, color.G, color.B);
+            _brush.Color = Windows.UI.Color.FromArgb(255, snapshot.Color.R, snapshot.Color.G, snapshot.Color.B);
 
             if (!SameAnimation(snapshot, scale))
             {
-                StartLane(_first, _firstShape, snapshot, snapshot.First, radius, scale, 0f, 0.75f);
-                StartLane(_second, _secondShape, snapshot, snapshot.Second, radius, scale, 0.375f, 1f);
+                _first.Start(_compositor, snapshot, snapshot.First, snapshot.FirstShape, s, 0f, 0.75f);
+                _second.Start(_compositor, snapshot, snapshot.Second, snapshot.SecondShape, s, 0.375f, 1f);
                 _animated = snapshot;
                 _animatedScale = scale;
             }
 
             _clip.IsVisible = true;
-            return true;
         }
+
+        public void Hide() => _clip.IsVisible = false;
 
         private bool SameAnimation(IndeterminateBarSnapshot snapshot, double scale)
             => _animated is { } previous
                && _animatedScale == scale
                && previous.First == snapshot.First
                && previous.Second == snapshot.Second
+               && previous.FirstShape == snapshot.FirstShape
+               && previous.SecondShape == snapshot.SecondShape
                && previous.IndicatorTop == snapshot.IndicatorTop
                && previous.IndicatorHeight == snapshot.IndicatorHeight;
 
-        private void StartLane(ShapeVisual visual, CompositionRoundedRectangleGeometry shape,
-            IndeterminateBarSnapshot snapshot, IndicatorLane lane, float radius, float scale,
-            float holdUntil, float arriveAt)
+        public void Dispose()
         {
-            Compositor c = Host.Compositor;
-            var size = new Vector2((float)(lane.Width * scale), (float)(snapshot.IndicatorHeight * scale));
-            visual.Size = size;
-            shape.Size = size;
-            shape.CornerRadius = new Vector2(radius, radius);
+            _root.Children.Remove(_clip);
+            _clip.Dispose();
+        }
+    }
+
+    private sealed class Indicator
+    {
+        private readonly CompositionRoundedRectangleGeometry _shape;
+
+        public Indicator(Compositor compositor, CompositionBrush brush)
+        {
+            _shape = compositor.CreateRoundedRectangleGeometry();
+            CompositionSpriteShape sprite = compositor.CreateSpriteShape(_shape);
+            sprite.FillBrush = brush;
+            Visual = compositor.CreateShapeVisual();
+            Visual.Clip = compositor.CreateInsetClip();
+            Visual.Shapes.Add(sprite);
+        }
+
+        public ShapeVisual Visual { get; }
+
+        public void Start(Compositor compositor, IndeterminateBarSnapshot snapshot, IndicatorLane lane,
+            RoundedShape shape, float scale, float holdUntil, float arriveAt)
+        {
+            Visual.Size = new Vector2((float)(lane.Width * scale), (float)(snapshot.IndicatorHeight * scale));
+            ApplyShape(_shape, shape, scale);
 
             float origin = (float)(lane.Origin * scale);
             float start = origin + (float)(lane.Start * scale);
             float end = origin + (float)(lane.End * scale);
-            visual.Offset = new Vector3(start, (float)(snapshot.IndicatorTop * scale), 0);
+            Visual.Offset = new Vector3(start, (float)(snapshot.IndicatorTop * scale), 0);
 
-            CubicBezierEasingFunction easing = c.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0), new Vector2(0.6f, 1));
-            ScalarKeyFrameAnimation animation = c.CreateScalarKeyFrameAnimation();
+            CubicBezierEasingFunction easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0), new Vector2(0.6f, 1));
+            ScalarKeyFrameAnimation animation = compositor.CreateScalarKeyFrameAnimation();
             animation.InsertKeyFrame(0f, start);
             if (holdUntil > 0)
                 animation.InsertKeyFrame(holdUntil, start, easing);
@@ -324,14 +219,16 @@ internal static partial class CompositorProgressBars
                 animation.InsertKeyFrame(1f, end, easing);
             animation.Duration = Cycle;
             animation.IterationBehavior = AnimationIterationBehavior.Forever;
-            visual.StartAnimation("Offset.X", animation);
+            Visual.StartAnimation("Offset.X", animation);
         }
+    }
 
-        public void Dispose()
-        {
-            Host.Root.Children.Remove(_clip);
-            _clip.Dispose();
-        }
+    private static void ApplyShape(CompositionRoundedRectangleGeometry geometry, RoundedShape shape, float scale)
+    {
+        geometry.Offset = new Vector2((float)(shape.OffsetX * scale), (float)(shape.OffsetY * scale));
+        geometry.Size = new Vector2((float)(shape.Width * scale), (float)(shape.Height * scale));
+        float radius = (float)(shape.Radius * scale);
+        geometry.CornerRadius = new Vector2(radius, radius);
     }
 
     [StructLayout(LayoutKind.Sequential)]

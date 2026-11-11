@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
@@ -166,6 +167,128 @@ public sealed class IndeterminateProgressBarsTests
         Assert.Null(IndeterminateBarSnapshot.Capture(hidden, window));
         window.Close();
     }, CancellationToken.None);
+
+    [Fact]
+    public void RoundedShapeMatchesUniformAndOneSidedCorners()
+    {
+        Assert.Equal(new RoundedShape(0, 0, 100, 4, 2), RoundedShape.For(100, 4, new CornerRadius(2)));
+        Assert.Equal(new RoundedShape(0, -2.5, 300, 5, 2.5), RoundedShape.For(300, 2.5, new CornerRadius(0, 0, 6, 6)));
+        Assert.Equal(new RoundedShape(0, 0, 300, 13, 3), RoundedShape.For(300, 10, new CornerRadius(3, 3, 0, 0)));
+        Assert.Equal(new RoundedShape(-5, 0, 305, 10, 5), RoundedShape.For(300, 10, new CornerRadius(0, 6, 6, 0)));
+        Assert.Equal(new RoundedShape(0, 0, 304, 10, 4), RoundedShape.For(300, 10, new CornerRadius(4, 0, 0, 4)));
+        Assert.Null(RoundedShape.For(300, 10, new CornerRadius(1, 2, 3, 4)));
+        Assert.False(RoundedShape.Supports(new CornerRadius(1, 2, 3, 4)));
+    }
+
+    [Fact]
+    public void RoundedShapeScalesOversizedCornersLikeSkia()
+    {
+        Assert.Equal(new CornerRadius(2), RoundedShape.Fit(100, 4, new CornerRadius(10)));
+        Assert.Equal(new CornerRadius(0, 0, 2.5, 2.5), RoundedShape.Fit(300, 2.5, new CornerRadius(0, 0, 6, 6)));
+        Assert.Equal(new CornerRadius(1), RoundedShape.Fit(100, 4, new CornerRadius(1)));
+    }
+
+    [Fact]
+    public Task SnapshotKeepsPerCornerRounding() => _session.Dispatch(() =>
+    {
+        PrepareStyles();
+        var bar = Bar();
+        bar.Height = 2.5;
+        bar.MinHeight = 0;
+        bar.CornerRadius = new CornerRadius(0, 0, 6, 6);
+        var window = Show(new Panel { Children = { bar } });
+
+        var snapshot = IndeterminateBarSnapshot.Capture(bar, window);
+
+        Assert.NotNull(snapshot);
+        double height = snapshot.Track.Height;
+        Assert.Equal(Math.Min(6, height), snapshot.TrackShape.Radius, 3);
+        Assert.Equal(-snapshot.TrackShape.Radius, snapshot.TrackShape.OffsetY, 3);
+        Assert.Equal(height + snapshot.TrackShape.Radius, snapshot.TrackShape.Height, 3);
+        Assert.Equal(-snapshot.FirstShape.Radius, snapshot.FirstShape.OffsetY, 3);
+        Assert.True(snapshot.FirstShape.Radius > 0);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(5, true)]
+    public Task OnlyContentDrawnAboveABarCoversIt(int coverZIndex, bool covered) => _session.Dispatch(() =>
+    {
+        PrepareStyles();
+        var bar = Bar();
+        bar.Background = null;
+        var below = new Border
+        {
+            Width = 300,
+            Height = 40,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Background = Brushes.White,
+            ZIndex = coverZIndex,
+        };
+        var window = Show(new Panel { Children = { below, bar } });
+
+        Assert.Equal(covered, IndeterminateBarSnapshot.Capture(bar, window) is null);
+        Assert.Equal(covered, IndeterminateBarSnapshot.IsDrawnAbove(below, bar));
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task CopiedIndicatorAnimationsMatchFluent() => _session.Dispatch(() =>
+    {
+        PrepareStyles();
+        var fluent = new FluentTheme();
+        Assert.True(fluent.TryGetResource(typeof(ProgressBar), null, out object? resource));
+        var original = Describe(Assert.IsType<ControlTheme>(resource).Children);
+
+        var common = Application.Current!.Styles.OfType<StyleInclude>()
+            .Single(s => s.Source?.OriginalString.EndsWith("Styles.Common.axaml") == true);
+        var copied = Describe(((Styles)common.Loaded).OfType<IStyle>());
+
+        Assert.Equal(4, original.Count);
+        Assert.Equal(original, copied);
+    }, CancellationToken.None);
+
+    private static SortedDictionary<string, string> Describe(IEnumerable<IStyle> styles)
+    {
+        var found = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (IStyle style in styles)
+        {
+            if (style is Style { Selector: { } selector } withSelector
+                && selector.ToString() is var text
+                && text.Contains("indeterminate", StringComparison.Ordinal)
+                && System.Text.RegularExpressions.Regex.Match(text, @":(horizontal|vertical)") is { Success: true } orientation
+                && System.Text.RegularExpressions.Regex.Match(text, @"#(IndeterminateProgressBarIndicator2?)\b") is { Success: true } part)
+            {
+                foreach (Animation animation in withSelector.Animations.OfType<Animation>().Where(a => a.IterationCount == IterationCount.Infinite))
+                {
+                    var frames = animation.Children.Select(frame =>
+                        $"{frame.KeyTime}|{frame.KeySpline?.ControlPointX1},{frame.KeySpline?.ControlPointY1},{frame.KeySpline?.ControlPointX2},{frame.KeySpline?.ControlPointY2}|"
+                        + string.Join(";", frame.Setters.OfType<Setter>().Select(s => $"{s.Property?.Name}={BoundProperty(s.Value)}")));
+                    found[$"{orientation.Groups[1].Value}/{part.Groups[1].Value}"] =
+                        $"{animation.Duration}|{animation.IterationCount}|{string.Join(" ", frames)}";
+                }
+            }
+
+            foreach (var entry in Describe(style.Children))
+                found[entry.Key] = entry.Value;
+        }
+
+        return found;
+    }
+
+    private static string BoundProperty(object? value)
+    {
+        string text = value switch
+        {
+            global::Avalonia.Data.CompiledBinding compiled => compiled.Path?.ToString() ?? "",
+            global::Avalonia.Data.ReflectionBinding reflection => reflection.Path ?? "",
+            _ => value?.ToString() ?? "",
+        };
+        int dot = text.LastIndexOf('.');
+        return dot >= 0 ? text[(dot + 1)..] : text;
+    }
 
     private static void PrepareStyles()
     {

@@ -178,7 +178,7 @@ public static class PendingRebootStore
             entry.Version = OrEmpty(entry.Version);
             entry.Kind = OrEmpty(entry.Kind);
             entry.RecordedAtUtc = OrEmpty(entry.RecordedAtUtc);
-            entry.BootId = OrEmpty(entry.BootId);
+            entry.BootId = Guid.TryParseExact(entry.BootId, "N", out _) ? "" : OrEmpty(entry.BootId);
 
             if (entry.PackageId.Length == 0 || entry.ManagerName.Length == 0) continue;
             result.Add(entry);
@@ -215,7 +215,18 @@ public static class PendingRebootStore
             entry => RecordedBeforeCurrentBoot(entry, currentBootId, currentUptime));
         if (removed > 0)
             Logger.Info($"Discarded {removed} pending-reboot entries recorded before the current boot");
-        return removed > 0;
+
+        int adopted = 0;
+        if (currentBootId.Length > 0)
+        {
+            foreach (var entry in _cache.Where(entry => entry.BootId.Length == 0))
+            {
+                entry.BootId = currentBootId;
+                adopted++;
+            }
+        }
+
+        return removed > 0 || adopted > 0;
     }
 
     private static bool RecordedBeforeCurrentBoot(
@@ -223,11 +234,14 @@ public static class PendingRebootStore
         string currentBootId,
         long currentUptimeTicks)
     {
-        if (currentBootId.Length > 0 && entry.BootId.Length > 0)
-            return !string.Equals(entry.BootId, currentBootId, StringComparison.OrdinalIgnoreCase);
+        bool bootIdsKnown = currentBootId.Length > 0 && entry.BootId.Length > 0;
+        if (bootIdsKnown && !string.Equals(entry.BootId, currentBootId, StringComparison.OrdinalIgnoreCase))
+            return true;
 
-        if (entry.UptimeTicks <= 0) return true;
-        return currentUptimeTicks < entry.UptimeTicks;
+        if (entry.UptimeTicks > 0)
+            return currentUptimeTicks < entry.UptimeTicks;
+
+        return !bootIdsKnown;
     }
 
     private static void SaveUnlocked()

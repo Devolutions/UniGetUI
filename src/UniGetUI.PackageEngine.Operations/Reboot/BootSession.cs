@@ -9,51 +9,34 @@ public static class BootSession
     public static string? TestIdOverride { get; set; }
     public static long? TestUptimeOverride { get; set; }
 
-    private const int SystemBootEnvironmentInformation = 90;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct BootEnvironmentInformation
-    {
-        public Guid BootIdentifier;
-        public int FirmwareType;
-        public ulong BootFlags;
-    }
-
-    [SupportedOSPlatform("windows")]
-    [DllImport("ntdll.dll")]
-    private static extern int NtQuerySystemInformation(
-        int systemInformationClass,
-        out BootEnvironmentInformation systemInformation,
-        int systemInformationLength,
-        IntPtr returnLength
-    );
-
     [SupportedOSPlatform("windows")]
     [DllImport("kernelbase.dll", SetLastError = false)]
     private static extern void QueryInterruptTime(out ulong lpInterruptTime);
 
-    public static string GetId()
-    {
-        if (TestIdOverride is { } overriden) return overriden;
+    private const string WindowsBootCounterKey =
+        @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters";
 
+    private static readonly Lazy<string> _id = new(ReadId);
+
+    public static string GetId() => TestIdOverride ?? _id.Value;
+
+    private static string ReadId()
+    {
         if (OperatingSystem.IsWindows())
         {
             try
             {
-                int status = NtQuerySystemInformation(
-                    SystemBootEnvironmentInformation,
-                    out BootEnvironmentInformation info,
-                    Marshal.SizeOf<BootEnvironmentInformation>(),
-                    IntPtr.Zero);
+                if (Microsoft.Win32.Registry.GetValue(WindowsBootCounterKey, "BootId", null) is int counter
+                    && counter > 0)
+                {
+                    return "windows-boot-" + counter.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
 
-                if (status == 0 && info.BootIdentifier != Guid.Empty)
-                    return info.BootIdentifier.ToString("N");
-
-                Logger.Warn($"Could not read the Windows boot identifier (NTSTATUS 0x{status:X8})");
+                Logger.Warn("The Windows boot counter is unavailable; reboots are detected from uptime alone");
             }
             catch (Exception ex)
             {
-                Logger.Warn("Could not read the Windows boot identifier");
+                Logger.Warn("Could not read the Windows boot counter");
                 Logger.Warn(ex);
             }
         }

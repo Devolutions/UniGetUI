@@ -194,6 +194,36 @@ public sealed class IndeterminateBarRegistryTests
     }, CancellationToken.None);
 
     [Fact]
+    public Task ABarUnderAClippedOpaqueCoverKeepsAnimatingWhereItShows() => _session.Dispatch(() =>
+    {
+        var bar = Bar();
+        var window = Show(new Panel
+        {
+            Children =
+            {
+                bar,
+                new Border
+                {
+                    Width = 120,
+                    Height = 40,
+                    ClipToBounds = true,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Child = new Border { Width = 300, Height = 40, HorizontalAlignment = HorizontalAlignment.Left, Background = Brushes.White },
+                },
+            },
+        });
+        var surface = new FakeSurface();
+        var registry = new IndeterminateBarRegistry(_ => surface);
+        registry.Register(bar);
+        registry.SyncAll();
+
+        Assert.False(HandedOff(bar));
+        Assert.Equal(0, surface.Layers[0].Shows);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
     public Task AFullyCoveredBarStaysHandedOffButHidden() => _session.Dispatch(() =>
     {
         var bar = Bar();

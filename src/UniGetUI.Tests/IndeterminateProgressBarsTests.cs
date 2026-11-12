@@ -261,6 +261,37 @@ public sealed class IndeterminateProgressBarsTests
         window.Close();
     }, CancellationToken.None);
 
+    [Theory]
+    [InlineData(0, "Partial")]
+    [InlineData(200, "None")]
+    public Task CoverageOnlyCountsWhatAClippingParentLetsThrough(double childLeft, string expected) => _session.Dispatch(() =>
+    {
+        PrepareStyles();
+        var bar = Bar();
+        var clipping = new Border
+        {
+            Width = 120,
+            Height = 40,
+            ClipToBounds = true,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Child = new Border
+            {
+                Margin = new Thickness(childLeft, 0, 0, 0),
+                Width = 300 - childLeft,
+                Height = 40,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Background = Brushes.White,
+            },
+        };
+        var window = Show(new Panel { Children = { bar, clipping } });
+
+        IndeterminateBarSnapshot.Capture(bar, window, out BarCoverage coverage);
+
+        Assert.Equal(Enum.Parse<BarCoverage>(expected), coverage);
+        window.Close();
+    }, CancellationToken.None);
+
     [Fact]
     public Task CopiedIndicatorAnimationsMatchFluent() => _session.Dispatch(() =>
     {

@@ -177,7 +177,7 @@ internal sealed record IndeterminateBarSnapshot(
             {
                 if (sibling == branch || Order(sibling, siblings).CompareTo(branchOrder) <= 0)
                     continue;
-                result = Max(result, CoverageBy(sibling, root, visible, EffectiveOpacity(parent, root)));
+                result = Max(result, CoverageBy(sibling, root, visible, EffectiveOpacity(parent, root), new Rect(root.Bounds.Size)));
                 if (result == BarCoverage.Full)
                     return result;
             }
@@ -190,23 +190,28 @@ internal sealed record IndeterminateBarSnapshot(
         return result;
     }
 
-    private static BarCoverage CoverageBy(Visual visual, Visual root, Rect visible, double opacity)
+    private static BarCoverage CoverageBy(Visual visual, Visual root, Rect visible, double opacity, Rect clip)
     {
-        if (!visual.IsVisible)
+        if (!visual.IsVisible || !clip.Intersects(visible))
             return BarCoverage.None;
         opacity *= visual.Opacity;
         if (opacity < 0.01 || visual.TransformToVisual(root) is not Matrix toRoot)
             return BarCoverage.None;
 
         Rect bounds = new Rect(visual.Bounds.Size).TransformToAABB(toRoot);
-        bool intersects = bounds.Intersects(visible);
-        if (!intersects && visual.ClipToBounds)
-            return BarCoverage.None;
+        Rect painted = bounds.Intersect(clip);
+        bool intersects = painted.Intersects(visible);
+        if (visual.ClipToBounds)
+        {
+            if (!intersects)
+                return BarCoverage.None;
+            clip = painted;
+        }
 
         BarCoverage result = BarCoverage.None;
         if (intersects && Draws(visual, out bool opaque))
         {
-            result = opaque && opacity >= 0.999 && bounds.Contains(visible)
+            result = opaque && opacity >= 0.999 && painted.Contains(visible)
                 ? BarCoverage.Full
                 : BarCoverage.Partial;
             if (result == BarCoverage.Full)
@@ -215,7 +220,7 @@ internal sealed record IndeterminateBarSnapshot(
 
         foreach (Visual child in visual.GetVisualChildren())
         {
-            result = Max(result, CoverageBy(child, root, visible, opacity));
+            result = Max(result, CoverageBy(child, root, visible, opacity, clip));
             if (result == BarCoverage.Full)
                 return result;
         }

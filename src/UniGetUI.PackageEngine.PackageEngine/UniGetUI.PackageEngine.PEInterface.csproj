@@ -26,27 +26,37 @@
     </ItemGroup>
 
     <!-- Windows-only managers (only target $(WindowsTargetFramework)). Declared unconditionally on Windows builds
-         so the project graph sees them; SetTargetFramework pins them to their only TFM regardless of consumer,
-         and ReferenceOutputAssembly disables the /reference inclusion for the net10.0 inner build. -->
+         so the project graph sees them, including from the net10.0 inner build, where ReferenceOutputAssembly
+         disables the /reference inclusion. SkipGetTargetFrameworkProperties skips the TFM compatibility check
+         that net10.0 would fail, and UndefineProperties removes the same global properties a plain reference to a
+         single-TFM project removes. Do not use SetTargetFramework here: it would pass TargetFramework as a global
+         property, so each manager would be built a second time, as a separate configuration, into the same obj
+         folder as the plain references from the solution and Operations, and a parallel build (/m) can then run
+         both CoreCompiles at once and fail with CS2012 ("file may be locked by VBCSCompiler"). -->
     <ItemGroup Condition="'$(BuildSharedWindowsTargetFrameworks)' == 'true'">
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.PowerShell\UniGetUI.PackageEngine.Managers.PowerShell.csproj"
-                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+                          SkipGetTargetFrameworkProperties="true"
+                          UndefineProperties="TargetFramework;RuntimeIdentifier;SelfContained">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Scoop\UniGetUI.PackageEngine.Managers.Scoop.csproj"
-                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+                          SkipGetTargetFrameworkProperties="true"
+                          UndefineProperties="TargetFramework;RuntimeIdentifier;SelfContained">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.WinInstaller\UniGetUI.PackageEngine.Managers.WinInstaller.csproj"
-                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+                          SkipGetTargetFrameworkProperties="true"
+                          UndefineProperties="TargetFramework;RuntimeIdentifier;SelfContained">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.WinGet\UniGetUI.PackageEngine.Managers.WinGet.csproj"
-                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+                          SkipGetTargetFrameworkProperties="true"
+                          UndefineProperties="TargetFramework;RuntimeIdentifier;SelfContained">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Chocolatey\UniGetUI.PackageEngine.Managers.Chocolatey.csproj"
-                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+                          SkipGetTargetFrameworkProperties="true"
+                          UndefineProperties="TargetFramework;RuntimeIdentifier;SelfContained">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
     </ItemGroup>

@@ -28,22 +28,56 @@ public partial class SidebarViewModel : ViewModelBase
 
     partial void OnGitRepositoriesEnabledChanged(bool value)
     {
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, value, AgentSkillsEnabled);
+        NavigationPages = GetNavigationPages(gitRepositoriesEnabled: value);
         if (value) return;
         GitRepositoriesBadgeCount = 0;
         GitRepositoriesIsLoading = false;
     }
 
+#if UNIGETUI_XCODE_EXTENSION
+    // Keep a saved preference without starting the extension on an unsupported system.
+    [ObservableProperty]
+    private bool _xcodeEnabled = XcodePlatform.IsSupported && Settings.Get(Settings.K.EnableXcode);
+
+    partial void OnXcodeEnabledChanged(bool value)
+    {
+        NavigationPages = GetNavigationPages(xcodeEnabled: value);
+        if (value) return;
+        XcodeBadgeCount = 0;
+        XcodeIsLoading = false;
+    }
+#endif
+
+    private PageType[] GetNavigationPages(
+        bool? gitRepositoriesEnabled = null,
+        bool? agentSkillsEnabled = null,
+        bool? xcodeEnabled = null) =>
+#if UNIGETUI_XCODE_EXTENSION
+        NavigationPageOrder.Get(
+            SoftwareCatalogEnabled,
+            gitRepositoriesEnabled ?? GitRepositoriesEnabled,
+            agentSkillsEnabled ?? AgentSkillsEnabled,
+            xcodeEnabled ?? XcodeEnabled);
+#else
+        NavigationPageOrder.Get(
+            SoftwareCatalogEnabled,
+            gitRepositoriesEnabled ?? GitRepositoriesEnabled,
+            agentSkillsEnabled ?? AgentSkillsEnabled);
+#endif
+
     [ObservableProperty]
     private bool _agentSkillsEnabled = Settings.Get(Settings.K.EnableAgentSkills);
 
     partial void OnAgentSkillsEnabledChanged(bool value)
-        => NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, value);
+        => NavigationPages = GetNavigationPages(agentSkillsEnabled: value);
 
     public void SetExtensionEnabled(PageType page, bool enabled)
     {
         if (page == PageType.GitRepositories) GitRepositoriesEnabled = enabled;
         if (page == PageType.AgentSkills) AgentSkillsEnabled = enabled;
+#if UNIGETUI_XCODE_EXTENSION
+        if (page == PageType.Xcode) XcodeEnabled = enabled && XcodePlatform.IsSupported;
+#endif
     }
 
     [ObservableProperty]
@@ -52,13 +86,13 @@ public partial class SidebarViewModel : ViewModelBase
     public void ReorderNavigationPages(IReadOnlyList<PageType> pages)
     {
         NavigationPageOrder.Save(pages);
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
+        NavigationPages = GetNavigationPages();
     }
 
     public void ResetNavigationPages()
     {
         NavigationPageOrder.Reset();
-        NavigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
+        NavigationPages = GetNavigationPages();
     }
 
     // ─── Badge properties ─────────────────────────────────────────────────────
@@ -86,6 +120,21 @@ public partial class SidebarViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _gitRepositoriesIsLoading;
+
+#if UNIGETUI_XCODE_EXTENSION
+    // Whether a newer Xcode than the newest one installed can be installed; one at most.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(XcodeBadgeText))]
+    [NotifyPropertyChangedFor(nameof(XcodeBadgeVisible))]
+    private int _xcodeBadgeCount;
+
+    public bool XcodeBadgeVisible => XcodeBadgeCount > 0;
+
+    public string XcodeBadgeText => XcodeBadgeCount > 99 ? "99+" : XcodeBadgeCount.ToString();
+
+    [ObservableProperty]
+    private bool _xcodeIsLoading;
+#endif
 
     // When the count changes, sync the badge visibility
     partial void OnUpdatesBadgeCountChanged(int value) =>
@@ -145,7 +194,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     public SidebarViewModel()
     {
-        _navigationPages = NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled);
+        _navigationPages = GetNavigationPages();
         _wasDocked = Docked;
         _isPaneOpen = Docked && !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
     }
@@ -228,6 +277,9 @@ public partial class SidebarViewModel : ViewModelBase
             case PageType.Updates: UpdatesIsLoading = isLoading; break;
             case PageType.Installed: InstalledIsLoading = isLoading; break;
             case PageType.GitRepositories: GitRepositoriesIsLoading = isLoading; break;
+#if UNIGETUI_XCODE_EXTENSION
+            case PageType.Xcode: XcodeIsLoading = isLoading; break;
+#endif
         }
     }
 }

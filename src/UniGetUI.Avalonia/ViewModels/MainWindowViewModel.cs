@@ -42,6 +42,11 @@ public partial class MainWindowViewModel : ViewModelBase
     public CatalogEditorViewModel? CatalogEditor { get; }
     private readonly Dictionary<PageType, AppExtensionSession> _extensions = [];
     public GitRepositoriesViewModel? GitRepositories { get; private set; }
+#if UNIGETUI_XCODE_EXTENSION
+    public XcodeViewModel? Xcode { get; private set; }
+    private XcodeAccountViewModel? _xcodeAccount;
+    public XcodeAccountViewModel XcodeAccount => _xcodeAccount ??= new(XcodeViewModel.SharedService);
+#endif
     private SettingsBasePage? SettingsPage;
     private SettingsBasePage? ManagersPage;
     private UniGetUILogPage? UniGetUILogPage;
@@ -817,7 +822,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void SetExtensionEnabled(PageType page, bool enabled)
     {
-        var extension = AppExtensions.All.First(extension => extension.Page == page);
+        var extension = AppExtensions.All.FirstOrDefault(extension => extension.Page == page);
+        if (extension is null)
+            return;
+        if (enabled && !extension.IsAvailable())
+        {
+            Logger.Warn($"Cannot enable {extension.Name}: {extension.UnavailableReason()}");
+            enabled = false;
+        }
         Sidebar.SetExtensionEnabled(page, enabled);
         if (enabled)
         {
@@ -827,7 +839,6 @@ public partial class MainWindowViewModel : ViewModelBase
                 _ = session.CheckForUpdatesAsync();
             }
         }
-
         else if (_extensions.Remove(page, out var session))
         {
             if (_currentPage == page) LoadDefaultPage();
@@ -840,6 +851,34 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var session in _extensions.Values) session.Stop();
         _extensions.Clear();
     }
+
+#if UNIGETUI_XCODE_EXTENSION
+    // Lives while the feature is on, so automatic checks and the sidebar badge run with the page closed.
+    internal AppExtensionSession StartXcode()
+    {
+        var xcode = Xcode = new XcodeViewModel(XcodeViewModel.SharedService, XcodeAccount,
+            XcodeViewModel.SharedCatalog);
+        xcode.PropertyChanged += (_, e) =>
+        {
+            // A turned-off instance may still finish what it had started.
+            if (!ReferenceEquals(xcode, Xcode)) return;
+            if (e.PropertyName == nameof(XcodeViewModel.UpdateCount))
+                Sidebar.XcodeBadgeCount = xcode.UpdateCount;
+            else if (e.PropertyName == nameof(XcodeViewModel.IsBusy))
+                Sidebar.SetNavItemLoading(PageType.Xcode, xcode.IsBusy);
+        };
+        _ = xcode.InitializeAsync();
+        return new(() => new XcodePage(xcode), () =>
+        {
+            xcode.Stop();
+            Xcode = null;
+        });
+    }
+
+    /// <summary>Turns Xcode on or off without a restart: its sidebar entry, badge and automatic checks.</summary>
+    public void SetXcodeEnabled(bool enabled)
+        => SetExtensionEnabled(PageType.Xcode, enabled);
+#endif
 
     // ─── Navigation ──────────────────────────────────────────────────────────
     public void LoadDefaultPage()
@@ -946,6 +985,20 @@ public partial class MainWindowViewModel : ViewModelBase
                 MainWindow.RuntimeNotificationLevel.Error);
             return false;
         }
+#if UNIGETUI_XCODE_EXTENSION
+        if (newPage_t is PageType.Xcode && !Sidebar.XcodeEnabled)
+        {
+            Logger.Warn("Xcode navigation was rejected because it is turned off.");
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Xcode is turned off"),
+                CoreTools.Translate("Turn it on in Settings, under Extensions."),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return false;
+        }
+#else
+        if (newPage_t is PageType.Xcode)
+            return false;
+#endif
         if (newPage_t is PageType.About) { _ = ShowAboutDialog(); return true; }
         if (newPage_t is PageType.Quit) { MainWindow.Instance?.QuitApplication(); return true; }
 
@@ -1035,6 +1088,9 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
         PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
         PageType.AgentSkills => CoreTools.Translate("Agent Skills"),
+#if UNIGETUI_XCODE_EXTENSION
+        PageType.Xcode => CoreTools.Translate("Xcode"),
+#endif
         PageType.Settings => CoreTools.Translate("Settings"),
         PageType.Managers => CoreTools.Translate("Package Managers"),
         PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),
@@ -1172,7 +1228,11 @@ public partial class MainWindowViewModel : ViewModelBase
     /// </summary>
     public bool CanShutdownWithoutAsking
         => CurrentPageContent is not IAsyncLeaveGuard { HasUnsavedWork: true }
-            && CatalogEditor is not ({ IsBusy: true } or { IsDirty: true });
+            && CatalogEditor is not ({ IsBusy: true } or { IsDirty: true })
+#if UNIGETUI_XCODE_EXTENSION
+            && Xcode is not { IsOperationRunning: true }
+#endif
+        ;
 
     public async Task<bool> CanShutdownAsync(CancellationToken cancellationToken = default)
     {
@@ -1182,6 +1242,10 @@ public partial class MainWindowViewModel : ViewModelBase
             if (CurrentPageContent is IAsyncLeaveGuard guard
                 && !await guard.CanLeaveAsync(PageLeaveReason.Shutdown, cancellationToken))
                 return false;
+#if UNIGETUI_XCODE_EXTENSION
+            if (Xcode is { IsOperationRunning: true } xcode && !await xcode.ConfirmQuitAsync())
+                return false;
+#endif
             if (CatalogEditor is null) return true;
             if (CatalogEditor.IsBusy) return false;
             if (!CatalogEditor.IsDirty) return true;

@@ -32,7 +32,8 @@ public static class SettingsSearchIndex
         string[] Keywords,
         Type PageType,
         string? Anchor,
-        bool WindowsOnly = false);
+        bool WindowsOnly = false,
+        bool MacOnly = false);
 
     // Order matters only as a tie-break for equally-ranked matches.
     private static readonly Entry[] Entries =
@@ -153,6 +154,18 @@ public static class SettingsSearchIndex
         new("Search skills.sh", ["skills.sh", "skills discovery", "registry"], typeof(AgentSkillsSettingsControl), "SkillsShDiscoveryToggle"),
         new("Installation targets", ["skills", "agents", "codex", "claude", "copilot"], typeof(AgentSkillsSettingsControl), "TargetModeSelector"),
         new("Notion integration", ["skills", "notion", "sign in"], typeof(AgentSkillsSettingsControl), "NotionExpander"),
+#if UNIGETUI_XCODE_EXTENSION
+        new("Enable Xcode", ["xcode", "xcodes", "apple", "ios", "macos", "developer tools"], typeof(XcodeSettings), "XcodeCard", MacOnly: true),
+        new("Check for new Xcode versions automatically", ["xcode check interval", "xcode updates"], typeof(XcodeSettings), "XcodeCheckIntervalCard", MacOnly: true),
+        new("Install Xcode updates automatically", ["xcode automatic install", "xcode auto update"], typeof(XcodeSettings), "XcodeAutoInstallCard", MacOnly: true),
+        new("Include pre-releases", ["xcode beta", "xcode prerelease", "release candidate"], typeof(XcodeSettings), "XcodeIncludePrereleasesCard", MacOnly: true),
+        new("Select a new version after installing it", ["xcode-select", "xcode command line tools"], typeof(XcodeSettings), "XcodeSelectAfterInstallCard", MacOnly: true),
+        new("Skip the steps that need your macOS password", ["xcode license", "xcode sudo", "xcode administrator"], typeof(XcodeSettings), "XcodeSkipAdminStepsCard", MacOnly: true),
+        new("Delete the download once Xcode is unpacked", ["xcode archive", "xip", "xcode download"], typeof(XcodeSettings), "XcodeDeleteArchiveCard", MacOnly: true),
+        new("Installation directory", ["xcode install directory", "xcode location"], typeof(XcodeSettings), "XcodeInstallDirectoryCard", MacOnly: true),
+        new("Archive directory", ["xcode archive directory", "xcode download directory", "xcode cache", "xip"], typeof(XcodeSettings), "XcodeArchiveDirectoryCard", MacOnly: true),
+        new("Apple ID", ["apple id", "xcode sign in", "xcode sign out", "keychain", "different apple id"], typeof(XcodeSettings), "SignOutCard", MacOnly: true),
+#endif
 
         // ── Experimental ─────────────────────────────────────────────────────
         new("Enable Software Catalog", ["catalog", "software catalog"], typeof(Experimental), "SoftwareCatalogCard"),
@@ -172,10 +185,10 @@ public static class SettingsSearchIndex
 
     public static IReadOnlyList<SettingsSearchResult> Search(string query, int limit = 8)
     {
-        return Search(query, limit, OperatingSystem.IsWindows());
+        return Search(query, limit, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
     }
 
-    internal static IReadOnlyList<SettingsSearchResult> Search(string query, int limit, bool isWindows)
+    internal static IReadOnlyList<SettingsSearchResult> Search(string query, int limit, bool isWindows, bool isMacOS = false)
     {
         var queryWords = Tokenize(query);
         if (queryWords.Count == 0) return [];
@@ -185,6 +198,7 @@ public static class SettingsSearchIndex
         foreach (var e in Entries)
         {
             if (e.WindowsOnly && !isWindows) continue;
+            if (e.MacOnly && !isMacOS) continue;
 
             int score = Rank(queryWords, CoreTools.Translate(e.Title), e.Title, e.Keywords);
             if (score < NoMatch)
@@ -314,6 +328,9 @@ public static class SettingsSearchIndex
         nameof(ExtensionsHomepage) => "Extensions",
         nameof(GitRepositoriesSettings) => "Git Repositories",
         nameof(AgentSkillsSettingsControl) => "Agent Skills",
+#if UNIGETUI_XCODE_EXTENSION
+        nameof(XcodeSettings) => "Xcode",
+#endif
         nameof(Experimental) => "Experimental settings and developer options",
         _ => "UniGetUI Settings",
     });

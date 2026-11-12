@@ -258,7 +258,7 @@ other hosts; this does not substitute for their native lock-contention tests.
 | --- | --- | --- | --- |
 | `app status` | None | None | Returns app/session state such as headless mode, page, and supported UI actions. |
 | `app show` | None | None | Shows and focuses the window when a GUI session exists. |
-| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `agent-skills`, `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` and `agent-skills` require their respective extensions to be turned on in Settings, under Extensions; no restart is needed. |
+| `app navigate` | `--page <page>` | `--manager <id>`, `--help-attachment <path>` | Valid pages include `discover`, `updates`, `installed`, `bundles`, `catalog`, `catalog-editor`, `git-repositories`, `agent-skills`, `xcode` (macOS builds only), `settings`, `managers`, `own-log`, `manager-log`, `operation-history`, `help`, `release-notes`, and `about`. `catalog` and `catalog-editor` require Enable Software Catalog in Experimental settings and developer options, followed by an application restart. `git-repositories` and `agent-skills` require their respective extensions to be turned on in Settings, under Extensions; no restart is needed. `xcode` is included only in macOS builds and requires macOS 13 or later with the Xcode extension turned on the same way. |
 | `app quit` | None | None | Gracefully shuts down the selected session, including headless daemons. |
 
 The **Git Repositories** page fetches the remote even when the main clone is on a feature
@@ -273,6 +273,171 @@ first, then smallest first, then back to the original order; **Name** sorts A–
 Z–A. Entries not yet measured sort last. Sizes appear after a background scan and
 include build output. They are the sum of file lengths, not allocated disk space;
 symbolic links and junctions are not followed.
+
+The **Xcode** page (macOS 13 or later) installs, updates and selects Xcode itself; it needs no
+other tool. It ports the relevant parts of [Xcodes.app and xcodes](https://github.com/XcodesOrg)
+(MIT License) to C#, including Apple's developer sign-in, and does not read or share their
+saved accounts. The version browser combines installed Xcodes (read from their bundles) with the
+release list from [Xcode Releases](https://xcodereleases.com). By default it scans `/Applications`
+and Xcodes found by Spotlight; when an installation directory is configured, it scans that folder only.
+The browser has search, installed-only, release and architecture filters and optional major/minor grouping.
+Different builds of the same version have separate available rows; the architecture filter also
+selects that architecture when a build offers multiple variants.
+Filters, grouping, and expanded or collapsed groups are remembered. Each installed path has its
+own details and actions, including **Open**, **Show in Finder**, and **Copy path**. Opening and
+revealing use the selected path and report when the system cannot launch them. The active
+command-line Xcode is marked separately from the highlighted row. After an Apple session has been
+verified, refreshing also reads that account's Apple download list. Apple data is matched to public
+release details only by the exact archive address; a version whose build is missing or unrecognized is
+shown but cannot be installed or downloaded until its build can be identified. The account-specific list is kept
+only in memory and cleared when signing out. If the release list cannot be
+read, the last saved list is shown and labeled with its age; if there is none, installed Xcodes
+remain visible but available versions and the update badge are withheld. Release details are
+matched by version, build and architecture; ambiguous or missing details remain unknown, and
+compatibility stays unknown while they are stale. When the catalog reports the same build and
+architecture for a release and a pre-release, the details identify the other version; this is
+catalog metadata, not a verification of the installed app or downloaded archive. An active
+pre-release is marked when the corresponding stable version is installed or available; it is not
+selected automatically. Before installing, compatibility is checked against the selected build and
+architecture; if either is unknown or its details are stale, compatibility remains unknown. When
+that build requires a newer macOS, the install dialog asks for an explicit **Install Anyway** or
+**Cancel**. The download made for this Mac (Apple Silicon or
+Intel) is preferred when there is one, then the universal one, then an archive whose architecture is
+unknown. A specifically requested build and architecture are not substituted.
+
+**Download** saves the selected release's archive to UniGetUI's cache without installing Xcode.
+An installed version offers this action only when the catalog contains its exact version, build
+and architecture. The action uses the same Apple account, cache, resumable downloads and
+available catalog checksums as installation, but does not independently verify the archive's Apple
+signature or Xcode build; those checks happen during installation. The success notice can reveal
+the cached archive in Finder. Cache cleanup, or **Delete the download once Xcode is unpacked**
+after an install, may remove it; copy it elsewhere if it must be retained. The account is checked
+again after confirmation, the selected identity is resolved against the cached catalog before
+download, and access failures retain the operation log and offer a user-initiated retry.
+
+An install downloads the archive from Apple with the signed-in Apple ID. It resumes a partial
+download when the catalog supplies a checksum or Apple provides a strong validator; otherwise it
+starts that download again. Archives are cached separately by download address and expected
+checksum, and the catalog's checksum is verified when available. It then expands the archive with `xip` (or
+`archiveutil` for encrypted archives), checks it with Gatekeeper and its Apple code signature, and
+copies it into a newly created installation directory next to the other versions. If the usual
+`Xcode-<version>.app` is already a readable Xcode of the same product version but a different
+build or architecture, the new copy uses `Xcode-<version>-<build>.app`; an additional architecture
+suffix is used when that build path already contains another known variant. Existing paths, including
+symbolic links and unrecognized apps, are never replaced. A conflicting destination must be moved
+or renamed before retrying. Before running
+first-launch commands as administrator, it copies Xcode to a private root-owned folder and checks
+the signature, version and exact build again. These copies require additional free space. If the
+installation folder requires administrator rights, its path must be on the system volume, owned
+by root, free of access-control lists and inaccessible for modification by the requesting user.
+The first-launch steps (enabling developer mode, accepting the license and installing its
+components) and, when asked, selecting it with `xcode-select` run in one macOS administrator
+prompt. Once approved, administrator setup cannot safely be canceled; UniGetUI waits for it to
+finish before quitting. An interrupted earlier copy may leave an Xcode folder to inspect or remove
+before retrying. Selecting requires a non-symlinked bundle approved by Gatekeeper and signed by
+Apple as Xcode; the administrator step protects and rechecks that bundle before calling
+`xcode-select`. After installing or selecting, UniGetUI reports when the installed copy or
+selected path cannot be confirmed. While a download, install or selection runs, its browser row and details
+show progress and a confirmation-protected **Cancel** action; the operation panel keeps a bounded,
+redacted log if it fails. Quitting during an install asks first, and stopping it keeps the partial
+download for a retry when it can be verified. The archive is kept in the UniGetUI cache folder unless
+**Delete the download once Xcode is unpacked** is on. A second UniGetUI process cannot use the same
+cached archive until the install finishes.
+
+The account card signs in to Apple with an Apple ID that can download from developer.apple.com,
+using Apple's SRP sign-in with two-factor codes from a trusted device or by text message. Apple's
+public sign-in configuration is fetched separately, without account cookies or following its sign-out
+redirect. The Apple ID, its password and the session are kept in UniGetUI's own login-keychain item, never in
+logs or settings, so later downloads do not ask again. **Verify session** checks the session with
+Apple, **Use a different Apple ID** signs in with another account, and **Sign out** forgets all
+three; installed versions and downloads are kept. Accounts that require a security key, and
+federated (managed) Apple IDs, cannot sign in yet. Password and verification dialogs identify the Apple ID being used, and an
+install stops if the saved Apple ID changed while its confirmation was open. When Apple refuses
+access (HTTP 401 or 403), the failed-operation panel keeps the original log and offers **Use a
+different Apple ID**, the Apple Developer account page (where new agreements may need to be
+accepted), and an explicit retry; a 401 or 403 does not by itself identify the cause.
+UniGetUI also rechecks its saved account before validating a session or starting an authenticated
+catalog request or download, and after validation. If it detects an external change, it stops and asks
+you to refresh the account. Another process can still change the Keychain while a request is in
+flight; UniGetUI checks again before saving that request's cookies.
+
+UniGetUI does not delete Xcode itself: **Uninstall...** shows the selected copy in Finder so you
+can move it to the Trash yourself. After an update, the shortcut to the older copy appears only
+when its path, version, build, and architecture still match. An update is the newest stable
+release when it is newer than every installed Xcode (a pre-release counts when **Include
+pre-releases** is on); nothing is offered while no Xcode is installed, and the older version is
+kept until it is uninstalled. **Install Xcode updates automatically** is off by default. When
+enabled along with a periodic check, it installs only a freshly checked update with a known build,
+architecture and supported macOS compatibility, and only while the saved Apple session is valid.
+It pauses for manual selection if that version has multiple builds or an unverified build identity;
+different architectures of the same known build do not by themselves prevent automatic installation.
+It does not prompt for Apple sign-in automatically; verify or sign in again to resume. The macOS
+administrator prompt may still appear. A failed or cancelled automatic attempt is not retried
+again in the same app session; you can retry it manually.
+
+**Installation directory** accepts an existing absolute folder, or an empty value to use
+`/Applications`. It applies to listing,
+update checks, selection, and installations; changing it changes which installed Xcodes the page
+can see. It cannot be changed while an Xcode operation or account action is running.
+
+**Archive directory** accepts an existing absolute folder, or an empty value to keep downloaded
+Xcode archives in UniGetUI's cache folder. Temporary expansion folders during installation are
+created beside the cached archive in that directory as well. Existing cached archives in a
+previous folder are not moved automatically, and an inaccessible custom folder fails before Apple
+sign-in rather than falling back to the default cache. It cannot be changed while an Xcode
+operation or account action is running.
+
+**Simulator runtimes** lists Apple's public simulator catalog separately from the installed and
+bundled runtimes reported by `xcrun simctl runtime list -j`. The local list belongs to the developer
+tools selected by `xcrun`, which `DEVELOPER_DIR` may override, not necessarily the Xcode highlighted
+in the version browser. Platform, source, release-stage, and architecture filters plus search narrow
+the list. The filters are remembered separately from the version browser; search text is not saved.
+
+**View mapped simulator runtimes** in a version's details narrows it to Apple catalog mappings for
+that Xcode's SDK platform, version, and build. Only SDK builds shared by every possible Xcode
+variant are used; installed or bundled rows also need an exact platform, version, build, and known
+architecture match to a mapped catalog entry. Missing or stale metadata is identified, and a
+missing mapping does not mean a runtime is incompatible. This view does not change the selected
+developer tools: install and export still use the tools currently selected by `xcrun`.
+
+Unknown release stages and architectures appear only when their respective filters are set to
+**All**. The last successful Apple simulator catalog is saved across restarts and marked stale until
+refreshed; it can be browsed offline but cannot authorize installs, exports, or downloads. The local
+runtime list is retained for the session and marked potentially out of date if its next refresh fails.
+The catalog entry being installed, exported, or downloaded shows progress and a confirmation-protected
+**Cancel** action; the global operation panel remains available if a filter hides that entry. You can
+return to the runtime browser during an operation without refreshing its catalog.
+For installed or bundled runtimes with a reported absolute local path, **Show in Finder** reveals the
+runtime folder or image and **Copy path** copies that path. Finder reports when the item no longer exists.
+For supported modern Apple catalog entries,
+**Install with Xcode** asks Xcode to download and install the selected build and architecture.
+This needs Xcode 16.1 or later with explicit architecture selection, or Xcode 26 or later for an
+Apple Silicon runtime; the dialog identifies the developer tools that will be used. Xcode manages
+its own Apple account and may ask for administrator authorization; the Apple ID UniGetUI downloads Xcode
+with is not used.
+The installed build and architecture must be reported ready by `simctl` before UniGetUI reports
+success. **Export with Xcode** asks the same selected Xcode for the specified platform, build and
+architecture and saves an image in a folder you choose. Xcode may also install the runtime on this
+Mac. The image is first written to a private system temporary directory and then copied and checked
+before publication under a new name; existing files are not overwritten. Allow enough space in both
+locations. Xcode determines the image contents: UniGetUI verifies the copy, but does not
+independently verify the exported image's build or Apple signature. Cancelling requests that
+`xcodebuild` stop, but macOS or Xcode may finish system-managed work afterwards. Temporary data or
+an incomplete `.partial` copy may remain after cancellation or failure, and their paths are shown
+in the notice.
+
+For legacy simulator packages that Apple's catalog explicitly hosts on its public
+`devimages-cdn.apple.com` server, **Download from Apple** saves the image without using an Apple
+account or installing it. A fresh catalog entry and confirmation are required; authenticated
+sources and redirects are not used. UniGetUI checks that the saved bytes match the response but
+does not independently verify the image's build, Apple signature, or compatibility with the
+selected Xcode. The catalog size is approximate. Downloads are capped at 20 GiB, do not overwrite
+existing files, and cannot be resumed; an incomplete `.partial` file may remain after cancellation
+or failure and its path is shown. Other unsupported or unknown runtime types remain read-only.
+The page does not install legacy images or remove runtimes.
+
+The account card appears on the Xcode page and under **Settings > Extensions > Xcode**; both are
+disabled while an Xcode operation is running.
 
 ### Operations
 

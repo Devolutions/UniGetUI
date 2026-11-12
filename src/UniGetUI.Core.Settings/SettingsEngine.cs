@@ -111,5 +111,29 @@ namespace UniGetUI.Core.SettingsEngine
                 Logger.Error(e);
             }
         }
+
+        /// <summary>Persists a value and reports failure without changing the cached setting.</summary>
+        public static bool TrySetValue(K key, string value)
+        {
+            string setting = ResolveKey(key);
+            try
+            {
+                string path = Path.Join(CoreData.UniGetUIUserConfigurationDirectory, setting);
+                if (value == String.Empty)
+                    File.Delete(path);
+                else
+                    File.WriteAllText(path, value);
+
+                booleanSettings[key] = value != String.Empty;
+                valueSettings[key] = value;
+                return true;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                Logger.Error($"CANNOT SET SETTING VALUE FOR setting={setting}");
+                Logger.Error(e);
+                return false;
+            }
+        }
     }
 }

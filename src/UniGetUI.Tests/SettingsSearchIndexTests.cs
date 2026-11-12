@@ -1,5 +1,8 @@
+using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
+using UniGetUI.Interface;
 
 namespace UniGetUI.Tests;
 
@@ -45,4 +48,79 @@ public class SettingsSearchIndexTests
         Assert.DoesNotContain(results, result =>
             result.Title.Equals("Repair the stored policy", StringComparison.Ordinal));
     }
+
+#if UNIGETUI_XCODE_EXTENSION
+    [Fact]
+    public void Search_ExposesXcodeSettingsOnlyOnMac()
+    {
+        Assert.Contains(
+            SettingsSearchIndex.Search("xcode", limit: 100, isWindows: false, isMacOS: true),
+            result => result.PageType == typeof(XcodeSettings));
+        Assert.DoesNotContain(
+            SettingsSearchIndex.Search("xcode", limit: 100, isWindows: false, isMacOS: false),
+            result => result.PageType == typeof(XcodeSettings));
+        Assert.DoesNotContain(
+            SettingsSearchIndex.Search("xcode", limit: 100, isWindows: true),
+            result => result.PageType == typeof(XcodeSettings));
+    }
+
+    [Theory]
+    [InlineData("xcode install directory", "XcodeInstallDirectoryCard")]
+    [InlineData("xcode archive directory", "XcodeArchiveDirectoryCard")]
+    [InlineData("different apple id", "SignOutCard")]
+    [InlineData("xcode automatic install", "XcodeAutoInstallCard")]
+    public void Search_FindsXcodeDirectoryAndAccountSettings(string query, string anchor)
+    {
+        Assert.Contains(SettingsSearchIndex.Search(query, limit: 100, isWindows: false, isMacOS: true),
+            result => result.PageType == typeof(XcodeSettings) && result.Anchor == anchor);
+    }
+#else
+    [Fact]
+    public async Task NonMacBuildsExcludeXcodeExtensionSettingsNavigationAndIpc()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), nameof(SettingsSearchIndexTests), Guid.NewGuid().ToString("N"));
+        UniGetUI.Core.Data.CoreData.TEST_DataDirectoryOverride = Path.Combine(testRoot, "Data");
+        Directory.CreateDirectory(UniGetUI.Core.Data.CoreData.UniGetUIUserConfigurationDirectory);
+        UniGetUI.Core.SettingsEngine.Settings.ResetSettings();
+        try
+        {
+            UniGetUI.Core.SettingsEngine.Settings.Set(UniGetUI.Core.SettingsEngine.Settings.K.EnableXcode, true);
+
+            Assert.DoesNotContain(AppExtensions.All, extension => extension.Id == "xcode");
+            Assert.Empty(SettingsSearchIndex.Search("xcode", limit: 100, isWindows: true, isMacOS: true));
+            Assert.DoesNotContain(
+                NavigationPageOrder.DefaultPages(catalogEnabled: true, gitRepositoriesEnabled: true, xcodeEnabled: true),
+                page => page == PageType.Xcode);
+            Assert.DoesNotContain(
+                NavigationPageOrder.Resolve("Xcode,Discover", catalogEnabled: true, gitRepositoriesEnabled: true, xcodeEnabled: true),
+                page => page == PageType.Xcode);
+            Assert.DoesNotContain("xcode", IpcAppPages.SupportedPages);
+            Assert.Throws<InvalidOperationException>(() => IpcAppPages.NormalizePageName("xcode"));
+
+            global::Avalonia.Headless.HeadlessUnitTestSession session =
+                global::Avalonia.Headless.HeadlessUnitTestSession.GetOrStartForAssembly(typeof(SettingsSearchIndexTests).Assembly);
+            await session.Dispatch(() =>
+            {
+                var sidebarVm = new UniGetUI.Avalonia.ViewModels.SidebarViewModel();
+                Assert.DoesNotContain(PageType.Xcode, sidebarVm.NavigationPages);
+                var sidebar = new SidebarView { DataContext = sidebarVm };
+                Assert.DoesNotContain(
+                    sidebar.FindControl<global::Avalonia.Controls.ListBox>("NavListBox")!.Items.OfType<global::Avalonia.Controls.ListBoxItem>(),
+                    item => Equals(item.Tag, "Xcode"));
+                var extensionsPage = new ExtensionsHomepage();
+                Assert.DoesNotContain(
+                    global::Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(extensionsPage)
+                        .OfType<global::Avalonia.Controls.TextBlock>(),
+                    block => string.Equals(block.Text, "Xcode", StringComparison.Ordinal));
+            }, CancellationToken.None);
+        }
+        finally
+        {
+            UniGetUI.Core.SettingsEngine.Settings.ResetSettings();
+            UniGetUI.Core.Data.CoreData.TEST_DataDirectoryOverride = null;
+            if (Directory.Exists(testRoot))
+                Directory.Delete(testRoot, recursive: true);
+        }
+    }
+#endif
 }

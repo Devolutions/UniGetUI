@@ -49,6 +49,7 @@ public enum PageType
     GitRepositories,
     ManagerHealth,
     AgentSkills,
+    Xcode,
 }
 
 public partial class MainWindow : Window
@@ -210,6 +211,12 @@ public partial class MainWindow : Window
     public GitRepositoriesViewModel? GitRepositories => ViewModel.GitRepositories;
     public void SetGitRepositoriesEnabled(bool enabled) => ViewModel.SetGitRepositoriesEnabled(enabled);
     public void SetExtensionEnabled(PageType page, bool enabled) => ViewModel.SetExtensionEnabled(page, enabled);
+#if UNIGETUI_XCODE_EXTENSION
+    public bool XcodeEnabled => ViewModel.Sidebar.XcodeEnabled;
+    public XcodeViewModel? Xcode => ViewModel.Xcode;
+    public XcodeAccountViewModel XcodeAccount => ViewModel.XcodeAccount;
+    public void SetXcodeEnabled(bool enabled) => ViewModel.SetXcodeEnabled(enabled);
+#endif
 
     public MainWindow()
     {

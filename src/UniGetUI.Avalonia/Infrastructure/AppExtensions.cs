@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
@@ -40,12 +41,30 @@ internal sealed class AppExtension
     /// <summary>A few words on how it is doing while on, such as "2 behind"; empty when there is nothing to say.</summary>
     public Func<string> Status { get; init; } = () => "";
 
-    public bool IsEnabled => Settings.Get(EnabledSetting);
+    /// <summary>Whether this extension can run on the current system and, if not, why.</summary>
+    public Func<bool> IsAvailable { get; init; } = () => true;
+    public Func<string> UnavailableReason { get; init; } = () => "";
+    internal Action<bool>? ApplyEnabledOverride { get; init; }
 
-    public void ApplyEnabled(bool enabled) => MainWindow.Instance?.SetExtensionEnabled(Page, enabled);
+    public bool IsEnabled => IsAvailable() && Settings.Get(EnabledSetting);
+
+    public void ApplyEnabled(bool enabled)
+    {
+        if (ApplyEnabledOverride is { } apply)
+        {
+            apply(enabled);
+            return;
+        }
+        MainWindow.Instance?.SetExtensionEnabled(Page, enabled);
+    }
 
     public void SetEnabled(bool enabled)
     {
+        if (enabled && !IsAvailable())
+        {
+            Logger.Warn($"Cannot enable {Name}: {UnavailableReason()}");
+            return;
+        }
         Settings.Set(EnabledSetting, enabled);
         ApplyEnabled(enabled);
     }
@@ -84,7 +103,6 @@ internal static class AppExtensions
                 },
     };
 
-    /// <summary>Every extension, in the order Settings lists them.</summary>
     public static readonly AppExtension AgentSkills = new()
     {
         Id = "agent-skills",
@@ -104,7 +122,40 @@ internal static class AppExtensions
         InitializePreferences = AgentSkillsDependencies.ApplyPinnedUpdateExclusions,
     };
 
-    public static IReadOnlyList<AppExtension> All { get; } = [GitRepositories, AgentSkills];
+#if UNIGETUI_XCODE_EXTENSION
+    public static readonly AppExtension Xcode = new()
+    {
+        Id = "xcode",
+        Name = "Xcode",
+        Description = "Install, update and switch between versions of Xcode",
+        Icon = IconType.Xcode,
+        EnabledSetting = Settings.K.EnableXcode,
+        Page = PageType.Xcode,
+        SettingsPage = typeof(XcodeSettings),
+        CreateSettingsPage = () => new XcodeSettings(),
+        Start = window => window.StartXcode(),
+        IsAvailable = () => XcodePlatform.IsSupported,
+        UnavailableReason = () => CoreTools.Translate("Requires macOS 13 or later"),
+        Status = () => MainWindow.Instance?.Xcode is not { } xcode
+            ? ""
+            : xcode.HasUpdate
+                    ? CoreTools.Translate("Xcode {0} is available", xcode.UpdateVersion)
+                    : xcode.Installed.Count switch
+                    {
+                        0 => xcode.HasLoaded ? CoreTools.Translate("No Xcode installed") : "",
+                        1 => CoreTools.Translate("1 version installed"),
+                        int count => CoreTools.Translate("{0} versions installed", count),
+                    },
+    };
+#endif
+
+    /// <summary>Every extension available on this system, in the order Settings lists them.</summary>
+    public static IReadOnlyList<AppExtension> All { get; } =
+#if UNIGETUI_XCODE_EXTENSION
+        OperatingSystem.IsMacOS() ? [GitRepositories, AgentSkills, Xcode] : [GitRepositories, AgentSkills];
+#else
+        [GitRepositories, AgentSkills];
+#endif
 
     public static void InitializePreferences()
     {

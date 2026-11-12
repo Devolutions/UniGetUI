@@ -231,6 +231,20 @@ public class LinuxUpdateTargetTests
         Assert.Null(LinuxPackageOwnership.RunQuery("unigetui-no-such-package-tool", "-S", "/opt/unigetui/UniGetUI"));
     }
 
+    [Fact]
+    public void RunQuery_GivesUpWhenAChildKeepsTheOutputOpenAfterTheToolExits()
+    {
+        (string tool, string flag, string script) = OperatingSystem.IsWindows()
+            ? ("cmd.exe", "/c", "start /b ping -n 6 127.0.0.1")
+            : ("/bin/sh", "-c", "sleep 5 &");
+        Stopwatch watch = Stopwatch.StartNew();
+
+        PackageQueryResult? result = LinuxPackageOwnership.RunQuery(tool, flag, script, TimeSpan.FromSeconds(1));
+
+        Assert.Null(result);
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(4), $"RunQuery took {watch.Elapsed.TotalSeconds:0.0} s");
+    }
+
     [LinuxFact]
     public void Find_RecognisesAFileOwnedByTheSystemPackageManager()
     {

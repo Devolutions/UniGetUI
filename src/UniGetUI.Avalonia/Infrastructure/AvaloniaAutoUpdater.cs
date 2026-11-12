@@ -603,7 +603,7 @@ internal static partial class AvaloniaAutoUpdater
                 return false;
             }
 
-            if (OperatingSystem.IsLinux() && await ReportLinuxUpdateTargetIfBlockedAsync(candidate.VersionName, IsManual()))
+            if (OperatingSystem.IsLinux() && await ReportLinuxUpdateTargetIfBlockedAsync(candidate.VersionName, IsManual))
             {
                 return false;
             }
@@ -1501,7 +1501,7 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     [SupportedOSPlatform("linux")]
-    private static async Task<bool> ReportLinuxUpdateTargetIfBlockedAsync(string versionName, bool isManual)
+    private static async Task<bool> ReportLinuxUpdateTargetIfBlockedAsync(string versionName, Func<bool> isManual)
     {
         string? exePath = Environment.ProcessPath;
         string? installDir = Path.GetDirectoryName(exePath);
@@ -1562,9 +1562,8 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         LogUpdateWarn(logLine);
-        bool show = transient
-            ? isManual
-            : isManual || Interlocked.Exchange(ref _linuxBlockedUpdateShownFor, versionName) != versionName;
+        bool firstNotice = !transient && Interlocked.Exchange(ref _linuxBlockedUpdateShownFor, versionName) != versionName;
+        bool show = firstNotice || isManual();
         if (show)
         {
             RaiseStatus(

@@ -148,7 +148,10 @@ public static class LinuxPackageOwnership
         return escaped.ToString();
     }
 
-    public static PackageQueryResult? RunQuery(string tool, string flag, string path)
+    public static PackageQueryResult? RunQuery(string tool, string flag, string path) =>
+        RunQuery(tool, flag, path, QueryTimeout);
+
+    public static PackageQueryResult? RunQuery(string tool, string flag, string path, TimeSpan timeout)
     {
         Process p = new()
         {
@@ -179,9 +182,9 @@ public static class LinuxPackageOwnership
         {
             Task<string> stdout = p.StandardOutput.ReadToEndAsync();
             Task<string> stderr = p.StandardError.ReadToEndAsync();
-            if (!p.WaitForExit(QueryTimeout))
+            if (!Task.WaitAll([p.WaitForExitAsync(), stdout, stderr], timeout))
             {
-                Logger.Warn($"'{tool} {flag} {path}' did not answer within {QueryTimeout.TotalSeconds:0} seconds.");
+                Logger.Warn($"'{tool} {flag} {path}' did not answer within {timeout.TotalSeconds:0} seconds.");
                 try
                 {
                     p.Kill(entireProcessTree: true);
@@ -194,7 +197,6 @@ public static class LinuxPackageOwnership
                 return null;
             }
 
-            p.WaitForExit();
             string answer = (stdout.Result + "\n" + stderr.Result).Trim();
             Logger.Info($"'{tool} {flag} {path}' exited with {p.ExitCode}: {answer}");
             return new PackageQueryResult(p.ExitCode, answer);

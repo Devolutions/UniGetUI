@@ -234,6 +234,33 @@ public sealed class IndeterminateProgressBarsTests
         window.Close();
     }, CancellationToken.None);
 
+    [Theory]
+    [InlineData(40, 20, 255, "Partial")]
+    [InlineData(0, 300, 255, "Full")]
+    [InlineData(0, 300, 128, "Partial")]
+    [InlineData(0, 300, 0, "None")]
+    public Task CoverageSeesEveryOverlapNotJustSamplePoints(double left, double width, byte alpha, string expected) => _session.Dispatch(() =>
+    {
+        PrepareStyles();
+        var bar = Bar();
+        var overlay = new Border
+        {
+            Margin = new Thickness(left, 0, 0, 0),
+            Width = width,
+            Height = 40,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Background = new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)),
+        };
+        var window = Show(new Panel { Children = { bar, overlay } });
+
+        var snapshot = IndeterminateBarSnapshot.Capture(bar, window, out BarCoverage coverage);
+
+        Assert.Equal(Enum.Parse<BarCoverage>(expected), coverage);
+        Assert.Equal(coverage == BarCoverage.None, snapshot is not null);
+        window.Close();
+    }, CancellationToken.None);
+
     [Fact]
     public Task CopiedIndicatorAnimationsMatchFluent() => _session.Dispatch(() =>
     {

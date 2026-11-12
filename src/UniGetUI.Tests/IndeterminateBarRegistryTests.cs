@@ -163,6 +163,117 @@ public sealed class IndeterminateBarRegistryTests
     }, CancellationToken.None);
 
     [Fact]
+    public Task APartlyCoveredBarIsHandedBackUntilUncovered() => _session.Dispatch(() =>
+    {
+        var bar = Bar();
+        var cover = new Border
+        {
+            Margin = new Thickness(40, 0, 0, 0),
+            Width = 20,
+            Height = 40,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Background = Brushes.White,
+        };
+        var window = Show(new Panel { Children = { bar, cover } });
+        var surface = new FakeSurface();
+        var registry = new IndeterminateBarRegistry(_ => surface);
+        registry.Register(bar);
+        registry.SyncAll();
+
+        Assert.False(HandedOff(bar));
+        Assert.Equal(0, surface.Layers[0].Shows);
+        Assert.True(registry.IsPolling);
+
+        cover.IsVisible = false;
+        registry.SyncAll();
+
+        Assert.True(HandedOff(bar));
+        Assert.Equal(1, surface.Layers[0].Shows);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task AFullyCoveredBarStaysHandedOffButHidden() => _session.Dispatch(() =>
+    {
+        var bar = Bar();
+        var window = Show(new Panel
+        {
+            Children =
+            {
+                bar,
+                new Border
+                {
+                    Width = 300,
+                    Height = 40,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Background = Brushes.White,
+                },
+            },
+        });
+        var surface = new FakeSurface();
+        var registry = new IndeterminateBarRegistry(_ => surface);
+        registry.Register(bar);
+        registry.SyncAll();
+
+        Assert.True(HandedOff(bar));
+        Assert.Equal(0, surface.Layers[0].Shows);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task AnAncestorMovingWithoutLayoutResyncsAtOnce() => _session.Dispatch(() =>
+    {
+        var bar = Bar();
+        var slide = new TranslateTransform();
+        var page = new Border { RenderTransform = slide, Child = bar };
+        var window = Show(new Panel { Children = { page } });
+        var surface = new FakeSurface();
+        var registry = new IndeterminateBarRegistry(_ => surface);
+        registry.Register(bar);
+        Dispatcher.UIThread.RunJobs();
+        FakeLayer layer = surface.Layers[0];
+        Assert.Equal(1, layer.Shows);
+        Assert.Equal(0, layer.LastSnapshot!.Track.X, 3);
+
+        slide.X = 50;
+        registry.NotifyAppearanceChanged(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(2, layer.Shows);
+        Assert.Equal(50, layer.LastSnapshot!.Track.X, 3);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task AnAncestorFadingInShowsTheBarWithoutWaitingForThePoll() => _session.Dispatch(() =>
+    {
+        var bar = Bar();
+        var page = new Border { Opacity = 0, Child = bar };
+        var unrelated = new Border();
+        var window = Show(new Panel { Children = { page, unrelated } });
+        var surface = new FakeSurface();
+        var registry = new IndeterminateBarRegistry(_ => surface);
+        registry.Register(bar);
+        Dispatcher.UIThread.RunJobs();
+        FakeLayer layer = surface.Layers[0];
+        Assert.Equal(0, layer.Shows);
+
+        page.Opacity = 0.5;
+        unrelated.Opacity = 0.5;
+        registry.NotifyAppearanceChanged(unrelated);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(0, layer.Shows);
+
+        registry.NotifyAppearanceChanged(page);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, layer.Shows);
+        Assert.Equal(0.5, layer.LastSnapshot!.Opacity, 3);
+        window.Close();
+    }, CancellationToken.None);
+
+    [Fact]
     public Task AFailingLayerHandsEveryBarBackAndDisablesTheCompositor() => _session.Dispatch(() =>
     {
         var first = Bar();

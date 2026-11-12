@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UniGetUI.Core.Logging;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -69,6 +70,21 @@ internal sealed class IndeterminateBarRegistry(Func<Window, IIndeterminateBarSur
     {
         if (_entries.Count > 0)
             PostSync();
+    }
+
+    public void NotifyAppearanceChanged(Visual? changed)
+    {
+        if (IsDisabled || _syncPosted)
+            return;
+
+        foreach (ProgressBar bar in _entries.Keys)
+        {
+            if (bar.IsIndeterminate && (changed is null || changed == bar || changed.IsVisualAncestorOf(bar)))
+            {
+                PostSync();
+                return;
+            }
+        }
     }
 
     public void SyncAll()
@@ -195,14 +211,16 @@ internal sealed class IndeterminateBarRegistry(Func<Window, IIndeterminateBarSur
         public bool Sync()
         {
             bool supported = IndeterminateBarSnapshot.IsSupported(bar);
-            SetClass(supported);
             if (!supported || Window.WindowState == WindowState.Minimized || !Window.IsVisible)
             {
+                SetClass(supported);
                 Hide();
                 return false;
             }
 
-            if (IndeterminateBarSnapshot.Capture(bar, Window) is not { } snapshot)
+            IndeterminateBarSnapshot? snapshot = IndeterminateBarSnapshot.Capture(bar, Window, out BarCoverage coverage);
+            SetClass(coverage != BarCoverage.Partial);
+            if (snapshot is null)
             {
                 Hide();
                 return bar.IsIndeterminate;

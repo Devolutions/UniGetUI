@@ -3,6 +3,7 @@ using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Styling;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -37,6 +38,12 @@ internal static class IndeterminateProgressBars
         ProgressBar.OrientationProperty.Changed.AddClassHandler<ProgressBar>(OnChanged);
         TemplatedControl.ForegroundProperty.Changed.AddClassHandler<ProgressBar>(OnChanged);
         TemplatedControl.CornerRadiusProperty.Changed.AddClassHandler<ProgressBar>(OnChanged);
+        Visual.OpacityProperty.Changed.AddClassHandler<Visual>(OnVisualMoved);
+        Visual.RenderTransformProperty.Changed.AddClassHandler<Visual>(OnVisualMoved);
+        TranslateTransform.XProperty.Changed.AddClassHandler<TranslateTransform>(OnTransformMoved);
+        TranslateTransform.YProperty.Changed.AddClassHandler<TranslateTransform>(OnTransformMoved);
+        ScaleTransform.ScaleXProperty.Changed.AddClassHandler<ScaleTransform>(OnTransformMoved);
+        ScaleTransform.ScaleYProperty.Changed.AddClassHandler<ScaleTransform>(OnTransformMoved);
     }
 
     public static int RemoveThemeAnimations(IResourceHost host)
@@ -79,4 +86,10 @@ internal static class IndeterminateProgressBars
     private static void OnUnloaded(ProgressBar bar, RoutedEventArgs e) => _registry?.Unregister(bar);
 
     private static void OnChanged(ProgressBar bar, AvaloniaPropertyChangedEventArgs e) => _registry?.Refresh();
+
+    private static void OnVisualMoved(Visual visual, AvaloniaPropertyChangedEventArgs e)
+        => _registry?.NotifyAppearanceChanged(visual);
+
+    private static void OnTransformMoved(Transform transform, AvaloniaPropertyChangedEventArgs e)
+        => _registry?.NotifyAppearanceChanged(null);
 }

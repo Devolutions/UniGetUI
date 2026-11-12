@@ -1,11 +1,14 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 
 namespace UniGetUI.Avalonia.Infrastructure;
+
+internal enum BarCoverage { None, Partial, Full }
 
 internal readonly record struct IndicatorLane(double Origin, double Width, double Start, double End);
 
@@ -78,15 +81,17 @@ internal sealed record IndeterminateBarSnapshot(
     Color Color,
     double Opacity)
 {
-    private const int CoverageSamples = 5;
-
     public static bool IsSupported(ProgressBar bar)
         => bar.Orientation == Orientation.Horizontal
            && RoundedShape.Supports(bar.CornerRadius)
            && FindParts(bar) is { First.Background: ISolidColorBrush };
 
     public static IndeterminateBarSnapshot? Capture(ProgressBar bar, Visual root)
+        => Capture(bar, root, out _);
+
+    public static IndeterminateBarSnapshot? Capture(ProgressBar bar, Visual root, out BarCoverage coverage)
     {
+        coverage = BarCoverage.None;
         if (!bar.IsIndeterminate
             || !bar.IsEffectivelyVisible
             || !root.IsVisualAncestorOf(bar)
@@ -156,27 +161,69 @@ internal sealed record IndeterminateBarSnapshot(
             Color.FromRgb(brush.Color.R, brush.Color.G, brush.Color.B),
             Math.Min(1, opacity));
 
-        return IsCovered(bar, root, clip) ? null : snapshot;
+        coverage = Coverage(bar, root, clip);
+        return coverage == BarCoverage.None ? snapshot : null;
     }
 
-    public static bool IsCovered(ProgressBar bar, Visual root, Rect visible)
+    public static BarCoverage Coverage(ProgressBar bar, Visual root, Rect visible)
     {
-        double y = visible.Y + visible.Height / 2;
-        for (int i = 0; i < CoverageSamples; i++)
+        BarCoverage result = BarCoverage.None;
+        Visual branch = bar;
+        for (Visual? parent = bar.GetVisualParent(); parent is not null; parent = parent.GetVisualParent())
         {
-            double x = visible.X + visible.Width * (i + 0.5) / CoverageSamples;
-            foreach (Visual visual in root.GetVisualsAt(new Point(x, y), v => v.IsVisible))
+            var siblings = parent.GetVisualChildren().ToList();
+            var branchOrder = Order(branch, siblings);
+            foreach (Visual sibling in siblings)
             {
-                if (visual == bar || bar.IsVisualAncestorOf(visual))
-                    break;
-                if (visual.IsVisualAncestorOf(bar) || !IsDrawnAbove(visual, bar) || DrawsNothing(visual, root))
+                if (sibling == branch || Order(sibling, siblings).CompareTo(branchOrder) <= 0)
                     continue;
-                return true;
+                result = Max(result, CoverageBy(sibling, root, visible, EffectiveOpacity(parent, root)));
+                if (result == BarCoverage.Full)
+                    return result;
             }
+
+            if (parent == root)
+                break;
+            branch = parent;
         }
 
-        return false;
+        return result;
     }
+
+    private static BarCoverage CoverageBy(Visual visual, Visual root, Rect visible, double opacity)
+    {
+        if (!visual.IsVisible)
+            return BarCoverage.None;
+        opacity *= visual.Opacity;
+        if (opacity < 0.01 || visual.TransformToVisual(root) is not Matrix toRoot)
+            return BarCoverage.None;
+
+        Rect bounds = new Rect(visual.Bounds.Size).TransformToAABB(toRoot);
+        bool intersects = bounds.Intersects(visible);
+        if (!intersects && visual.ClipToBounds)
+            return BarCoverage.None;
+
+        BarCoverage result = BarCoverage.None;
+        if (intersects && Draws(visual, out bool opaque))
+        {
+            result = opaque && opacity >= 0.999 && bounds.Contains(visible)
+                ? BarCoverage.Full
+                : BarCoverage.Partial;
+            if (result == BarCoverage.Full)
+                return result;
+        }
+
+        foreach (Visual child in visual.GetVisualChildren())
+        {
+            result = Max(result, CoverageBy(child, root, visible, opacity));
+            if (result == BarCoverage.Full)
+                return result;
+        }
+
+        return result;
+    }
+
+    private static BarCoverage Max(BarCoverage a, BarCoverage b) => a > b ? a : b;
 
     public static bool IsDrawnAbove(Visual visual, Visual target)
     {
@@ -222,22 +269,33 @@ internal sealed record IndeterminateBarSnapshot(
         return track is not null && first is not null && second is not null ? (track, first, second) : null;
     }
 
-    private static bool DrawsNothing(Visual visual, Visual root)
+    private static bool Draws(Visual visual, out bool opaque)
     {
-        if (EffectiveOpacity(visual, root) < 0.01)
-            return true;
-
-        return visual switch
+        opaque = false;
+        switch (visual)
         {
-            Panel panel => IsClear(panel.Background),
-            Border border => IsClear(border.Background) && (IsClear(border.BorderBrush) || border.BorderThickness == default),
-            ContentPresenter presenter => IsClear(presenter.Background) && (IsClear(presenter.BorderBrush) || presenter.BorderThickness == default),
-            _ => false,
-        };
+            case Panel panel:
+                opaque = IsOpaque(panel.Background);
+                return !IsClear(panel.Background);
+            case Border border:
+                opaque = IsOpaque(border.Background);
+                return !IsClear(border.Background) || (!IsClear(border.BorderBrush) && border.BorderThickness != default);
+            case ContentPresenter presenter:
+                opaque = IsOpaque(presenter.Background);
+                return !IsClear(presenter.Background) || (!IsClear(presenter.BorderBrush) && presenter.BorderThickness != default);
+            case TemplatedControl:
+            case Decorator:
+                return false;
+            default:
+                return true;
+        }
     }
 
     private static bool IsClear(IBrush? brush)
         => brush is null || brush.Opacity <= 0 || brush is ISolidColorBrush { Color.A: 0 };
+
+    private static bool IsOpaque(IBrush? brush)
+        => brush is ISolidColorBrush { Color.A: 255, Opacity: >= 1 };
 
     private static double EffectiveOpacity(Visual visual, Visual root)
     {

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Компјутерот не можеше да се исклучи",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI не можеше да го започне исклучувањето. Исклучете го компјутерот рачно.",
   "Your computer was not shut down": "Компјутерот не беше исклучен",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некои операции не успеаја, па UniGetUI не го исклучи компјутерот. Проверете ги неуспешните операции, а потоа исклучете го компјутерот рачно."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некои операции не успеаја, па UniGetUI не го исклучи компјутерот. Проверете ги неуспешните операции, а потоа исклучете го компјутерот рачно.",
+  "Skip major updates for this package": "Прескокни ги главните ажурирања за овој пакет",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} не беше ажуриран на {1}: веќе е инсталирана понова верзија. Повторно вчитајте го списокот со ажурирања.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} не беше ажуриран: главните ажурирања се прескокнати за овој пакет, а верзијата на која треба да се ажурира не е позната. Ажурирајте го од списокот со ажурирања или побарајте конкретна верзија.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} не беше ажуриран на {1}: {2} не може да ја инсталира токму таа верзија во моментов. Повторно вчитајте го списокот со ажурирања.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} не беше ажуриран на {1}: главните ажурирања се прескокнати за овој пакет. Повторно вчитајте го списокот со ажурирања за да видите ажурирање во рамките на инсталираната главна верзија или исклучете ја опцијата „Прескокни ги главните ажурирања“ за да го инсталирате."
 }

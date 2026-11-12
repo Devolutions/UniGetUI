@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "सङ्गणकं निरोद्धुं न शकितम्",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI सङ्गणकस्य निरोधनं प्रारब्धुं न अशक्नोत्। कृपया सङ्गणकं स्वहस्तेन निरोधयतु।",
   "Your computer was not shut down": "भवतः सङ्गणकः निरुद्धः न अभवत्",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "केचन कार्याणि विफलानि, अतः UniGetUI भवतः सङ्गणकं न निरुद्धवत्। विफलानि कार्याणि समीक्ष्य, ततः सङ्गणकं स्वहस्तेन निरोधयतु।"
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "केचन कार्याणि विफलानि, अतः UniGetUI भवतः सङ्गणकं न निरुद्धवत्। विफलानि कार्याणि समीक्ष्य, ततः सङ्गणकं स्वहस्तेन निरोधयतु।",
+  "Skip major updates for this package": "अस्य package कृते प्रमुख-अद्यतनानि त्यज",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} संस्करणं {1} पर्यन्तम् अद्यतनं न कृतम्: नवीनतरं संस्करणम् पूर्वमेव स्थापितम् अस्ति। अद्यतनसूचीं पुनः लोड् कुरु।",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} अद्यतनं न कृतम्: अस्य package कृते प्रमुख-अद्यतनानि त्यक्तानि सन्ति, अद्यतनार्थं संस्करणं च अज्ञातम् अस्ति। अद्यतनसूचीतः अद्यतनयतु, अथवा विशिष्टं संस्करणं याचताम्।",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} संस्करणं {1} पर्यन्तम् अद्यतनं न कृतम्: {2} इदानीं तत् सटीकं संस्करणं स्थापयितुं न शक्नोति। अद्यतनसूचीं पुनः लोड् कुरु।",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} संस्करणं {1} पर्यन्तम् अद्यतनं न कृतम्: अस्य package कृते प्रमुख-अद्यतनानि त्यक्तानि सन्ति। स्थापितस्य प्रमुख-संस्करणस्य अन्तर्गतं अद्यतनं द्रष्टुं अद्यतनसूचीं पुनः लोड् कुरु, अथवा तत् स्थापयितुं \"प्रमुख-अद्यतनानि त्यज\" विकल्पं निष्क्रियं कुरु।"
 }

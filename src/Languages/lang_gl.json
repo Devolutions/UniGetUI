@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Non se puido apagar o equipo",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI non puido iniciar o apagado. Apaga o equipo manualmente.",
   "Your computer was not shut down": "O equipo non se apagou",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algunhas operacións fallaron, polo que UniGetUI non apagou o equipo. Revisa as operacións que fallaron e apágao manualmente."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algunhas operacións fallaron, polo que UniGetUI non apagou o equipo. Revisa as operacións que fallaron e apágao manualmente.",
+  "Skip major updates for this package": "Omitir as actualizacións principais deste paquete",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} non se actualizou á versión {1}: xa hai instalada unha versión máis recente. Volve cargar a lista de actualizacións.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} non se actualizou: omítense as actualizacións principais deste paquete e non se coñece a versión á que se debe actualizar. Actualízao desde a lista de actualizacións ou solicita unha versión específica.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} non se actualizou á versión {1}: {2} non pode instalar esa versión exacta neste momento. Volve cargar a lista de actualizacións.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} non se actualizou á versión {1}: omítense as actualizacións principais deste paquete. Volve cargar a lista de actualizacións para ver unha actualización dentro da versión principal instalada, ou desactiva \"Omitir as actualizacións principais\" para instalala."
 }

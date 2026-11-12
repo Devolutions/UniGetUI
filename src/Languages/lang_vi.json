@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Không thể tắt máy tính",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI không thể bắt đầu quá trình tắt máy. Vui lòng tự tắt máy tính.",
   "Your computer was not shut down": "Máy tính của bạn chưa được tắt",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Một số thao tác không thành công nên UniGetUI đã không tắt máy tính của bạn. Hãy xem lại các thao tác thất bại, sau đó tự tắt máy tính."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Một số thao tác không thành công nên UniGetUI đã không tắt máy tính của bạn. Hãy xem lại các thao tác thất bại, sau đó tự tắt máy tính.",
+  "Skip major updates for this package": "Bỏ qua các bản cập nhật phiên bản lớn cho gói này",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "Không cập nhật {0} lên {1}: phiên bản mới hơn đã được cài đặt. Tải lại danh sách cập nhật.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "Không cập nhật {0}: đã bỏ qua các bản cập nhật phiên bản lớn cho gói này và chưa xác định phiên bản cần cập nhật. Hãy cập nhật từ danh sách cập nhật hoặc yêu cầu một phiên bản cụ thể.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "Không cập nhật {0} lên {1}: hiện tại {2} không thể cài đặt chính xác phiên bản đó. Tải lại danh sách cập nhật.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "Không cập nhật {0} lên {1}: đã bỏ qua các bản cập nhật phiên bản lớn cho gói này. Tải lại danh sách cập nhật để xem bản cập nhật trong cùng phiên bản lớn đang cài đặt, hoặc tắt \"Bỏ qua các bản cập nhật phiên bản lớn\" để cài đặt phiên bản đó."
 }

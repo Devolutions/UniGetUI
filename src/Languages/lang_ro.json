@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Computerul nu a putut fi închis",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nu a putut iniția închiderea. Te rog să închizi computerul manual.",
   "Your computer was not shut down": "Computerul nu a fost închis",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Unele operațiuni au eșuat, așa că UniGetUI nu a închis computerul. Verifică operațiunile eșuate, apoi închide-l manual."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Unele operațiuni au eșuat, așa că UniGetUI nu a închis computerul. Verifică operațiunile eșuate, apoi închide-l manual.",
+  "Skip major updates for this package": "Omite actualizările majore pentru acest pachet",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} nu a fost actualizat la {1}: este deja instalată o versiune mai nouă. Reîncarcă lista de actualizări.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} nu a fost actualizat: actualizările majore sunt omise pentru acest pachet, iar versiunea la care trebuie actualizat este necunoscută. Actualizează-l din lista de actualizări sau solicită o versiune specifică.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} nu a fost actualizat la {1}: {2} nu poate instala acum acea versiune exactă. Reîncarcă lista de actualizări.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} nu a fost actualizat la {1}: actualizările majore sunt omise pentru acest pachet. Reîncarcă lista de actualizări pentru a vedea o actualizare în cadrul versiunii majore instalate sau dezactivează „Omite actualizările majore” pentru a o instala."
 }

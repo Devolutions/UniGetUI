@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "De computer kon niet worden afgesloten",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI kon het afsluiten niet starten. Sluit je computer handmatig af.",
   "Your computer was not shut down": "Je computer is niet afgesloten",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Sommige bewerkingen zijn mislukt. Daarom heeft UniGetUI je computer niet afgesloten. Controleer de mislukte bewerkingen en sluit je computer daarna handmatig af."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Sommige bewerkingen zijn mislukt. Daarom heeft UniGetUI je computer niet afgesloten. Controleer de mislukte bewerkingen en sluit je computer daarna handmatig af.",
+  "Skip major updates for this package": "Grote updates voor dit pakket overslaan",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} is niet bijgewerkt naar {1}: er is al een nieuwere versie geïnstalleerd. Laad de updatelijst opnieuw.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} is niet bijgewerkt: grote updates voor dit pakket worden overgeslagen en de versie waarnaar moet worden bijgewerkt is onbekend. Werk het bij vanuit de updatelijst of vraag een specifieke versie aan.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} is niet bijgewerkt naar {1}: {2} kan die exacte versie momenteel niet installeren. Laad de updatelijst opnieuw.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} is niet bijgewerkt naar {1}: grote updates voor dit pakket worden overgeslagen. Laad de updatelijst opnieuw om een update binnen de geïnstalleerde hoofdversie te zien, of schakel \"Grote updates voor dit pakket overslaan\" uit om deze te installeren."
 }

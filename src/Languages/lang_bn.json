@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "কম্পিউটার বন্ধ করা যায়নি",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI কম্পিউটার বন্ধ করার প্রক্রিয়া শুরু করতে পারেনি। অনুগ্রহ করে ম্যানুয়ালি কম্পিউটার বন্ধ করুন।",
   "Your computer was not shut down": "আপনার কম্পিউটার বন্ধ করা হয়নি",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "কিছু অপারেশন ব্যর্থ হয়েছে, তাই UniGetUI আপনার কম্পিউটার বন্ধ করেনি। ব্যর্থ অপারেশনগুলো পর্যালোচনা করুন, তারপর ম্যানুয়ালি কম্পিউটার বন্ধ করুন।"
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "কিছু অপারেশন ব্যর্থ হয়েছে, তাই UniGetUI আপনার কম্পিউটার বন্ধ করেনি। ব্যর্থ অপারেশনগুলো পর্যালোচনা করুন, তারপর ম্যানুয়ালি কম্পিউটার বন্ধ করুন।",
+  "Skip major updates for this package": "এই প্যাকেজের জন্য প্রধান সংস্করণের আপডেট এড়িয়ে যান",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} {1}-এ আপডেট করা হয়নি: এর চেয়ে নতুন একটি সংস্করণ ইতিমধ্যেই ইনস্টল করা আছে। আপডেটের তালিকা পুনরায় লোড করুন।",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} আপডেট করা হয়নি: এই প্যাকেজের জন্য প্রধান সংস্করণের আপডেট এড়ানো হচ্ছে এবং কোন সংস্করণে আপডেট করতে হবে তা জানা নেই। আপডেটের তালিকা থেকে এটি আপডেট করুন, অথবা একটি নির্দিষ্ট সংস্করণ অনুরোধ করুন।",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} {1}-এ আপডেট করা হয়নি: {2} এই মুহূর্তে ওই নির্দিষ্ট সংস্করণটি ইনস্টল করতে পারছে না। আপডেটের তালিকা পুনরায় লোড করুন।",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} {1}-এ আপডেট করা হয়নি: এই প্যাকেজের জন্য প্রধান সংস্করণের আপডেট এড়ানো হচ্ছে। ইনস্টল করা প্রধান সংস্করণের মধ্যে উপলব্ধ আপডেট দেখতে আপডেটের তালিকা পুনরায় লোড করুন, অথবা এটি ইনস্টল করতে \"প্রধান সংস্করণের আপডেট এড়িয়ে যান\" বন্ধ করুন।"
 }

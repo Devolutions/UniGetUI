@@ -2641,5 +2641,10 @@
   "The computer could not be shut down": "ไม่สามารถปิดเครื่องคอมพิวเตอร์ได้",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI ไม่สามารถเริ่มการปิดเครื่องได้ โปรดปิดเครื่องคอมพิวเตอร์ด้วยตนเอง",
   "Your computer was not shut down": "คอมพิวเตอร์ของคุณไม่ได้ปิดเครื่อง",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "การดำเนินการบางอย่างล้มเหลว UniGetUI จึงไม่ได้ปิดเครื่องคอมพิวเตอร์ ตรวจสอบการดำเนินการที่ล้มเหลว แล้วปิดเครื่องด้วยตนเอง"
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "การดำเนินการบางอย่างล้มเหลว UniGetUI จึงไม่ได้ปิดเครื่องคอมพิวเตอร์ ตรวจสอบการดำเนินการที่ล้มเหลว แล้วปิดเครื่องด้วยตนเอง",
+  "Skip major updates for this package": "ข้ามการอัปเดตเวอร์ชันหลักสำหรับแพ็กเกจนี้",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} ไม่ได้อัปเดตเป็น {1}: มีเวอร์ชันใหม่กว่าติดตั้งอยู่แล้ว โหลดรายการอัปเดตใหม่",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} ไม่ได้อัปเดต: มีการข้ามการอัปเดตเวอร์ชันหลักสำหรับแพ็กเกจนี้ และไม่ทราบเวอร์ชันที่จะอัปเดตเป็น อัปเดตจากรายการอัปเดต หรือระบุเวอร์ชันที่ต้องการ",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} ไม่ได้อัปเดตเป็น {1}: {2} ไม่สามารถติดตั้งเวอร์ชันที่ระบุนั้นได้ในขณะนี้ โหลดรายการอัปเดตใหม่",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} ไม่ได้อัปเดตเป็น {1}: มีการข้ามการอัปเดตเวอร์ชันหลักสำหรับแพ็กเกจนี้ โหลดรายการอัปเดตใหม่เพื่อดูการอัปเดตภายในเวอร์ชันหลักที่ติดตั้งอยู่ หรือปิด \"ข้ามการอัปเดตเวอร์ชันหลัก\" เพื่อติดตั้ง"
 }

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Komputer tidak dapat dimatikan",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI tidak dapat memulai proses pematian. Silakan matikan komputer Anda secara manual.",
   "Your computer was not shut down": "Komputer Anda tidak dimatikan",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Beberapa operasi gagal, jadi UniGetUI tidak mematikan komputer Anda. Tinjau operasi yang gagal, lalu matikan komputer secara manual."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Beberapa operasi gagal, jadi UniGetUI tidak mematikan komputer Anda. Tinjau operasi yang gagal, lalu matikan komputer secara manual.",
+  "Skip major updates for this package": "Lewati pembaruan versi mayor untuk paket ini",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} tidak diperbarui ke {1}: versi yang lebih baru sudah terpasang. Muat ulang daftar pembaruan.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} tidak diperbarui: pembaruan versi mayor dilewati untuk paket ini dan versi yang akan dipasang tidak diketahui. Perbarui dari daftar pembaruan, atau minta versi tertentu.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} tidak diperbarui ke {1}: {2} tidak dapat memasang versi persis tersebut saat ini. Muat ulang daftar pembaruan.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} tidak diperbarui ke {1}: pembaruan versi mayor dilewati untuk paket ini. Muat ulang daftar pembaruan untuk melihat pembaruan dalam versi mayor yang terpasang, atau nonaktifkan \"Lewati pembaruan versi mayor\" untuk memasangnya."
 }

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Računalnika ni bilo mogoče izklopiti",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI ni mogel začeti izklapljanja. Ročno izklopite računalnik.",
   "Your computer was not shut down": "Računalnik ni bil izklopljen",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Nekatera opravila so spodletela, zato UniGetUI ni izklopil računalnika. Preglejte spodletela opravila in nato računalnik ročno izklopite."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Nekatera opravila so spodletela, zato UniGetUI ni izklopil računalnika. Preglejte spodletela opravila in nato računalnik ročno izklopite.",
+  "Skip major updates for this package": "Preskoči večje posodobitve za ta paket",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} ni bil posodobljen na {1}: nameščena je že novejša različica. Znova naložite seznam posodobitev.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} ni bil posodobljen: večje posodobitve so za ta paket preskočene, ciljna različica za posodobitev pa ni znana. Posodobite ga s seznama posodobitev ali zahtevajte določeno različico.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} ni bil posodobljen na {1}: {2} trenutno ne more namestiti točno te različice. Znova naložite seznam posodobitev.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} ni bil posodobljen na {1}: večje posodobitve so za ta paket preskočene. Znova naložite seznam posodobitev, da si ogledate posodobitev znotraj nameščene glavne različice, ali izklopite možnost »Preskoči večje posodobitve«, da jo namestite."
 }

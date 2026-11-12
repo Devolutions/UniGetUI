@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "संगणक बंद करता आला नाही",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI ला संगणक बंद करण्याची प्रक्रिया सुरू करता आली नाही. कृपया संगणक स्वतः बंद करा.",
   "Your computer was not shut down": "तुमचा संगणक बंद झाला नाही",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "काही क्रिया अयशस्वी झाल्यामुळे UniGetUI ने तुमचा संगणक बंद केला नाही. अयशस्वी क्रियांचा आढावा घ्या, त्यानंतर संगणक स्वतः बंद करा."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "काही क्रिया अयशस्वी झाल्यामुळे UniGetUI ने तुमचा संगणक बंद केला नाही. अयशस्वी क्रियांचा आढावा घ्या, त्यानंतर संगणक स्वतः बंद करा.",
+  "Skip major updates for this package": "या पॅकेजसाठी प्रमुख आवृत्ती अद्यतने वगळा",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} ला {1} वर अद्यतनित केले नाही: यापेक्षा नवीन आवृत्ती आधीच स्थापित आहे. अद्यतनांची यादी पुन्हा लोड करा.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} अद्यतनित केले नाही: या पॅकेजसाठी प्रमुख आवृत्ती अद्यतने वगळली आहेत आणि कोणत्या आवृत्तीवर अद्यतनित करायचे हे अज्ञात आहे. अद्यतनांच्या यादीतून ते अद्यतनित करा किंवा विशिष्ट आवृत्तीची विनंती करा.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} ला {1} वर अद्यतनित केले नाही: {2} सध्या ती अचूक आवृत्ती स्थापित करू शकत नाही. अद्यतनांची यादी पुन्हा लोड करा.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} ला {1} वर अद्यतनित केले नाही: या पॅकेजसाठी प्रमुख आवृत्ती अद्यतने वगळली आहेत. स्थापित प्रमुख आवृत्तीतील अद्यतन पाहण्यासाठी अद्यतनांची यादी पुन्हा लोड करा, किंवा ते स्थापित करण्यासाठी \"प्रमुख अद्यतने वगळा\" बंद करा."
 }

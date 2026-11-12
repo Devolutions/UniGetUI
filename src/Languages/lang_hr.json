@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Računalo nije bilo moguće isključiti",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nije mogao pokrenuti isključivanje. Ručno isključite računalo.",
   "Your computer was not shut down": "Računalo nije isključeno",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Neke operacije nisu uspjele, pa UniGetUI nije isključio računalo. Pregledajte neuspjele operacije, a zatim ga ručno isključite."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Neke operacije nisu uspjele, pa UniGetUI nije isključio računalo. Pregledajte neuspjele operacije, a zatim ga ručno isključite.",
+  "Skip major updates for this package": "Preskoči veća ažuriranja za ovaj paket",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} nije ažuriran na {1}: novija je verzija već instalirana. Ponovno učitajte popis ažuriranja.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} nije ažuriran: veća ažuriranja preskaču se za ovaj paket, a verzija na koju ga treba ažurirati nije poznata. Ažurirajte ga s popisa ažuriranja ili zatražite određenu verziju.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} nije ažuriran na {1}: {2} trenutačno ne može instalirati tu točnu verziju. Ponovno učitajte popis ažuriranja.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} nije ažuriran na {1}: veća ažuriranja preskaču se za ovaj paket. Ponovno učitajte popis ažuriranja da biste vidjeli ažuriranje unutar instalirane glavne verzije ili isključite \"Preskoči veća ažuriranja\" da biste ga instalirali."
 }

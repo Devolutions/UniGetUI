@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Nem sikerült leállítani a számítógépet",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "Az UniGetUI nem tudta elindítani a leállítást. Kérjük, állítsa le kézzel a számítógépet.",
   "Your computer was not shut down": "A számítógép leállítása nem történt meg",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Néhány művelet nem sikerült, ezért az UniGetUI nem állította le a számítógépet. Ellenőrizze a sikertelen műveleteket, majd állítsa le kézzel a számítógépet."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Néhány művelet nem sikerült, ezért az UniGetUI nem állította le a számítógépet. Ellenőrizze a sikertelen műveleteket, majd állítsa le kézzel a számítógépet.",
+  "Skip major updates for this package": "Főverzió-frissítések kihagyása ennél a csomagnál",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} nem frissült {1} verzióra: már egy újabb verzió van telepítve. Töltse újra a frissítések listáját.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} nem frissült: ennél a csomagnál a főverzió-frissítések kihagyása van beállítva, és nem ismert a frissítési célverzió. A frissítések listájából frissítheti, vagy kérhet egy konkrét verziót.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} nem frissült {1} verzióra: a(z) {2} jelenleg nem tudja telepíteni ezt a pontos verziót. Töltse újra a frissítések listáját.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} nem frissült {1} verzióra: ennél a csomagnál a főverzió-frissítések kihagyása van beállítva. Töltse újra a frissítések listáját, hogy lássa a telepített főverzión belüli frissítést, vagy kapcsolja ki a „Főverzió-frissítések kihagyása” beállítást a telepítéshez."
 }

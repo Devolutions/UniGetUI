@@ -2641,5 +2641,11 @@
   "The computer could not be shut down": "Arvutit ei saanud välja lülitada",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI ei saanud väljalülitamist alustada. Lülita arvuti käsitsi välja.",
   "Your computer was not shut down": "Arvutit ei lülitatud välja",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Mõned toimingud nurjusid, seega UniGetUI ei lülitanud arvutit välja. Vaata nurjunud toimingud üle ja lülita arvuti käsitsi välja."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Mõned toimingud nurjusid, seega UniGetUI ei lülitanud arvutit välja. Vaata nurjunud toimingud üle ja lülita arvuti käsitsi välja.",
+  "[... {0} characters omitted ...]": "[... {0} tähemärki jäeti välja ...]",
+  "Skip major updates for this package": "Jäta selle paketi suuremad uuendused vahele",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} ei uuendatud versioonile {1}: uuem versioon on juba paigaldatud. Laadige uuenduste loend uuesti.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} ei uuendatud: selle paketi suuremad uuendused jäetakse vahele ja uuendatava versioon pole teada. Uuendage seda uuenduste loendis või taotlege kindlat versiooni.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} ei uuendatud versioonile {1}: {2} ei saa praegu seda täpset versiooni paigaldada. Laadige uuenduste loend uuesti.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} ei uuendatud versioonile {1}: selle paketi suuremad uuendused jäetakse vahele. Laadige uuenduste loend uuesti, et näha uuendust paigaldatud põhiversiooni piires, või lülitage selle installimiseks välja „Jäta selle paketi suuremad uuendused vahele”."
 }

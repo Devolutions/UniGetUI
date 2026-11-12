@@ -2638,5 +2638,10 @@
   "The computer could not be shut down": "No se pudo apagar el equipo",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI no pudo iniciar el apagado. Apaga el equipo manualmente, por favor.",
   "Your computer was not shut down": "El equipo no se apagó",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algunas operaciones fallaron, por lo que UniGetUI no apagó el equipo. Revisa las operaciones fallidas y apágalo manualmente."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algunas operaciones fallaron, por lo que UniGetUI no apagó el equipo. Revisa las operaciones fallidas y apágalo manualmente.",
+  "Skip major updates for this package": "Omitir actualizaciones mayores para este paquete",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} no se actualizó a {1}: ya hay instalada una versión más reciente. Vuelve a cargar la lista de actualizaciones.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} no se actualizó: se omiten las actualizaciones mayores para este paquete y se desconoce la versión a la que se debe actualizar. Actualízalo desde la lista de actualizaciones o solicita una versión específica.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} no se actualizó a {1}: {2} no puede instalar esa versión exacta ahora mismo. Vuelve a cargar la lista de actualizaciones.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} no se actualizó a {1}: se omiten las actualizaciones mayores para este paquete. Vuelve a cargar la lista de actualizaciones para ver una actualización dentro de la versión mayor instalada o desactiva \"Omitir actualizaciones mayores\" para instalarla."
 }

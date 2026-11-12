@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "לא ניתן היה לכבות את המחשב",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI לא הצליח להתחיל את תהליך הכיבוי. כבה את המחשב באופן ידני.",
   "Your computer was not shut down": "המחשב שלך לא כובה",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "חלק מהפעולות נכשלו, ולכן UniGetUI לא כיבה את המחשב שלך. בדוק את הפעולות שנכשלו, ולאחר מכן כבה אותו באופן ידני."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "חלק מהפעולות נכשלו, ולכן UniGetUI לא כיבה את המחשב שלך. בדוק את הפעולות שנכשלו, ולאחר מכן כבה אותו באופן ידני.",
+  "Skip major updates for this package": "דלג על עדכונים לגרסאות ראשיות עבור חבילה זו",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "לא בוצע עדכון של {0} לגרסה {1}: כבר מותקנת גרסה חדשה יותר. טען מחדש את רשימת העדכונים.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "לא בוצע עדכון של {0}: עדכונים לגרסאות ראשיות מדולגים עבור חבילה זו, ולא ידועה הגרסה שאליה יש לעדכן. עדכן מרשימת העדכונים או בקש גרסה מסוימת.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "לא בוצע עדכון של {0} לגרסה {1}: לא ניתן להתקין את הגרסה המדויקת הזו באמצעות {2} כרגע. טען מחדש את רשימת העדכונים.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "לא בוצע עדכון של {0} לגרסה {1}: עדכונים לגרסאות ראשיות מדולגים עבור חבילה זו. טען מחדש את רשימת העדכונים כדי לראות עדכון במסגרת הגרסה הראשית המותקנת, או השבת את האפשרות \"דלג על עדכונים לגרסאות ראשיות\" כדי להתקין אותה."
 }

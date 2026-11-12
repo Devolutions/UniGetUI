@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Počítač se nepodařilo vypnout",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI se nepodařilo zahájit vypnutí. Vypněte počítač ručně.",
   "Your computer was not shut down": "Počítač nebyl vypnut",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Některé operace selhaly, proto UniGetUI počítač nevypnul. Zkontrolujte neúspěšné operace a poté počítač vypněte ručně."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Některé operace selhaly, proto UniGetUI počítač nevypnul. Zkontrolujte neúspěšné operace a poté počítač vypněte ručně.",
+  "Skip major updates for this package": "Přeskakovat aktualizace hlavní verze tohoto balíčku",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} nebyl aktualizován na {1}: novější verze je již nainstalována. Znovu načtěte seznam aktualizací.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} nebyl aktualizován: u tohoto balíčku se přeskakují aktualizace hlavní verze a cílová verze není známa. Aktualizujte ho ze seznamu aktualizací nebo požádejte o konkrétní verzi.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} nebyl aktualizován na {1}: {2} momentálně nemůže nainstalovat přesně tuto verzi. Znovu načtěte seznam aktualizací.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} nebyl aktualizován na {1}: u tohoto balíčku se přeskakují aktualizace hlavní verze. Znovu načtěte seznam aktualizací, abyste zobrazili aktualizaci v rámci nainstalované hlavní verze, nebo vypněte možnost „Přeskakovat aktualizace hlavní verze“ a nainstalujte ji."
 }

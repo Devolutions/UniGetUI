@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "පරිගණකය වසා දැමීමට නොහැකි විය",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI හට පරිගණකය වසා දැමීම ආරම්භ කිරීමට නොහැකි විය. කරුණාකර ඔබගේ පරිගණකය අතින් වසා දමන්න.",
   "Your computer was not shut down": "ඔබගේ පරිගණකය වසා දැමුවේ නැත",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "සමහර මෙහෙයුම් අසාර්ථක වූ බැවින් UniGetUI ඔබගේ පරිගණකය වසා දැමුවේ නැත. අසාර්ථක වූ මෙහෙයුම් පරීක්ෂා කර, ඉන්පසු පරිගණකය අතින් වසා දමන්න."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "සමහර මෙහෙයුම් අසාර්ථක වූ බැවින් UniGetUI ඔබගේ පරිගණකය වසා දැමුවේ නැත. අසාර්ථක වූ මෙහෙයුම් පරීක්ෂා කර, ඉන්පසු පරිගණකය අතින් වසා දමන්න.",
+  "Skip major updates for this package": "මෙම පැකේජය සඳහා ප්‍රධාන සංස්කරණ යාවත්කාලීන කිරීම් මඟ හරින්න",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} {1} වෙත යාවත්කාලීන නොකළේය: වඩාත් නව සංස්කරණයක් දැනටමත් ස්ථාපනය කර ඇත. යාවත්කාලීන ලැයිස්තුව නැවත පූරණය කරන්න.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} යාවත්කාලීන නොකළේය: මෙම පැකේජය සඳහා ප්‍රධාන සංස්කරණ යාවත්කාලීන කිරීම් මඟ හැර ඇති අතර යාවත්කාලීන කිරීමට ඇති සංස්කරණය නොදනී. යාවත්කාලීන ලැයිස්තුවෙන් එය යාවත්කාලීන කරන්න, නැතහොත් නිශ්චිත සංස්කරණයක් ඉල්ලන්න.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} {1} වෙත යාවත්කාලීන නොකළේය: {2} හට එම නිශ්චිත සංස්කරණය මේ මොහොතේ ස්ථාපනය කළ නොහැක. යාවත්කාලීන ලැයිස්තුව නැවත පූරණය කරන්න.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} {1} වෙත යාවත්කාලීන නොකළේය: මෙම පැකේජය සඳහා ප්‍රධාන සංස්කරණ යාවත්කාලීන කිරීම් මඟ හැර ඇත. ස්ථාපිත ප්‍රධාන සංස්කරණය තුළ ඇති යාවත්කාලීනයක් බැලීමට යාවත්කාලීන ලැයිස්තුව නැවත පූරණය කරන්න, නැතහොත් එය ස්ථාපනය කිරීමට \"ප්‍රධාන සංස්කරණ යාවත්කාලීන කිරීම් මඟ හරින්න\" අක්‍රිය කරන්න."
 }

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "نەکرا کۆمپیوتەرەکە خامۆش بکرێتەوە",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI نەیتوانی دەست بە خامۆشکردنی کۆمپیوتەرەکەت بکات. تکایە بە دەستی کۆمپیوتەرەکەت خامۆش بکەرەوە.",
   "Your computer was not shut down": "کۆمپیوتەرەکەت خامۆش نەکرایەوە",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "هەندێک کردار شکستیان هێنا، بۆیە UniGetUI کۆمپیوتەرەکەت خامۆش نەکردەوە. کردارە شکست‌هێناوەکان بپشکنە، پاشان بە دەستی کۆمپیوتەرەکەت خامۆش بکەرەوە."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "هەندێک کردار شکستیان هێنا، بۆیە UniGetUI کۆمپیوتەرەکەت خامۆش نەکردەوە. کردارە شکست‌هێناوەکان بپشکنە، پاشان بە دەستی کۆمپیوتەرەکەت خامۆش بکەرەوە.",
+  "Skip major updates for this package": "نوێکردنەوە گەورەکان بۆ ئەم پاکێجە پشتگوێ بخە",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} بۆ {1} نوێ نەکرایەوە: وەشانێکی نوێتر پێشتر دامەزراوە. لیستی نوێکردنەوەکان دووبارە بار بکەرەوە.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} نوێ نەکرایەوە: نوێکردنەوە گەورەکان بۆ ئەم پاکێجە پشتگوێ خراون و وەشانی نوێکردنەوە دیار نییە. لە لیستی نوێکردنەوەکانەوە نوێی بکەرەوە، یان وەشانێکی دیاریکراو داوا بکە.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} بۆ {1} نوێ نەکرایەوە: {2} لە ئێستادا ناتوانێت ئەو وەشانەی دیاریکراو دابمەزرێنێت. لیستی نوێکردنەوەکان دووبارە بار بکەرەوە.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} بۆ {1} نوێ نەکرایەوە: نوێکردنەوە گەورەکان بۆ ئەم پاکێجە پشتگوێ خراون. لیستی نوێکردنەوەکان دووبارە بار بکەرەوە بۆ بینینی نوێکردنەوەیەک لە ناو وەشانی گەورەی دامەزراودا، یان «پشتگوێخستنی نوێکردنەوە گەورەکان» ناچالاک بکە بۆ دامەزراندنی."
 }

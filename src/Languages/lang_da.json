@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Computeren kunne ikke lukkes ned",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI kunne ikke starte nedlukningen. Luk computeren manuelt.",
   "Your computer was not shut down": "Computeren blev ikke lukket ned",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Nogle handlinger mislykkedes, så UniGetUI lukkede ikke computeren ned. Gennemgå de mislykkede handlinger, og luk derefter computeren manuelt."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Nogle handlinger mislykkedes, så UniGetUI lukkede ikke computeren ned. Gennemgå de mislykkede handlinger, og luk derefter computeren manuelt.",
+  "Skip major updates for this package": "Spring større opdateringer over for denne pakke",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} blev ikke opdateret til {1}: en nyere version er allerede installeret. Genindlæs listen over opdateringer.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} blev ikke opdateret: større opdateringer springes over for denne pakke, og versionen, der skal opdateres til, er ukendt. Opdater den fra listen over opdateringer, eller anmod om en bestemt version.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} blev ikke opdateret til {1}: {2} kan ikke installere den præcise version lige nu. Genindlæs listen over opdateringer.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} blev ikke opdateret til {1}: større opdateringer springes over for denne pakke. Genindlæs listen over opdateringer for at se en opdatering inden for den installerede hovedversion, eller slå \"Spring større opdateringer over\" fra for at installere den."
 }

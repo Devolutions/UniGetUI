@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "رایانه خاموش نشد",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI نتوانست خاموش‌کردن رایانه را آغاز کند. لطفاً رایانه خود را به‌صورت دستی خاموش کنید.",
   "Your computer was not shut down": "رایانه شما خاموش نشد",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "برخی عملیات ناموفق بودند، بنابراین UniGetUI رایانه شما را خاموش نکرد. عملیات ناموفق را بررسی کنید و سپس رایانه را به‌صورت دستی خاموش کنید."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "برخی عملیات ناموفق بودند، بنابراین UniGetUI رایانه شما را خاموش نکرد. عملیات ناموفق را بررسی کنید و سپس رایانه را به‌صورت دستی خاموش کنید.",
+  "Skip major updates for this package": "رد کردن به‌روزرسانی‌های اصلی برای این بسته",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} به {1} به‌روزرسانی نشد: نسخهٔ جدیدتری از قبل نصب شده است. فهرست به‌روزرسانی‌ها را دوباره بارگیری کنید.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} به‌روزرسانی نشد: به‌روزرسانی‌های اصلی برای این بسته رد می‌شوند و نسخه‌ای که باید به‌روزرسانی شود مشخص نیست. آن را از فهرست به‌روزرسانی‌ها به‌روزرسانی کنید یا نسخه‌ای مشخص را درخواست کنید.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} به {1} به‌روزرسانی نشد: {2} در حال حاضر نمی‌تواند آن نسخهٔ دقیق را نصب کند. فهرست به‌روزرسانی‌ها را دوباره بارگیری کنید.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} به {1} به‌روزرسانی نشد: به‌روزرسانی‌های اصلی برای این بسته رد می‌شوند. فهرست به‌روزرسانی‌ها را دوباره بارگیری کنید تا به‌روزرسانی در همان نسخهٔ اصلی نصب‌شده را ببینید، یا برای نصب آن، «رد کردن به‌روزرسانی‌های اصلی» را خاموش کنید."
 }

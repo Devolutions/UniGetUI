@@ -2643,5 +2643,10 @@
   "The computer could not be shut down": "無法關閉電腦",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI 無法啟動關機程序。請手動關閉電腦。",
   "Your computer was not shut down": "電腦未關機",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "部分作業失敗，因此 UniGetUI 未關閉您的電腦。請檢視失敗的作業，再手動關機。"
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "部分作業失敗，因此 UniGetUI 未關閉您的電腦。請檢視失敗的作業，再手動關機。",
+  "Skip major updates for this package": "略過此套件的主要版本更新",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} 未更新至 {1}：已安裝較新版本。重新載入更新清單。",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} 未更新：此套件已略過主要版本更新，且無法得知要更新至哪個版本。請從更新清單更新，或指定版本。",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} 未更新至 {1}：{2} 目前無法安裝該確切版本。重新載入更新清單。",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} 未更新至 {1}：此套件已略過主要版本更新。重新載入更新清單，以查看已安裝主要版本內的更新，或關閉「略過主要版本更新」以安裝此版本。"
 }

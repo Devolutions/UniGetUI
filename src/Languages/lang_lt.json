@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Nepavyko išjungti kompiuterio",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "„UniGetUI“ nepavyko pradėti kompiuterio išjungimo. Išjunkite kompiuterį rankiniu būdu.",
   "Your computer was not shut down": "Kompiuteris nebuvo išjungtas",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Kai kurių operacijų nepavyko atlikti, todėl „UniGetUI“ neišjungė kompiuterio. Peržiūrėkite nepavykusias operacijas, tada išjunkite kompiuterį rankiniu būdu."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Kai kurių operacijų nepavyko atlikti, todėl „UniGetUI“ neišjungė kompiuterio. Peržiūrėkite nepavykusias operacijas, tada išjunkite kompiuterį rankiniu būdu.",
+  "Skip major updates for this package": "Praleisti pagrindinės versijos naujinimus šiam paketui",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "„{0}“ nepavyko atnaujinti į „{1}“: jau įdiegta naujesnė versija. Iš naujo įkelkite naujinimų sąrašą.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "„{0}“ nebuvo atnaujintas: šio paketo pagrindinės versijos naujinimai praleidžiami, o versija, į kurią reikia naujinti, nežinoma. Atnaujinkite jį naujinimų sąraše arba nurodykite konkrečią versiją.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "„{0}“ nepavyko atnaujinti į „{1}“: „{2}“ šiuo metu negali įdiegti būtent šios versijos. Iš naujo įkelkite naujinimų sąrašą.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "„{0}“ nepavyko atnaujinti į „{1}“: šio paketo pagrindinės versijos naujinimai praleidžiami. Iš naujo įkelkite naujinimų sąrašą, kad pamatytumėte naujinimą įdiegtos pagrindinės versijos ribose, arba išjunkite parinktį „Praleisti pagrindinės versijos naujinimus“, kad jį įdiegtumėte."
 }

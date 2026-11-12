@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Рачунар није могао да се искључи",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI није могао да покрене искључивање. Искључи рачунар ручно.",
   "Your computer was not shut down": "Рачунар није искључен",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Неке операције нису успеле, па UniGetUI није искључио рачунар. Прегледај неуспеле операције, па га искључи ручно."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Неке операције нису успеле, па UniGetUI није искључио рачунар. Прегледај неуспеле операције, па га искључи ручно.",
+  "Skip major updates for this package": "Preskoči velika ažuriranja za ovaj paket",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} није ажуриран на {1}: новија верзија је већ инсталирана. Поново учитај листу ажурирања.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} није ажуриран: велика ажурирања су прескочена за овај пакет, а верзија на коју треба да се ажурира није позната. Ажурирај га са листе ажурирања или затражи одређену верзију.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} није ажуриран на {1}: {2} тренутно не може да инсталира ту тачну верзију. Поново учитај листу ажурирања.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} није ажуриран на {1}: велика ажурирања су прескочена за овај пакет. Поново учитај листу ажурирања да видиш ажурирање у оквиру инсталиране главне верзије или искључи „Прескочи велика ажурирања“ да би га инсталирао."
 }

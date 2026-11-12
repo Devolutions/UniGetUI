@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "कंप्यूटर बंद नहीं किया जा सका",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI कंप्यूटर बंद करना शुरू नहीं कर सका। कृपया कंप्यूटर को मैन्युअल रूप से बंद करें।",
   "Your computer was not shut down": "आपका कंप्यूटर बंद नहीं हुआ",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "कुछ कार्य विफल हो गए, इसलिए UniGetUI ने आपका कंप्यूटर बंद नहीं किया। विफल कार्यों की समीक्षा करें, फिर कंप्यूटर को मैन्युअल रूप से बंद करें।"
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "कुछ कार्य विफल हो गए, इसलिए UniGetUI ने आपका कंप्यूटर बंद नहीं किया। विफल कार्यों की समीक्षा करें, फिर कंप्यूटर को मैन्युअल रूप से बंद करें।",
+  "Skip major updates for this package": "इस पैकेज के लिए बड़े अपडेट छोड़ें",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} को {1} में अपडेट नहीं किया गया: एक नया संस्करण पहले से इंस्टॉल है। अपडेट सूची फिर से लोड करें।",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} अपडेट नहीं किया गया: इस पैकेज के लिए बड़े अपडेट छोड़े गए हैं और अपडेट करने के लिए संस्करण अज्ञात है। इसे अपडेट सूची से अपडेट करें या किसी विशिष्ट संस्करण का अनुरोध करें।",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} को {1} में अपडेट नहीं किया गया: {2} अभी वह सटीक संस्करण इंस्टॉल नहीं कर सकता। अपडेट सूची फिर से लोड करें।",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} को {1} में अपडेट नहीं किया गया: इस पैकेज के लिए बड़े अपडेट छोड़े गए हैं। इंस्टॉल किए गए मेजर वर्शन के भीतर अपडेट देखने के लिए अपडेट सूची फिर से लोड करें, या इसे इंस्टॉल करने के लिए \"बड़े अपडेट छोड़ें\" बंद करें।"
 }

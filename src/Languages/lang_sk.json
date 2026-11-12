@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Počítač sa nepodarilo vypnúť",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nedokázal spustiť vypnutie počítača. Vypnite počítač manuálne.",
   "Your computer was not shut down": "Počítač nebol vypnutý",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Niektoré operácie zlyhali, preto UniGetUI nevypol počítač. Skontrolujte neúspešné operácie a potom počítač vypnite manuálne."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Niektoré operácie zlyhali, preto UniGetUI nevypol počítač. Skontrolujte neúspešné operácie a potom počítač vypnite manuálne.",
+  "Skip major updates for this package": "Preskočiť aktualizácie hlavných verzií pre tento balík",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} sa neaktualizoval na verziu {1}: novšia verzia je už nainštalovaná. Znovu načítajte zoznam aktualizácií.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} sa neaktualizoval: aktualizácie hlavných verzií sú pre tento balík preskočené a verzia, na ktorú sa má aktualizovať, nie je známa. Aktualizujte ho zo zoznamu aktualizácií alebo požiadajte o konkrétnu verziu.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} sa neaktualizoval na verziu {1}: {2} momentálne nedokáže nainštalovať presne túto verziu. Znovu načítajte zoznam aktualizácií.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} sa neaktualizoval na verziu {1}: aktualizácie hlavných verzií sú pre tento balík preskočené. Znovu načítajte zoznam aktualizácií, aby ste zobrazili aktualizáciu v rámci nainštalovanej hlavnej verzie, alebo vypnite možnosť \"Preskočiť aktualizácie hlavných verzií\", aby ste ju nainštalovali."
 }

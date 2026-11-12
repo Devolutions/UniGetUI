@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
+using System.Text;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Core.Tools.Tests;
@@ -25,6 +26,43 @@ public class RelaunchTests
         Assert.True(startInfo.CreateNoWindow);
     }
 
+    [WindowsFact]
+    public void CreateRelaunchStartInfo_OnWindows_PassesTheArgumentsWithoutReparsingThem()
+    {
+        ProcessStartInfo startInfo = CoreTools.CreateRelaunchStartInfo(
+            4242,
+            @"C:\Program Files\UniGetUI\UniGetUI.exe",
+            [@"C:\Users\O'Brien\My Bundles\work.ubundle", "--daemon", "say \"hi\""]
+        );
+
+        Assert.Equal("powershell.exe", startInfo.FileName);
+        const string prefix = "-NoProfile -WindowStyle Hidden -EncodedCommand ";
+        Assert.StartsWith(prefix, startInfo.Arguments);
+        string command = Encoding.Unicode.GetString(
+            Convert.FromBase64String(startInfo.Arguments[prefix.Length..])
+        );
+        Assert.Equal(
+            @"Wait-Process -Id 4242; Start-Process -FilePath 'C:\Program Files\UniGetUI\UniGetUI.exe' "
+                + @"-ArgumentList '""C:\Users\O''Brien\My Bundles\work.ubundle"" ""--daemon"" ""say \""hi\""""'",
+            command
+        );
+    }
+
+    [UnixFact]
+    public void CreateRelaunchStartInfo_OffWindows_PassesTheArgumentsAfterTheHelperOnes()
+    {
+        ProcessStartInfo startInfo = CoreTools.CreateRelaunchStartInfo(
+            4242,
+            "/opt/unigetui/UniGetUI",
+            ["/home/me/My Bundles/work.ubundle", "--daemon"]
+        );
+
+        Assert.Equal(8, startInfo.ArgumentList.Count);
+        Assert.Contains("shift 3", startInfo.ArgumentList[1]);
+        Assert.Equal("/home/me/My Bundles/work.ubundle", startInfo.ArgumentList[6]);
+        Assert.Equal("--daemon", startInfo.ArgumentList[7]);
+    }
+
     [UnixFact]
     public void CreateRelaunchStartInfo_OffWindows_WaitsForThePidInAShellHelper()
     {
@@ -35,8 +73,8 @@ public class RelaunchTests
         Assert.Equal(6, startInfo.ArgumentList.Count);
         Assert.Equal("-c", startInfo.ArgumentList[0]);
         Assert.Contains("kill -0 \"$pid\"", startInfo.ArgumentList[1]);
-        Assert.Contains("\"$exe\" >/dev/null 2>&1 &", startInfo.ArgumentList[1]);
-        Assert.Contains("/usr/bin/open -na \"$bundle\" || \"$exe\" >/dev/null 2>&1 &", startInfo.ArgumentList[1]);
+        Assert.Contains("\"$exe\" \"$@\" >/dev/null 2>&1 &", startInfo.ArgumentList[1]);
+        Assert.Contains("/usr/bin/open -na \"$bundle\" --args \"$@\" || \"$exe\" \"$@\" >/dev/null 2>&1 &", startInfo.ArgumentList[1]);
         Assert.Equal("sh", startInfo.ArgumentList[2]);
         Assert.Equal("4242", startInfo.ArgumentList[3]);
         Assert.Equal("/opt/unigetui/UniGetUI", startInfo.ArgumentList[4]);

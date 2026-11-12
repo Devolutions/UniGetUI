@@ -357,6 +357,10 @@
                             </WrapPanel>
                         </StackPanel>
 
+                        <CheckBox Content="{Binding SkipMajorCheckBox_Content, FallbackValue='Skip major updates'}"
+                                  IsChecked="{Binding SkipMajorChecked}"
+                                  automation:AutomationProperties.Name="{Binding SkipMajorCheckBox_Content}"/>
+
                     </StackPanel>
                 </Border>
             </TabItem>

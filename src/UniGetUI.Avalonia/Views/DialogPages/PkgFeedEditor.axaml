@@ -31,7 +31,7 @@
 
         <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{x:Static vm:PkgFeedEditorViewModel.CanPreview}">
             <Button Content="{t:Translate Check feed}" Command="{Binding CheckCommand}"/>
-            <ProgressBar IsIndeterminate="True" Width="80" IsVisible="{Binding IsChecking}" VerticalAlignment="Center"/>
+            <ProgressBar IsIndeterminate="{Binding IsChecking}" Width="80" IsVisible="{Binding IsChecking}" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" TextWrapping="Wrap"/>
         </StackPanel>
 

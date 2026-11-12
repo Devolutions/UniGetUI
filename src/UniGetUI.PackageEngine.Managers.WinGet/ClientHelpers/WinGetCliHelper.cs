@@ -494,30 +494,54 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
         }
         p.Start();
 
-        string? line;
         List<string> versions = [];
-        bool DashesPassed = false;
-        while ((line = p.StandardOutput.ReadLine()) is not null)
+        var reading = Task.Run(() =>
         {
-            logger.AddToStdOut(line);
-            if (!DashesPassed)
+            string? line;
+            bool DashesPassed = false;
+            while ((line = p.StandardOutput.ReadLine()) is not null)
             {
-                if (line.Contains("---"))
+                logger.AddToStdOut(line);
+                if (!DashesPassed)
                 {
-                    DashesPassed = true;
+                    if (line.Contains("---"))
+                    {
+                        DashesPassed = true;
+                    }
+                }
+                else
+                {
+                    versions.Add(line.Trim());
                 }
             }
-            else
+
+            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            p.WaitForExit();
+        });
+
+        if (!reading.Wait(VersionListingTimeout))
+        {
+            Logger.Warn(
+                $"winget show --versions for {package.Id} did not finish within {VersionListingTimeout.TotalSeconds:0} seconds and was stopped"
+            );
+            try
             {
-                versions.Add(line.Trim());
+                p.Kill(entireProcessTree: true);
+                reading.Wait(TimeSpan.FromSeconds(5));
             }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex);
+            }
+            logger.Close(1);
+            return [];
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
-        p.WaitForExit();
         logger.Close(p.ExitCode);
         return versions;
     }
+
+    internal static TimeSpan VersionListingTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public IReadOnlyList<IManagerSource> GetSources_UnSafe()
     {

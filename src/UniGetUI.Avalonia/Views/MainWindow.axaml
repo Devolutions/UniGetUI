@@ -396,6 +396,12 @@
                                     <MenuItem Header="{t:Translate Clear finished}"
                                               Command="{Binding ClearFinishedOperationsCommand}"/>
                                     <Separator/>
+                                    <MenuItem Header="{t:Translate Shut down when finished}"
+                                              ToggleType="CheckBox"
+                                              IsChecked="{Binding ShutdownController.IsArmed, Mode=TwoWay}"
+                                              IsEnabled="{Binding ShutdownController.CanToggle}"
+                                              IsVisible="{Binding ShutdownController.IsSupported}"/>
+                                    <Separator IsVisible="{Binding ShutdownController.IsSupported}"/>
                                     <MenuItem Header="{t:Translate Cancel all}"
                                               Command="{Binding CancelAllOperationsCommand}"/>
                                 </MenuFlyout>

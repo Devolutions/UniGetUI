@@ -821,14 +821,19 @@
                                                   automation:AutomationProperties.Name="{Binding NewVersionAutomationName}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/download.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
-                                                                  IsVisible="{Binding !InstallerHostChanged}"/>
+                                                                  IsVisible="{Binding ShowsNewVersionIcon}"/>
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/reload.svg"
+                                                                  Width="24" Height="24" VerticalAlignment="Center"
+                                                                  IsVisible="{Binding ShowsReinstallIcon}"
+                                                                  ToolTip.Tip="{Binding ReinstallTooltip}"/>
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
                                                                   Width="22" Height="22" VerticalAlignment="Center"
                                                                   Foreground="#F59E0B"
                                                                   IsVisible="{Binding InstallerHostChanged}"
                                                                   ToolTip.Tip="{Binding InstallerHostChangeTooltip}"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Package.NewVersionString}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding ReinstallTooltip}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -942,6 +947,7 @@
                                         <Border CornerRadius="4" Margin="4" Height="70"
                                             HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                            automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                                                 BorderBrush="Transparent" BorderThickness="1" Padding="4">
@@ -975,6 +981,12 @@
                                                                       ToolTip.Tip="{Binding InstallerHostChangeTooltip}"
                                                                       HorizontalAlignment="Right"
                                                                       VerticalAlignment="Top"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
+                                                                      Width="17" Height="17"
+                                                                      IsVisible="{Binding RequiresReinstallToUpdate}"
+                                                                      ToolTip.Tip="{Binding ReinstallTooltip}"
+                                                                      HorizontalAlignment="Left"
+                                                                      VerticalAlignment="Top"/>
                                                 </Panel>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                                                     <TextBlock Text="{Binding Package.Name}"
@@ -994,6 +1006,7 @@
                                                     <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                               Classes="package-selector"
                                                               automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                                              automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                                               VerticalAlignment="Top"
                                                               HorizontalAlignment="Center"
                                                               MinHeight="0"
@@ -1032,6 +1045,7 @@
                                         <Border CornerRadius="4" Margin="4" Height="142"
                                             HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                            automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                                                 BorderBrush="Transparent" BorderThickness="1" Padding="4">
@@ -1040,6 +1054,7 @@
                                                           Classes="package-selector"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                           automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                                          automation:AutomationProperties.HelpText="{Binding ReinstallTooltip}"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Center"
                                                           MinHeight="0"
@@ -1088,6 +1103,12 @@
                                                                       IsVisible="{Binding InstallerHostChanged}"
                                                                       ToolTip.Tip="{Binding InstallerHostChangeTooltip}"
                                                                       HorizontalAlignment="Right"
+                                                                      VerticalAlignment="Top"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
+                                                                      Width="24" Height="24"
+                                                                      IsVisible="{Binding RequiresReinstallToUpdate}"
+                                                                      ToolTip.Tip="{Binding ReinstallTooltip}"
+                                                                      HorizontalAlignment="Left"
                                                                       VerticalAlignment="Top"/>
                                                 </Panel>
                                                 <TextBlock Grid.Row="2"

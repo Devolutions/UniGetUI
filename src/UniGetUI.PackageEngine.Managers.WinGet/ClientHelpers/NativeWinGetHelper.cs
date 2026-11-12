@@ -5,6 +5,7 @@ using Microsoft.Management.Deployment;
 using Microsoft.Win32;
 using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
@@ -473,12 +474,22 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         }
 
         List<Package> packages = [];
+        List<(CatalogPackage Package, PackageVersionInfo Newest)> reinstallCandidates = [];
+        Lazy<IReadOnlyList<InstalledEntry>> installedEntries = new(() => ReadInstalledEntries(nativePackages));
         foreach (var nativePackage in nativePackages)
         {
             try
             {
                 if (!nativePackage.IsUpdateAvailable)
                 {
+                    if (
+                        Manager.GetLauncherGameSource(nativePackage.InstalledVersion?.Id) is null
+                        && TryGetReinstallOnlyUpdate(nativePackage) is { } newest
+                    )
+                    {
+                        reinstallCandidates.Add((nativePackage, newest));
+                    }
+
                     continue;
                 }
 
@@ -503,6 +514,18 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     Logger.Warn(
                         $"WinGet package {nativePackage.Id} has a DefaultInstallVersion with null PackageCatalog or Info, skipping"
                     );
+                    continue;
+                }
+
+                if (
+                    IsSupersededByAnotherInstall(
+                        nativePackage,
+                        nativePackage.DefaultInstallVersion.Version,
+                        installedEntries.Value,
+                        logger
+                    )
+                )
+                {
                     continue;
                 }
 
@@ -552,8 +575,242 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             }
         }
 
+        AddReinstallOnlyUpdates(
+            [
+                .. reinstallCandidates.Where(candidate =>
+                    !IsSupersededByAnotherInstall(
+                        candidate.Package,
+                        candidate.Newest.Version,
+                        installedEntries.Value,
+                        logger
+                    )
+                ),
+            ],
+            packages,
+            logger
+        );
+
         logger.Close(0);
         return packages;
+    }
+
+    internal readonly record struct InstalledEntry(string DisplayName, string Publisher, string Version);
+
+    private static IReadOnlyList<InstalledEntry> ReadInstalledEntries(
+        IReadOnlyList<CatalogPackage> nativePackages
+    )
+    {
+        List<InstalledEntry> entries = [];
+        foreach (var nativePackage in nativePackages)
+        {
+            if (ReadInstalledEntry(nativePackage) is { } entry)
+                entries.Add(entry);
+        }
+
+        return entries;
+    }
+
+    private static InstalledEntry? ReadInstalledEntry(CatalogPackage nativePackage)
+    {
+        try
+        {
+            return nativePackage.InstalledVersion is { } installed
+                ? new InstalledEntry(
+                    installed.DisplayName ?? "",
+                    installed.Publisher ?? "",
+                    installed.Version ?? ""
+                )
+                : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug(
+                $"Could not read the installed entry of {DescribePackage(nativePackage)}: {ex.Message}"
+            );
+            return null;
+        }
+    }
+
+    private bool IsSupersededByAnotherInstall(
+        CatalogPackage nativePackage,
+        string? newVersion,
+        IReadOnlyList<InstalledEntry> installedEntries,
+        INativeTaskLogger logger
+    )
+    {
+        if (
+            ReadInstalledEntry(nativePackage) is not { } candidate
+            || FindInstallAtOrAbove(Manager, candidate, newVersion, installedEntries) is not { } newer
+        )
+        {
+            return false;
+        }
+
+        logger.Log(
+            $"Skipping the update of {DescribePackage(nativePackage)} from {candidate.Version} to {newVersion}, "
+                + $"since {newer.DisplayName} {newer.Version} from {newer.Publisher} is already installed"
+        );
+        return true;
+    }
+
+    internal static InstalledEntry? FindInstallAtOrAbove(
+        IPackageManager manager,
+        InstalledEntry candidate,
+        string? newVersion,
+        IEnumerable<InstalledEntry> installedEntries
+    )
+    {
+        if (
+            string.IsNullOrWhiteSpace(candidate.DisplayName)
+            || string.IsNullOrWhiteSpace(candidate.Publisher)
+            || WinGetPkgOperationHelper.IsUnknownVersion(newVersion)
+        )
+        {
+            return null;
+        }
+
+        foreach (var entry in installedEntries)
+        {
+            if (
+                string.Equals(entry.DisplayName, candidate.DisplayName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(entry.Publisher, candidate.Publisher, StringComparison.OrdinalIgnoreCase)
+                && !WinGetPkgOperationHelper.IsUnknownVersion(entry.Version)
+                && manager.CompareVersions(entry.Version, newVersion!) is >= 0
+            )
+            {
+                return entry;
+            }
+        }
+
+        return null;
+    }
+
+    private PackageVersionInfo? TryGetReinstallOnlyUpdate(CatalogPackage nativePackage)
+    {
+        try
+        {
+            PackageVersionInfo? installed = nativePackage.InstalledVersion;
+            var availableVersions = nativePackage.AvailableVersions;
+            if (installed is null || availableVersions is null)
+                return null;
+
+            string installedChannel = installed.Channel ?? "";
+            PackageVersionId? newestId = null;
+            for (int i = 0; i < availableVersions.Count; i++)
+            {
+                if (string.Equals(availableVersions[i].Channel ?? "", installedChannel, StringComparison.OrdinalIgnoreCase))
+                {
+                    newestId = availableVersions[i];
+                    break;
+                }
+            }
+
+            if (newestId is null || !IsNewerVersion(Manager, installed.Version, newestId.Version))
+                return null;
+
+            PackageVersionInfo newest = nativePackage.GetPackageVersionInfo(newestId);
+            if (newest?.PackageCatalog?.Info is null)
+                return null;
+
+            return newest.GetApplicableInstaller(Factory.CreateInstallOptions()) is null ? null : newest;
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug(
+                $"Could not check whether {DescribePackage(nativePackage)} has an update that needs a reinstall: {ex.Message}"
+            );
+            return null;
+        }
+    }
+
+    private static IEnumerable<string?> GetPinIdentifiers(CatalogPackage nativePackage)
+    {
+        yield return nativePackage.Id;
+        if (nativePackage.InstalledVersion is not { } installed)
+            yield break;
+
+        yield return installed.Id;
+        foreach (string productCode in NativeWinGetCollection.Copy(installed.ProductCodes))
+            yield return productCode;
+        foreach (string familyName in NativeWinGetCollection.Copy(installed.PackageFamilyNames))
+            yield return familyName;
+    }
+
+    internal static bool IsNewerVersion(IPackageManager manager, string? installedVersion, string? newestVersion) =>
+        !WinGetPkgOperationHelper.IsUnknownVersion(installedVersion)
+        && !string.IsNullOrWhiteSpace(newestVersion)
+        && manager.CompareVersions(installedVersion!, newestVersion) is < 0;
+
+    private void AddReinstallOnlyUpdates(
+        List<(CatalogPackage Package, PackageVersionInfo Newest)> candidates,
+        List<Package> packages,
+        INativeTaskLogger logger
+    )
+    {
+        if (candidates.Count == 0)
+            return;
+
+        if (Settings.Get(Settings.K.UseAgentBroker))
+        {
+            logger.Log(
+                "Updates that need a reinstall are not listed while operations go through the Devolutions Agent"
+            );
+            return;
+        }
+
+        IReadOnlyList<string>? pinnedIds = WinGetPins.Read(Manager);
+        if (pinnedIds is null)
+        {
+            logger.Error(
+                "Could not read the WinGet pins, so updates that need a reinstall are not listed"
+            );
+            return;
+        }
+
+        foreach (var (nativePackage, newest) in candidates)
+        {
+            try
+            {
+                if (WinGetPins.IsPinned(pinnedIds, GetPinIdentifiers(nativePackage)))
+                    continue;
+
+                IManagerSource source = Manager.SourcesHelper.Factory.GetSourceOrDefault(
+                    newest.PackageCatalog.Info.Name
+                );
+                string? reportedVersion = nativePackage.InstalledVersion.Version;
+                var package = new Package(
+                    nativePackage.Name,
+                    nativePackage.Id,
+                    WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
+                        nativePackage.Id,
+                        reportedVersion
+                    ),
+                    newest.Version,
+                    source,
+                    Manager
+                )
+                {
+                    InstalledVersionIsUnverified = WinGetPkgOperationHelper.IsUnknownVersion(
+                        reportedVersion
+                    ),
+                    RequiresReinstallToUpdate = true,
+                };
+
+                if (WinGetPkgOperationHelper.IsStuckUpgradeLoop(package))
+                    continue;
+
+                NativePackageHandler.AddPackage(package, nativePackage);
+                NativePackageHandler.AddLocalIdentifier(package, nativePackage.InstalledVersion?.Id);
+                packages.Add(package);
+                logger.Log(
+                    $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}, from version {package.VersionString} to version {newest.Version}, which needs a reinstall"
+                );
+            }
+            catch (Exception ex)
+            {
+                LogSkippedPackage(logger, nativePackage, "listing updates that need a reinstall", ex);
+            }
+        }
     }
 
     public IReadOnlyList<Package> GetInstalledPackages_UnSafe()

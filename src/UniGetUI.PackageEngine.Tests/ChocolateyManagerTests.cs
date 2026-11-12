@@ -231,6 +231,226 @@ public sealed class ChocolateyManagerTests : IDisposable
         );
     }
 
+    [Fact]
+    public void UpdateParametersCarryAnExplicitVersion()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder().WithManager(manager).WithId("ghidra").Build();
+        var options = new InstallOptions { Version = "12.1.0", VersionIsExplicit = true };
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.Contains("\"--version=12.1.0\"", parameters);
+        Assert.Contains("--allow-downgrade", parameters);
+    }
+
+    [Fact]
+    public void UpdateToAnExplicitVersionThatIsAlreadyInstalledIsASuccess()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ghidra")
+            .WithVersion("12.0.4")
+            .WithNewVersion("12.2.0")
+            .Build();
+        var options = new InstallOptions { Version = "12.0.4", VersionIsExplicit = true };
+        string[] output =
+        [
+            "ghidra v12.0.4 is the latest version available based on your source(s).",
+            "Chocolatey upgraded 0/1 packages. ",
+        ];
+
+        var veredict = manager.OperationHelper.GetResult(package, OperationType.Update, output, 0, options);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
+        Assert.Null(
+            manager.OperationHelper.GetFailureExplanation(package, OperationType.Update, output, 0, options)
+        );
+    }
+
+    [Fact]
+    public void OverlappingUpdatesOfOnePackageAreEachJudgedOnTheirOwnTarget()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ghidra")
+            .WithVersion("12.0.4")
+            .WithNewVersion("12.2.0")
+            .Build();
+        var explicitOptions = new InstallOptions { Version = "12.0.4", VersionIsExplicit = true };
+        var ordinaryOptions = new InstallOptions();
+        string[] output =
+        [
+            "ghidra v12.0.4 is the latest version available based on your source(s).",
+            "Chocolatey upgraded 0/1 packages. ",
+        ];
+
+        manager.OperationHelper.GetParameters(package, explicitOptions, OperationType.Update);
+        manager.OperationHelper.GetParameters(package, ordinaryOptions, OperationType.Update);
+
+        OperationAssert.HasVeredict(
+            manager.OperationHelper.GetResult(package, OperationType.Update, output, 0, explicitOptions),
+            OperationVeredict.Success
+        );
+        OperationAssert.HasVeredict(
+            manager.OperationHelper.GetResult(package, OperationType.Update, output, 0, ordinaryOptions),
+            OperationVeredict.Failure
+        );
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update, false, false)]
+    [InlineData(OperationType.Update, true, true)]
+    [InlineData(OperationType.Install, false, true)]
+    public void StandaloneCommandsUseASavedVersionOnlyForInstalls(
+        OperationType operation,
+        bool versionIsExplicit,
+        bool expectVersion
+    )
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder().WithManager(manager).WithId("ghidra").Build();
+        var options = new InstallOptions { Version = "12.0.4", VersionIsExplicit = versionIsExplicit };
+
+        var standalone = manager.OperationHelper.GetStandaloneParameters(package, options, operation);
+        var launched = manager.OperationHelper.GetParameters(package, options, operation);
+
+        Assert.Equal(expectVersion, standalone.Contains("\"--version=12.0.4\""));
+        Assert.Equal(expectVersion, launched.Contains("\"--version=12.0.4\""));
+        Assert.Equal("12.0.4", options.Version);
+    }
+
+    [Fact]
+    public void UpdateThatStayedBelowTheOfferedVersionIsAnExplainedFailure()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ghidra")
+            .WithVersion("12.0.4")
+            .WithNewVersion("12.2.0")
+            .Build();
+        string[] output =
+        [
+            "ghidra v12.0.4 is the latest version available based on your source(s).",
+            "",
+            "Chocolatey upgraded 0/1 packages.",
+        ];
+
+        var veredict = manager.OperationHelper.GetResult(package, OperationType.Update, output, 0);
+        var explanation = manager.OperationHelper.GetFailureExplanation(
+            package,
+            OperationType.Update,
+            output,
+            0
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotNull(explanation);
+        Assert.Contains("12.0.4", explanation);
+    }
+
+    [Fact]
+    public void UpdateOfAPackageAlreadyAtTheOfferedVersionIsASuccess()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("curl")
+            .WithVersion("8.17.0")
+            .WithNewVersion("8.23.0")
+            .Build();
+        string[] output =
+        [
+            "curl v8.23.0 is the latest version available based on your source(s).",
+            "Chocolatey upgraded 0/1 packages. ",
+        ];
+
+        var veredict = manager.OperationHelper.GetResult(package, OperationType.Update, output, 0);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
+        Assert.Null(
+            manager.OperationHelper.GetFailureExplanation(package, OperationType.Update, output, 0)
+        );
+    }
+
+    [Fact]
+    public void UpdateThatUpgradedNothingWithoutAReasonIsAnExplainedFailure()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("git")
+            .WithVersion("2.47.0")
+            .WithNewVersion("2.48.1")
+            .Build();
+        string[] output = ["Upgrading the following packages:", "git", "Chocolatey upgraded 0/1 packages. "];
+
+        var veredict = manager.OperationHelper.GetResult(package, OperationType.Update, output, 0);
+        var explanation = manager.OperationHelper.GetFailureExplanation(
+            package,
+            OperationType.Update,
+            output,
+            0
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotNull(explanation);
+        Assert.Contains("pinned", explanation);
+    }
+
+    [Fact]
+    public void ParseAvailableUpdatesSkipsPinnedPackages()
+    {
+        var manager = new Chocolatey();
+
+        var packages = manager.ParseAvailableUpdates(
+            ["git|2.47.0|2.48.1|true", "curl|8.17.0|8.23.0|false", "7zip|24.9.0|25.0.0"]
+        );
+
+        Assert.Equal(["curl", "7zip"], packages.Select(package => package.Id));
+    }
+
+    [Fact]
+    public void UpdateThatUpgradedThePackageIsASuccess()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder().WithManager(manager).WithId("ghidra").Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [" The upgrade of ghidra was successful.", "Chocolatey upgraded 1/1 packages."],
+            0
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
+    }
+
+    [Fact]
+    public void UpdateRetriedElevatedIsJudgedOnTheLastAttempt()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder().WithManager(manager).WithId("curl").Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [
+                "Access to the path 'C:\\ProgramData\\chocolatey\\lib-bkp\\curl' is denied.",
+                "Chocolatey upgraded 0/0 packages. ",
+                "Chocolatey v2.7.4",
+                " The upgrade of curl was successful.",
+                "Chocolatey upgraded 1/1 packages. ",
+            ],
+            0
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(1614)]

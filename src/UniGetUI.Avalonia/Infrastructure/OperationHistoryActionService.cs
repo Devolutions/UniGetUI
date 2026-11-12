@@ -91,7 +91,13 @@ internal static class OperationHistoryActionService
             "uninstall-package" => new UninstallPackageOperation(
                 new Package(name, record.PackageId, InstalledVersion(record), source, manager), options),
             "update-package" => new UpdatePackageOperation(
-                new Package(name, record.PackageId, record.VersionBefore, record.VersionAfter, source, manager), options),
+                UpdateVersionPin.KeepRecordedTarget(
+                    new Package(name, record.PackageId, record.VersionBefore, record.VersionAfter, source, manager)
+                    {
+                        RequiresReinstallToUpdate = record.RequiresReinstallToUpdate is true,
+                    },
+                    options),
+                options),
             _ => null,
         };
     }

@@ -92,6 +92,24 @@ public static class ScheduleEvaluator
         return IsWithinGrace(schedule, nowLocal);
     }
 
+    public static bool IsAutoInstallDue(
+        MaintenanceTaskSchedule installSchedule,
+        MaintenanceTaskSchedule checkSchedule,
+        bool installRunPending,
+        bool checkRunPending)
+    {
+        if (!installSchedule.Enabled)
+            return false;
+
+        if (installRunPending)
+            return true;
+
+        if (installSchedule.Frequency is not ScheduleFrequency.AfterEveryUpdateCheck)
+            return false;
+
+        return !(checkSchedule.Enabled && IsTimeBased(checkSchedule.Frequency)) || checkRunPending;
+    }
+
     public static bool IsWithinGrace(MaintenanceTaskSchedule schedule, DateTime nowLocal)
     {
         DateTime? occurrence = GetMostRecentOccurrence(schedule, nowLocal);

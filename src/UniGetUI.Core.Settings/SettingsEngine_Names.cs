@@ -149,6 +149,7 @@ public static partial class Settings
         MaintenanceTaskLastFailure,
         NavigationPageOrder,
         QuitAfterAutomaticUpdates,
+        QuitWhenNothingToInstall,
         InstallUniGetUIUpdatesWhenIdle,
         // NOTE: Set this to true to delegate package operations to Devolutions Agent broker
         // instead of using local UAC elevation. Change default here when ready for production.
@@ -319,6 +320,7 @@ public static partial class Settings
             K.MaintenanceTaskLastFailure => "MaintenanceTaskLastFailure",
             K.NavigationPageOrder => "NavigationPageOrder",
             K.QuitAfterAutomaticUpdates => "QuitAfterAutomaticUpdates",
+            K.QuitWhenNothingToInstall => "QuitWhenNothingToInstall",
             K.InstallUniGetUIUpdatesWhenIdle => "InstallUniGetUIUpdatesWhenIdle",
             K.UseAgentBroker => "UseAgentBroker",
             K.SkippedUniGetUIVersion => "SkippedUniGetUIVersion",

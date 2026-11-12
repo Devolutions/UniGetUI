@@ -1,9 +1,12 @@
 #if WINDOWS
 using UniGetUI.Core.Data;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
+using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -33,6 +36,175 @@ public sealed class WinGetCliParsingTests : IDisposable
 
     private static string[] Lines(string output) =>
         output.Replace("\r\n", "\n").Split('\n', StringSplitOptions.None);
+
+    [Fact]
+    public void ParsePinsReadsTheIdOfEveryPin()
+    {
+        IReadOnlyList<string> pins = WinGetPins.Parse(
+            Lines(
+                """
+                Name                                 Id              Version Source Pin type
+                ----------------------------------------------------------------------------
+                Tessl CLI 0.113.0                    tessl.tessl     0.113.0 winget Pinning
+                Rustup: the Rust toolchain installer Rustlang.Rustup 1.29.1  winget Blocking
+                """
+            )
+        );
+
+        Assert.Equal(["tessl.tessl", "Rustlang.Rustup"], pins);
+    }
+
+    [Fact]
+    public void ParsePinsReturnsNothingWhenNoPinIsConfigured()
+    {
+        Assert.Empty(WinGetPins.Parse(Lines("There are no pins configured.")));
+    }
+
+    [Theory]
+    [InlineData("Audacity.Audacity", true)]
+    [InlineData("audacity.audacity", true)]
+    [InlineData("Audacity.AudacityBeta", false)]
+    [InlineData("MoonlightGameStreamingProject.Moonlight", true)]
+    [InlineData("Moonlight.Other", false)]
+    public void IsPinnedMatchesIdsCaseInsensitivelyAndTruncatedIdsByPrefix(string packageId, bool expected)
+    {
+        Assert.Equal(
+            expected,
+            WinGetPins.IsPinned(["Audacity.Audacity", "MoonlightGameStreamingPro…"], [packageId])
+        );
+    }
+
+    [Fact]
+    public void AnInstalledPinMatchesThroughTheInstalledProductCode()
+    {
+        IReadOnlyList<string> pins = WinGetPins.Parse(
+            Lines(
+                """
+                Name           Id           Version Source      Pin type
+                --------------------------------------------------------
+                Audacity 3.7.9 Audacity_is1 3.7.9   (installed) Blocking
+                """
+            )
+        );
+
+        Assert.True(
+            WinGetPins.IsPinned(pins, ["Audacity.Audacity", "ARP\\Machine\\X64\\Audacity_is1", "Audacity_is1"])
+        );
+        Assert.False(WinGetPins.IsPinned(pins, ["Audacity.Audacity"]));
+    }
+
+    [Theory]
+    [InlineData(false, OperationType.Install, "machine")]
+    [InlineData(true, OperationType.Install, null)]
+    [InlineData(true, OperationType.Uninstall, "machine")]
+    public void AnUpdateThatNeedsAReinstallIsInstalledWithoutTheSavedScopeButUninstalledWithIt(
+        bool requiresReinstall,
+        OperationType operation,
+        string? expectedScope
+    )
+    {
+        var builder = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId("MoonlightGameStreamingProject.Moonlight")
+            .WithVersion("6.1.0.0")
+            .WithNewVersion("6.2.0.0");
+        if (requiresReinstall)
+            builder.RequiringReinstallToUpdate();
+
+        Assert.Equal(
+            expectedScope,
+            WinGetPkgOperationHelper.GetEffectiveScope(
+                builder.Build(),
+                new InstallOptions { InstallationScope = PackageScope.Machine },
+                operation
+            )
+        );
+    }
+
+    [Fact]
+    public void ReportedDifferentInstallTechnologyRecognisesTheWinGetMessage()
+    {
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(
+                Lines(
+                    """
+                    Found Audacity [Audacity.Audacity] Version 4.0.2.263060742
+                    A newer version was found, but the install technology is different from the current version installed. Please uninstall the package and install the newer version.
+                    """
+                )
+            )
+        );
+        Assert.False(
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(
+                Lines("No applicable upgrade found.")
+            )
+        );
+    }
+
+    [Fact]
+    public void ReportedDifferentInstallTechnologyRecognisesALocalizedWinGetMessage()
+    {
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(
+                Lines(
+                    "Die Installationstechnologie der angegebenen neueren Version unterscheidet sich von der aktuell installierten Version. Deinstallieren Sie das Paket, und installieren Sie die neuere Version."
+                )
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData("3.7.9", "4.0.2.263060742", true)]
+    [InlineData("4.0.2", "4.0.2", false)]
+    [InlineData("5.0", "4.0.2", false)]
+    [InlineData("Unknown", "4.0.2", false)]
+    [InlineData("", "4.0.2", false)]
+    [InlineData("3.7.9", "", false)]
+    public void IsNewerVersionOnlyAcceptsAKnownOlderInstalledVersion(
+        string installed,
+        string newest,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, NativeWinGetHelper.IsNewerVersion(new WinGet(), installed, newest));
+    }
+
+    private const string ViberPublisher = "2010-2026 Viber Media S.a.r.l";
+
+    [Theory]
+    [InlineData("Viber", ViberPublisher, "29.4.0.0", "29.3.0.0", true)]
+    [InlineData("viber", ViberPublisher, "29.3.0.0", "29.3.0.0", true)]
+    [InlineData("Viber", ViberPublisher, "29.2.0.0", "29.3.0.0", false)]
+    [InlineData("Viber", "Someone Else", "29.4.0.0", "29.3.0.0", false)]
+    [InlineData("Viber Desktop", ViberPublisher, "29.4.0.0", "29.3.0.0", false)]
+    [InlineData("Viber", ViberPublisher, "Unknown", "29.3.0.0", false)]
+    [InlineData("Viber", ViberPublisher, "29.4.0.0", "Unknown", false)]
+    public void FindInstallAtOrAboveMatchesAnotherCopyOfTheSameApp(
+        string otherName,
+        string otherPublisher,
+        string otherVersion,
+        string newVersion,
+        bool expected
+    )
+    {
+        var stale = new NativeWinGetHelper.InstalledEntry("Viber", ViberPublisher, "29.1.0.0");
+        var other = new NativeWinGetHelper.InstalledEntry(otherName, otherPublisher, otherVersion);
+
+        var match = NativeWinGetHelper.FindInstallAtOrAbove(new WinGet(), stale, newVersion, [stale, other]);
+
+        Assert.Equal(expected ? other : null, match);
+    }
+
+    [Theory]
+    [InlineData("", ViberPublisher)]
+    [InlineData("Viber", "")]
+    public void FindInstallAtOrAboveNeedsANameAndPublisherToMatchOn(string name, string publisher)
+    {
+        var stale = new NativeWinGetHelper.InstalledEntry(name, publisher, "29.1.0.0");
+        var other = new NativeWinGetHelper.InstalledEntry(name, publisher, "29.4.0.0");
+
+        Assert.Null(NativeWinGetHelper.FindInstallAtOrAbove(new WinGet(), stale, "29.3.0.0", [stale, other]));
+    }
 
     [Fact]
     public void ParseInstalledPackagesReadsJapaneseLocalizedTable()

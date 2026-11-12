@@ -43,10 +43,13 @@ internal static class AvaloniaPackageOperationHelper
         IReadOnlyList<IPackage> packages, bool background = false)
     {
         List<AbstractOperation> started = [];
-        foreach (var pkg in packages)
+        foreach (var listed in packages)
         {
+            var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed);
+            if (pkg is null) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
+            if (PackageOperation.IsLeftOutOfBulkUpdates(pkg, opts)) continue;
             var op = new UpdatePackageOperation(pkg, opts) { IsBackgroundOperation = background };
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
@@ -60,12 +63,15 @@ internal static class AvaloniaPackageOperationHelper
 
     public static async Task UpdateForIdAsync(string packageId)
     {
-        var pkg = UpgradablePackagesLoader.Instance.Packages.FirstOrDefault(p => p.Id == packageId);
-        if (pkg is null)
+        var listed = UpgradablePackagesLoader.Instance.Packages.FirstOrDefault(p => p.Id == packageId);
+        if (listed is null)
         {
             Logger.Warn($"BackgroundApi: no upgradable package found with id={packageId}");
             return;
         }
+
+        var pkg = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed);
+        if (pkg is null) return;
 
         var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
         if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) return;
@@ -266,8 +272,8 @@ internal static class AvaloniaPackageOperationHelper
                 CoreTools.Translate("It is recommended to restart UniGetUI after WinGet has been repaired"),
                 MainWindow.RuntimeNotificationLevel.Success);
 
-            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
             _ = InstalledPackagesLoader.Instance.ReloadPackages();
+            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
         }
         catch (Exception ex)
         {

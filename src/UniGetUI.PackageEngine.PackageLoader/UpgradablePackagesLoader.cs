@@ -4,6 +4,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.PackageLoader
 {
@@ -63,6 +64,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return false;
             }
 
+            if (installOptions.SkipMajorUpdates && package.IsUpdateMajor())
+            {
+                Logger.Info(
+                    $"Ignoring package {package.Id} because it is a major update ({package.VersionString} -> {package.NewVersionString}) and SkipMajorUpdates is set to true."
+                );
+                return false;
+            }
+
             if (await package.HasUpdatesIgnoredAsync(package.NewVersionString))
             {
                 IgnoredPackages[package.Id] = package;
@@ -115,10 +124,94 @@ namespace UniGetUI.PackageEngine.PackageLoader
         protected override bool DidManagerReportFailure(IPackageManager manager)
             => manager.LastUpdatesListingFailed;
 
+        protected virtual TimeSpan InstalledListingWaitLimit => TimeSpan.FromMinutes(2);
+
+        protected override async Task WaitBeforeLoadingFromManagerAsync(IPackageManager manager)
+        {
+            Task installedListing =
+                InstalledPackagesLoader.Instance?.WaitForManagerAsync(manager) ?? Task.CompletedTask;
+            if (installedListing.IsCompleted)
+                return;
+
+            Logger.Info($"Waiting for the installed packages of {manager.Name} before checking its updates");
+            try
+            {
+                await installedListing.WaitAsync(InstalledListingWaitLimit);
+            }
+            catch (TimeoutException)
+            {
+                Logger.Warn(
+                    $"The installed packages of {manager.Name} were still loading after {InstalledListingWaitLimit.TotalSeconds:0} seconds, checking its updates anyway"
+                );
+            }
+        }
+
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
             return manager.GetAvailableUpdates();
         }
+
+        private readonly ConcurrentDictionary<long, SemaphoreSlim> _resolutionGates = new();
+
+        public async Task<IPackage?> ResolveSkippedMajorUpdateAsync(IPackage package, InstallOptions? options = null)
+        {
+            if (!package.IsUpgradable)
+                return package;
+
+            var gate = _resolutionGates.GetOrAdd(HashPackage(package), _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync();
+            try
+            {
+                return await ResolveSkippedMajorUpdateExclusivelyAsync(package, options);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+        private async Task<IPackage?> ResolveSkippedMajorUpdateExclusivelyAsync(IPackage package, InstallOptions? options)
+        {
+            if (PackageReference.TryGetValue(HashPackage(package), out var current))
+                package = current;
+
+            if (IsPending(package))
+                return package;
+
+            bool pinned = package.OverridenOptions.PinUpdateToNewVersion;
+            options ??= await package.GetInstallOptions();
+            if (pinned && !options.SkipMajorUpdates)
+            {
+                Remove(package);
+                return package;
+            }
+
+            if (!options.SkipMajorUpdates || !(pinned || package.IsUpdateMajor()))
+                return package;
+
+            var resolved = await Task.Run(() => package.Manager.ResolveSkippedMajorUpdate(package, options));
+            if (IsPending(package) || (pinned && ReferenceEquals(resolved, package)))
+                return package;
+
+            if (resolved is null || ReferenceEquals(resolved, package) || !await IsPackageValid(resolved))
+            {
+                if (!IsPending(package))
+                    Remove(package);
+                return null;
+            }
+
+            if (IsPending(package))
+                return package;
+
+            bool wasChecked = package.IsChecked;
+            Remove(package);
+            await AddForeign(resolved);
+            resolved.IsChecked = wasChecked;
+            return resolved;
+        }
+
+        private static bool IsPending(IPackage package) =>
+            package.Tag is PackageTag.OnQueue or PackageTag.BeingProcessed;
 
         protected override Task WhenAddingPackage(IPackage package)
         {

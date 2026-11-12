@@ -538,6 +538,12 @@ public abstract partial class AbstractOperation : IDisposable
     {
         OperationVeredict result;
 
+        if (RefusalBeforeStart() is { } refusal)
+        {
+            Line(refusal, LineType.Error);
+            return OperationVeredict.Failure;
+        }
+
         var preOps = new List<InnerOperation>(PreOperations);
         preOps.AddRange(GetAttemptPreOperations());
         int i = 0,
@@ -631,6 +637,14 @@ public abstract partial class AbstractOperation : IDisposable
                         Line(l, LineType.Error);
                     }
                 }
+            }
+
+            if (result is OperationVeredict.AutoRetry)
+            {
+                Line($"", LineType.VerboseDetails);
+                Line($"-----------------------", LineType.VerboseDetails);
+                Line($"Retrying operation automatically", LineType.VerboseDetails);
+                Line($"", LineType.VerboseDetails);
             }
         } while (result is OperationVeredict.AutoRetry);
 
@@ -924,6 +938,7 @@ public abstract partial class AbstractOperation : IDisposable
     }
 
     protected virtual IReadOnlyList<InnerOperation> GetAttemptPreOperations() => [];
+    protected virtual string? RefusalBeforeStart() => null;
     protected abstract Task<OperationVeredict> PerformOperation();
     public abstract Task<Uri> GetOperationIcon();
 

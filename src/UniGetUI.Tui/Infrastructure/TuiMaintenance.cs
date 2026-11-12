@@ -5,6 +5,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Tui.Infrastructure;
@@ -24,10 +25,12 @@ internal static class TuiMaintenanceScheduler
 
     private static readonly HashSet<MaintenanceTaskKind> RunningTasks = [];
     private static readonly Dictionary<MaintenanceTaskKind, (int Attempts, DateTime Next)> Retries = [];
+    private static readonly object UpdateLoadLock = new();
     private static DispatcherTimer? _timer;
     private static bool _started;
     private static volatile bool _updatesWereLoaded;
     private static DateTime? _pendingInstallSince;
+    private static DateTime? _pendingCheckSince;
 
     public static event Action<MaintenanceTaskKind>? TaskFinished;
 
@@ -41,7 +44,7 @@ internal static class TuiMaintenanceScheduler
             loader.FinishedLoading += (_, _) =>
             {
                 _updatesWereLoaded = true;
-                MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
+                RecordUpdateLoad(DateTime.Now);
             };
         }
 
@@ -55,26 +58,59 @@ internal static class TuiMaintenanceScheduler
     }
 
     public static bool IsAutoInstallDue()
+        => IsAutoInstallDue(DateTime.Now, UpgradablePackagesLoader.Instance is not { IsLoaded: false });
+
+    internal static bool IsAutoInstallDue(DateTime nowLocal, bool updatesLoaded)
     {
         if (_pendingInstallSince is { } since && DateTime.Now - since > PendingInstallLifetime)
             _pendingInstallSince = null;
+        if (_pendingCheckSince is { } checkSince && DateTime.Now - checkSince > PendingInstallLifetime)
+            _pendingCheckSince = null;
         var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
         if (!schedule.Enabled)
         {
-            _pendingInstallSince = null;
+            MarkAutoInstallHandled();
             return false;
         }
 
-        if (schedule.Frequency is ScheduleFrequency.AfterEveryUpdateCheck)
-        {
-            _pendingInstallSince = null;
-            return true;
-        }
+        if (updatesLoaded)
+            ClaimMissedCheck(nowLocal);
 
-        return _pendingInstallSince is not null;
+        return ScheduleEvaluator.IsAutoInstallDue(
+            schedule,
+            MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates),
+            _pendingInstallSince is not null,
+            _pendingCheckSince is not null);
     }
 
-    public static void MarkAutoInstallHandled() => _pendingInstallSince = null;
+    public static void MarkAutoInstallHandled()
+    {
+        _pendingInstallSince = null;
+        _pendingCheckSince = null;
+    }
+
+    internal static void RecordUpdateLoad(DateTime nowLocal)
+    {
+        lock (UpdateLoadLock)
+        {
+            ClaimMissedCheck(nowLocal);
+            MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
+        }
+    }
+
+    private static void ClaimMissedCheck(DateTime nowLocal)
+    {
+        lock (UpdateLoadLock)
+        {
+            var check = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
+            if (!ScheduleEvaluator.IsTimeBased(check.Frequency)
+                || !ScheduleEvaluator.IsDue(check, MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.CheckForUpdates), nowLocal))
+                return;
+
+            _pendingCheckSince = DateTime.Now;
+            MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.CheckForUpdates, DateTime.UtcNow);
+        }
+    }
 
     public static bool ShouldRunAtAppStart(MaintenanceTaskKind kind)
     {
@@ -121,6 +157,7 @@ internal static class TuiMaintenanceScheduler
         switch (kind)
         {
             case MaintenanceTaskKind.CheckForUpdates:
+                _pendingCheckSince = DateTime.Now;
                 await ReloadUpdatesAsync();
                 break;
             case MaintenanceTaskKind.InstallUpdates:
@@ -268,20 +305,21 @@ internal static class TuiUpdatesPolicy
             {
                 TuiMaintenanceScheduler.MarkAutoInstallHandled();
                 bool markedOnly = MaintenanceScheduleStore.GetInstallTargets() is ScheduleInstallTargets.MarkedPackagesOnly;
-                var targets = upgradable.Where(p => !markedOnly || AutoUpdatesDatabase.IsAutoUpdated(p)).ToList();
+                var targets = await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(
+                    upgradable.Where(p => !markedOnly || AutoUpdatesDatabase.IsAutoUpdated(p)));
                 if (targets.Count > 0)
                 {
-                    await TuiPackageActions.UpdateAsync(targets);
+                    await TuiPackageActions.UpdateAsync(targets, bulk: true);
                     ShowUpgrading(targets);
                 }
 
-                var skipped = upgradable.Except(targets).ToList();
+                var skipped = upgradable.Where(p => !targets.Contains(p, ReferenceEqualityComparer.Instance)).ToList();
                 if (skipped.Count > 0) ShowAvailable(skipped);
             }
             else if (firstLoad && TuiStartup.Current?.UpdateAppsOnStart == true)
             {
                 await TuiPackageActions.UpdateAllAsync();
-                ShowUpgrading(upgradable);
+                ShowUpgrading(await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(upgradable));
             }
             else
             {

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
@@ -65,6 +66,61 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
         );
 
         Assert.False(await loader.EvaluatePackageAsync(package));
+    }
+
+    [Theory]
+    [InlineData("5.2.0", "5.3.1", true)]
+    [InlineData("5.2.0", "5.2.1", true)]
+    [InlineData("5.2.0", "6.0.0", false)]
+    [InlineData("v5.2", "v12.0", false)]
+    [InlineData("5.2.0.1", "5.9.0.0", true)]
+    [InlineData("Unknown", "6.0.0", true)]
+    [InlineData("5.2.0", "latest", true)]
+    public async Task EvaluatePackageAsync_SkipMajorUpdatesHidesOnlyMajorUpdates(
+        string installedVersion,
+        string newVersion,
+        bool offered
+    )
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion(installedVersion)
+            .WithNewVersion(newVersion)
+            .Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
+            package
+        );
+
+        Assert.Equal(offered, await loader.EvaluatePackageAsync(package));
+    }
+
+    [Fact]
+    public async Task EvaluatePackageAsync_OffersMajorUpdatesUnlessSkipMajorIsSet()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("6.0.0")
+            .Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMinorUpdates = true, SkipMinorUpdatesLevel = 2 },
+            package
+        );
+
+        Assert.True(await loader.EvaluatePackageAsync(package));
     }
 
     [Fact]
@@ -354,5 +410,117 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
         IgnoredUpdatesDatabase.ForgetAvailableUpdate(updated, "2.0.0");
 
         Assert.Same(otherUpdate, loader.IgnoredPackages[otherUpdate.Id]);
+    }
+
+    [Fact]
+    public async Task ReloadPackages_ChecksEachManagersUpdatesOnlyAfterItsInstalledListing()
+    {
+        Settings.Set(Settings.K.DisableWaitForInternetConnection, true);
+        var calls = new ConcurrentQueue<string>();
+        using var slowGate = new ManualResetEventSlim(false);
+        var slow = new PackageManagerBuilder()
+            .WithName("Slow")
+            .WithInstalledPackages(_ =>
+            {
+                slowGate.Wait(TimeSpan.FromSeconds(30));
+                calls.Enqueue("Slow:installed");
+                return [];
+            })
+            .WithAvailableUpdates(_ =>
+            {
+                calls.Enqueue("Slow:updates");
+                return [];
+            })
+            .Build();
+        var fast = new PackageManagerBuilder()
+            .WithName("Fast")
+            .WithInstalledPackages(_ =>
+            {
+                calls.Enqueue("Fast:installed");
+                return [];
+            })
+            .WithAvailableUpdates(_ =>
+            {
+                calls.Enqueue("Fast:updates");
+                return [];
+            })
+            .Build();
+        var installedLoader = new InstalledPackagesLoader([slow, fast]);
+        _ = new DiscoverablePackagesLoader([slow, fast]);
+        var updatesLoader = new TestUpgradablePackagesLoader([slow, fast]);
+
+        Task installedLoad;
+        Task updatesLoad;
+        try
+        {
+            installedLoad = installedLoader.ReloadPackages();
+            updatesLoad = updatesLoader.ReloadPackages();
+
+            await WaitUntilAsync(() => calls.Contains("Fast:updates"));
+            Assert.DoesNotContain("Slow:updates", calls);
+        }
+        finally
+        {
+            slowGate.Set();
+        }
+
+        await Task.WhenAll(installedLoad, updatesLoad).WaitAsync(TimeSpan.FromSeconds(30));
+
+        string[] order = [.. calls];
+        Assert.True(Array.IndexOf(order, "Fast:installed") < Array.IndexOf(order, "Fast:updates"));
+        Assert.True(Array.IndexOf(order, "Slow:installed") < Array.IndexOf(order, "Slow:updates"));
+    }
+
+    [Fact]
+    public async Task ReloadPackages_ChecksUpdatesAnywayWhenTheInstalledListingOutlastsTheWaitLimit()
+    {
+        Settings.Set(Settings.K.DisableWaitForInternetConnection, true);
+        int updateChecks = 0;
+        using var installedGate = new ManualResetEventSlim(false);
+        var manager = new PackageManagerBuilder()
+            .WithInstalledPackages(_ =>
+            {
+                installedGate.Wait(TimeSpan.FromSeconds(30));
+                return [];
+            })
+            .WithAvailableUpdates(_ =>
+            {
+                Interlocked.Increment(ref updateChecks);
+                return [];
+            })
+            .Build();
+        var installedLoader = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var updatesLoader = new TestUpgradablePackagesLoader([manager])
+        {
+            WaitLimit = TimeSpan.FromMilliseconds(200),
+        };
+
+        Task installedLoad;
+        try
+        {
+            installedLoad = installedLoader.ReloadPackages();
+            await updatesLoader.ReloadPackages().WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.True(installedLoader.IsLoading);
+            Assert.Equal(1, updateChecks);
+            Assert.True(updatesLoader.IsLoaded);
+        }
+        finally
+        {
+            installedGate.Set();
+        }
+
+        await installedLoad.WaitAsync(TimeSpan.FromSeconds(30));
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        DateTime deadline = DateTime.UtcNow.AddSeconds(30);
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The condition was not met in time");
+            await Task.Delay(20);
+        }
     }
 }

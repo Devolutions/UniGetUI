@@ -319,6 +319,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 && helper.ReportedUpdateNotApplicable(processOutput, returnCode);
         }
 
+        public bool ReportedDifferentInstallTechnology(IReadOnlyList<string> processOutput) =>
+            WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(processOutput);
+
         public bool ReportedInstallerHashMismatch(int returnCode) =>
             WinGetPkgOperationHelper.ReportedInstallerHashMismatch(returnCode);
 
@@ -327,6 +330,11 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         public bool HonorsIntegrityCheckSkipWhenElevated =>
             SelectedCliToolKind is WinGetCliToolKind.BundledPinget;
+
+        public override bool CanUpdateToExactVersion =>
+            SelectedCliToolKind is WinGetCliToolKind.SystemWinGet
+            && Capabilities.SupportsCustomVersions
+            && Capabilities.CanListVersions;
 
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {

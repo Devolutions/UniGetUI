@@ -190,14 +190,29 @@ public static class IpcPackageApi
         );
     }
 
-    public static Task<IpcPackageOperationResult> UpdatePackageAsync(
+    public static async Task<IpcPackageOperationResult> UpdatePackageAsync(
         IpcPackageActionRequest request
     )
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var package = FindUpgradablePackageOrInstalledPackage(request);
-        return ExecuteOperationAsync(
+        if (
+            package.IsUpgradable
+            && string.IsNullOrWhiteSpace(request.Version)
+            && UpgradablePackagesLoader.Instance is { } loader
+        )
+        {
+            var effectiveOptions = await InstallOptionsFactory.LoadApplicableAsync(package);
+            ApplyRequestOptions(effectiveOptions, request);
+            package =
+                await loader.ResolveSkippedMajorUpdateAsync(package, effectiveOptions)
+                ?? throw new InvalidOperationException(
+                    $"No update of {package.Id} is available within its installed major version, and major updates are skipped for it."
+                );
+        }
+
+        return await ExecuteOperationAsync(
             "update-package",
             package,
             request,
@@ -215,10 +230,23 @@ public static class IpcPackageApi
     )
     {
         List<AbstractOperation> operations = [];
-        foreach (var package in await GetUpdatesToApplyAsync(managerName))
+        foreach (var listed in await GetUpdatesToApplyAsync(managerName))
         {
+            var package = UpgradablePackagesLoader.Instance is { } loader
+                ? await loader.ResolveSkippedMajorUpdateAsync(listed)
+                : listed;
+            if (package is null)
+            {
+                continue;
+            }
+
             var options = await InstallOptionsFactory.LoadApplicableAsync(package);
             if (PackageOperation.HasPendingOperation(package, OperationType.Update))
+            {
+                continue;
+            }
+
+            if (PackageOperation.IsLeftOutOfBulkUpdates(package, options))
             {
                 continue;
             }
@@ -600,6 +628,7 @@ public static class IpcPackageApi
         if (!string.IsNullOrWhiteSpace(request.Version))
         {
             options.Version = request.Version;
+            options.VersionIsExplicit = true;
         }
 
         if (!string.IsNullOrWhiteSpace(request.Scope))

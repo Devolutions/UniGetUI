@@ -104,6 +104,7 @@ public partial class MainWindow : Window
     private const uint WM_STYLECHANGING = 0x007C;
     private const uint WM_GETMINMAXINFO = 0x0024;
     private const uint WM_NCCALCSIZE = 0x0083;
+    private const uint WM_NCPAINT = 0x0085;
     // Snap Layouts: DWM shows the maximize flyout only when WM_NCHITTEST reports HTMAXBUTTON
     // over the button. That routes the button's input through non-client messages, so the
     // click and hover/press visuals are driven from the WndProc below (the Avalonia Button
@@ -1522,6 +1523,12 @@ public partial class MainWindow : Window
             Dispatcher.UIThread.Post(cornerOwner.UpdateWindowCornerPreference);
         }
 
+        if (msg == WM_NCPAINT)
+        {
+            handled = true;
+            return NativeMethods.DefWindowProc(hWnd, msg, wParam, lParam);
+        }
+
         if (msg == WM_SETTINGCHANGE && Instance is { } trayOwner)
         {
             trayOwner.UpdateSystemTrayStatus();
@@ -1697,8 +1704,11 @@ public partial class MainWindow : Window
 
     // P/Invokes compile on any platform; they are only called from code paths guarded by
     // OperatingSystem.IsWindows(), so non-Windows targets never invoke user32.dll at runtime.
-    private static class NativeMethods
+    private static partial class NativeMethods
     {
+        [LibraryImport("user32.dll", EntryPoint = "DefWindowProcW")]
+        public static partial nint DefWindowProc(nint hWnd, uint msg, nint wParam, nint lParam);
+
         public static readonly nint HKEY_CURRENT_USER = new(unchecked((int)0x80000001));
         public const int RRF_RT_REG_DWORD = 0x00000010;
 
@@ -2422,9 +2432,11 @@ public partial class MainWindow : Window
     {
         Logger.Warn("Quitting UniGetUI");
         await AvaloniaAutoUpdater.WaitForInstallerHandoffAsync();
+        bool ipcStopped = false;
         try
         {
             await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            ipcStopped = true;
         }
         catch (TimeoutException ex)
         {
@@ -2436,7 +2448,37 @@ public partial class MainWindow : Window
             Logger.Error(ex);
         }
 
+        await AvaloniaAppHost.StopAcceptingLaunchesAsync();
+        if (ipcStopped)
+            AvaloniaAppHost.ReleaseSingleInstance();
+
+        if (!AvaloniaAutoUpdater.InstallerLaunched)
+        {
+            string executablePath = AppRestartHelper.ResolveRestartExecutablePath(AppContext.BaseDirectory);
+            foreach (string[] launch in AvaloniaAppHost.TakeLaunchesWhileQuitting())
+            {
+                if (!CoreTools.TryScheduleRelaunchAfterExit(executablePath, launch))
+                    StartDirectly(executablePath, launch);
+            }
+        }
+
         Environment.Exit(0);
+    }
+
+    private static void StartDirectly(string executablePath, string[] arguments)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo(executablePath) { UseShellExecute = false };
+            foreach (string argument in arguments)
+                startInfo.ArgumentList.Add(argument);
+            using var process = Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Could not start UniGetUI again for a launch made while it was quitting");
+            Logger.Error(ex);
+        }
     }
 
     public static void ApplyProxyVariableToProcess()

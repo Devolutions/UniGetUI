@@ -1,6 +1,7 @@
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations.Reboot;
+using UniGetUI.PackageEngine.Tests.Infrastructure;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -9,8 +10,8 @@ namespace UniGetUI.PackageEngine.Tests;
 public sealed class PendingRebootStoreTests : IDisposable
 {
     private static readonly long TwoHours = TimeSpan.FromHours(2).Ticks;
-    private const string BootA = "11111111111111111111111111111111";
-    private const string BootB = "22222222222222222222222222222222";
+    private const string BootA = "boot-a";
+    private const string BootB = "boot-b";
 
     private readonly string _tempFile;
 
@@ -198,6 +199,109 @@ public sealed class PendingRebootStoreTests : IDisposable
 
         Assert.Equal(first, second);
         if (OperatingSystem.IsWindows()) Assert.NotEqual("", first);
+    }
+
+    [WindowsFact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public void RealWindowsBootIdIsTheKernelBootCounter()
+    {
+        BootSession.TestIdOverride = null;
+        object? counter = Microsoft.Win32.Registry.GetValue(
+            @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters",
+            "BootId",
+            null);
+
+        Assert.IsType<int>(counter);
+        Assert.Equal("windows-boot-" + counter, BootSession.GetId());
+    }
+
+    [Fact]
+    public void AnUnchangedBootIdDoesNotHideARebootTheUptimeCounterSaw()
+    {
+        PendingRebootStore.Record(Package(), OperationType.Install);
+
+        BootSession.TestUptimeOverride = TimeSpan.FromSeconds(45).Ticks;
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(0, PendingRebootStore.PendingCount);
+    }
+
+    [Fact]
+    public void RealSourcesDetectARebootTheUptimeCounterSaw()
+    {
+        BootSession.TestIdOverride = null;
+        PendingRebootStore.Record(Package(), OperationType.Install);
+
+        BootSession.TestUptimeOverride = TimeSpan.FromSeconds(45).Ticks;
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(0, PendingRebootStore.PendingCount);
+    }
+
+    [Fact]
+    public void LegacyWindowsBootEntryGuidsAreLeftToTheUptimeCounter()
+    {
+        const string bootEntryGuid = "68e0e37c055911f1bc13c70d14f1b93c";
+        File.WriteAllText(_tempFile,
+            "[{\"PackageId\":\"Contoso.ThisBoot\",\"ManagerName\":\"choco\",\"BootId\":\"" + bootEntryGuid
+            + "\",\"UptimeTicks\":" + TimeSpan.FromHours(1).Ticks + "},"
+            + "{\"PackageId\":\"Contoso.PreviousBoot\",\"ManagerName\":\"choco\",\"BootId\":\"" + bootEntryGuid
+            + "\",\"UptimeTicks\":" + TimeSpan.FromHours(48).Ticks + "}]");
+
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(1, PendingRebootStore.PendingCount);
+        Assert.True(PendingRebootStore.IsPending("choco", "Contoso.ThisBoot"));
+    }
+
+    [Fact]
+    public void ASurvivingLegacyEntryIsClearedByTheNextRebootWhateverTheStartupTime()
+    {
+        const string bootEntryGuid = "68e0e37c055911f1bc13c70d14f1b93c";
+        File.WriteAllText(_tempFile,
+            "[{\"PackageId\":\"Contoso.Legacy\",\"ManagerName\":\"choco\",\"BootId\":\"" + bootEntryGuid
+            + "\",\"UptimeTicks\":" + TimeSpan.FromSeconds(60).Ticks + "}]");
+
+        PendingRebootStore.InvalidateCache();
+        Assert.Equal(1, PendingRebootStore.PendingCount);
+        Assert.DoesNotContain(bootEntryGuid, File.ReadAllText(_tempFile));
+
+        BootSession.TestIdOverride = BootB;
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(0, PendingRebootStore.PendingCount);
+    }
+
+    [Fact]
+    public void AnEntryRecordedWithoutABootIdAdoptsTheCurrentOne()
+    {
+        BootSession.TestIdOverride = "";
+        PendingRebootStore.Record(Package(), OperationType.Install);
+
+        BootSession.TestIdOverride = BootA;
+        PendingRebootStore.InvalidateCache();
+        Assert.Equal(BootA, PendingRebootStore.GetPending()[0].BootId);
+
+        BootSession.TestIdOverride = BootB;
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(0, PendingRebootStore.PendingCount);
+    }
+
+    [WindowsFact]
+    public void AMatchingRealWindowsBootIdKeepsAnEntryWithoutAnUptimeStamp()
+    {
+        BootSession.TestIdOverride = null;
+        PendingRebootStore.Record(Package(), OperationType.Install);
+        var entry = PendingRebootStore.GetPending()[0];
+        entry.UptimeTicks = 0;
+        File.WriteAllText(
+            _tempFile,
+            System.Text.Json.JsonSerializer.Serialize(new[] { entry }));
+
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(1, PendingRebootStore.PendingCount);
     }
 
     [Fact]

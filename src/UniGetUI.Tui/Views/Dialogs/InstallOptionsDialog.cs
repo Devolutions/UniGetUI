@@ -9,6 +9,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.Tui.Infrastructure;
 using UniGetUI.Tui.Views.Controls;
@@ -188,6 +189,8 @@ internal sealed class InstallOptionsDialog : FormDialog
                 [new("1", "2"), new("2", "3"), new("3", "4")],
                 () => _o.SkipMinorUpdatesLevel.ToString(), v => Set(() => _o.SkipMinorUpdatesLevel = int.Parse(v)),
                 () => Unlocked() && _o.SkipMinorUpdates);
+            Form.AddCheck(CoreTools.Translate("Skip major updates for this package"), () => _o.SkipMajorUpdates,
+                v => Set(() => _o.SkipMajorUpdates = v), Unlocked);
             if (!_bundleMode)
             {
                 Form.AddCheck(CoreTools.Translate("Automatically update this package"), () => _autoUpdate, v => _autoUpdate = v);
@@ -263,7 +266,7 @@ internal sealed class InstallOptionsDialog : FormDialog
             Form.AddHeader(CoreTools.Translate("Close apps") + " " + CoreTools.Translate("before installing"));
             Form.AddNote(CoreTools.Translate("Select the processes that should be closed before this package is installed, updated or uninstalled."));
             Form.AddText(CoreTools.Translate("Processes"), () => _killList, v => _killList = v,
-                CoreTools.Translate("Write here the process names here, separated by commas (,)"), Unlocked);
+                CoreTools.Translate("Enter the process names here, separated by commas (,)"), Unlocked);
             Form.AddCheck(CoreTools.Translate("Try to kill the processes that refuse to close when requested to"),
                 () => _forceKill, v => _forceKill = v);
 
@@ -342,6 +345,7 @@ internal sealed class InstallOptionsDialog : FormDialog
                 else if (AutoUpdatesDatabase.IsAutoUpdated(id)) AutoUpdatesDatabase.Remove(id);
                 if (_ignoreUpdates) await _package.AddToIgnoredUpdatesAsync("*");
                 else if (await _package.GetIgnoredUpdatesVersionAsync() == "*") await _package.RemoveFromIgnoredUpdatesAsync();
+                if (_package.IsUpgradable) await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(_package);
             }
 
             TuiNotifications.Success(CoreTools.Translate("Installation options"), CoreTools.Translate("Options saved"));
@@ -365,6 +369,7 @@ internal sealed class InstallOptionsDialog : FormDialog
         to.RemoveDataOnUninstall = from.RemoveDataOnUninstall;
         to.SkipMinorUpdates = from.SkipMinorUpdates;
         to.SkipMinorUpdatesLevel = from.SkipMinorUpdatesLevel;
+        to.SkipMajorUpdates = from.SkipMajorUpdates;
         to.OverridesNextLevelOpts = from.OverridesNextLevelOpts;
         to.PreRelease = from.PreRelease;
         to.Version = from.Version;

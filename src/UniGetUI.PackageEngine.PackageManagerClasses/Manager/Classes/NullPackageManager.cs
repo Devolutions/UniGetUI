@@ -35,6 +35,10 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
         public bool IdentifiersAreQuotedOnCommandLine => false;
 
+        public bool CanUpdateToExactVersion => false;
+
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update, InstallOptions? options = null) => update;
+
         public int? CompareVersions(string versionA, string versionB)
         {
             var parsedA = CoreTools.VersionStringToStruct(versionA);
@@ -197,7 +201,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             IPackage package,
             OperationType operation,
             IReadOnlyList<string> processOutput,
-            int returnCode
+            int returnCode,
+            InstallOptions? options = null
         ) => throw new NotImplementedException();
 
         public void ApplyElevationRequirements(
@@ -211,5 +216,13 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             InstallOptions options,
             OperationType operation
         ) => throw new NotImplementedException();
+
+        public string? GetFailureExplanation(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode,
+            InstallOptions? options = null
+        ) => null;
     }
 }

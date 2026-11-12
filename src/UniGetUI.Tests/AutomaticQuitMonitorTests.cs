@@ -131,4 +131,179 @@ public class AutomaticQuitMonitorTests
         Assert.Equal(AutomaticQuitDecision.KeepWaiting, AutomaticQuitMonitor.Evaluate(visible, ref idleChecks));
         Assert.Equal(AutomaticQuitDecision.WindowVisible, AutomaticQuitMonitor.Evaluate(visible, ref idleChecks));
     }
+
+    [Theory]
+    [InlineData(false, false, false, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, true, true, true)]
+    [InlineData(true, false, false, true)]
+    [InlineData(true, false, true, false)]
+    [InlineData(true, true, false, true)]
+    [InlineData(true, true, true, true)]
+    public void EachKindOfPassFollowsItsOwnSetting(
+        bool quitAfterUpdates,
+        bool quitWhenNothingToInstall,
+        bool nothingToInstall,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            AutomaticQuitMonitor.IsQuitEnabled(quitAfterUpdates, quitWhenNothingToInstall, nothingToInstall));
+    }
+
+    [Fact]
+    public void OnlyOneRequestWaitsAtATime()
+    {
+        var request = new AutomaticQuitRequest();
+
+        Assert.True(request.TryBegin(nothingToInstall: false));
+        Assert.False(request.TryBegin(nothingToInstall: false));
+
+        request.End();
+
+        Assert.True(request.TryBegin(nothingToInstall: true));
+        Assert.True(request.NothingToInstall);
+    }
+
+    [Fact]
+    public void APassThatInstallsUpdatesUpgradesAWaitingEmptyPass()
+    {
+        var request = new AutomaticQuitRequest();
+
+        Assert.True(request.TryBegin(nothingToInstall: true));
+        Assert.False(request.TryBegin(nothingToInstall: false));
+
+        Assert.False(request.NothingToInstall);
+    }
+
+    [Fact]
+    public void AnEmptyPassDoesNotDowngradeAWaitingUpdatePass()
+    {
+        var request = new AutomaticQuitRequest();
+
+        Assert.True(request.TryBegin(nothingToInstall: false));
+        Assert.False(request.TryBegin(nothingToInstall: true));
+
+        Assert.False(request.NothingToInstall);
+    }
+
+    [Fact]
+    public void AnUpdatePassThatWillNotQuitStillTurnsAWaitingEmptyPassIntoAnUpdatePass()
+    {
+        var request = new AutomaticQuitRequest();
+
+        Assert.True(request.TryBegin(nothingToInstall: true));
+        request.NoteUpdatePass();
+
+        Assert.False(request.NothingToInstall);
+        Assert.False(AutomaticQuitMonitor.IsQuitEnabled(
+            quitAfterUpdates: false,
+            quitWhenNothingToInstall: true,
+            request.NothingToInstall));
+    }
+
+    [Fact]
+    public void NotingAnUpdatePassWithoutAWaiterChangesNothing()
+    {
+        var request = new AutomaticQuitRequest();
+
+        request.NoteUpdatePass();
+
+        Assert.True(request.TryBegin(nothingToInstall: true));
+        Assert.True(request.NothingToInstall);
+    }
+
+    [Fact]
+    public void RequestsAbsorbedBeforeTheLastSampleAreNotReplayed()
+    {
+        var request = new AutomaticQuitRequest();
+
+        Assert.True(request.TryBegin(nothingToInstall: false));
+        Assert.False(request.TryBegin(nothingToInstall: true));
+        request.MarkSampled();
+
+        Assert.Null(request.End());
+    }
+
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    public void RequestsArrivingAfterTheLastSampleAreReplayed(bool first, bool second, bool expected)
+    {
+        var request = new AutomaticQuitRequest();
+
+        Assert.True(request.TryBegin(nothingToInstall: true));
+        request.MarkSampled();
+        Assert.False(request.TryBegin(first));
+        Assert.False(request.TryBegin(second));
+
+        Assert.Equal(expected, request.End());
+        Assert.True(request.TryBegin(nothingToInstall: true));
+    }
+
+    [Fact]
+    public async Task ConcurrentRequestsNeverLeaveAnUpdatePassMarkedAsEmpty()
+    {
+        for (int i = 0; i < 2000; i++)
+        {
+            var request = new AutomaticQuitRequest();
+            using var start = new Barrier(2);
+
+            Task empty = Task.Run(() =>
+            {
+                start.SignalAndWait();
+                request.TryBegin(nothingToInstall: true);
+            });
+            Task update = Task.Run(() =>
+            {
+                start.SignalAndWait();
+                request.TryBegin(nothingToInstall: false);
+            });
+            await Task.WhenAll(empty, update);
+
+            Assert.False(request.NothingToInstall);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, true, true, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, false, true)]
+    [InlineData(true, false, true, true)]
+    public void AnEmptyPassQuitsOnlyAfterASuccessfulAutomaticCheck(
+        bool checkSucceeded,
+        bool installDue,
+        bool firstUpdateAppsPass,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            AutomaticQuitMonitor.ShouldQuitAfterEmptyPass(checkSucceeded, installDue, firstUpdateAppsPass));
+    }
+
+    [Theory]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, false)]
+    public void AnInstallPassThatLaunchedNothingNeedsASuccessfulCheck(bool launched, bool checkSucceeded, bool expected)
+    {
+        Assert.Equal(expected, AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded));
+    }
+
+    [Fact]
+    public void TheUpdateAppsArgumentCountsOnlyOnce()
+    {
+        var handled = new OneTimeClaim();
+
+        Assert.False(AutomaticQuitMonitor.IsFirstUpdateAppsPass(false, true, false, handled));
+        Assert.False(AutomaticQuitMonitor.IsFirstUpdateAppsPass(true, false, false, handled));
+        Assert.False(handled.IsClaimed);
+
+        Assert.True(AutomaticQuitMonitor.IsFirstUpdateAppsPass(true, false, true, handled));
+        Assert.False(AutomaticQuitMonitor.IsFirstUpdateAppsPass(true, true, false, handled));
+        Assert.False(AutomaticQuitMonitor.IsFirstUpdateAppsPass(true, true, true, handled));
+    }
 }

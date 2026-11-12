@@ -13,6 +13,7 @@ namespace UniGetUI.PackageEngine.Serializable
         private const string PRERELEASE = "PreRelease";
         private const string SKIP_MINOR = "SkipMinorUpdates";
         private const string SKIP_MINOR_LEVEL = "SkipMinorUpdatesLevel";
+        private const string SKIP_MAJOR = "SkipMajorUpdates";
         private const string REMOVE_DATA_UNINST = "RemoveDataOnUninstall";
         private const string CLEAR_PREV_VER = "UninstallPreviousVersionsOnUpdate";
         private const string UNINST_BEFORE_UPD = "UninstallBeforeUpdate";
@@ -47,6 +48,7 @@ namespace UniGetUI.PackageEngine.Serializable
             { AS_ADMIN, false },
             { PRERELEASE, false },
             { SKIP_MINOR, false },
+            { SKIP_MAJOR, false },
             { REMOVE_DATA_UNINST, false },
             { CLEAR_PREV_VER, false },
             { UNINST_BEFORE_UPD, false },
@@ -116,6 +118,11 @@ namespace UniGetUI.PackageEngine.Serializable
         {
             get => int.TryParse(_strVal[SKIP_MINOR_LEVEL], out int v) && v is >= 2 and <= 4 ? v : DefaultSkipMinorLevel;
             set => _strVal[SKIP_MINOR_LEVEL] = value == DefaultSkipMinorLevel ? "" : value.ToString();
+        }
+        public bool SkipMajorUpdates
+        {
+            get => _boolVal[SKIP_MAJOR];
+            set => _boolVal[SKIP_MAJOR] = value;
         }
         public bool RemoveDataOnUninstall
         {
@@ -231,6 +238,18 @@ namespace UniGetUI.PackageEngine.Serializable
         // from the manager-wide default. Transient (not serialized): set by InstallOptionsFactory.
         public bool CustomInstallLocationIsExplicit { get; set; }
 
+        public bool VersionIsExplicit { get; set; }
+
+        public InstallOptions WithoutSavedVersion()
+        {
+            if (Version.Length == 0 || VersionIsExplicit)
+                return this;
+
+            var cleared = Copy();
+            cleared.Version = "";
+            return cleared;
+        }
+
         public override InstallOptions Copy()
         {
             var copy = new InstallOptions();
@@ -247,6 +266,7 @@ namespace UniGetUI.PackageEngine.Serializable
             // Handle non-automated properties
             copy.OverridesNextLevelOpts = OverridesNextLevelOpts;
             copy.CustomInstallLocationIsExplicit = CustomInstallLocationIsExplicit;
+            copy.VersionIsExplicit = VersionIsExplicit;
             return copy;
         }
 

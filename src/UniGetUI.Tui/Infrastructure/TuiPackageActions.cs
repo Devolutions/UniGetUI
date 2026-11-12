@@ -40,14 +40,19 @@ internal static class TuiPackageActions
     }
 
     public static async Task<int> UpdateAsync(IEnumerable<IPackage> packages, bool? elevated = null,
-        bool? interactive = null, bool? skipHash = null, bool keepUpdatesPaused = false)
+        bool? interactive = null, bool? skipHash = null, bool keepUpdatesPaused = false, bool bulk = false)
     {
         int started = 0;
-        foreach (IPackage pkg in packages)
+        foreach (IPackage listed in packages)
         {
+            IPackage? pkg = keepUpdatesPaused
+                ? listed
+                : await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed);
+            if (pkg is null) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg, elevated: elevated,
                 interactive: interactive, no_integrity: skipHash);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
+            if (bulk && PackageOperation.IsLeftOutOfBulkUpdates(pkg, opts)) continue;
             TuiOperationRegistry.Start(new UpdatePackageOperation(pkg, opts) { KeepUpdatesPaused = keepUpdatesPaused });
             started++;
         }
@@ -108,10 +113,10 @@ internal static class TuiPackageActions
     }
 
     public static Task<int> UpdateAllAsync()
-        => UpdateAsync(UpgradablePackagesLoader.Instance.Packages.ToList());
+        => UpdateAsync(UpgradablePackagesLoader.Instance.Packages.ToList(), bulk: true);
 
     public static Task<int> UpdateAllForManagerAsync(IPackageManager manager)
-        => UpdateAsync(UpgradablePackagesLoader.Instance.Packages.Where(p => p.Manager == manager).ToList());
+        => UpdateAsync(UpgradablePackagesLoader.Instance.Packages.Where(p => p.Manager == manager).ToList(), bulk: true);
 
     /// <summary>Downloads installers into <paramref name="folderOrFile"/> for every eligible package.</summary>
     public static int Download(IEnumerable<IPackage> packages, string folderOrFile)

@@ -108,7 +108,10 @@ internal static class TuiHistoryActions
         {
             "install-package" => new InstallPackageOperation(new Package(name, record.PackageId, InstalledVersion(record), source, manager), options),
             "uninstall-package" => new UninstallPackageOperation(new Package(name, record.PackageId, InstalledVersion(record), source, manager), options),
-            "update-package" => new UpdatePackageOperation(new Package(name, record.PackageId, record.VersionBefore, record.VersionAfter, source, manager), options),
+            "update-package" => new UpdatePackageOperation(UpdateVersionPin.KeepRecordedTarget(new Package(name, record.PackageId, record.VersionBefore, record.VersionAfter, source, manager)
+            {
+                RequiresReinstallToUpdate = record.RequiresReinstallToUpdate is true,
+            }, options), options),
             _ => null,
         };
     }

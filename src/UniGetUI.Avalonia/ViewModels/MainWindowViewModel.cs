@@ -24,6 +24,7 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.Operations.Reboot;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageOperations;
 
@@ -121,8 +122,6 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_operationBatch.Count > 0
             && _operationBatch.All(o => o.Status is not (OperationStatus.InQueue or OperationStatus.Running)))
         {
-            foreach (var old in _operationBatch)
-                old.StatusChanged -= OnOperationStatusChanged;
             _operationBatch.Clear();
             _batchSummaryShown = false;
         }
@@ -130,18 +129,87 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!_operationBatch.Contains(op))
         {
             _operationBatch.Add(op);
-            op.StatusChanged += OnOperationStatusChanged;
+            ShutdownController.OnOperationJoined();
         }
+
+        WatchOperations();
+    }
+
+    private readonly HashSet<AbstractOperation> _watchedOperations = [];
+
+    private void WatchOperations()
+    {
+        var wanted = Operations.Select(vm => vm.Operation).Concat(_operationBatch).ToHashSet();
+        foreach (var op in _watchedOperations.Where(op => !wanted.Contains(op)).ToList())
+        {
+            op.StatusChanged -= OnOperationStatusChanged;
+            _watchedOperations.Remove(op);
+        }
+
+        foreach (var op in wanted.Where(_watchedOperations.Add))
+            op.StatusChanged += OnOperationStatusChanged;
     }
 
     private void OnOperationStatusChanged(object? sender, OperationStatus e)
         => Dispatcher.UIThread.Post(() =>
         {
+            if (sender is AbstractOperation op
+                && e is OperationStatus.InQueue or OperationStatus.Running
+                && !_operationBatch.Contains(op))
+                AddToBatch(op);
+
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
             MaybeShowBatchSummaryToast();
+            ShutdownController.OnOperationsChanged();
         });
+
+    private ShutdownWhenFinishedController? _shutdownController;
+
+    public ShutdownWhenFinishedController ShutdownController => _shutdownController ??= CreateShutdownController();
+
+    private ShutdownWhenFinishedController CreateShutdownController() => new(
+        SystemRestartService.CanShutDown,
+        ShutdownBatchStates,
+        () => PendingRebootStore.HasPending,
+        RunShutdownCountdownAsync,
+        ShowShutdownCanceledByFailureToast);
+
+    private List<BatchOperationState> ShutdownBatchStates() =>
+        _operationBatch
+            .Concat(Operations
+                .Select(vm => vm.Operation)
+                .Where(op => op.Status is OperationStatus.InQueue or OperationStatus.Running))
+            .Distinct()
+            .Select(op => new BatchOperationState(op.Status, op.SystemRestartRequired))
+            .ToList();
+
+    private void ShowShutdownCanceledByFailureToast()
+    {
+        var toast = new InfoBarViewModel
+        {
+            Title = CoreTools.Translate("Your computer was not shut down"),
+            Message = CoreTools.Translate(
+                "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually."),
+            Severity = InfoBarSeverity.Warning,
+            IsClosable = true,
+            IsOpen = true,
+        };
+        toast.OnClosed = () => DismissToast(toast);
+        ShowToast(toast);
+    }
+
+    private static async Task<ShutdownCountdownOutcome> RunShutdownCountdownAsync(
+        bool restart,
+        Func<bool> operationsActive,
+        CancellationToken newWorkStarted)
+    {
+        if (MainWindow.Instance is not { } owner) return ShutdownCountdownOutcome.Canceled;
+
+        owner.ShowFromTray();
+        return await SystemRestartService.CountdownAndShutDownAsync(owner, restart, operationsActive, newWorkStarted);
+    }
 
     // Opt-in: one toast summarizing the batch once every operation in it has finished.
     private void MaybeShowBatchSummaryToast()
@@ -185,7 +253,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ClearFinishedOperations() => AvaloniaOperationRegistry.ClearFinished();
 
     [RelayCommand]
-    private void CancelAllOperations() => AvaloniaOperationRegistry.CancelAll();
+    private void CancelAllOperations()
+    {
+        ShutdownController.SetArmed(false);
+        AvaloniaOperationRegistry.CancelAll();
+    }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────
     public SidebarViewModel Sidebar { get; } = new();
@@ -553,10 +625,12 @@ public partial class MainWindowViewModel : ViewModelBase
             if (e.NewItems is not null)
                 foreach (OperationViewModel vm in e.NewItems)
                     AddToBatch(vm.Operation);
+            WatchOperations();
             OperationsPanelVisible = Operations.Count > 0;
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
+            ShutdownController.OnOperationsChanged();
         };
 
         if (OperatingSystem.IsWindows() && CoreTools.IsAdministrator() && !Settings.Get(Settings.K.AlreadyWarnedAboutAdmin))

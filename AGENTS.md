@@ -254,9 +254,11 @@ usual negative/zero/positive, or `null` when two versions cannot be meaningfully
 Each override falls back to the base implementation when its own parser rejects the input, so an
 unparseable version behaves exactly as it did before.
 
-Three call sites consume it: `Package.NewerVersionIsInstalled()`, which decides whether an update
-is offered at all; `BaseNuGet.KeepUpdatesNewerThanInstalled`; and the
-`UninstallPreviousVersionsOnUpdate` match, which removes superseded copies. Display sorting
+Four call sites consume it: `Package.NewerVersionIsInstalled()`, which decides whether an update
+is offered at all; `BaseNuGet.KeepUpdatesNewerThanInstalled`; the
+`UninstallPreviousVersionsOnUpdate` match, which removes superseded copies; and
+`PackageManager.NewestVersionWithinMajor`, which picks the update offered in place of a skipped
+major one (see the next section), so a wrong comparator there installs the wrong version. Display sorting
 deliberately does not - those lists mix managers, and a comparison between two packages from
 different ecosystems has no single correct answer.
 
@@ -264,6 +266,26 @@ When adding a manager, pick the comparator its registry actually uses. Getting i
 real updates or offers downgrades, and the tests in `PackageTests.cs` assert both directions:
 that SemVer and PEP 440 managers order pre-releases below their releases, and that revision
 ecosystems keep reading a trailing suffix as newer.
+
+## Skipping major updates
+
+The per-package `SkipMajorUpdates` install option hides an update whose first version number
+changes (`Package.IsUpdateMajor`, relative to the installed version). Managers report only their
+newest version, so hiding alone would also hide every later release of the installed major; for
+managers that can update to an exact version, `PackageManager.GetAvailableUpdates` instead offers
+the newest stable version within the installed major, marked with
+`OverridenInstallationOptions.PinUpdateToNewVersion`, and `UpdateVersionPin` installs exactly that
+version (as an explicit `Version`, which WinGet passes as `--version`).
+
+- `CanUpdateToExactVersion` declares whether a manager's update can target a version. It defaults
+  to custom versions + versions on update + version listing; WinGet narrows it to system winget,
+  because bundled Pinget's `upgrade` has no `--version`. Without it the major update is only hidden.
+- `IsEligibleUpdateTarget` rejects withdrawn releases (`false`) or stops the choice when their
+  status is unknown (`null`): NuGet V3 checks the registration leaf, Cargo skips yanked crates.
+  Override it when a manager's version list includes releases its own update selection excludes.
+- `UpgradablePackagesLoader.ResolveSkippedMajorUpdateAsync` re-resolves a listed row before an
+  update is launched or after its options are saved, and every update is checked again by
+  `RefusalBeforeStart` before any pre-operation runs.
 
 ## Build & Test
 

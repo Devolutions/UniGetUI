@@ -4,6 +4,7 @@ using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Interfaces
 {
@@ -47,6 +48,10 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// shared numeric comparison cannot be right for every manager at once.
         /// </summary>
         public int? CompareVersions(string versionA, string versionB);
+
+        public bool CanUpdateToExactVersion { get; }
+
+        public IPackage? ResolveSkippedMajorUpdate(IPackage update, InstallOptions? options = null);
 
         /// <summary>
         /// Initializes the Package Manager (asynchronously). Must be run before using any other method of the manager.

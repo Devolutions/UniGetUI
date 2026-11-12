@@ -364,8 +364,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             package, OperationType.Update, TEL_InstallReferral.ALREADY_INSTALLED);
         await dialog.ShowDialog(win);
 
-        if (dialog.ShouldProceedWithOperation)
-            await LaunchUpdate([package]);
+        var update = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(package);
+        if (dialog.ShouldProceedWithOperation && update is not null)
+            await LaunchUpdate([update]);
     }
 
     protected override async Task ShowInstallationOptionsForPackage(IPackage? package)
@@ -378,8 +379,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         await dialog.ShowDialog(win);
         await InstallOptionsFactory.SaveForPackageAsync(opts, package);
 
-        if (dialog.ShouldProceedWithOperation)
-            await LaunchUpdate([package]);
+        var update = await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(package);
+        if (dialog.ShouldProceedWithOperation && update is not null)
+            await LaunchUpdate([update]);
     }
 
     // ─── Page-specific actions ────────────────────────────────────────────────
@@ -416,11 +418,16 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         Action<UpdatePackageOperation>? beforeStart = null)
     {
         List<UpdatePackageOperation> started = [];
-        foreach (var pkg in packages)
+        foreach (var listed in packages)
         {
+            var pkg = keepUpdatesPaused
+                ? listed
+                : await UpgradablePackagesLoader.Instance.ResolveSkippedMajorUpdateAsync(listed);
+            if (pkg is null) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
+            if (background && PackageOperation.IsLeftOutOfBulkUpdates(pkg, opts)) continue;
             var op = new UpdatePackageOperation(pkg, opts)
             {
                 IsBackgroundOperation = background,
@@ -477,11 +484,16 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
     // ─── Auto-update on load ──────────────────────────────────────────────────
 
+    private static readonly OneTimeClaim UpdateAppsPassHandled = new();
+
     private static async Task WhenPackagesLoaded()
     {
         try
         {
             bool shouldAutoInstall = MaintenanceScheduler.IsAutoInstallDue();
+            bool checkSucceeded = UpgradablePackagesLoader.Instance
+                is { IsLoaded: true, LastLoadReportedFailures: false, AnyManagerReady: true };
+            bool hasUpdateAppsArgument = CoreData.GetProcessArguments().Contains("--updateapps");
 
             var upgradable = UpgradablePackagesLoader.Instance.Packages
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
@@ -489,9 +501,12 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
             if (upgradable.Count == 0)
             {
-                if (OperatingSystem.IsWindows()
-                    && UpgradablePackagesLoader.Instance is { IsLoaded: true, LastLoadReportedFailures: false, AnyManagerReady: true })
+                if (OperatingSystem.IsWindows() && checkSucceeded)
                     WindowsAppNotificationBridge.RemoveUpdatesAvailableNotification();
+                bool firstUpdateAppsPass = AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: false, UpdateAppsPassHandled);
+                if (AutomaticQuitMonitor.ShouldQuitAfterEmptyPass(checkSucceeded, shouldAutoInstall, firstUpdateAppsPass))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: true);
                 return;
             }
 
@@ -513,15 +528,24 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             else if (shouldAutoInstall)
             {
                 MaintenanceScheduler.MarkAutoInstallHandled();
-                if (await LaunchScheduledUpdate(upgradable))
-                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish();
+                AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: true, UpdateAppsPassHandled);
+                bool launched = await LaunchScheduledUpdate(upgradable);
+                if (AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: !launched);
             }
-            else if (CoreData.GetProcessArguments().Contains("--updateapps"))
+            else if (hasUpdateAppsArgument)
             {
-                Task updateAll = AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
-                ShowUpgradingPackagesNotification(upgradable);
+                bool firstUpdateAppsPass = AutomaticQuitMonitor.IsFirstUpdateAppsPass(
+                    hasUpdateAppsArgument, checkSucceeded, foundUpdates: true, UpdateAppsPassHandled);
+                var started = await AvaloniaPackageOperationHelper.UpdateAllAsync(background: true);
+                bool launched = started.Count > 0;
+                ShowUpgradingPackagesNotification(await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(upgradable));
                 Logger.Warn("Automatic install of updates has been enabled via Command Line (user settings have been overriden)");
-                QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(updateAll);
+                if (firstUpdateAppsPass && AutomaticQuitMonitor.ShouldQuitAfterInstallPass(launched, checkSucceeded))
+                    QuitAfterAutomaticUpdates.QuitWhenOperationsFinish(nothingToInstall: !launched);
+                else if (launched)
+                    QuitAfterAutomaticUpdates.NoteUpdatesLaunched();
             }
             else
             {
@@ -539,15 +563,18 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         bool markedOnly = MaintenanceScheduleStore.GetInstallTargets()
             is ScheduleInstallTargets.MarkedPackagesOnly;
 
-        List<IPackage> targets = [];
+        List<IPackage> candidates = [];
         List<IPackage> skipped = [];
         foreach (var package in upgradable)
         {
             if (!markedOnly || AutoUpdatesDatabase.IsAutoUpdated(package))
-                targets.Add(package);
+                candidates.Add(package);
             else
                 skipped.Add(package);
         }
+
+        var targets = await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync(candidates);
+        skipped.AddRange(candidates.Where(package => !targets.Contains(package, ReferenceEqualityComparer.Instance)));
 
         if (targets.Count > 0)
         {

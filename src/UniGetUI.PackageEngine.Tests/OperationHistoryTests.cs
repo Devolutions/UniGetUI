@@ -209,6 +209,190 @@ public sealed class OperationHistoryTests : IDisposable
         Assert.Equal("Error", result[1].Type);
     }
 
+    [Fact]
+    public void BuildOutput_KeepsBothEndsOfAnOversizedLine()
+    {
+        string huge = "HEAD" + new string('x', 25_000_000) + "TAIL";
+        var lines = new List<(string, AbstractOperation.LineType)>
+        {
+            ("before", AbstractOperation.LineType.Information),
+            (huge, AbstractOperation.LineType.Error),
+            ("after", AbstractOperation.LineType.Information),
+        };
+
+        var result = OperationHistoryRecord.BuildOutput(lines);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal("before", result[0].Text);
+        Assert.Equal("after", result[2].Text);
+        Assert.Equal("Error", result[1].Type);
+        Assert.True(result[1].Text.Length <= OperationHistoryRecord.MaxOutputLineChars);
+        Assert.StartsWith("HEAD", result[1].Text);
+        Assert.EndsWith("TAIL", result[1].Text);
+    }
+
+    [Fact]
+    public void BuildOutput_CapsTotalCharactersAndKeepsTheTail()
+    {
+        var lines = new List<(string, AbstractOperation.LineType)>();
+        for (int i = 0; i < 1000; i++)
+            lines.Add(($"line{i:D4}" + new string('y', 2000), AbstractOperation.LineType.Information));
+
+        var result = OperationHistoryRecord.BuildOutput(lines);
+
+        Assert.True(result.Sum(l => l.Text.Length) <= OperationHistoryRecord.MaxOutputChars);
+        Assert.StartsWith("line0999", result[^1].Text);
+        int firstKept = int.Parse(result[1].Text[4..8]);
+        Assert.Contains(firstKept.ToString(), result[0].Text);
+        Assert.Equal(1000 - firstKept, result.Count - 1);
+    }
+
+    [Fact]
+    public void ClampStoredOutput_IsIdempotent()
+    {
+        var record = Record("bloated");
+        for (int i = 0; i < 200; i++)
+            record.Output.Add(new OperationHistoryOutputLine { Text = new string('z', 10_000), Type = "Information" });
+
+        Assert.True(record.ClampStoredOutput());
+        var once = record.Output.Select(l => l.Text).ToList();
+        Assert.False(record.ClampStoredOutput());
+        Assert.Equal(once, record.Output.Select(l => l.Text));
+    }
+
+    [Fact]
+    public void Load_ShrinksAStoreBloatedByAnOlderVersion()
+    {
+        var bloated = Record("bloated");
+        bloated.Output.Add(new OperationHistoryOutputLine { Text = new string('q', 2_000_000), Type = "Error" });
+        var small = Record("small");
+        small.Output.Add(new OperationHistoryOutputLine { Text = "ok", Type = "Information" });
+        var typeInfo = OperationHistoryJsonContext.Default.ListOperationHistoryRecord;
+        File.WriteAllText(_tempFile, System.Text.Json.JsonSerializer.Serialize([bloated, small], typeInfo));
+        long before = new FileInfo(_tempFile).Length;
+        OperationHistoryStore.InvalidateCache();
+
+        var reloaded = OperationHistoryStore.Get("bloated");
+
+        Assert.NotNull(reloaded);
+        Assert.Single(reloaded!.Output);
+        Assert.True(reloaded.Output[0].Text.Length <= OperationHistoryRecord.MaxOutputLineChars);
+        Assert.Equal("ok", OperationHistoryStore.Get("small")!.Output[0].Text);
+        Assert.True(new FileInfo(_tempFile).Length < before / 100);
+    }
+
+    [Fact]
+    public void ClampedLineNeverSplitsASurrogatePairAndStillPersists()
+    {
+        for (int shift = 0; shift < 2; shift++)
+        {
+            string huge = new string('a', shift) + string.Concat(Enumerable.Repeat("\U0001F600", 10_000));
+            var record = Record("emoji" + shift);
+            record.Output = OperationHistoryRecord.BuildOutput([(huge, AbstractOperation.LineType.Error)]);
+            string text = record.Output[0].Text;
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (char.IsHighSurrogate(text[i]))
+                    Assert.True(i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]));
+                else if (char.IsLowSurrogate(text[i]))
+                    Assert.True(i > 0 && char.IsHighSurrogate(text[i - 1]));
+            }
+
+            OperationHistoryStore.Add(record);
+            OperationHistoryStore.InvalidateCache();
+            Assert.Equal(text, OperationHistoryStore.Get("emoji" + shift)!.Output[0].Text);
+        }
+    }
+
+    [Fact]
+    public void Load_KeepsTheHistoryWhenARecordHasNullOutput()
+    {
+        File.WriteAllText(_tempFile, """
+            [
+              { "Id": "nulloutput", "Kind": "install-package", "Output": null },
+              { "Id": "nulltext", "Kind": "install-package", "Output": [ { "Text": null, "Type": "Information" }, null ] },
+              { "Id": "fine", "Kind": "install-package", "Output": [ { "Text": "ok", "Type": "Information" } ] }
+            ]
+            """);
+        OperationHistoryStore.InvalidateCache();
+
+        Assert.Equal(3, OperationHistoryStore.GetAll().Count);
+        Assert.Empty(OperationHistoryStore.Get("nulloutput")!.Output);
+        Assert.Equal("", Assert.Single(OperationHistoryStore.Get("nulltext")!.Output).Text);
+        Assert.Equal("ok", OperationHistoryStore.Get("fine")!.Output[0].Text);
+    }
+
+    [Fact]
+    public void ClampStoredOutput_KeepsEveryLineOfTheLegacyLog()
+    {
+        var record = Record("legacy", OperationHistoryRecord.KindLegacyLog);
+        for (int i = 0; i < 1000; i++)
+            record.Output.Add(new OperationHistoryOutputLine { Text = new string('l', 1000), Type = "Information" });
+        record.Output.Add(new OperationHistoryOutputLine { Text = new string('h', 100_000), Type = "Information" });
+
+        Assert.True(record.ClampStoredOutput());
+
+        Assert.Equal(1001, record.Output.Count);
+        Assert.Equal(new string('l', 1000), record.Output[0].Text);
+        Assert.True(record.Output[^1].Text.Length <= OperationHistoryRecord.MaxOutputLineChars);
+    }
+
+    [Fact]
+    public void ClampStoredOutput_AddsToTheCountOfAnExistingOmittedMarker()
+    {
+        var shortLines = new List<(string, AbstractOperation.LineType)>();
+        for (int i = 0; i < OperationHistoryRecord.MaxOutputLines + 10; i++)
+            shortLines.Add(("x", AbstractOperation.LineType.Information));
+        var marker = OperationHistoryRecord.BuildOutput(shortLines)[0];
+
+        var record = Record("capped");
+        record.Output.Add(marker);
+        for (int i = 0; i < OperationHistoryRecord.MaxOutputLines; i++)
+            record.Output.Add(new OperationHistoryOutputLine { Text = new string('w', 100), Type = "Information" });
+
+        Assert.True(record.ClampStoredOutput());
+
+        int kept = record.Output.Count - 1;
+        int expectedOmitted = 10 + OperationHistoryRecord.MaxOutputLines - kept;
+        Assert.Contains(expectedOmitted.ToString(), record.Output[0].Text);
+        Assert.False(record.ClampStoredOutput());
+    }
+
+    [Theory]
+    [InlineData("[... 10 frühere Zeilen ausgelassen ...]")]
+    [InlineData("[... предыдущих строк пропущено: 10 ...]")]
+    [InlineData("[... 以前の10行は省略されました ...]")]
+    [InlineData("[... تم حذف 10 من الأسطر السابقة ...]")]
+    [InlineData("[... 10 earlier lines omitted ...]")]
+    public void ClampStoredOutput_KeepsTheOmittedCountOfAMarkerInAnyLanguage(string storedMarker)
+    {
+        var record = Record("localized");
+        record.Output.Add(new OperationHistoryOutputLine { Text = storedMarker, Type = "Information" });
+        for (int i = 0; i < OperationHistoryRecord.MaxOutputLines; i++)
+            record.Output.Add(new OperationHistoryOutputLine { Text = new string('w', 100), Type = "Information" });
+
+        Assert.True(record.ClampStoredOutput());
+
+        int expectedOmitted = 10 + OperationHistoryRecord.MaxOutputLines - (record.Output.Count - 1);
+        Assert.Contains(expectedOmitted.ToString(), record.Output[0].Text);
+        Assert.DoesNotContain(record.Output, line => line.Text == storedMarker);
+    }
+
+    [Fact]
+    public void ClampStoredOutput_TreatsAnOrdinaryFirstLineAsOutput()
+    {
+        var record = Record("ordinary");
+        record.Output.Add(new OperationHistoryOutputLine { Text = "[... 10 of 20 ...]", Type = "Information" });
+        for (int i = 0; i < OperationHistoryRecord.MaxOutputLines; i++)
+            record.Output.Add(new OperationHistoryOutputLine { Text = new string('w', 100), Type = "Information" });
+
+        Assert.True(record.ClampStoredOutput());
+
+        int expectedOmitted = 1 + OperationHistoryRecord.MaxOutputLines - (record.Output.Count - 1);
+        Assert.Contains(expectedOmitted.ToString(), record.Output[0].Text);
+    }
+
     private static List<OperationHistoryOutputLine> Lines(params (string text, string type)[] items)
         => items.Select(i => new OperationHistoryOutputLine { Text = i.text, Type = i.type }).ToList();
 
@@ -340,7 +524,7 @@ public sealed class OperationHistoryTests : IDisposable
 
         using var op = new UpdatePackageOperation(
             package,
-            new InstallOptions { Version = "2.0.0" }
+            new InstallOptions { Version = "2.0.0", VersionIsExplicit = true }
         );
         var record = OperationHistoryRecord.FromOperation(
             op,
@@ -349,6 +533,26 @@ public sealed class OperationHistoryTests : IDisposable
 
         Assert.Equal("1.0.0", record.VersionBefore);
         Assert.Equal("2.0.0", record.VersionAfter);
+    }
+
+    [Fact]
+    public void FromOperation_Update_RecordsTheNewVersionWhenTheVersionIsOnlySaved()
+    {
+        var manager = new PackageManagerBuilder().WithName("Scoop").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+
+        using var op = new UpdatePackageOperation(package, new InstallOptions { Version = "1.0.0" });
+        var record = OperationHistoryRecord.FromOperation(
+            op,
+            OperationHistoryRecord.StatusSucceeded
+        );
+
+        Assert.Equal("3.0.0", record.VersionAfter);
     }
 
     [Fact]
@@ -401,6 +605,36 @@ public sealed class OperationHistoryTests : IDisposable
 
         Assert.Equal("1.7.1", record.VersionBefore);
         Assert.Equal("1.8.2", record.VersionAfter);
+    }
+
+    [Theory]
+    [InlineData(true, "1.2.0")]
+    [InlineData(false, "2.0.0")]
+    public void FromOperation_Update_RecordsAnExplicitVersionTheManagerHonors(bool canUpdateToExactVersion, string recorded)
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsCustomVersionsOnUpdate = false;
+                return capabilities;
+            })
+            .Build();
+        manager.CanUpdateToExactVersionOverride = canUpdateToExactVersion;
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        using var op = new UpdatePackageOperation(
+            package,
+            new InstallOptions { SkipMajorUpdates = true, Version = "1.2.0", VersionIsExplicit = true },
+            IgnoreParallelInstalls: true
+        );
+        var record = OperationHistoryRecord.FromOperation(op, OperationHistoryRecord.StatusSucceeded);
+
+        Assert.Equal(recorded, record.VersionAfter);
     }
 
     [Fact]

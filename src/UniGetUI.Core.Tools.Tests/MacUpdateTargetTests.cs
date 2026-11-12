@@ -173,16 +173,16 @@ public class MacUpdateTargetTests
             "Target version: 2026.1.0\n"
             + "[INFO ] Replacing /Applications/UniGetUI.app with the freshly-extracted bundle and relaunching.\n"
             + "\n"
-            + MacUpdateTargetResolver.SwapFailedMarker + " /Applications/UniGetUI.app\n";
+            + SelfUpdateSwap.FailedMarker + " /Applications/UniGetUI.app\n";
 
-        Assert.True(MacUpdateTargetResolver.TryGetSwapFailure(log, out string bundle));
+        Assert.True(SelfUpdateSwap.TryGetFailure(log, out string bundle));
         Assert.Equal("/Applications/UniGetUI.app", bundle);
     }
 
     [Fact]
     public void TryGetSwapFailure_IgnoresALogWithoutTheMarker()
     {
-        Assert.False(MacUpdateTargetResolver.TryGetSwapFailure("Target version: 2026.1.0\n", out _));
+        Assert.False(SelfUpdateSwap.TryGetFailure("Target version: 2026.1.0\n", out _));
     }
 
     [MacOSFact]

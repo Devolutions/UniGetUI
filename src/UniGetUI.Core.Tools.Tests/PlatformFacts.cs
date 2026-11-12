@@ -25,6 +25,17 @@ public sealed class UnixFactAttribute : FactAttribute
     }
 }
 
+public sealed class LinuxFactAttribute : FactAttribute
+{
+    public LinuxFactAttribute()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            Skip = "Runs on Linux only";
+        }
+    }
+}
+
 public sealed class MacOSFactAttribute : FactAttribute
 {
     public MacOSFactAttribute()

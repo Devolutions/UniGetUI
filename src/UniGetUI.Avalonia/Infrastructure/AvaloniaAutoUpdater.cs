@@ -229,7 +229,7 @@ internal static partial class AvaloniaAutoUpdater
             if (content.Contains(AttemptFinishedMarker))
                 return;
 
-            if (MacUpdateTargetResolver.TryGetSwapFailure(content, out string failedBundle))
+            if (SelfUpdateSwap.TryGetFailure(content, out string failedBundle))
             {
                 Logger.Warn($"The previous update could not replace {failedBundle}.");
                 try
@@ -461,6 +461,8 @@ internal static partial class AvaloniaAutoUpdater
 
     private static int _activeAttempts;
     private static int _attemptsAwaitingConsent;
+    private static string? _linuxBlockedUpdateShownFor;
+    private static KnownPackageOwnership? _linuxPackageOwnership;
     private static readonly AutoUpdaterHelpers.UpdaterAttemptCoordinator AttemptCoordinator = new();
     private static readonly InstallerHandoffTracker InstallerHandoffs = new();
     private static readonly TimeSpan InstallerHandoffTimeout = TimeSpan.FromMinutes(2);
@@ -597,6 +599,11 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             if (OperatingSystem.IsMacOS() && ReportMacUpdateTargetIfBlocked(ResolveMacUpdateTarget()))
+            {
+                return false;
+            }
+
+            if (OperatingSystem.IsLinux() && await ReportLinuxUpdateTargetIfBlockedAsync(candidate.VersionName, IsManual))
             {
                 return false;
             }
@@ -1284,35 +1291,13 @@ internal static partial class AvaloniaAutoUpdater
         // "attempt finished" marker here — exactly like the Windows installer path, the
         // relaunched copy confirms success via CheckForOrphanedUpdateAttempt() by
         // comparing its own version against the recorded target version.
-        //
-        // Arguments are passed positionally ($1=pid, $2=target, $3=new app, $4=update log,
-        // $5=failure marker, $6=redacted target) so no path is ever interpolated into the script text.
-        const string swap = """
-            pid="$1"; target="$2"; newapp="$3"; log="$4"; marker="$5"; shown="$6"
-            i=0
-            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
-            rm -rf "$target.old"
-            if mv "$target" "$target.old"; then
-              if mv "$newapp" "$target"; then
-                xattr -dr com.apple.quarantine "$target" 2>/dev/null
-                rm -rf "$target.old"
-              else
-                rm -rf "$target"
-                mv "$target.old" "$target"
-                printf '\n%s %s\n' "$marker" "$shown" >> "$log"
-              fi
-            else
-              printf '\n%s %s\n' "$marker" "$shown" >> "$log"
-            fi
-            /usr/bin/open -na "$target"
-            """;
         if (!TrySpawnSwapHelper(
-                swap,
+                MacUpdateTargetResolver.SwapScript,
                 Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
                 target,
                 newApp,
                 _updateLogPath,
-                MacUpdateTargetResolver.SwapFailedMarker,
+                SelfUpdateSwap.FailedMarker,
                 Logger.Redact(target)))
         {
             // We could not even launch the helper, so nothing was changed. Report and bail
@@ -1491,25 +1476,15 @@ internal static partial class AvaloniaAutoUpdater
         // intact until it is gone). On failure the helper rolls back. As with Windows,
         // success/failure is confirmed by the relaunched copy via
         // CheckForOrphanedUpdateAttempt() — so no "attempt finished" marker is written here.
-        //
-        // Positional args: $1=pid, $2=install dir, $3=new tree, $4=executable name.
-        const string swap = """
-            pid="$1"; dir="$2"; newroot="$3"; exe="$4"
-            i=0
-            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
-            rm -rf "$dir.old"
-            if mv "$dir" "$dir.old"; then
-              if mv "$newroot" "$dir"; then
-                chmod +x "$dir/$exe" 2>/dev/null
-                rm -rf "$dir.old"
-              else
-                rm -rf "$dir"
-                mv "$dir.old" "$dir"
-              fi
-            fi
-            "$dir/$exe" >/dev/null 2>&1 &
-            """;
-        if (!TrySpawnSwapHelper(swap, Environment.ProcessId.ToString(CultureInfo.InvariantCulture), installDir, newRoot, exeName))
+        if (!TrySpawnSwapHelper(
+                LinuxUpdateTargetResolver.SwapScript,
+                Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
+                installDir,
+                newRoot,
+                exeName,
+                _updateLogPath,
+                SelfUpdateSwap.FailedMarker,
+                Logger.Redact(installDir)))
         {
             RaiseStatus(
                 CoreTools.Translate("The update could not be applied."),
@@ -1523,6 +1498,107 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         Environment.Exit(0);
+    }
+
+    [SupportedOSPlatform("linux")]
+    private static async Task<bool> ReportLinuxUpdateTargetIfBlockedAsync(string versionName, Func<bool> isManual)
+    {
+        string? exePath = Environment.ProcessPath;
+        string? installDir = Path.GetDirectoryName(exePath);
+        if (string.IsNullOrEmpty(exePath) || string.IsNullOrEmpty(installDir)
+            || LooksLikeDevBuild(Path.GetFileName(exePath), installDir))
+        {
+            return false;
+        }
+
+        LinuxUpdateTarget target = await Task.Run(() => LinuxUpdateTargetResolver.Resolve(
+            exePath,
+            installDir,
+            GetLinuxPackageOwnership,
+            LinuxInstallLocation.IsOnReadOnlyFileSystem,
+            LinuxInstallLocation.IsWritable));
+
+        string title, message, logLine, outcome, actionText;
+        Action action = OpenUpdateLog;
+        bool transient = false;
+        switch (target.Status)
+        {
+            case LinuxUpdateTargetStatus.PackageManaged:
+                logLine = $"UniGetUI at {target.InstallDirectory} was installed from a {target.PackageFormat} package; replacing it in place would leave the system package database out of date, so the update will not be applied.";
+                title = CoreTools.Translate("An update for UniGetUI is available. Install it with your package manager.");
+                message = CoreTools.Translate("UniGetUI was installed from a {0} package, so it cannot update itself. Download the new package and install it with your system package manager.", target.PackageFormat ?? "");
+                outcome = $"install is managed by a {target.PackageFormat} package";
+                actionText = CoreTools.Translate("Download");
+                action = () => CoreTools.Launch(ReleaseNotesLinks.BrowserDownloadUrl(versionName, "", isWindows: false));
+                break;
+
+            case LinuxUpdateTargetStatus.OwnershipUnknown:
+                logLine = $"Could not determine whether {target.InstallDirectory} belongs to a system package; the update will not be applied in this attempt.";
+                title = CoreTools.Translate("The update could not be applied.");
+                message = CoreTools.Translate("UniGetUI could not check whether it was installed by your system package manager, so it did not update itself. Try again later.");
+                outcome = "could not determine whether the install is managed by a system package";
+                actionText = CoreTools.Translate("View log");
+                transient = true;
+                break;
+
+            case LinuxUpdateTargetStatus.ReadOnlyFileSystem:
+                logLine = $"UniGetUI is running from {target.InstallDirectory}, which is on a read-only file system; the update will not be applied.";
+                title = CoreTools.Translate("UniGetUI cannot update itself from a read-only location.");
+                message = CoreTools.Translate("UniGetUI is running from {0}, which is on a read-only file system. Install UniGetUI in a location that can be modified so that it can update itself.", target.InstallDirectory);
+                outcome = "install directory is on a read-only file system";
+                actionText = CoreTools.Translate("View log");
+                break;
+
+            case LinuxUpdateTargetStatus.NotWritable:
+                logLine = $"The current user cannot replace {target.InstallDirectory} (the folder or its parent is not writable); the update will not be applied.";
+                title = CoreTools.Translate("An update for UniGetUI is available, but installing it requires administrator rights.");
+                message = CoreTools.Translate("Your account cannot modify {0} without administrator rights.", target.InstallDirectory);
+                outcome = "install directory is not writable";
+                actionText = CoreTools.Translate("View log");
+                break;
+
+            default:
+                return false;
+        }
+
+        LogUpdateWarn(logLine);
+        bool firstNotice = !transient && Interlocked.Exchange(ref _linuxBlockedUpdateShownFor, versionName) != versionName;
+        bool show = firstNotice || isManual();
+        if (show)
+        {
+            RaiseStatus(
+                title,
+                message,
+                InfoBarSeverity.Warning,
+                isClosable: true,
+                actionButtonText: actionText,
+                actionButtonAction: action);
+        }
+        else
+        {
+            LogUpdateInfo($"The notice for version {versionName} was not shown again for this automatic check.");
+        }
+
+        MarkAttemptFinished(outcome);
+        return true;
+    }
+
+    private sealed record KnownPackageOwnership(string ExecutablePath, PackageOwnership Ownership);
+
+    private static PackageOwnership GetLinuxPackageOwnership(string executablePath)
+    {
+        if (Volatile.Read(ref _linuxPackageOwnership) is { } cached && cached.ExecutablePath == executablePath)
+        {
+            return cached.Ownership;
+        }
+
+        PackageOwnership ownership = LinuxPackageOwnership.Find(executablePath);
+        if (ownership.IsKnown)
+        {
+            Volatile.Write(ref _linuxPackageOwnership, new KnownPackageOwnership(executablePath, ownership));
+        }
+
+        return ownership;
     }
 
     // Shows the friendly "updated, but this running copy was not replaced" notice used

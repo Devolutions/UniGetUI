@@ -82,6 +82,34 @@ jobs:
       # Keep test hosts serial: several suites share on-disk settings and package-manager state.
       run: dotnet test UniGetUI.Windows.slnx --no-build --no-restore --verbosity q --nologo /p:Platform=x64 /m:1
 
+  test-linux-self-update:
+    runs-on: ubuntu-latest
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      NUGET_HTTP_CACHE_PATH: ${{ github.workspace }}/.nuget/http-cache
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v7
+
+    - name: Install .NET SDK
+      uses: actions/setup-dotnet@v6
+      with:
+        global-json-file: global.json
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Run the Linux and macOS self-update tests
+      working-directory: src
+      run: >-
+        dotnet test UniGetUI.Core.Tools.Tests/UniGetUI.Core.Tools.Tests.csproj --verbosity q --nologo
+        --filter "FullyQualifiedName~LinuxUpdateTargetTests|FullyQualifiedName~LinuxSwapScriptTests|FullyQualifiedName~MacUpdateTargetTests"
+
   publish-nativeaot:
     runs-on: windows-latest
     steps:
@@ -132,12 +160,13 @@ jobs:
 
   # Preserve the existing required check: neither tests nor NativeAOT may fail or be skipped.
   test-codebase:
-    needs: [test-windows, publish-nativeaot]
+    needs: [test-windows, test-linux-self-update, publish-nativeaot]
     if: always()
     runs-on: ubuntu-latest
     steps:
     - name: Require tests and NativeAOT publish
       env:
         TEST_RESULT: ${{ needs.test-windows.result }}
+        LINUX_TEST_RESULT: ${{ needs.test-linux-self-update.result }}
         PUBLISH_RESULT: ${{ needs.publish-nativeaot.result }}
-      run: test "$TEST_RESULT" = success && test "$PUBLISH_RESULT" = success
+      run: test "$TEST_RESULT" = success && test "$LINUX_TEST_RESULT" = success && test "$PUBLISH_RESULT" = success

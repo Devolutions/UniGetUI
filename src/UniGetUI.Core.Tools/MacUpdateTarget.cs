@@ -14,7 +14,28 @@ public sealed record MacUpdateTarget(MacUpdateTargetStatus Status, string Bundle
 public static class MacUpdateTargetResolver
 {
     public const string DefaultInstallPath = "/Applications/UniGetUI.app";
-    public const string SwapFailedMarker = "=== Swap failed:";
+
+    // Arguments are passed positionally ($1=pid, $2=target, $3=new app, $4=update log,
+    // $5=failure marker, $6=redacted target) so no path is ever interpolated into the script text.
+    public const string SwapScript = """
+        pid="$1"; target="$2"; newapp="$3"; log="$4"; marker="$5"; shown="$6"
+        i=0
+        while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+        rm -rf "$target.old"
+        if mv "$target" "$target.old"; then
+          if mv "$newapp" "$target"; then
+            xattr -dr com.apple.quarantine "$target" 2>/dev/null
+            rm -rf "$target.old"
+          else
+            rm -rf "$target"
+            mv "$target.old" "$target"
+            printf '\n%s %s\n' "$marker" "$shown" >> "$log"
+          fi
+        else
+          printf '\n%s %s\n' "$marker" "$shown" >> "$log"
+        fi
+        /usr/bin/open -na "$target"
+        """;
 
     // Runs as root for a bundle the user cannot replace ($1=target, $2=archive, $3=SHA-256, $4=pid).
     // Installs only from a root-owned copy of the archive, re-hashed, so the user's staging is never trusted.
@@ -115,29 +136,11 @@ public static class MacUpdateTargetResolver
             return new MacUpdateTarget(MacUpdateTargetStatus.ReadOnlyVolume, target, running);
         }
 
-        int slash = target.TrimEnd('/').LastIndexOf('/');
-        string parent = slash <= 0 ? "/" : target[..slash];
-        if (!isWritable(parent) || !isWritable(target))
+        if (!SelfUpdateSwap.CanReplace(target, isWritable))
         {
             return new MacUpdateTarget(MacUpdateTargetStatus.NotWritable, target, running);
         }
 
         return new MacUpdateTarget(MacUpdateTargetStatus.Ready, target, running);
-    }
-
-    public static bool TryGetSwapFailure(string updateLog, out string bundlePath)
-    {
-        foreach (string rawLine in updateLog.Split('\n'))
-        {
-            string line = rawLine.Trim();
-            if (line.StartsWith(SwapFailedMarker, StringComparison.Ordinal))
-            {
-                bundlePath = line[SwapFailedMarker.Length..].Trim();
-                return true;
-            }
-        }
-
-        bundlePath = string.Empty;
-        return false;
     }
 }

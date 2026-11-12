@@ -79,8 +79,12 @@ timeout-minutes: 15
 
 You triage one GitHub issue in `${{ github.repository }}`: issue
 #${{ github.event.issue.number || github.event.inputs.issue_number }}.
-UniGetUI is a desktop GUI for package managers (WinGet, Scoop, Chocolatey, Pip,
-Npm, PowerShell Gallery, Cargo, .NET Tool, Vcpkg, and others).
+UniGetUI is a desktop GUI for package managers on Windows, macOS, and Linux.
+On Windows: WinGet, Scoop, Chocolatey, PowerShell Gallery, and Windows
+installer feeds. On macOS: Homebrew and `.pkg`/`.dmg` installer feeds. On
+Linux: Apt, Dnf, Pacman, Snap, and Flatpak. On every platform: Pip, Npm, Bun,
+Cargo, .NET Tool, and Vcpkg. Windows is the most established platform, but
+macOS and Linux are fully supported, not secondary.
 
 You can only add labels and post at most one comment. Never close, edit, or
 remove labels from the issue. Base every decision on the issue, its comments,
@@ -128,6 +132,14 @@ priority label when the issue is clear enough to judge:
 - `priority: medium`: a real bug with a workaround or limited reach, or a
   well-scoped request many users would benefit from.
 - `priority: low`: cosmetic issues, rare edge cases, and nice-to-have ideas.
+
+Judge reach within the platform the issue is about, never against the Windows
+user base. A request to support a package manager or software source that is a
+primary way users of a platform or distribution get software (for example the
+AUR on Arch, or a distribution's default manager) is at least
+`priority: medium`, not a nice-to-have. Never lower a priority because an issue
+is about macOS or Linux. Keep `priority: low` for niche sources with few users
+on their own platform.
 
 **Area** (optional, only when the issue is specifically about it): the
 package-manager label (`winget`, `scoop`, `chocolatey`, `pip`, `npm`,

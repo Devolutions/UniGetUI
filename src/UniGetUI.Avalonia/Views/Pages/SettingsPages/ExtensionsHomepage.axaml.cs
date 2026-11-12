@@ -85,6 +85,7 @@ public sealed partial class ExtensionsHomepage : UserControl, ISettingsPage
         _isLoadingToggles = true;
         foreach (var (toggle, extension, badge) in _rows)
         {
+            toggle.IsEnabled = extension.IsAvailable();
             toggle.IsChecked = extension.IsEnabled;
             ApplyStatus(extension, toggle, badge);
         }
@@ -94,7 +95,12 @@ public sealed partial class ExtensionsHomepage : UserControl, ISettingsPage
     private static void ApplyStatus(AppExtension extension, ToggleSwitch toggle, StatusBadge badge)
     {
         string label;
-        if (!extension.IsEnabled)
+        if (!extension.IsAvailable())
+        {
+            badge.Severity = StatusBadgeSeverity.Warning;
+            label = extension.UnavailableReason();
+        }
+        else if (!extension.IsEnabled)
         {
             badge.Severity = StatusBadgeSeverity.Info;
             label = CoreTools.Translate("Off");

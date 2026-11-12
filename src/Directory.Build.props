@@ -50,6 +50,16 @@
         <EnableAvaloniaDiagnostics Condition="'$(Configuration)' == '' or '$(Configuration)' == 'Debug'">true</EnableAvaloniaDiagnostics>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <EnableXcodeExtension Condition="'$(EnableXcodeExtension)' == '' and '$(RuntimeIdentifier)' != ''">$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))</EnableXcodeExtension>
+        <EnableXcodeExtension Condition="'$(EnableXcodeExtension)' == '' and $([System.String]::Copy('$(TargetFramework)').Contains('-windows'))">false</EnableXcodeExtension>
+        <EnableXcodeExtension Condition="'$(EnableXcodeExtension)' == ''">$([MSBuild]::IsOSPlatform('OSX'))</EnableXcodeExtension>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(EnableXcodeExtension)' == 'true'">
+        <DefineConstants>$(DefineConstants);UNIGETUI_XCODE_EXTENSION</DefineConstants>
+    </PropertyGroup>
+
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
         <Optimize>true</Optimize>
         <WholeProgramOptimization>true</WholeProgramOptimization>

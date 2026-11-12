@@ -8,12 +8,14 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
@@ -48,6 +50,13 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private SidebarViewModel? _subscribedViewModel;
     private PageType? _pendingPointerNavigation;
 
+#if UNIGETUI_XCODE_EXTENSION
+    private readonly ListBoxItem XcodeNavBtn;
+    private readonly Border _xcodeBadge;
+    private readonly TextBlock _xcodeBadgeText;
+    private readonly ProgressBar _xcodeProgress;
+#endif
+
     private const double DragThreshold = 6d;
     private const double PillHeight = 16d;
     private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(300);
@@ -69,6 +78,9 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     public SidebarView()
     {
         InitializeComponent();
+#if UNIGETUI_XCODE_EXTENSION
+        (XcodeNavBtn, _xcodeBadge, _xcodeBadgeText, _xcodeProgress) = CreateXcodeNavButton();
+#endif
         PlatformShortcuts.AdaptAcceleratorKeys(this);
 
         NavigationPillTopCap.RenderTransform = _pillTopCapTranslate;
@@ -104,6 +116,9 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         UpdateViewModelSubscription(TopLevel.GetTopLevel(this) is not null);
         if (DataContext is SidebarViewModel vm)
         {
+#if UNIGETUI_XCODE_EXTENSION
+            SyncXcodeState(vm);
+#endif
             ApplyNavigationOrder(vm.NavigationPages);
             // The startup page may already be set before this view subscribes, so apply it now.
             SyncListBoxSelection(vm.SelectedPageType);
@@ -116,6 +131,9 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         UpdateViewModelSubscription(attached: true);
         if (_subscribedViewModel is { } vm)
         {
+#if UNIGETUI_XCODE_EXTENSION
+            SyncXcodeState(vm);
+#endif
             ApplyNavigationOrder(vm.NavigationPages);
             SyncListBoxSelection(vm.SelectedPageType);
         }
@@ -152,6 +170,15 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             ApplyNavigationOrder(vm.NavigationPages);
             SyncListBoxSelection(vm.SelectedPageType);
         }
+#if UNIGETUI_XCODE_EXTENSION
+        else if (args.PropertyName is nameof(SidebarViewModel.XcodeBadgeCount)
+                 or nameof(SidebarViewModel.XcodeBadgeVisible)
+                 or nameof(SidebarViewModel.XcodeBadgeText)
+                 or nameof(SidebarViewModel.XcodeIsLoading))
+        {
+            SyncXcodeState(vm);
+        }
+#endif
     }
 
     private void ApplyNavigationOrder(PageType[] pages)
@@ -428,10 +455,104 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         PageType.Bundles => BundlesNavBtn,
         PageType.GitRepositories => GitRepositoriesNavBtn,
         PageType.AgentSkills => AgentSkillsNavBtn,
+#if UNIGETUI_XCODE_EXTENSION
+        PageType.Xcode => XcodeNavBtn,
+#endif
         PageType.Settings => SettingsNavBtn,
         PageType.Managers => ManagersNavBtn,
         _ => null,
     };
+
+#if UNIGETUI_XCODE_EXTENSION
+    private (ListBoxItem Button, Border Badge, TextBlock BadgeText, ProgressBar Progress) CreateXcodeNavButton()
+    {
+        string title = CoreTools.Translate("Xcode");
+        var icon = new SvgIcon
+        {
+            Path = "avares://UniGetUI/Assets/Symbols/xcode.svg",
+            Width = 24,
+            Height = 24,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var label = new TextBlock
+        {
+            Text = title,
+            FontSize = 14,
+            FontWeight = FontWeight.Normal,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        label.Bind(IsVisibleProperty, this.GetObservable(ShowLabelsProperty));
+        Grid.SetColumn(label, 1);
+
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            ColumnSpacing = 12,
+            Margin = new Thickness(8, 8),
+        };
+        grid.Children.Add(icon);
+        grid.Children.Add(label);
+
+        var badgeText = new TextBlock
+        {
+            FontSize = 9,
+            FontWeight = FontWeight.Bold,
+            TextAlignment = TextAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        badgeText.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable("TextOnAccentFillColorPrimaryBrush"));
+
+        var badge = new Border
+        {
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(3, 1),
+            MinWidth = 16,
+            Height = 16,
+            IsVisible = false,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(26, 5, -20, 0),
+            Child = badgeText,
+        };
+        badge.Bind(Border.BackgroundProperty, this.GetResourceObservable("AccentFillColorDefaultBrush"));
+
+        var progress = new ProgressBar
+        {
+            IsVisible = false,
+            Height = 2,
+            Width = 32,
+            MinWidth = 0,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(4, 0, 0, 2),
+        };
+
+        var panel = new Panel();
+        panel.Children.Add(grid);
+        panel.Children.Add(badge);
+        panel.Children.Add(progress);
+
+        var button = new ListBoxItem
+        {
+            Tag = "Xcode",
+            Padding = new Thickness(4, 2),
+            CornerRadius = new CornerRadius(6),
+            Content = panel,
+        };
+        button.Classes.Add("nav-item");
+        AutomationProperties.SetName(button, title);
+        ToolTip.SetTip(button, title);
+        return (button, badge, badgeText, progress);
+    }
+
+    private void SyncXcodeState(SidebarViewModel vm)
+    {
+        _xcodeBadge.IsVisible = vm.XcodeBadgeVisible;
+        _xcodeBadgeText.Text = vm.XcodeBadgeText;
+        _xcodeProgress.IsVisible = vm.XcodeIsLoading;
+        _xcodeProgress.IsIndeterminate = vm.XcodeIsLoading;
+    }
+#endif
 
     private void SyncListBoxSelection(PageType page)
     {
@@ -449,6 +570,9 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             PageType.Catalog => CatalogNavBtn,
             PageType.GitRepositories => GitRepositoriesNavBtn,
             PageType.AgentSkills => AgentSkillsNavBtn,
+#if UNIGETUI_XCODE_EXTENSION
+            PageType.Xcode => XcodeNavBtn,
+#endif
             _ => null,
         };
         FooterNavListBox.SelectedItem = page switch

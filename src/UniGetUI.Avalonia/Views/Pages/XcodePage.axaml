@@ -1,0 +1,788 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.XcodePage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:pages="using:UniGetUI.Avalonia.Views.Pages"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:DataType="vm:XcodeViewModel">
+    <UserControl.Resources>
+        <pages:XcodePageWidthConverter x:Key="PageWidth"/>
+        <pages:XcodeBrowserHeightConverter x:Key="BrowserHeight"/>
+        <DataTemplate x:Key="XcodeVersionRowTemplate" x:DataType="vm:XcodeBrowserItemViewModel">
+            <Border Classes="xcode-row">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4">
+                        <Border Classes="tag installed" IsVisible="{Binding IsInstalled}">
+                            <TextBlock Text="{t:Translate Installed}"/>
+                        </Border>
+                        <Border Classes="tag good" IsVisible="{Binding IsActive}"
+                                ToolTip.Tip="{t:Translate Text='Command line tools such as xcodebuild use this Xcode.'}">
+                            <TextBlock Text="{t:Translate Active}"/>
+                        </Border>
+                        <Border Classes="tag caution" IsVisible="{Binding IsPrerelease}">
+                            <TextBlock Text="{t:Translate Pre-release}"/>
+                        </Border>
+                        <Border Classes="tag caution" IsVisible="{Binding HasStableCounterpart}"
+                                ToolTip.Tip="{Binding StableCounterpartText}">
+                            <TextBlock Text="{t:Translate Stable release found}"/>
+                        </Border>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding DetailText}" FontSize="11.5" Opacity="0.72"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Location}" IsVisible="{Binding IsInstalled}"
+                               FontSize="11" Opacity="0.58" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Location}"/>
+                    <StackPanel Name="VersionRowProgress" IsVisible="{Binding IsOperationTarget}" Spacing="4" Margin="0,2,0,0">
+                        <TextBlock Name="VersionRowOperationStatus"
+                                   Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationStatus}"
+                                   FontSize="11" TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationStatus}"/>
+                        <TextBlock Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationStep}"
+                                   FontSize="11" Opacity="0.7"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <ProgressBar Name="VersionRowOperationProgress" Minimum="0" Maximum="100" Height="4"
+                                         VerticalAlignment="Center"
+                                         Value="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationProgress}"
+                                         IsIndeterminate="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationIsIndeterminate}"
+                                         automation:AutomationProperties.Name="{Binding Title}"/>
+                            <Button Grid.Column="1" Name="CancelVersionRowOperation" Content="{t:Translate Cancel}"
+                                    Padding="8,2" FontSize="11.5"
+                                    automation:AutomationProperties.Name="{Binding CancelOperationText}"
+                                    Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).RequestCancelOperationCommand}"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="#XcodeToolbar Button">
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="#XcodeToolbar Button.subtle">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="#XcodeToolbar Button.subtle:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="#XcodeToolbar Button.subtle:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
+        </Style>
+        <Style Selector="#XcodeToolbar Button.xcode-switch">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        <Style Selector="Border.xcode-card">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SettingsCardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="Border.xcode-subcard">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,10"/>
+        </Style>
+        <Style Selector="Border.xcode-subcard.caution">
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource WarningBannerBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.xcode-subcard.caution TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusWarningForeground}"/>
+        </Style>
+        <Style Selector="Border.xcode-row">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="10,8"/>
+        </Style>
+        <Style Selector="ListBox#VersionList ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="ListBox#VersionList ListBoxItem:selected Border.xcode-row">
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="TreeView#GroupedVersionList TreeViewItem">
+            <Setter Property="IsExpanded"
+                    Value="{Binding $self.((vm:XcodeBrowserNodeViewModel)DataContext).IsExpanded, Mode=TwoWay}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="TreeView#GroupedVersionList TreeViewItem /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="TreeView#GroupedVersionList TreeViewItem:selected Border.xcode-row">
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="TreeView#GroupedVersionList Border.xcode-row">
+            <Setter Property="Padding" Value="6,6"/>
+        </Style>
+        <Style Selector="#VersionBrowserContent ComboBox">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="8,4,4,5"/>
+        </Style>
+        <Style Selector="#RuntimeBrowserContent ComboBox">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="8,4,6,5"/>
+        </Style>
+        <Style Selector="Border.tag">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Border.tag.installed">
+            <Setter Property="Background" Value="{DynamicResource StatusInfoBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource StatusInfoBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="Border.tag.installed TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource HyperlinkForeground}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Border.tag.good">
+            <Setter Property="Background" Value="{DynamicResource StatusSuccessBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource StatusSuccessBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="Border.tag.good TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusSuccessForeground}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Border.tag.caution">
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+        </Style>
+        <Style Selector="Border.tag.caution TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusWarningForeground}"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        <Style Selector="Border.tag TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style Selector="Button.xcode-installed-pill">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="11,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.xcode-installed-pill:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource StatusInfoBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.xcode-none-pill">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="11,6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer Name="XcodePageScroll" Focusable="True"
+                  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <Grid Name="XcodePageContent" Margin="12,8,12,10" MinWidth="560" HorizontalAlignment="Left">
+            <Grid.Width>
+                <MultiBinding Converter="{StaticResource PageWidth}">
+                    <Binding ElementName="XcodePageScroll" Path="Viewport.Width"/>
+                    <Binding ElementName="XcodePageContent" Path="MinWidth"/>
+                    <Binding ElementName="XcodePageContent" Path="Margin"/>
+                </MultiBinding>
+            </Grid.Width>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*" MinHeight="120"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="2,0,2,8">
+                <controls:SvgIcon Width="36" Height="36"
+                                  automation:AutomationProperties.AccessibilityView="Raw"
+                                  VerticalAlignment="Center" HorizontalAlignment="Center"
+                                  Path="avares://UniGetUI/Assets/Symbols/xcode.svg"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <TextBlock Text="{t:Translate Xcode}"
+                               FontSize="26" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{t:Translate Text='Install, update and switch between versions of Xcode.'}"
+                               FontSize="12" Opacity="0.65" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="2" Name="InstalledSummaryButton" Classes="xcode-installed-pill"
+                        MaxWidth="260" IsVisible="{Binding HasInstalled}"
+                        Command="{Binding FocusInstalledCommand}"
+                        ToolTip.Tip="{t:Translate Text='Show installed Xcode versions'}"
+                        automation:AutomationProperties.Name="{Binding InstalledSummaryTitle}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <Panel VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8"
+                                     Fill="{DynamicResource StatusSuccessForeground}"
+                                     IsVisible="{Binding HasActiveInstalled}"/>
+                            <Ellipse Width="8" Height="8"
+                                     Fill="{DynamicResource HyperlinkForeground}"
+                                     IsVisible="{Binding HasInactiveInstalled}"/>
+                        </Panel>
+                        <StackPanel Grid.Column="1" Spacing="1">
+                            <TextBlock Text="{Binding InstalledSummaryTitle}" FontSize="12.5" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding InstalledSummaryDetail}"
+                                       IsVisible="{Binding HasInstalledSummaryDetail}"
+                                       FontSize="11" Opacity="0.72"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding InstalledSummaryDetail}"/>
+                        </StackPanel>
+                    </Grid>
+                </Button>
+                <Border Grid.Column="2" Name="NoneInstalledBadge" Classes="xcode-none-pill"
+                        MaxWidth="220" IsVisible="{Binding NoneInstalled}">
+                    <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                        <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                 Fill="{DynamicResource TextFillColorTertiaryBrush}"/>
+                        <TextBlock Text="{t:Translate No Xcode installed}" FontSize="12" Opacity="0.75"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <controls:XcodeAccountCard Grid.Row="1" DataContext="{Binding Account}" Margin="0,0,0,8"/>
+
+            <!-- Toolbar -->
+            <Grid Grid.Row="2" Name="XcodeToolbar" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,0,0,6">
+                <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" VerticalAlignment="Center">
+                    <Button Classes="accent" Content="{Binding UpdateButtonText}"
+                            IsVisible="{Binding HasUpdate}" IsEnabled="{Binding CanStartOperation}"
+                            Command="{Binding UpdateXcodeCommand}"
+                            ToolTip.Tip="{t:Translate Text='Download the newest Xcode and install it next to the versions you have. They are kept until you uninstall them.'}"/>
+                    <Button Classes="subtle" Command="{Binding CheckForUpdatesCommand}" IsEnabled="{Binding CanStartOperation}"
+                            ToolTip.Tip="{t:Translate Text='Download the list of Xcode versions again and look for a newer one'}"
+                            automation:AutomationProperties.Name="{t:Translate Check for updates}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg" Width="16" Height="16"
+                                              VerticalAlignment="Center"/>
+                            <TextBlock Text="{t:Translate Check for updates}" FontSize="12.5" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Name="OpenSimulatorRuntimes" Classes="xcode-switch"
+                            Content="{t:Translate Simulator runtimes}"
+                            IsVisible="{Binding !ShowSimulatorRuntimes}" IsEnabled="{Binding CanOpenSimulatorRuntimes}"
+                            Command="{Binding OpenSimulatorRuntimesCommand}"/>
+                    <Button Name="ShowXcodeVersions" Classes="xcode-switch"
+                            Content="{t:Translate Xcode versions}"
+                            IsVisible="{Binding ShowSimulatorRuntimes}" Command="{Binding ShowXcodeVersionsCommand}"/>
+                </WrapPanel>
+                <WrapPanel Grid.Column="1" Orientation="Horizontal" ItemSpacing="12" LineSpacing="4"
+                           VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding LastCheckedText}" FontSize="12" Opacity="0.6" VerticalAlignment="Center"/>
+                    <CheckBox IsChecked="{Binding IncludePrereleases, Mode=TwoWay}" VerticalAlignment="Center"
+                              ToolTip.Tip="{t:Translate Text='Offer betas and release candidates as updates.'}">
+                        <TextBlock Text="{t:Translate Include pre-releases}" FontSize="12"/>
+                    </CheckBox>
+                </WrapPanel>
+            </Grid>
+
+            <ProgressBar Grid.Row="3" Margin="0,0,0,6" Height="3"
+                         IsIndeterminate="{Binding ShowBusyBar}" IsVisible="{Binding ShowBusyBar}"/>
+
+            <controls:InfoBar Grid.Row="4" DataContext="{Binding Notice}" Margin="0,0,0,8"/>
+
+            <!-- The installation that is running, or that failed -->
+            <Border Name="OperationPanel" Grid.Row="5" Classes="xcode-card" Margin="0,0,0,8" Padding="14,12"
+                    IsVisible="{Binding HasOperation}">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding OperationTitle}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding OperationStatus}" FontSize="12" Opacity="0.8" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding OperationStep}" FontSize="12" Opacity="0.65" VerticalAlignment="Center"/>
+                        <Button Content="{t:Translate Cancel}" IsVisible="{Binding IsOperationRunning}"
+                                Command="{Binding RequestCancelOperationCommand}"/>
+                        <Button Content="{t:Translate Close}" IsVisible="{Binding IsOperationFinished}"
+                                Command="{Binding DismissOperationCommand}"/>
+                    </StackPanel>
+                    <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Minimum="0" Maximum="100"
+                                 Value="{Binding OperationProgress}"
+                                 IsIndeterminate="{Binding OperationIsIndeterminate}"
+                                 IsVisible="{Binding IsOperationRunning}"/>
+                    <Border Grid.Row="2" Grid.ColumnSpan="2" Classes="xcode-subcard" IsVisible="{Binding HasAccessRecovery}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{t:Translate Text='Apple reported a possible access problem. The Apple ID or session, developer access or agreements, or the service may be responsible. Check the original error below.'}"
+                                       FontSize="12.5" TextWrapping="Wrap"/>
+                            <TextBlock Text="{t:Translate Text='Refresh the Xcode version list before retrying.'}"
+                                       IsVisible="{Binding !HasLoaded}" FontSize="12" Opacity="0.8" TextWrapping="Wrap"/>
+                            <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+                                <Button Content="{t:Translate Use a different Apple ID}" Command="{Binding Account.UseDifferentAppleIdCommand}"/>
+                                <Button Content="{t:Translate Apple Developer account}" Command="{Binding Account.OpenDeveloperAccountCommand}"/>
+                                <Button Content="{t:Translate Retry}" Command="{Binding RetryInstallationCommand}"
+                                        IsEnabled="{Binding CanRetryInstallation}"/>
+                                <Button Content="{t:Translate Dismiss}" Command="{Binding DismissAccessRecoveryCommand}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                    <Expander Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              IsExpanded="{Binding IsLogExpanded, Mode=TwoWay}"
+                              Header="{t:Translate Details}">
+                        <Border Padding="8,6" CornerRadius="4"
+                                Background="{DynamicResource AppDialogSubtleBackground}"
+                                BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}">
+                            <ScrollViewer Name="LogScroll" MaxHeight="180"
+                                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                <SelectableTextBlock Name="LogText" Text="{Binding OperationLog}"
+                                                     FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                                                     FontSize="11" Opacity="0.85"/>
+                            </ScrollViewer>
+                        </Border>
+                    </Expander>
+                </Grid>
+            </Border>
+
+            <Border Name="VersionBrowser" Grid.Row="6" Grid.RowSpan="2"
+                    Classes="xcode-card" IsVisible="{Binding ShowVersionBrowser}">
+                <Border.MaxHeight>
+                    <MultiBinding Converter="{StaticResource BrowserHeight}">
+                        <Binding ElementName="XcodePageScroll" Path="Viewport.Height"/>
+                        <Binding ElementName="VersionBrowser" Path="Bounds.Y"/>
+                        <Binding ElementName="VersionListRegion" Path="Bounds.Y"/>
+                        <Binding ElementName="VersionListRegion" Path="MinHeight"/>
+                        <Binding ElementName="XcodePageContent" Path="Margin"/>
+                        <Binding ElementName="VersionBrowserContent" Path="Margin"/>
+                        <Binding ElementName="VersionBrowser" Path="BorderThickness"/>
+                    </MultiBinding>
+                </Border.MaxHeight>
+                <Grid ColumnDefinitions="332,*">
+                    <Grid Name="VersionBrowserContent" RowDefinitions="Auto,Auto,*" Margin="10">
+                        <TextBox Text="{Binding SearchText, Mode=TwoWay}"
+                                 PlaceholderText="{t:Translate Search versions}"
+                                 automation:AutomationProperties.Name="{t:Translate Search versions}"/>
+                        <Border Grid.Row="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1"
+                                Padding="0,8,0,8" Margin="0,0,0,4">
+                            <StackPanel Spacing="6">
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                                    <ComboBox SelectedIndex="{Binding ReleaseFilterIndex, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              automation:AutomationProperties.Name="{t:Translate Release filter}">
+                                        <ComboBoxItem Content="{t:Translate All versions}"/>
+                                        <ComboBoxItem Content="{t:Translate Releases only}"/>
+                                        <ComboBoxItem Content="{t:Translate Pre-releases only}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Column="1" SelectedIndex="{Binding ArchitectureFilterIndex, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              automation:AutomationProperties.Name="{t:Translate Architecture filter}">
+                                        <ComboBoxItem Content="{t:Translate All architectures}"/>
+                                        <ComboBoxItem Content="{t:Translate Apple Silicon}"/>
+                                        <ComboBoxItem Content="{t:Translate Universal}"/>
+                                        <ComboBoxItem Content="{t:Translate Intel}"/>
+                                    </ComboBox>
+                                </Grid>
+                                <WrapPanel Orientation="Horizontal" ItemSpacing="14" LineSpacing="4">
+                                    <CheckBox IsChecked="{Binding InstalledOnly, Mode=TwoWay}" FontSize="12.5">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <TextBlock Text="{t:Translate Installed only}" VerticalAlignment="Center"/>
+                                            <Border Classes="tag installed" Padding="5,1"
+                                                    IsVisible="{Binding HasInstalledCountBadge}">
+                                                <TextBlock Text="{Binding InstalledCountText}" FontSize="10.5"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    <CheckBox IsChecked="{Binding GroupVersions, Mode=TwoWay}" FontSize="12.5"
+                                              Content="{t:Translate Group versions}"/>
+                                </WrapPanel>
+                                <TextBlock Name="VersionListStatus" Text="{Binding VersionListStatusText}"
+                                           IsVisible="{Binding HasVersionListStatus}" FontSize="11.5"
+                                           TextWrapping="Wrap" Opacity="0.78"
+                                           automation:AutomationProperties.AccessibilityView="Control"/>
+                            </StackPanel>
+                        </Border>
+                        <Grid Name="VersionListRegion" Grid.Row="2" MinHeight="120" IsVisible="{Binding !IsBrowserEmpty}">
+                            <ListBox Name="VersionList" ItemsSource="{Binding BrowserItems}"
+                                     SelectedItem="{Binding SelectedBrowserItem, Mode=TwoWay}"
+                                     ItemTemplate="{StaticResource XcodeVersionRowTemplate}"
+                                     Background="Transparent" Padding="0" IsVisible="{Binding !GroupVersions}"
+                                     automation:AutomationProperties.Name="{t:Translate Xcode versions}"/>
+                            <TreeView Name="GroupedVersionList" ItemsSource="{Binding BrowserGroups}"
+                                      SelectedItem="{Binding SelectedTreeNode, Mode=TwoWay}"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      Background="Transparent" IsVisible="{Binding GroupVersions}"
+                                      automation:AutomationProperties.Name="{t:Translate Xcode versions}">
+                                <TreeView.Resources>
+                                    <x:Double x:Key="TreeViewItemIndent">10</x:Double>
+                                </TreeView.Resources>
+                                <TreeView.ItemTemplate>
+                                    <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:XcodeBrowserNodeViewModel">
+                                        <Grid>
+                                            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsGroup}" Margin="2,5">
+                                                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                                <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                                         Fill="{DynamicResource StatusSuccessForeground}"
+                                                         IsVisible="{Binding HasActiveChild}"
+                                                         ToolTip.Tip="{t:Translate Active}"/>
+                                                <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                                         Fill="{DynamicResource HyperlinkForeground}"
+                                                         IsVisible="{Binding HasInactiveInstalledChild}"
+                                                         ToolTip.Tip="{t:Translate Installed}"/>
+                                            </StackPanel>
+                                            <ContentControl Content="{Binding Item}" IsVisible="{Binding !IsGroup}"
+                                                            ContentTemplate="{StaticResource XcodeVersionRowTemplate}"/>
+                                        </Grid>
+                                    </TreeDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                        </Grid>
+                        <TextBlock Grid.Row="2" Text="{Binding BrowserEmptyText}" IsVisible="{Binding IsBrowserEmpty}"
+                                   Opacity="0.7" TextWrapping="Wrap" TextAlignment="Center" Margin="16"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Border Grid.Column="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1,0,0,0">
+                        <Grid>
+                            <ScrollViewer IsVisible="{Binding HasBrowserSelection}" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel DataContext="{Binding SelectedBrowserItem}" x:DataType="vm:XcodeBrowserItemViewModel"
+                                            Margin="22,18" Spacing="14">
+                                    <!-- Version Hero Header -->
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding DetailText}" FontSize="13" Opacity="0.72" TextWrapping="Wrap"/>
+                                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+                                            <Border Classes="tag good" Padding="8,3" IsVisible="{Binding IsActive}">
+                                                <TextBlock Text="{t:Translate Active command line Xcode}"/>
+                                            </Border>
+                                            <Border Classes="tag installed" Padding="8,3" IsVisible="{Binding IsInstalled}">
+                                                <TextBlock Text="{t:Translate Installed}"/>
+                                            </Border>
+                                            <Border Classes="tag caution" Padding="8,3" IsVisible="{Binding IsPrerelease}">
+                                                <TextBlock Text="{t:Translate Pre-release}"/>
+                                            </Border>
+                                        </WrapPanel>
+                                    </StackPanel>
+
+                                    <Border Name="StableCounterpartNotice" Classes="xcode-subcard caution"
+                                            IsVisible="{Binding HasStableCounterpart}">
+                                        <TextBlock Text="{Binding StableCounterpartText}" FontSize="12.5" TextWrapping="Wrap"/>
+                                    </Border>
+
+                                    <!-- Unified Action Bar -->
+                                    <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8">
+                                        <Button Classes="accent" Content="{t:Translate Select}" IsVisible="{Binding CanSelect}"
+                                                IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).SelectCommand}"
+                                                CommandParameter="{Binding InstalledItem}"/>
+                                        <Button Name="OpenSelectedXcode" Content="{t:Translate Open}"
+                                                IsVisible="{Binding IsInstalled}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OpenCommand}"
+                                                CommandParameter="{Binding InstalledItem}"/>
+                                        <Button Name="RevealSelectedXcode" Content="{t:Translate Show in Finder}"
+                                                IsVisible="{Binding IsInstalled}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).RevealInFinderCommand}"
+                                                CommandParameter="{Binding InstalledItem}"/>
+                                        <Button Content="{t:Translate Copy path}"
+                                                IsVisible="{Binding IsInstalled}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CopyPathCommand}"
+                                                CommandParameter="{Binding InstalledItem}"/>
+                                        <Button Name="InstallSelectedXcode" Classes="accent" Content="{t:Translate Install}"
+                                                IsVisible="{Binding CanInstall}"
+                                                IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).InstallCommand}"
+                                                CommandParameter="{Binding AvailableItem}"/>
+                                        <Button Name="DownloadSelectedXcode" Content="{t:Translate Download}"
+                                                IsVisible="{Binding CanDownload}"
+                                                IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).DownloadXcodeCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="{t:Translate Release notes}" IsVisible="{Binding HasReleaseNotes}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OpenReleaseNotesCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Name="OpenMappedSimulatorRuntimes"
+                                                Content="{t:Translate View mapped simulator runtimes}"
+                                                IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OpenMappedSimulatorRuntimesCommand}"/>
+                                        <Button Content="{t:Translate Uninstall...}"
+                                                IsVisible="{Binding IsInstalled}"
+                                                ToolTip.Tip="{t:Translate Text='Show this Xcode in Finder to remove it yourself.'}"
+                                                IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).UninstallCommand}"
+                                                CommandParameter="{Binding InstalledItem}"/>
+                                    </WrapPanel>
+
+                                    <!-- Active Operation Progress -->
+                                    <Border Classes="xcode-subcard" IsVisible="{Binding IsOperationTarget}">
+                                        <StackPanel Name="SelectedVersionProgress" IsVisible="{Binding IsOperationTarget}" Spacing="6">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <TextBlock Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationTitle}"
+                                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationStep}"
+                                                           FontSize="12" Opacity="0.7" VerticalAlignment="Center"/>
+                                            </Grid>
+                                            <TextBlock Name="SelectedVersionOperationStatus"
+                                                       Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationStatus}"
+                                                       FontSize="12.5" TextWrapping="Wrap"/>
+                                            <ProgressBar Name="SelectedVersionOperationProgress" Minimum="0" Maximum="100"
+                                                         Value="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationProgress}"
+                                                         IsIndeterminate="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationIsIndeterminate}"
+                                                         automation:AutomationProperties.Name="{Binding Title}"/>
+                                            <Button Name="CancelSelectedVersionOperation" Content="{t:Translate Cancel}"
+                                                    HorizontalAlignment="Left"
+                                                    automation:AutomationProperties.Name="{Binding CancelOperationText}"
+                                                    Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).RequestCancelOperationCommand}"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Installed Path Card -->
+                                    <Border Classes="xcode-subcard" IsVisible="{Binding IsInstalled}">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="{t:Translate Installed on this Mac}"
+                                                       FontSize="11.5" FontWeight="SemiBold" Opacity="0.72"/>
+                                            <SelectableTextBlock Text="{Binding Location}"
+                                                                 FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                                                                 FontSize="12" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Available Variants & Compatibility Card -->
+                                    <Border Classes="xcode-subcard" IsVisible="{Binding IsAvailable}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="{Binding ListedArchitecturesText}" FontWeight="Medium" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{t:Translate Text='The architecture filter selects a listed variant. With all architectures, the download for this Mac is preferred.'}"
+                                                       IsVisible="{Binding CanInstall}" FontSize="12" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{t:Translate Text='The exact build is not yet known. Check again after release details are available.'}"
+                                                       IsVisible="{Binding !CanInstall}" FontSize="12" Opacity="0.82" TextWrapping="Wrap"/>
+                                            <Border Classes="xcode-subcard caution" Padding="10,6" IsVisible="{Binding IsIncompatible}">
+                                                <TextBlock Text="{Binding CompatibilityText}" FontSize="12" TextWrapping="Wrap"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding CompatibilityText}" IsVisible="{Binding !IsIncompatible}"
+                                                       FontSize="12" Opacity="0.78" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Release Metadata Card -->
+                                    <Border Classes="xcode-subcard">
+                                        <StackPanel Spacing="8">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                                <TextBlock Text="{t:Translate Details}" FontSize="13" FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Name="CatalogStatus"
+                                                           Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CatalogStatusText}"
+                                                           FontSize="11.5" Opacity="0.65" TextWrapping="Wrap"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                           automation:AutomationProperties.AccessibilityView="Control"/>
+                                            </Grid>
+                                            <TextBlock Text="{t:Translate Text='Release details could not be matched to this version, build and architecture.'}"
+                                                       IsVisible="{Binding !HasReleaseDetails}" FontSize="12.5" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <StackPanel IsVisible="{Binding HasReleaseDetails}" Spacing="6">
+                                                <TextBlock Text="{Binding ReleaseDateText}" IsVisible="{Binding HasReleaseDate}"
+                                                           FontSize="12.5" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding RequiredMacOSText}" FontSize="12.5" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding SizeText}" IsVisible="{Binding HasSize}"
+                                                           FontSize="12.5" TextWrapping="Wrap"/>
+                                                <TextBlock Name="SameBuildVersions" Text="{Binding SameBuildVersionsText}"
+                                                           IsVisible="{Binding HasSameBuildVersions}" FontSize="12.5" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding SDKsText}" IsVisible="{Binding HasSDKs}"
+                                                           FontSize="12.5" Opacity="0.88" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding CompilersText}" IsVisible="{Binding HasCompilers}"
+                                                           FontSize="12.5" Opacity="0.88" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                            <TextBlock Text="{t:Translate Choose a version to see its details.}"
+                                       IsVisible="{Binding !HasBrowserSelection}" TextWrapping="Wrap" Opacity="0.7"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border Name="RuntimeBrowser" Grid.Row="6" Grid.RowSpan="2"
+                    Classes="xcode-card" IsVisible="{Binding ShowRuntimeBrowser}">
+                <Border.MaxHeight>
+                    <MultiBinding Converter="{StaticResource BrowserHeight}">
+                        <Binding ElementName="XcodePageScroll" Path="Viewport.Height"/>
+                        <Binding ElementName="RuntimeBrowser" Path="Bounds.Y"/>
+                        <Binding ElementName="RuntimeListRegion" Path="Bounds.Y"/>
+                        <Binding ElementName="RuntimeListRegion" Path="MinHeight"/>
+                        <Binding ElementName="XcodePageContent" Path="Margin"/>
+                        <Binding ElementName="RuntimeBrowserContent" Path="Margin"/>
+                        <Binding ElementName="RuntimeBrowser" Path="BorderThickness"/>
+                    </MultiBinding>
+                </Border.MaxHeight>
+                <Grid Name="RuntimeBrowserContent" DataContext="{Binding Runtimes}" x:DataType="vm:XcodeSimulatorRuntimesViewModel"
+                      RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8" Margin="14,12">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{t:Translate Simulator runtimes}" FontSize="18" FontWeight="SemiBold"/>
+                            <WrapPanel Orientation="Horizontal" ItemSpacing="12" LineSpacing="2">
+                                <TextBlock Name="SimulatorCatalogStatus" Text="{Binding CatalogStatus}" TextWrapping="Wrap"
+                                           FontSize="11.5" Opacity="0.68"
+                                           automation:AutomationProperties.AccessibilityView="Control"/>
+                                <TextBlock Text="{Binding InstalledStatus}" TextWrapping="Wrap"
+                                           FontSize="11.5" Opacity="0.68"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Button Grid.Column="1" Name="RefreshSimulatorRuntimes" Content="{t:Translate Refresh}"
+                                VerticalAlignment="Center"
+                                IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).RefreshSimulatorRuntimesCommand}"/>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Spacing="6">
+                        <Border Classes="xcode-subcard" Padding="10,8" IsVisible="{Binding HasMappingContext}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Name="RuntimeMappingStatus" Text="{Binding MappingStatus}"
+                                               FontWeight="SemiBold" FontSize="12.5" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding MappingCatalogStatus}" TextWrapping="Wrap"
+                                               FontSize="11.5" Opacity="0.72"/>
+                                    <TextBlock Text="{t:Translate Text='Mapping does not change the active developer tools; install and export use the currently selected tools.'}"
+                                               TextWrapping="Wrap" FontSize="11.5" Opacity="0.72"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Name="ShowAllSimulatorRuntimes"
+                                        Content="{t:Translate Show all runtimes}" VerticalAlignment="Center"
+                                        Command="{Binding ShowAllRuntimesCommand}"/>
+                            </Grid>
+                        </Border>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{t:Translate Text='Apple catalog entries and runtimes visible to the selected developer tools are listed separately. DEVELOPER_DIR can select different tools.'}"
+                                       TextWrapping="Wrap" FontSize="11.5" Opacity="0.68"/>
+                            <TextBlock Text="{t:Translate Text='Supported modern runtimes can be installed or exported by Xcode. Some legacy images can be downloaded from Apple but not installed here.'}"
+                                       TextWrapping="Wrap" FontSize="11.5" Opacity="0.64"/>
+                            <TextBlock Text="{t:Translate Text='Unknown release stages and architectures are shown only when their filters are set to All.'}"
+                                       TextWrapping="Wrap" FontSize="11.5" Opacity="0.64"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1"
+                            Padding="0,0,0,8">
+                        <StackPanel Spacing="6">
+                            <TextBox Name="SimulatorRuntimeSearch" Text="{Binding SearchText, Mode=TwoWay}"
+                                     PlaceholderText="{t:Translate Search runtimes}"
+                                     automation:AutomationProperties.Name="{t:Translate Search runtimes}"/>
+                            <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+                                <ComboBox Name="SimulatorRuntimeSourceFilter" SelectedIndex="{Binding SourceFilterIndex, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Runtime source filter}">
+                                    <ComboBoxItem Content="{t:Translate All entries}"/>
+                                    <ComboBoxItem Content="{t:Translate Installed and bundled}"/>
+                                    <ComboBoxItem Content="{t:Translate Apple catalog}"/>
+                                </ComboBox>
+                                <ComboBox Name="SimulatorRuntimePlatformFilter" SelectedIndex="{Binding PlatformFilterIndex, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Runtime platform filter}">
+                                    <ComboBoxItem Content="{t:Translate All platforms}"/>
+                                    <ComboBoxItem Content="iOS"/>
+                                    <ComboBoxItem Content="watchOS"/>
+                                    <ComboBoxItem Content="tvOS"/>
+                                    <ComboBoxItem Content="visionOS"/>
+                                </ComboBox>
+                                <ComboBox Name="SimulatorRuntimeReleaseFilter" SelectedIndex="{Binding ReleaseFilterIndex, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Release filter}">
+                                    <ComboBoxItem Content="{t:Translate All versions}"/>
+                                    <ComboBoxItem Content="{t:Translate Releases only}"/>
+                                    <ComboBoxItem Content="{t:Translate Pre-releases only}"/>
+                                </ComboBox>
+                                <ComboBox Name="SimulatorRuntimeArchitectureFilter"
+                                          SelectedIndex="{Binding ArchitectureFilterIndex, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Architecture filter}">
+                                    <ComboBoxItem Content="{t:Translate All architectures}"/>
+                                    <ComboBoxItem Content="{t:Translate Apple Silicon}"/>
+                                    <ComboBoxItem Content="{t:Translate Universal}"/>
+                                    <ComboBoxItem Content="{t:Translate Intel}"/>
+                                </ComboBox>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                    <Grid Name="RuntimeListRegion" Grid.Row="3" MinHeight="120">
+                        <ListBox Name="SimulatorRuntimeList" ItemsSource="{Binding Items}" IsVisible="{Binding !IsEmpty}"
+                                 Background="Transparent" Padding="0"
+                                 automation:AutomationProperties.Name="{t:Translate Simulator runtimes}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:XcodeSimulatorRuntimeItemViewModel">
+                                    <Border Classes="xcode-row" Padding="12,10">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="12" Opacity="0.75" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Path}" IsVisible="{Binding HasPath}"
+                                                           FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                                                           FontSize="11" Opacity="0.6" TextWrapping="Wrap"/>
+                                                <StackPanel Name="RuntimeRowProgress" IsVisible="{Binding IsOperationTarget}" Spacing="4" Margin="0,4,0,0">
+                                                    <TextBlock Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationTitle}"
+                                                               FontWeight="SemiBold" FontSize="12.5" TextWrapping="Wrap"/>
+                                                    <TextBlock Name="RuntimeRowOperationStatus"
+                                                               Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationStatus}"
+                                                               FontSize="12" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationStep}"
+                                                               FontSize="11" Opacity="0.7"/>
+                                                    <ProgressBar Name="RuntimeRowOperationProgress" Minimum="0" Maximum="100"
+                                                                 Value="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationProgress}"
+                                                                 IsIndeterminate="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).OperationIsIndeterminate}"
+                                                                 automation:AutomationProperties.Name="{Binding Title}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <WrapPanel Grid.Column="1" Orientation="Horizontal" ItemSpacing="6" LineSpacing="6"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                <Button Name="CancelRuntimeRowOperation" Content="{t:Translate Cancel}"
+                                                        IsVisible="{Binding IsOperationTarget}"
+                                                        automation:AutomationProperties.Name="{Binding CancelOperationText}"
+                                                        Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).RequestCancelOperationCommand}"/>
+                                                <Button Content="{t:Translate Install with Xcode}"
+                                                        IsVisible="{Binding CanInstall}"
+                                                        IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                        Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).InstallSimulatorRuntimeCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="{t:Translate Export with Xcode}"
+                                                        IsVisible="{Binding CanInstall}"
+                                                        IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                        Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).ExportSimulatorRuntimeCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="{t:Translate Download from Apple}"
+                                                        IsVisible="{Binding CanDownload}"
+                                                        IsEnabled="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CanStartOperation}"
+                                                        Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).DownloadSimulatorRuntimeCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="{t:Translate Show in Finder}"
+                                                        IsVisible="{Binding HasLocalPath}"
+                                                        Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).RevealSimulatorRuntimeInFinderCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="{t:Translate Copy path}"
+                                                        IsVisible="{Binding HasLocalPath}"
+                                                        Command="{Binding $parent[UserControl].((vm:XcodeViewModel)DataContext).CopySimulatorRuntimePathCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                            </WrapPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="{Binding EmptyText}"
+                                   IsVisible="{Binding IsEmpty}" Opacity="0.7" TextWrapping="Wrap"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

@@ -33,6 +33,9 @@ public static class IpcAppPages
         "catalog-editor",
         "git-repositories",
         "agent-skills",
+#if UNIGETUI_XCODE_EXTENSION
+        .. OperatingSystem.IsMacOS() ? ["xcode"] : Array.Empty<string>(),
+#endif
         "settings",
         "managers",
         "own-log",
@@ -58,6 +61,9 @@ public static class IpcAppPages
             "catalog-editor" => normalized,
             "git-repositories" => normalized,
             "agent-skills" => normalized,
+#if UNIGETUI_XCODE_EXTENSION
+            "xcode" when OperatingSystem.IsMacOS() => normalized,
+#endif
             "settings" => normalized,
             "managers" => normalized,
             "own-log" => normalized,
@@ -89,6 +95,9 @@ public static class IpcAppPages
             "CatalogEditor" => "catalog-editor",
             "GitRepositories" => "git-repositories",
             "AgentSkills" => "agent-skills",
+#if UNIGETUI_XCODE_EXTENSION
+            "Xcode" => "xcode",
+#endif
             "Settings" => "settings",
             "Managers" => "managers",
             "OwnLog" => "own-log",

@@ -190,6 +190,9 @@ public partial class MainWindow
         PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
         PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
         PageType.AgentSkills => CoreTools.Translate("Agent Skills"),
+#if UNIGETUI_XCODE_EXTENSION
+        PageType.Xcode => CoreTools.Translate("Xcode"),
+#endif
         PageType.Managers => CoreTools.Translate("Package Managers"),
         _ => CoreTools.Translate("Settings"),
     };

@@ -1,0 +1,62 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Controls.XcodeAccountCard"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:DataType="vm:XcodeAccountViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.xcode-link">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0,1"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource HyperlinkForeground}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.xcode-link /template/ ContentPresenter#PART_ContentPresenter,
+                         Button.xcode-link:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         Button.xcode-link:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource HyperlinkForeground}"/>
+        </Style>
+        <Style Selector="Button.xcode-link:pointerover">
+            <Setter Property="Opacity" Value="0.8"/>
+        </Style>
+        <Style Selector="Button.xcode-link:pressed">
+            <Setter Property="Opacity" Value="0.6"/>
+        </Style>
+    </UserControl.Styles>
+    <Border Background="{DynamicResource SettingsCardBackground}"
+            BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+            <StackPanel Spacing="3" VerticalAlignment="Center">
+                <WrapPanel Orientation="Horizontal" ItemSpacing="12" LineSpacing="4">
+                    <SelectableTextBlock Text="{Binding Status}" FontSize="13.5" FontWeight="SemiBold"
+                                         TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    <Button Classes="xcode-link" Content="{t:Translate Apple Developer account}"
+                            Command="{Binding OpenDeveloperAccountCommand}" VerticalAlignment="Center"/>
+                </WrapPanel>
+                <TextBlock Text="{Binding Description}" FontSize="12" Opacity="0.72" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}"
+                           Foreground="{DynamicResource SettingWarningTextForeground}"
+                           TextWrapping="Wrap" FontSize="12"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                <Button Classes="accent" Content="{t:Translate Sign in}" Command="{Binding SignInCommand}"
+                        IsVisible="{Binding !HasAccount}" Padding="14,6" HorizontalAlignment="Right"/>
+                <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" MaxWidth="280"
+                           HorizontalAlignment="Right" IsVisible="{Binding HasAccount}">
+                    <Button Content="{t:Translate Verify session}" Command="{Binding VerifyCommand}"/>
+                    <Button Content="{t:Translate Use a different Apple ID}" Command="{Binding UseDifferentAppleIdCommand}"/>
+                    <Button Content="{t:Translate Sign out}" Command="{Binding SignOutCommand}"/>
+                </WrapPanel>
+            </StackPanel>
+            <controls:InfoBar Grid.Row="1" Grid.ColumnSpan="2" DataContext="{Binding Notice}"/>
+        </Grid>
+    </Border>
+</UserControl>

@@ -75,6 +75,27 @@ namespace UniGetUI.Core.SettingsEngine.Tests
         }
 
         [Fact]
+        public void TrySetValueReportsFailureWithoutChangingTheCachedValue()
+        {
+            Settings.ResetSettings();
+            Settings.K key = Settings.K.XcodeInstallDirectory;
+            string path = GetNewSettingPath(Settings.ResolveKey(key));
+            Assert.True(Settings.TrySetValue(key, "original"));
+
+            File.Delete(path);
+            Directory.CreateDirectory(path);
+            Assert.False(Settings.TrySetValue(key, "replacement"));
+            Assert.Equal("original", Settings.GetValue(key));
+            Assert.False(Settings.TrySetValue(key, ""));
+            Assert.Equal("original", Settings.GetValue(key));
+
+            Directory.Delete(path);
+            Assert.True(Settings.TrySetValue(key, ""));
+            Assert.Equal("", Settings.GetValue(key));
+            Settings.ResetSettings();
+        }
+
+        [Fact]
         public void TestExistingSettingsMigrateToNewDirectory()
         {
             string settingName = Settings.ResolveKey(Settings.K.Test7_Legacy);

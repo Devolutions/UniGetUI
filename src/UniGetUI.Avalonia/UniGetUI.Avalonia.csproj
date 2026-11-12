@@ -6,7 +6,7 @@
         <ItemGroup>
             <Compile
                 Include="**/*$(DefaultLanguageSourceExtension)"
-                Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**;@(Compile)"
+                Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**;@(Compile);@(XcodeExcludedCompile)"
             />
         </ItemGroup>
     </Target>
@@ -298,6 +298,7 @@
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Tools\UniGetUI.Core.Tools.csproj" />
         <ProjectReference Include="..\UniGetUI.Extensions.GitRepositories\UniGetUI.Extensions.GitRepositories.csproj" />
+        <ProjectReference Include="..\UniGetUI.Extensions.Xcode\UniGetUI.Extensions.Xcode.csproj" Condition="'$(EnableXcodeExtension)' == 'true'" />
         <ProjectReference Include="..\UniGetUI.Interface.Enums\UniGetUI.Interface.Enums.csproj" />
         <ProjectReference Include="..\UniGetUI.Interface.IpcApi\UniGetUI.Interface.IpcApi.csproj" />
         <ProjectReference Include="..\UniGetUI.Interface.Telemetry\UniGetUI.Interface.Telemetry.csproj" />
@@ -356,6 +357,13 @@
       <!-- Style-only files have no x:Class; exclude from codegen and embed as plain resources -->
       <AvaloniaXaml Remove="Assets\Styles\*.axaml" />
       <AvaloniaResource Include="Assets\Styles\*.axaml" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(EnableXcodeExtension)' != 'true'">
+      <XcodeExcludedCompile Include="Infrastructure\Xcode*.cs;ViewModels\Pages\Xcode*.cs;ViewModels\Pages\SettingsPages\XcodeSettingsViewModel.cs;Views\Controls\XcodeAccountCard.axaml.cs;Views\DialogPages\Xcode*.cs;Views\Pages\XcodePage.axaml.cs;Views\Pages\SettingsPages\XcodeSettings.axaml.cs" />
+      <Compile Remove="@(XcodeExcludedCompile)" />
+      <AvaloniaXaml Remove="Views\Controls\XcodeAccountCard.axaml;Views\Pages\XcodePage.axaml;Views\Pages\SettingsPages\XcodeSettings.axaml" />
+      <AvaloniaResource Remove="..\SharedAssets\Assets\Symbols\xcode.svg" />
     </ItemGroup>
 
     <ItemGroup>

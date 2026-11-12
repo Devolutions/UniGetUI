@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Hindi ma-shutdown ang computer",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "Hindi masimulan ng UniGetUI ang pag-shutdown. Paki-shutdown nang manu-mano ang computer mo.",
   "Your computer was not shut down": "Hindi na-shutdown ang computer mo",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "May ilang operasyong nabigo, kaya hindi na-shutdown ng UniGetUI ang computer mo. Suriin ang mga nabigong operasyon, pagkatapos ay i-shutdown ito nang manu-mano."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "May ilang operasyong nabigo, kaya hindi na-shutdown ng UniGetUI ang computer mo. Suriin ang mga nabigong operasyon, pagkatapos ay i-shutdown ito nang manu-mano.",
+  "Skip major updates for this package": "Laktawan ang mga pangunahing update para sa package na ito",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "Hindi na-update ang {0} sa {1}: naka-install na ang mas bagong bersyon. I-reload ang listahan ng mga update.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "Hindi na-update ang {0}: nilalaktawan ang mga pangunahing update para sa package na ito at hindi alam ang bersyong ia-update. I-update ito mula sa listahan ng mga update, o humiling ng partikular na bersyon.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "Hindi na-update ang {0} sa {1}: hindi mai-install ng {2} ang eksaktong bersyong iyon sa ngayon. I-reload ang listahan ng mga update.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "Hindi na-update ang {0} sa {1}: nilalaktawan ang mga pangunahing update para sa package na ito. I-reload ang listahan ng mga update para makakita ng update sa loob ng naka-install na pangunahing bersyon, o i-off ang \"Laktawan ang mga pangunahing update\" para i-install ito."
 }

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Не ўдалося выключыць камп'ютар",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI не ўдалося пачаць выключэнне. Выключыце камп'ютар уручную.",
   "Your computer was not shut down": "Камп'ютар не быў выключаны",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некаторыя аперацыі не выканаліся, таму UniGetUI не выключыў камп'ютар. Праверце аперацыі, якія не выканаліся, а затым выключыце камп'ютар уручную."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некаторыя аперацыі не выканаліся, таму UniGetUI не выключыў камп'ютар. Праверце аперацыі, якія не выканаліся, а затым выключыце камп'ютар уручную.",
+  "Skip major updates for this package": "Прапускаць буйныя абнаўленні для пакета",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} не абноўлены да {1}: ужо ўсталявана больш новая версія. Перазагрузіце спіс абнаўленняў.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} не абноўлены: буйныя абнаўленні для гэтага пакета прапускаюцца, а версія для абнаўлення невядомая. Абнавіце яго са спісу абнаўленняў або запытайце пэўную версію.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} не абноўлены да {1}: {2} зараз не можа ўсталяваць гэтую дакладную версію. Перазагрузіце спіс абнаўленняў.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} не абноўлены да {1}: буйныя абнаўленні для гэтага пакета прапускаюцца. Перазагрузіце спіс абнаўленняў, каб убачыць абнаўленне ў межах усталяванай асноўнай версіі, або адключыце «Прапускаць буйныя абнаўленні», каб усталяваць яго."
 }

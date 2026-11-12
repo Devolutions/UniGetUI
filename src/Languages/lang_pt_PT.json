@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Não foi possível desligar o computador",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "O UniGetUI não conseguiu iniciar o encerramento. Desligue o computador manualmente.",
   "Your computer was not shut down": "O computador não foi desligado",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algumas operações falharam, por isso o UniGetUI não desligou o computador. Reveja as operações falhadas e, em seguida, desligue-o manualmente."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algumas operações falharam, por isso o UniGetUI não desligou o computador. Reveja as operações falhadas e, em seguida, desligue-o manualmente.",
+  "Skip major updates for this package": "Ignorar atualizações principais para este pacote",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} não foi atualizado para {1}: já está instalada uma versão mais recente. Atualize a lista de atualizações.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} não foi atualizado: as atualizações principais estão ignoradas para este pacote e não se sabe para que versão atualizar. Atualize-o a partir da lista de atualizações ou solicite uma versão específica.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} não foi atualizado para {1}: {2} não consegue instalar essa versão específica neste momento. Atualize a lista de atualizações.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} não foi atualizado para {1}: as atualizações principais estão ignoradas para este pacote. Atualize a lista de atualizações para ver uma atualização dentro da versão principal instalada ou desative \"Ignorar atualizações principais\" para a instalar."
 }

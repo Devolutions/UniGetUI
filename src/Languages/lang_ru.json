@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Не удалось выключить компьютер",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI не удалось начать выключение. Выключите компьютер вручную.",
   "Your computer was not shut down": "Компьютер не был выключен",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некоторые операции завершились с ошибкой, поэтому компьютер не был выключен. Проверьте операции с ошибками, а затем выключите его вручную."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Некоторые операции завершились с ошибкой, поэтому компьютер не был выключен. Проверьте операции с ошибками, а затем выключите его вручную.",
+  "Skip major updates for this package": "Пропускать обновления основных версий для этого пакета",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} не был обновлён до {1}: уже установлена более новая версия. Обновите список обновлений.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} не был обновлён: для этого пакета пропускаются обновления основных версий, а версия для обновления неизвестна. Обновите его из списка обновлений или запросите конкретную версию.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} не был обновлён до {1}: {2} сейчас не может установить именно эту версию. Обновите список обновлений.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} не был обновлён до {1}: для этого пакета пропускаются обновления основных версий. Обновите список обновлений, чтобы увидеть обновление в пределах установленной основной версии, или отключите параметр «Пропускать обновления основных версий», чтобы установить его."
 }

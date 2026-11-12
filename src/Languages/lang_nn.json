@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Datamaskina kunne ikkje slåast av",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI kunne ikkje starte avsluttinga. Slå av datamaskina manuelt.",
   "Your computer was not shut down": "Datamaskina vart ikkje slått av",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Nokre handlingar mislukkast, så UniGetUI slo ikkje av datamaskina. Gå gjennom dei mislukka handlingane, og slå henne deretter av manuelt."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Nokre handlingar mislukkast, så UniGetUI slo ikkje av datamaskina. Gå gjennom dei mislukka handlingane, og slå henne deretter av manuelt.",
+  "Skip major updates for this package": "Hopp over større oppdateringar for denne pakka",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} vart ikkje oppdatert til {1}: ein nyare versjon er allereie installert. Last inn oppdateringslista på nytt.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} vart ikkje oppdatert: større oppdateringar er hoppa over for denne pakka, og versjonen som skal installerast er ukjend. Oppdater frå oppdateringslista, eller be om ein bestemt versjon.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} vart ikkje oppdatert til {1}: {2} kan ikkje installere den nøyaktige versjonen no. Last inn oppdateringslista på nytt.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} vart ikkje oppdatert til {1}: større oppdateringar er hoppa over for denne pakka. Last inn oppdateringslista på nytt for å sjå ei oppdatering innanfor den installerte hovudversjonen, eller slå av \"Hopp over større oppdateringar\" for å installere henne."
 }

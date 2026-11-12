@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "કમ્પ્યુટર બંધ કરી શકાયું નહીં",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI કમ્પ્યુટર બંધ કરવાની પ્રક્રિયા શરૂ કરી શક્યું નહીં. કૃપા કરીને તમારું કમ્પ્યુટર જાતે બંધ કરો.",
   "Your computer was not shut down": "તમારું કમ્પ્યુટર બંધ થયું નથી",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "કેટલીક ક્રિયાઓ નિષ્ફળ ગઈ, તેથી UniGetUI એ તમારું કમ્પ્યુટર બંધ કર્યું નથી. નિષ્ફળ ગયેલી ક્રિયાઓની સમીક્ષા કરો, પછી કમ્પ્યુટર જાતે બંધ કરો."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "કેટલીક ક્રિયાઓ નિષ્ફળ ગઈ, તેથી UniGetUI એ તમારું કમ્પ્યુટર બંધ કર્યું નથી. નિષ્ફળ ગયેલી ક્રિયાઓની સમીક્ષા કરો, પછી કમ્પ્યુટર જાતે બંધ કરો.",
+  "Skip major updates for this package": "આ પેકેજ માટે મોટા અપડેટ્સ છોડો",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} ને {1} પર અપડેટ કરવામાં આવ્યું નથી: વધુ નવી આવૃત્તિ પહેલેથી ઇન્સ્ટોલ કરેલી છે. અપડેટ્સની યાદી ફરી લોડ કરો.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} અપડેટ કરવામાં આવ્યું નથી: આ પેકેજ માટે મોટા અપડેટ્સ છોડવામાં આવે છે અને કઈ આવૃત્તિમાં અપડેટ કરવું તે અજ્ઞાત છે. તેને અપડેટ્સની યાદીમાંથી અપડેટ કરો અથવા ચોક્કસ આવૃત્તિની વિનંતી કરો.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} ને {1} પર અપડેટ કરવામાં આવ્યું નથી: {2} અત્યારે તે ચોક્કસ આવૃત્તિ ઇન્સ્ટોલ કરી શકતું નથી. અપડેટ્સની યાદી ફરી લોડ કરો.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} ને {1} પર અપડેટ કરવામાં આવ્યું નથી: આ પેકેજ માટે મોટા અપડેટ્સ છોડવામાં આવે છે. ઇન્સ્ટોલ કરેલી મુખ્ય આવૃત્તિની અંદરનું અપડેટ જોવા માટે અપડેટ્સની યાદી ફરી લોડ કરો અથવા તેને ઇન્સ્ટોલ કરવા માટે \"મોટા અપડેટ્સ છોડો\" બંધ કરો."
 }

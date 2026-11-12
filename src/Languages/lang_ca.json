@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "No s'ha pogut apagar l'ordinador",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "L'UniGetUI no ha pogut iniciar l'apagada. Apagueu l'ordinador manualment.",
   "Your computer was not shut down": "L'ordinador no s'ha apagat",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algunes operacions han fallat, de manera que l'UniGetUI no ha apagat l'ordinador. Reviseu les operacions fallides i, a continuació, apagueu-lo manualment."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Algunes operacions han fallat, de manera que l'UniGetUI no ha apagat l'ordinador. Reviseu les operacions fallides i, a continuació, apagueu-lo manualment.",
+  "Skip major updates for this package": "Omet les actualitzacions de versió principal d'aquest paquet",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} no s'ha actualitzat a {1}: ja hi ha instal·lada una versió més recent. Torneu a carregar la llista d'actualitzacions.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} no s'ha actualitzat: s'ometen les actualitzacions de versió principal d'aquest paquet i no se sap a quina versió s'ha d'actualitzar. Actualitzeu-lo des de la llista d'actualitzacions o sol·liciteu una versió específica.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} no s'ha actualitzat a {1}: {2} no pot instal·lar ara mateix aquesta versió exacta. Torneu a carregar la llista d'actualitzacions.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} no s'ha actualitzat a {1}: s'ometen les actualitzacions de versió principal d'aquest paquet. Torneu a carregar la llista d'actualitzacions per veure una actualització dins de la versió principal instal·lada, o desactiveu \"Omet les actualitzacions de versió principal\" per instal·lar-la."
 }

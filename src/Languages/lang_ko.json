@@ -2638,5 +2638,10 @@
   "The computer could not be shut down": "컴퓨터를 종료할 수 없습니다",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI에서 종료를 시작할 수 없습니다. 컴퓨터를 수동으로 종료하세요.",
   "Your computer was not shut down": "컴퓨터가 종료되지 않았습니다",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "일부 작업이 실패하여 UniGetUI에서 컴퓨터를 종료하지 않았습니다. 실패한 작업을 확인한 다음 컴퓨터를 수동으로 종료하세요."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "일부 작업이 실패하여 UniGetUI에서 컴퓨터를 종료하지 않았습니다. 실패한 작업을 확인한 다음 컴퓨터를 수동으로 종료하세요.",
+  "Skip major updates for this package": "이 패키지의 주요 버전 업데이트 건너뛰기",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0}이(가) {1}(으)로 업데이트되지 않았습니다: 이미 더 최신 버전이 설치되어 있습니다. 업데이트 목록을 새로 고침하세요.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0}이(가) 업데이트되지 않았습니다: 이 패키지의 주요 버전 업데이트가 건너뛰도록 설정되어 있고 업데이트 대상 버전을 알 수 없습니다. 업데이트 목록에서 업데이트하거나 특정 버전을 요청하세요.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0}이(가) {1}(으)로 업데이트되지 않았습니다: {2}에서 지금 해당 버전을 정확히 설치할 수 없습니다. 업데이트 목록을 새로 고침하세요.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0}이(가) {1}(으)로 업데이트되지 않았습니다: 이 패키지의 주요 버전 업데이트가 건너뛰도록 설정되어 있습니다. 설치된 주요 버전 내의 업데이트를 확인하려면 업데이트 목록을 새로 고침하거나, 설치하려면 \"주요 업데이트 건너뛰기\"를 끄세요."
 }

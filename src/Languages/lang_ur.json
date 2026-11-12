@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "کمپیوٹر بند نہیں کیا جا سکا",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI کمپیوٹر بند کرنے کا عمل شروع نہیں کر سکا۔ براہ کرم اپنا کمپیوٹر دستی طور پر بند کریں۔",
   "Your computer was not shut down": "آپ کا کمپیوٹر بند نہیں کیا گیا",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "کچھ آپریشنز ناکام ہو گئے، اس لیے UniGetUI نے آپ کا کمپیوٹر بند نہیں کیا۔ ناکام آپریشنز کا جائزہ لیں، پھر اسے دستی طور پر بند کریں۔"
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "کچھ آپریشنز ناکام ہو گئے، اس لیے UniGetUI نے آپ کا کمپیوٹر بند نہیں کیا۔ ناکام آپریشنز کا جائزہ لیں، پھر اسے دستی طور پر بند کریں۔",
+  "Skip major updates for this package": "اس پیکیج کے لیے بڑی اپ ڈیٹس کو نظر انداز کریں",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} کو {1} پر اپ ڈیٹ نہیں کیا گیا: اس سے نیا ورژن پہلے ہی انسٹال ہے۔ اپ ڈیٹس کی فہرست دوبارہ لوڈ کریں۔",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} کو اپ ڈیٹ نہیں کیا گیا: اس پیکیج کے لیے بڑی اپ ڈیٹس نظر انداز کی گئی ہیں اور اپ ڈیٹ کرنے والا ورژن معلوم نہیں ہے۔ اسے اپ ڈیٹس کی فہرست سے اپ ڈیٹ کریں، یا کسی مخصوص ورژن کی درخواست کریں۔",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} کو {1} پر اپ ڈیٹ نہیں کیا گیا: {2} ابھی اس عین ورژن کو انسٹال نہیں کر سکتا۔ اپ ڈیٹس کی فہرست دوبارہ لوڈ کریں۔",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} کو {1} پر اپ ڈیٹ نہیں کیا گیا: اس پیکیج کے لیے بڑی اپ ڈیٹس نظر انداز کی گئی ہیں۔ انسٹال شدہ بڑے ورژن کے اندر دستیاب اپ ڈیٹ دیکھنے کے لیے اپ ڈیٹس کی فہرست دوبارہ لوڈ کریں، یا اسے انسٹال کرنے کے لیے \"بڑی اپ ڈیٹس کو نظر انداز کریں\" بند کریں۔"
 }

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Datorn kunde inte stängas av",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI kunde inte starta avstängningen. Stäng av datorn manuellt.",
   "Your computer was not shut down": "Datorn stängdes inte av",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Vissa åtgärder misslyckades, så UniGetUI stängde inte av datorn. Granska de misslyckade åtgärderna och stäng sedan av datorn manuellt."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Vissa åtgärder misslyckades, så UniGetUI stängde inte av datorn. Granska de misslyckade åtgärderna och stäng sedan av datorn manuellt.",
+  "Skip major updates for this package": "Hoppa över uppdateringar till huvudversioner för det här paketet",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} uppdaterades inte till {1}: en nyare version är redan installerad. Läs in uppdateringslistan igen.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} uppdaterades inte: uppdateringar till huvudversioner hoppas över för det här paketet och målversionen är okänd. Uppdatera det från uppdateringslistan eller ange en specifik version.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} uppdaterades inte till {1}: {2} kan inte installera exakt den versionen just nu. Läs in uppdateringslistan igen.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} uppdaterades inte till {1}: uppdateringar till huvudversioner hoppas över för det här paketet. Läs in uppdateringslistan igen för att se en uppdatering inom den installerade huvudversionen, eller inaktivera \"Hoppa över uppdateringar till huvudversioner\" för att installera den."
 }

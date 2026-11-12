@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Не вдалося вимкнути комп’ютер",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI не вдалося ініціювати вимкнення. Вимкніть комп’ютер вручну.",
   "Your computer was not shut down": "Комп’ютер не було вимкнено",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Деякі операції завершилися помилкою, тому UniGetUI не вимкнула комп’ютер. Перегляньте операції з помилками, а потім вимкніть його вручну."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Деякі операції завершилися помилкою, тому UniGetUI не вимкнула комп’ютер. Перегляньте операції з помилками, а потім вимкніть його вручну.",
+  "Skip major updates for this package": "Пропустити основні оновлення для цього пакета",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} не було оновлено до {1}: новішу версію вже встановлено. Перезавантажте список оновлень.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} не було оновлено: для цього пакета пропускаються основні оновлення, а версія для оновлення невідома. Оновіть його зі списку оновлень або вкажіть конкретну версію.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} не було оновлено до {1}: {2} зараз не може встановити саме цю версію. Перезавантажте список оновлень.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} не було оновлено до {1}: для цього пакета пропускаються основні оновлення. Перезавантажте список оновлень, щоб побачити оновлення в межах установленої основної версії, або вимкніть параметр «Пропускати основні оновлення», щоб установити його."
 }

@@ -2673,5 +2673,10 @@
   "The computer could not be shut down": "无法关闭电脑",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI 无法启动关机流程。请手动关闭电脑。",
   "Your computer was not shut down": "电脑未关闭",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "部分操作失败，因此 UniGetUI 未关闭您的电脑。请检查失败的操作，然后手动关机。"
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "部分操作失败，因此 UniGetUI 未关闭您的电脑。请检查失败的操作，然后手动关机。",
+  "Skip major updates for this package": "忽略此软件包的主版本更新",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} 未更新到 {1}：已安装更新的版本。请重新加载更新列表。",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} 未更新：此软件包已跳过主版本更新，且无法确定要更新到的版本。请从更新列表中更新，或指定要更新的版本。",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} 未更新到 {1}：{2} 目前无法安装该确切版本。请重新加载更新列表。",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} 未更新到 {1}：此软件包已跳过主版本更新。请重新加载更新列表，以查看已安装主版本内的更新；或关闭“忽略主版本更新”以安装该版本。"
 }

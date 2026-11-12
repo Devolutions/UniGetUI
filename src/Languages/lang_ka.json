@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "კომპიუტერის გამორთვა ვერ მოხერხდა",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI-მ ვერ დაიწყო კომპიუტერის გამორთვა. გთხოვთ, გამორთოთ კომპიუტერი ხელით.",
   "Your computer was not shut down": "თქვენი კომპიუტერი არ გამორთულა",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "ზოგიერთი ოპერაცია ვერ შესრულდა, ამიტომ UniGetUI-მ თქვენი კომპიუტერი არ გამორთო. შეამოწმეთ წარუმატებელი ოპერაციები, შემდეგ კი გამორთეთ კომპიუტერი ხელით."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "ზოგიერთი ოპერაცია ვერ შესრულდა, ამიტომ UniGetUI-მ თქვენი კომპიუტერი არ გამორთო. შეამოწმეთ წარუმატებელი ოპერაციები, შემდეგ კი გამორთეთ კომპიუტერი ხელით.",
+  "Skip major updates for this package": "ძირითადი განახლებების გამოტოვება ამ პაკეტისთვის",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} არ განახლებულა {1}-მდე: უკვე დაინსტალირებულია უფრო ახალი ვერსია. ხელახლა ჩატვირთეთ განახლებების სია.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} არ განახლებულა: ამ პაკეტისთვის ძირითადი განახლებები გამოტოვებულია და ვერსია, რომელზეც უნდა განახლდეს, უცნობია. განაახლეთ ის განახლებების სიიდან ან მოითხოვეთ კონკრეტული ვერსია.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} არ განახლებულა {1}-მდე: {2}-ს ამ ზუსტი ვერსიის დაყენება ახლა არ შეუძლია. ხელახლა ჩატვირთეთ განახლებების სია.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} არ განახლებულა {1}-მდე: ამ პაკეტისთვის ძირითადი განახლებები გამოტოვებულია. ხელახლა ჩატვირთეთ განახლებების სია, რომ ნახოთ განახლება დაინსტალირებული ძირითადი ვერსიის ფარგლებში, ან გამორთეთ „ძირითადი განახლებების გამოტოვება“, რომ დააინსტალიროთ."
 }

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Tietokonetta ei voitu sammuttaa",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI ei voinut käynnistää sammutusta. Sammuta tietokone manuaalisesti.",
   "Your computer was not shut down": "Tietokonetta ei sammutettu",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Jotkin toiminnot epäonnistuivat, joten UniGetUI ei sammuttanut tietokonetta. Tarkista epäonnistuneet toiminnot ja sammuta tietokone sitten manuaalisesti."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Jotkin toiminnot epäonnistuivat, joten UniGetUI ei sammuttanut tietokonetta. Tarkista epäonnistuneet toiminnot ja sammuta tietokone sitten manuaalisesti.",
+  "Skip major updates for this package": "Ohita tämän paketin pääversiopäivitykset",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "Pakettia {0} ei päivitetty versioon {1}: uudempi versio on jo asennettu. Lataa päivitysluettelo uudelleen.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "Pakettia {0} ei päivitetty: tämän paketin pääversiopäivitykset ohitetaan, eikä päivitettävää versiota tiedetä. Päivitä se päivitysluettelosta tai pyydä tiettyä versiota.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "Pakettia {0} ei päivitetty versioon {1}: {2} ei voi asentaa juuri tätä versiota tällä hetkellä. Lataa päivitysluettelo uudelleen.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "Pakettia {0} ei päivitetty versioon {1}: tämän paketin pääversiopäivitykset ohitetaan. Lataa päivitysluettelo uudelleen nähdäksesi päivityksen asennetun pääversion sisällä tai poista \"Ohita pääversiopäivitykset\" käytöstä asentaaksesi sen."
 }

@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Nie można było wyłączyć komputera",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nie mogło rozpocząć wyłączania komputera. Wyłącz komputer ręcznie.",
   "Your computer was not shut down": "Komputer nie został wyłączony",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Niektóre operacje zakończyły się niepowodzeniem, dlatego UniGetUI nie wyłączyło komputera. Sprawdź nieudane operacje, a następnie wyłącz komputer ręcznie."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Niektóre operacje zakończyły się niepowodzeniem, dlatego UniGetUI nie wyłączyło komputera. Sprawdź nieudane operacje, a następnie wyłącz komputer ręcznie.",
+  "Skip major updates for this package": "Pomiń aktualizacje głównych wersji dla tego pakietu",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "Nie zaktualizowano {0} do wersji {1}: nowsza wersja jest już zainstalowana. Odśwież listę aktualizacji.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "Nie zaktualizowano {0}: aktualizacje głównych wersji są pomijane dla tego pakietu, a wersja docelowa jest nieznana. Zaktualizuj go z listy aktualizacji lub zażądaj konkretnej wersji.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "Nie zaktualizowano {0} do wersji {1}: {2} nie może teraz zainstalować dokładnie tej wersji. Odśwież listę aktualizacji.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "Nie zaktualizowano {0} do wersji {1}: aktualizacje głównych wersji są pomijane dla tego pakietu. Odśwież listę aktualizacji, aby sprawdzić dostępność aktualizacji w ramach zainstalowanej wersji głównej, albo wyłącz opcję „Pomiń aktualizacje głównych wersji”, aby ją zainstalować."
 }

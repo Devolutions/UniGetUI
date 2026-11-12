@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "ಕಂಪ್ಯೂಟರ್ ಅನ್ನು ಸ್ಥಗಿತಗೊಳಿಸಲಾಗಲಿಲ್ಲ",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI ಸ್ಥಗಿತಗೊಳಿಸುವಿಕೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಕಂಪ್ಯೂಟರ್ ಅನ್ನು ಕೈಯಾರೆ ಸ್ಥಗಿತಗೊಳಿಸಿ.",
   "Your computer was not shut down": "ನಿಮ್ಮ ಕಂಪ್ಯೂಟರ್ ಸ್ಥಗಿತಗೊಳಿಸಲಾಗಿಲ್ಲ",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "ಕೆಲವು ಕಾರ್ಯಾಚರಣೆಗಳು ವಿಫಲವಾದ ಕಾರಣ UniGetUI ನಿಮ್ಮ ಕಂಪ್ಯೂಟರ್ ಅನ್ನು ಸ್ಥಗಿತಗೊಳಿಸಲಿಲ್ಲ. ವಿಫಲವಾದ ಕಾರ್ಯಾಚರಣೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ, ನಂತರ ಅದನ್ನು ಕೈಯಾರೆ ಸ್ಥಗಿತಗೊಳಿಸಿ."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "ಕೆಲವು ಕಾರ್ಯಾಚರಣೆಗಳು ವಿಫಲವಾದ ಕಾರಣ UniGetUI ನಿಮ್ಮ ಕಂಪ್ಯೂಟರ್ ಅನ್ನು ಸ್ಥಗಿತಗೊಳಿಸಲಿಲ್ಲ. ವಿಫಲವಾದ ಕಾರ್ಯಾಚರಣೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ, ನಂತರ ಅದನ್ನು ಕೈಯಾರೆ ಸ್ಥಗಿತಗೊಳಿಸಿ.",
+  "Skip major updates for this package": "ಈ ಪ್ಯಾಕೇಜ್‌ಗೆ ಪ್ರಮುಖ ಆವೃತ್ತಿ ನವೀಕರಣಗಳನ್ನು ಬಿಟ್ಟುಬಿಡಿ",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} ಅನ್ನು {1} ಗೆ ನವೀಕರಿಸಲಾಗಿಲ್ಲ: ಈಗಾಗಲೇ ಇನ್ನಷ್ಟು ಹೊಸ ಆವೃತ್ತಿ ಸ್ಥಾಪಿಸಲಾಗಿದೆ. ನವೀಕರಣಗಳ ಪಟ್ಟಿಯನ್ನು ಮರುಲೋಡ್ ಮಾಡಿ.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} ಅನ್ನು ನವೀಕರಿಸಲಾಗಿಲ್ಲ: ಈ ಪ್ಯಾಕೇಜ್‌ಗೆ ಪ್ರಮುಖ ಆವೃತ್ತಿ ನವೀಕರಣಗಳನ್ನು ಬಿಟ್ಟುಬಿಡಲಾಗಿದೆ ಮತ್ತು ನವೀಕರಿಸಬೇಕಾದ ಆವೃತ್ತಿ ತಿಳಿದಿಲ್ಲ. ನವೀಕರಣಗಳ ಪಟ್ಟಿಯಿಂದ ಅದನ್ನು ನವೀಕರಿಸಿ ಅಥವಾ ನಿರ್ದಿಷ್ಟ ಆವೃತ್ತಿಯನ್ನು ವಿನಂತಿಸಿ.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} ಅನ್ನು {1} ಗೆ ನವೀಕರಿಸಲಾಗಿಲ್ಲ: {2} ಇದೀಗ ಆ ನಿಖರ ಆವೃತ್ತಿಯನ್ನು ಸ್ಥಾಪಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ನವೀಕರಣಗಳ ಪಟ್ಟಿಯನ್ನು ಮರುಲೋಡ್ ಮಾಡಿ.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} ಅನ್ನು {1} ಗೆ ನವೀಕರಿಸಲಾಗಿಲ್ಲ: ಈ ಪ್ಯಾಕೇಜ್‌ಗೆ ಪ್ರಮುಖ ಆವೃತ್ತಿ ನವೀಕರಣಗಳನ್ನು ಬಿಟ್ಟುಬಿಡಲಾಗಿದೆ. ಸ್ಥಾಪಿತ ಪ್ರಮುಖ ಆವೃತ್ತಿಯೊಳಗಿನ ನವೀಕರಣವನ್ನು ನೋಡಲು ನವೀಕರಣಗಳ ಪಟ್ಟಿಯನ್ನು ಮರುಲೋಡ್ ಮಾಡಿ, ಅಥವಾ ಅದನ್ನು ಸ್ಥಾಪಿಸಲು \"ಪ್ರಮುಖ ಆವೃತ್ತಿ ನವೀಕರಣಗಳನ್ನು ಬಿಟ್ಟುಬಿಡಿ\" ಆಯ್ಕೆಯನ್ನು ಆಫ್ ಮಾಡಿ."
 }

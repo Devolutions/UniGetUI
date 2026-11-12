@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "تعذّر إيقاف تشغيل الكمبيوتر",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "تعذّر على UniGetUI بدء إيقاف التشغيل. يُرجى إيقاف تشغيل الكمبيوتر يدويًا.",
   "Your computer was not shut down": "لم يتم إيقاف تشغيل الكمبيوتر",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "فشلت بعض العمليات، لذا لم يُوقف UniGetUI تشغيل الكمبيوتر. راجع العمليات الفاشلة، ثم أوقف تشغيله يدويًا."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "فشلت بعض العمليات، لذا لم يُوقف UniGetUI تشغيل الكمبيوتر. راجع العمليات الفاشلة، ثم أوقف تشغيله يدويًا.",
+  "Skip major updates for this package": "تخطي التحديثات الرئيسية لهذه الحزمة",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "لم يتم تحديث {0} إلى {1}: تم بالفعل تثبيت إصدار أحدث. أعد تحميل قائمة التحديثات.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "لم يتم تحديث {0}: يتم تخطي التحديثات الرئيسية لهذه الحزمة، وإصدار التحديث غير معروف. حدّثها من قائمة التحديثات، أو اطلب إصدارًا محددًا.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "لم يتم تحديث {0} إلى {1}: لا يستطيع {2} تثبيت هذا الإصدار المحدد الآن. أعد تحميل قائمة التحديثات.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "لم يتم تحديث {0} إلى {1}: يتم تخطي التحديثات الرئيسية لهذه الحزمة. أعد تحميل قائمة التحديثات لرؤية تحديث ضمن الإصدار الرئيسي المثبّت، أو عطّل \"تخطي التحديثات الرئيسية\" لتثبيته."
 }

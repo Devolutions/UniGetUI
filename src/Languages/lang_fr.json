@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Impossible d'éteindre l'ordinateur",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI n'a pas pu lancer l'arrêt. Éteignez votre ordinateur manuellement.",
   "Your computer was not shut down": "Votre ordinateur n'a pas été éteint",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Certaines opérations ont échoué ; UniGetUI n'a donc pas éteint votre ordinateur. Consultez les opérations en échec, puis éteignez-le manuellement."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Certaines opérations ont échoué ; UniGetUI n'a donc pas éteint votre ordinateur. Consultez les opérations en échec, puis éteignez-le manuellement.",
+  "Skip major updates for this package": "Ignorer les mises à jour majeures pour ce paquet",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} n'a pas été mis à jour vers {1} : une version plus récente est déjà installée. Actualisez la liste des mises à jour.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} n'a pas été mis à jour : les mises à jour majeures sont ignorées pour ce paquet et la version à installer est inconnue. Effectuez la mise à jour depuis la liste des mises à jour ou demandez une version spécifique.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} n'a pas été mis à jour vers {1} : {2} ne peut pas installer cette version précise pour le moment. Actualisez la liste des mises à jour.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} n'a pas été mis à jour vers {1} : les mises à jour majeures sont ignorées pour ce paquet. Actualisez la liste des mises à jour pour voir une mise à jour dans la version majeure installée, ou désactivez l'option « Ignorer les mises à jour majeures » pour l'installer."
 }

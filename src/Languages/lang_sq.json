@@ -2642,5 +2642,10 @@
   "The computer could not be shut down": "Kompjuteri nuk mund të fiket",
   "UniGetUI could not start the shutdown. Please shut down your computer manually.": "UniGetUI nuk mundi të nisë fikjen. Fike kompjuterin manualisht.",
   "Your computer was not shut down": "Kompjuteri yt nuk u fik",
-  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Disa veprime dështuan, ndaj UniGetUI nuk e fiku kompjuterin. Shqyrto veprimet e dështuara dhe më pas fike manualisht."
+  "Some operations failed, so UniGetUI did not shut down your computer. Review the failed operations, then shut it down manually.": "Disa veprime dështuan, ndaj UniGetUI nuk e fiku kompjuterin. Shqyrto veprimet e dështuara dhe më pas fike manualisht.",
+  "Skip major updates for this package": "Anashkalo përditësimet madhore për këtë paketë",
+  "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} nuk u përditësua në {1}: një version më i ri është tashmë i instaluar. Rifresko listën e përditësimeve.",
+  "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} nuk u përditësua: përditësimet madhore anashkalohen për këtë paketë dhe versioni për përditësim nuk dihet. Përditësoje nga lista e përditësimeve ose kërko një version të caktuar.",
+  "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} nuk u përditësua në {1}: {2} nuk mund ta instalojë atë version të saktë tani. Rifresko listën e përditësimeve.",
+  "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} nuk u përditësua në {1}: përditësimet madhore anashkalohen për këtë paketë. Rifresko listën e përditësimeve për të parë një përditësim brenda versionit madhor të instaluar, ose çaktivizo \"Anashkalo përditësimet madhore\" për ta instaluar."
 }

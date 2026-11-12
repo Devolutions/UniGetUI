@@ -156,7 +156,7 @@ internal sealed class XcodeArchiveDownloader(HttpClient http, Func<string> archi
             {
                 if (data.Length == 0)
                     return null;
-                AppleDownloadList? list = JsonSerializer.Deserialize(data, AppleDownloadsJsonContext.Default.AppleDownloadList);
+                AppleDownloadList? list = AppleDownloadsCatalog.DeserializeList(data);
                 if (list?.ResultCode is { } code && code != 0)
                     Logger.Warn($"Xcode: Apple's download service returned result {code} when authorizing the download");
                 return list?.ResultCode;

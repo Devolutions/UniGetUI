@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace UniGetUI.Extensions.Xcode.AppleAuth;
 
@@ -446,7 +447,7 @@ public sealed class AppleAccount : IDisposable
                 && CryptographicOperations.FixedTimeEquals(digest, _storedDigest))
                 return;
 
-            StoredAccount? stored = JsonSerializer.Deserialize(bytes, AppleAccountJsonContext.Default.StoredAccount);
+            StoredAccount? stored = DeserializeJson(bytes, AppleAccountJsonContext.Default.StoredAccount);
             if (string.IsNullOrWhiteSpace(stored?.AppleId))
                 throw new InvalidDataException("The saved Apple account is invalid.");
             Cookie[] cookies = [.. (stored.Cookies ?? []).Take(MaximumCookies)
@@ -498,7 +499,7 @@ public sealed class AppleAccount : IDisposable
                     HttpOnly = c.HttpOnly,
                 })],
         };
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(stored, AppleAccountJsonContext.Default.StoredAccount);
+        byte[] bytes = SerializeJson(stored, AppleAccountJsonContext.Default.StoredAccount);
         try
         {
             byte[] digest = SHA256.HashData(bytes);
@@ -513,7 +514,7 @@ public sealed class AppleAccount : IDisposable
 
             if (_store.SupportsDeferredMetadata)
             {
-                byte[] metaBytes = JsonSerializer.SerializeToUtf8Bytes(new StoredAccountMetadata
+                byte[] metaBytes = SerializeJson(new StoredAccountMetadata
                 {
                     AppleId = _appleId,
                     HasSavedPassword = _password is not null,
@@ -582,7 +583,7 @@ public sealed class AppleAccount : IDisposable
         digest = null;
         try
         {
-            StoredAccountMetadata? parsed = JsonSerializer.Deserialize(rawMeta, AppleAccountJsonContext.Default.StoredAccountMetadata);
+            StoredAccountMetadata? parsed = DeserializeJson(rawMeta, AppleAccountJsonContext.Default.StoredAccountMetadata);
             if (string.IsNullOrWhiteSpace(parsed?.AppleId) || string.IsNullOrEmpty(parsed.Digest) || parsed.Digest.Length != 64)
                 return false;
             digest = Convert.FromHexString(parsed.Digest);
@@ -595,6 +596,12 @@ public sealed class AppleAccount : IDisposable
             return false;
         }
     }
+
+    private static byte[] SerializeJson<T>(T value, JsonTypeInfo<T> typeInfo)
+        => JsonSerializer.SerializeToUtf8Bytes(value, typeInfo);
+
+    private static T? DeserializeJson<T>(ReadOnlySpan<byte> bytes, JsonTypeInfo<T> typeInfo)
+        => JsonSerializer.Deserialize(bytes, typeInfo);
 
     private void ClearCookies()
     {

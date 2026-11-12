@@ -57,12 +57,15 @@ internal sealed class AppleDownloadsCatalog(HttpClient client, TimeSpan? request
         }
     }
 
+    internal static AppleDownloadList? DeserializeList(ReadOnlySpan<byte> data)
+        => JsonSerializer.Deserialize(data, AppleDownloadsJsonContext.Default.AppleDownloadList);
+
     internal static IReadOnlyList<AppleXcodeDownload> Parse(ReadOnlySpan<byte> data)
     {
         AppleDownloadList? list;
         try
         {
-            list = JsonSerializer.Deserialize(data, AppleDownloadsJsonContext.Default.AppleDownloadList);
+            list = DeserializeList(data);
         }
         catch (JsonException)
         {

@@ -236,6 +236,15 @@ public static class AvaloniaAppHost
             FontFallbacks = UiFontPolicy.ResolveFontFallbacks(),
         };
 
+    public const long MinimumGpuResourceCacheBytes = 128L * 1024 * 1024;
+    public const long GpuResourceCacheHeadroomBytes = 96L * 1024 * 1024;
+
+    public static long GpuResourceCacheBytes(long largestScreenPixels)
+        => Math.Max(MinimumGpuResourceCacheBytes, largestScreenPixels * 4 + GpuResourceCacheHeadroomBytes);
+
+    public static SkiaOptions BuildSkiaOptions(long largestScreenPixels)
+        => new() { MaxGpuResourceSizeBytes = GpuResourceCacheBytes(largestScreenPixels) };
+
     public static AppBuilder BuildAvaloniaApp()
     {
         AppBuilder builder = AppBuilder.Configure<App>()
@@ -262,6 +271,8 @@ public static class AvaloniaAppHost
             });
         }
 #endif
+
+        builder = builder.With(BuildSkiaOptions(DisplayMetrics.LargestScreenPixels()));
 
         return builder.LogToTrace();
     }

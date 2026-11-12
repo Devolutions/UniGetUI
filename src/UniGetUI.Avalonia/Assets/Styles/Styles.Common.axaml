@@ -736,6 +736,79 @@
         <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
     </Style>
 
+    <Style Selector="ProgressBar:horizontal:indeterminate:not(.compositor-indeterminate) /template/ Border#IndeterminateProgressBarIndicator">
+        <Style.Animations>
+            <Animation IterationCount="Infinite" Duration="0:0:2">
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:0">
+                    <Setter Property="TranslateTransform.X" Value="{Binding $parent[ProgressBar].TemplateSettings.ContainerAnimationStartPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:1.5">
+                    <Setter Property="TranslateTransform.X" Value="{Binding $parent[ProgressBar].TemplateSettings.ContainerAnimationEndPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:2">
+                    <Setter Property="TranslateTransform.X" Value="{Binding $parent[ProgressBar].TemplateSettings.ContainerAnimationEndPosition}"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="ProgressBar:horizontal:indeterminate:not(.compositor-indeterminate) /template/ Border#IndeterminateProgressBarIndicator2">
+        <Style.Animations>
+            <Animation IterationCount="Infinite" Duration="0:0:2">
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:0">
+                    <Setter Property="TranslateTransform.X" Value="{Binding $parent[ProgressBar].TemplateSettings.Container2AnimationStartPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:0.75">
+                    <Setter Property="TranslateTransform.X" Value="{Binding $parent[ProgressBar].TemplateSettings.Container2AnimationStartPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:2">
+                    <Setter Property="TranslateTransform.X" Value="{Binding $parent[ProgressBar].TemplateSettings.Container2AnimationEndPosition}"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="ProgressBar:vertical:indeterminate:not(.compositor-indeterminate) /template/ Border#IndeterminateProgressBarIndicator">
+        <Style.Animations>
+            <Animation IterationCount="Infinite" Duration="0:0:2">
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:0">
+                    <Setter Property="TranslateTransform.Y" Value="{Binding $parent[ProgressBar].TemplateSettings.ContainerAnimationStartPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:1.5">
+                    <Setter Property="TranslateTransform.Y" Value="{Binding $parent[ProgressBar].TemplateSettings.ContainerAnimationEndPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:2">
+                    <Setter Property="TranslateTransform.Y" Value="{Binding $parent[ProgressBar].TemplateSettings.ContainerAnimationEndPosition}"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="ProgressBar:vertical:indeterminate:not(.compositor-indeterminate) /template/ Border#IndeterminateProgressBarIndicator2">
+        <Style.Animations>
+            <Animation IterationCount="Infinite" Duration="0:0:2">
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:0">
+                    <Setter Property="TranslateTransform.Y" Value="{Binding $parent[ProgressBar].TemplateSettings.Container2AnimationStartPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:0.75">
+                    <Setter Property="TranslateTransform.Y" Value="{Binding $parent[ProgressBar].TemplateSettings.Container2AnimationStartPosition}"/>
+                </KeyFrame>
+                <KeyFrame KeySpline="0.4,0,0.6,1" KeyTime="0:0:2">
+                    <Setter Property="TranslateTransform.Y" Value="{Binding $parent[ProgressBar].TemplateSettings.Container2AnimationEndPosition}"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="ProgressBar.compositor-indeterminate /template/ Panel#DeterminateRoot">
+        <Setter Property="Transitions" Value="{x:Null}"/>
+    </Style>
+    <Style Selector="ProgressBar.compositor-indeterminate /template/ Panel#IndeterminateRoot">
+        <Setter Property="Transitions" Value="{x:Null}"/>
+    </Style>
+    <Style Selector="ProgressBar.compositor-indeterminate /template/ Border#IndeterminateProgressBarIndicator">
+        <Setter Property="Opacity" Value="0"/>
+    </Style>
+    <Style Selector="ProgressBar.compositor-indeterminate /template/ Border#IndeterminateProgressBarIndicator2">
+        <Setter Property="Opacity" Value="0"/>
+    </Style>
+
     <!-- DataGrid selection: WinUI-style border-only. Permanent transparent border reserves layout
          space so adjacent rows don't shift on select and the accent border isn't clipped on first/last rows. -->
     <Style Selector="DataGridRow">

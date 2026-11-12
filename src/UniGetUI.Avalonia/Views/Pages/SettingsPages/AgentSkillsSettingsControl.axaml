@@ -112,7 +112,7 @@
             <StackPanel Spacing="10" Margin="16,8,16,16">
                 <TextBlock Classes="help"
                            Text="{t:Translate Only Notion sources need the Notion CLI. Sign-in opens your browser; credentials stay with the CLI.}"/>
-                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3"/>
+                <ProgressBar IsIndeterminate="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Height="3"/>
                 <TextBlock x:Name="NotionErrorText" Classes="validation-error" Text="{Binding NotionError}"
                            IsVisible="{Binding HasNotionError}" automation:AutomationProperties.LiveSetting="Assertive"/>
                 <WrapPanel>

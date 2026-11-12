@@ -240,7 +240,7 @@
                                         </StackPanel>
                                     </Grid>
                                     <Panel Classes="git-status-cell" Grid.Column="1" VerticalAlignment="Center">
-                                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
+                                        <ProgressBar IsIndeterminate="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                                      MaxWidth="120" MinWidth="0" HorizontalAlignment="Stretch"/>
                                         <Border Classes="state"
                                                 Classes.ok="{Binding IsOk}"
@@ -371,7 +371,7 @@
                     <TextBlock Text="{t:Translate Select a repository to see its worktrees and branches}" Opacity="0.6"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                IsVisible="{Binding !HasSelection}"/>
-                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingDetails}"
+                    <ProgressBar IsIndeterminate="{Binding IsLoadingDetails}" IsVisible="{Binding IsLoadingDetails}"
                                  VerticalAlignment="Top" Height="2" MinWidth="0"/>
                     <ScrollViewer IsVisible="{Binding ShowBranches}" HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl ItemsSource="{Binding Branches}" Margin="8,4">

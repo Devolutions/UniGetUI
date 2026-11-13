@@ -42,6 +42,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public CatalogEditorViewModel? CatalogEditor { get; }
     private readonly Dictionary<PageType, AppExtensionSession> _extensions = [];
     public GitRepositoriesViewModel? GitRepositories { get; private set; }
+    public DriversViewModel? Drivers { get; private set; }
 #if UNIGETUI_XCODE_EXTENSION
     public XcodeViewModel? Xcode { get; private set; }
     private XcodeAccountViewModel? _xcodeAccount;
@@ -822,6 +823,24 @@ public partial class MainWindowViewModel : ViewModelBase
     public void SetGitRepositoriesEnabled(bool enabled)
         => SetExtensionEnabled(PageType.GitRepositories, enabled);
 
+    internal AppExtensionSession StartDrivers()
+    {
+        var drivers = Drivers = new DriversViewModel();
+        drivers.PropertyChanged += (_, e) =>
+        {
+            if (!ReferenceEquals(drivers, Drivers)) return;
+            if (e.PropertyName == nameof(DriversViewModel.UpdateCount))
+                Sidebar.DriversBadgeCount = drivers.UpdateCount;
+            else if (e.PropertyName == nameof(DriversViewModel.IsBusy))
+                Sidebar.SetNavItemLoading(PageType.Drivers, drivers.IsBusy);
+        };
+        return new(() => new DriversPage(drivers), () =>
+        {
+            drivers.Stop();
+            Drivers = null;
+        }, drivers.CheckForUpdatesAsync);
+    }
+
     public void SetExtensionEnabled(PageType page, bool enabled)
     {
         var extension = AppExtensions.All.FirstOrDefault(extension => extension.Page == page);
@@ -1090,6 +1109,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
         PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
         PageType.AgentSkills => CoreTools.Translate("Agent Skills"),
+        PageType.Drivers => CoreTools.Translate("Drivers"),
 #if UNIGETUI_XCODE_EXTENSION
         PageType.Xcode => CoreTools.Translate("Xcode"),
 #endif

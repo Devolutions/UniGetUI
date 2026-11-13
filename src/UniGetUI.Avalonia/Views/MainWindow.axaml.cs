@@ -50,6 +50,7 @@ public enum PageType
     ManagerHealth,
     AgentSkills,
     Xcode,
+    Drivers,
 }
 
 public partial class MainWindow : Window
@@ -209,6 +210,7 @@ public partial class MainWindow : Window
     public bool CatalogEditorEnabled => ViewModel.Sidebar.CatalogEditorEnabled;
     public bool GitRepositoriesEnabled => ViewModel.Sidebar.GitRepositoriesEnabled;
     public GitRepositoriesViewModel? GitRepositories => ViewModel.GitRepositories;
+    public DriversViewModel? Drivers => ViewModel.Drivers;
     public void SetGitRepositoriesEnabled(bool enabled) => ViewModel.SetGitRepositoriesEnabled(enabled);
     public void SetExtensionEnabled(PageType page, bool enabled) => ViewModel.SetExtensionEnabled(page, enabled);
 #if UNIGETUI_XCODE_EXTENSION

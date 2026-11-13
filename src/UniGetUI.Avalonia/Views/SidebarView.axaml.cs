@@ -455,6 +455,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         PageType.Bundles => BundlesNavBtn,
         PageType.GitRepositories => GitRepositoriesNavBtn,
         PageType.AgentSkills => AgentSkillsNavBtn,
+        PageType.Drivers => DriversNavBtn,
 #if UNIGETUI_XCODE_EXTENSION
         PageType.Xcode => XcodeNavBtn,
 #endif
@@ -570,6 +571,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             PageType.Catalog => CatalogNavBtn,
             PageType.GitRepositories => GitRepositoriesNavBtn,
             PageType.AgentSkills => AgentSkillsNavBtn,
+            PageType.Drivers => DriversNavBtn,
 #if UNIGETUI_XCODE_EXTENSION
             PageType.Xcode => XcodeNavBtn,
 #endif

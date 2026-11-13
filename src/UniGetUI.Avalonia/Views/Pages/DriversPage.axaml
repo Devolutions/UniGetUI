@@ -1,0 +1,196 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.DriversPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:DataType="vm:DriversViewModel">
+    <UserControl.Styles>
+        <Style Selector="#DriversToolbar Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="Border.drivers-card">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="ListBox#DriverList ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="Border.driver-row">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="12,10"/>
+        </Style>
+        <Style Selector="Border.state">
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Border.state.ok">
+            <Setter Property="Background" Value="{DynamicResource StatusSuccessBackground}"/>
+        </Style>
+        <Style Selector="Border.state.ok TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusSuccessForeground}"/>
+        </Style>
+        <Style Selector="Border.state.error">
+            <Setter Property="Background" Value="{DynamicResource StatusErrorBackground}"/>
+        </Style>
+        <Style Selector="Border.state.error TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForeground}"/>
+        </Style>
+        <Style Selector="Border.tag">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,1"/>
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+        </Style>
+        <Style Selector="Border.tag TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="8,6,8,8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="80,*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+            <controls:SvgIcon Width="40" Height="40" Margin="0,0,4,0"
+                              automation:AutomationProperties.AccessibilityView="Raw"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"
+                              Path="avares://UniGetUI/Assets/Symbols/drivers.svg"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{t:Translate Drivers}"
+                           FontSize="28" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="{t:Translate Text='Driver updates that Windows Update offers for this computer, including the optional ones it does not install by itself.'}"
+                           FontSize="12" Opacity="0.6" TextWrapping="Wrap"/>
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="{Binding LastCheckedText}" FontSize="11" Opacity="0.5"
+                       VerticalAlignment="Bottom"/>
+        </Grid>
+
+        <WrapPanel Grid.Row="1" Name="DriversToolbar" Orientation="Horizontal" ItemSpacing="4">
+            <Button Command="{Binding ScanCommand}"
+                    ToolTip.Tip="{t:Translate Ask Windows Update which driver updates are available}"
+                    automation:AutomationProperties.Name="{t:Translate Check for updates}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg" Width="20" Height="20"/>
+                    <TextBlock Text="{t:Translate Check for updates}" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Command="{Binding InstallSelectedCommand}"
+                    ToolTip.Tip="{t:Translate Download and install the selected drivers. Windows asks for administrator rights.}"
+                    automation:AutomationProperties.Name="{t:Translate Install selected}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/download.svg" Width="20" Height="20"/>
+                    <TextBlock Text="{t:Translate Install selected}" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Command="{Binding SelectAllCommand}" IsEnabled="{Binding HasUpdates}"
+                    automation:AutomationProperties.Name="{t:Translate Select all}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/clipboard_list.svg" Width="20" Height="20"/>
+                    <TextBlock Text="{t:Translate Select all}" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Command="{Binding OpenWindowsUpdateCommand}"
+                    automation:AutomationProperties.Name="{t:Translate Open Windows Update}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/launch.svg" Width="20" Height="20"/>
+                    <TextBlock Text="{t:Translate Open Windows Update}" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </WrapPanel>
+
+        <ProgressBar Grid.Row="2" Margin="0,4,0,4" Height="3"
+                     IsIndeterminate="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+
+        <controls:InfoBar Grid.Row="3" DataContext="{Binding ErrorNotice}" Margin="0,0,0,8"/>
+        <controls:InfoBar Grid.Row="4" DataContext="{Binding RestartNotice}" Margin="0,0,0,8"/>
+
+        <Border Grid.Row="5" Classes="drivers-card">
+            <Panel>
+                <ListBox Name="DriverList"
+                         ItemsSource="{Binding Updates}"
+                         Background="Transparent" Padding="4"
+                         IsVisible="{Binding HasUpdates}"
+                         automation:AutomationProperties.Name="{t:Translate Driver updates}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DriverUpdateItemViewModel">
+                            <Border Classes="driver-row">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              IsEnabled="{Binding CanInstall}"
+                                              VerticalAlignment="Center"
+                                              automation:AutomationProperties.Name="{Binding Title}"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
+                                        <TextBlock Text="{Binding DeviceText}" FontSize="12"
+                                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Update.HardwareId}"/>
+                                        <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="12">
+                                            <TextBlock Text="{Binding InstalledText}" FontSize="11" Opacity="0.6"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding AvailableText}" FontSize="11" Opacity="0.6"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" FontSize="11" Opacity="0.6"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding DetailsText}" FontSize="11" Opacity="0.6"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </Grid>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <Border Classes="tag" IsVisible="{Binding MayRequireRestart}"
+                                                ToolTip.Tip="{t:Translate Windows may ask to restart after installing this driver}">
+                                            <TextBlock Text="{t:Translate May need a restart}"/>
+                                        </Border>
+                                        <ProgressBar IsIndeterminate="{Binding IsInstalling}" IsVisible="{Binding IsInstalling}"
+                                                     Width="80" MinWidth="0" VerticalAlignment="Center"/>
+                                        <Border Classes="state"
+                                                Classes.ok="{Binding IsDone}"
+                                                Classes.error="{Binding IsFailed}"
+                                                IsVisible="{Binding ShowStateBadge}">
+                                            <TextBlock Text="{Binding StateText}" FontSize="12"
+                                                       TextTrimming="CharacterEllipsis" MaxWidth="260"
+                                                       ToolTip.Tip="{Binding StateText}"/>
+                                        </Border>
+                                        <Button Content="{t:Translate Install}" Classes="accent"
+                                                IsVisible="{Binding CanInstall}"
+                                                IsEnabled="{Binding !$parent[UserControl].((vm:DriversViewModel)DataContext).IsBusy}"
+                                                Command="{Binding $parent[UserControl].((vm:DriversViewModel)DataContext).InstallOneCommand}"
+                                                CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel IsVisible="{Binding ShowEmptyState}" Spacing="8" Margin="24"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/success_round.svg" Width="48" Height="48"
+                                      HorizontalAlignment="Center" Opacity="0.6"
+                                      automation:AutomationProperties.AccessibilityView="Raw"/>
+                    <TextBlock Text="{t:Translate Your drivers are up to date}" FontSize="16" FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{t:Translate Text='Windows Update has no driver update to offer for this computer right now.'}"
+                               FontSize="12" Opacity="0.6" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420"/>
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding ShowScanningPlaceholder}" Spacing="8" Margin="24"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="{t:Translate Checking Windows Update for driver updates...}" FontSize="14"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{t:Translate This can take a minute.}"
+                               FontSize="12" Opacity="0.6" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+        </Border>
+
+        <TextBlock Grid.Row="6" Margin="4,8,4,0" FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                   Text="{t:Translate Text='Drivers are provided by the device makers through Windows Update. On a computer managed by your organization, its update policies decide which ones are offered.'}"/>
+    </Grid>
+</UserControl>

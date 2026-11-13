@@ -646,4 +646,23 @@ public sealed class UvInstallOptionsTests : IDisposable
         Assert.Contains("--no-python-downloads", parameters);
         Assert.Null(package.OverridenOptions.Uv_PythonRequest);
     }
+
+    [Fact]
+    public void UvRanksVersionsWithPep440AndFallsBackWhenItsParserRejects()
+    {
+        Uv manager = new();
+
+        // PEP 440 ranks a pre-release below its release; the numeric fallback would return
+        // null here because "0rc1" trips its digit-letter-digit ambiguity check.
+        Assert.True(manager.CompareVersions("1.0.0rc1", "1.0.0") < 0);
+        Assert.True(manager.CompareVersions("1.0.0", "1.0.0rc1") > 0);
+
+        // An implicit post-release ranks above its release (the PyPI column of the table in
+        // AGENTS.md's version-comparison section).
+        Assert.True(manager.CompareVersions("1.0.0-1", "1.0.0") > 0);
+
+        // A version the PEP 440 parser rejects reaches the base numeric comparison, which
+        // reads letter-only strings as zero.
+        Assert.Equal(0, manager.CompareVersions("nonsense", "0"));
+    }
 }

@@ -158,8 +158,9 @@ Python CLI tools installed into uv's isolated tool environments.
   `ApplyOperationOverrides` (called from the top of `PackageOperations.PerformOperation`, so
   both the local and the agent-broker paths) copies them into `package.OverridenOptions`, and
   `UvToolInstallRecords` remembers the original request so an upgrade reuses it.
-- Tests drive the parser and option plumbing through fake `uv` script fixtures; the
-  `UvToolInstallRecords.TestPathOverride` hook keeps the records file inside the test sandbox.
+- Tests feed verbatim `uv` CLI output into the parsers and option plumbing (no process is
+  launched); the `UvToolInstallRecords.TestPathOverride` hook keeps the records file inside
+  the test sandbox.
 
 ## macOS installer packages (.pkg, .dmg and .zip)
 

@@ -95,6 +95,15 @@ internal static partial class ElevatedMas
             .Concat(CommandArguments(masPath, arguments, userId, groupId))
             .Select(CoreTools.QuoteForPosixShell)) + " 2>&1";
 
+    internal static string CommandWithHelperBootstrap(
+        string helperPath,
+        string masPath,
+        IEnumerable<string> arguments,
+        uint userId,
+        uint groupId) =>
+        $"{CoreTools.QuoteForPosixShell(helperPath)} install-daemon >/dev/null 2>&1 || true; "
+        + Command(masPath, arguments, userId, groupId);
+
     private static ProcessStartInfo StartInfo(string executable) => new(executable)
     {
         UseShellExecute = false,
@@ -130,19 +139,16 @@ internal static partial class ElevatedMas
 
         if (NativeMas.StartInfo(masPath, arguments, prompt) is { } native)
         {
-            log(CoreTools.Translate("Checking native Touch ID authorization for the Mac App Store."));
+            log(CoreTools.Translate("Checking Touch ID authorization for the Mac App Store."));
             cancellationToken.ThrowIfCancellationRequested();
             int nativeExit = await RunProcess(native, OnLine, CancellationToken.None);
             if (nativeExit == NativeMas.Canceled)
                 return (NativeMas.CancellationResult, output.ToArray());
-            // Both fallback outcomes are emitted only before mas starts. Transport errors or a
-            // failed mas command never trigger a retry.
-            if (nativeExit is not (NativeMas.Unavailable or NativeMas.SigningRequired))
+            // Unavailable is emitted only before mas starts. Transport errors or a failed mas
+            // command never trigger a retry.
+            if (nativeExit != NativeMas.Unavailable)
                 return (nativeExit, output.ToArray());
             cancellationToken.ThrowIfCancellationRequested();
-            log(nativeExit == NativeMas.SigningRequired
-                ? CoreTools.Translate("Native Touch ID requires a UniGetUI build signed with an Apple-issued certificate. This ad-hoc development build can use password authorization instead.")
-                : CoreTools.Translate("Native Touch ID is not available. Enable its helper in the Mac App Store manager settings, or authorize with a password."));
         }
 
         if (TouchIdSudoEnabled())
@@ -186,8 +192,16 @@ internal static partial class ElevatedMas
                 "Touch ID did not authorize the operation. Falling back to the macOS administrator-password dialog."));
         }
 
+        string? bootstrapHelper = await NativeMas.GetBootstrapHelperPathAsync(arguments);
+        string shellCommand = bootstrapHelper is not null
+            ? CommandWithHelperBootstrap(bootstrapHelper, masPath, arguments, userId, groupId)
+            : Command(masPath, arguments, userId, groupId);
+        if (bootstrapHelper is not null)
+            log(CoreTools.Translate(
+                "Touch ID is not set up yet. After you enter your administrator password once, future Mac App Store operations can use Touch ID."));
+
         ProcessStartInfo startInfo = StartInfo(OsaScriptPath);
-        foreach (string argument in new[] { "-e", AuthorizationScript, "--", Command(masPath, arguments, userId, groupId), prompt })
+        foreach (string argument in new[] { "-e", AuthorizationScript, "--", shellCommand, prompt })
             startInfo.ArgumentList.Add(argument);
         log(CoreTools.Translate(
             "Waiting for the macOS administrator-password dialog and the Mac App Store. Command output will appear when the operation finishes."));

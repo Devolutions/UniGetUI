@@ -213,7 +213,10 @@ public static class SettingsSearchIndex
 
         foreach (var manager in PEInterface.Managers)
         {
-            int score = Rank(queryWords, manager.DisplayName, manager.DisplayName, [manager.Name]);
+            string[] keywords = manager.Name == "MacAppStore"
+                ? [manager.Name, manager.Properties.Id, "touch id", "biometrics"]
+                : [manager.Name, manager.Properties.Id];
+            int score = Rank(queryWords, manager.DisplayName, manager.DisplayName, keywords);
             if (score < NoMatch)
                 scored.Add((score, new SettingsSearchResult
                 {

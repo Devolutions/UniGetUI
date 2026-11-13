@@ -475,7 +475,27 @@ namespace UniGetUI.PackageEngine.Operations
                     var result = await managed.TryPerformAsync(Package, Options, CommandRole,
                         message => Line(message, LineType.Information), ReportProgress, CancellationToken);
                     if (result is not null)
+                    {
+                        if (result.Value is OperationVeredict.Failure)
+                        {
+                            Metadata.FailureTitle = _genericFailureTitle;
+                            Metadata.FailureMessage = _genericFailureMessage;
+                            string[] output = GetRawOutput().Select(entry => entry.Item1).ToArray();
+                            if (
+                                Package.Manager.OperationHelper.GetFailureExplanation(
+                                    Package,
+                                    CommandRole,
+                                    output,
+                                    1,
+                                    Options
+                                )
+                                is { Length: > 0 } explanation
+                            )
+                                Metadata.FailureMessage = explanation;
+                        }
+
                         return result.Value;
+                    }
                     // Resolution may have pinned an initially unversioned request before fallback.
                     PrepareProcessStartInfo();
                 }

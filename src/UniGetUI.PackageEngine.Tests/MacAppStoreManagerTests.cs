@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 using UniGetUI.PackageEngine.Managers.MacAppStoreManager.Internal;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
@@ -41,6 +42,8 @@ public sealed class MacAppStoreManagerTests : IDisposable
     private readonly Func<(uint UserId, uint GroupId)> _userIds = ElevatedMas.UserIds;
     private readonly Func<bool> _touchIdSudoEnabled = ElevatedMas.TouchIdSudoEnabled;
     private readonly Func<string?> _nativeHelperPath = NativeMas.HelperPath;
+    private readonly Func<string, Task<bool>> _canBootstrapWithHelper = NativeMas.CanBootstrapWithHelper;
+    private readonly Func<bool> _hasInstalledDaemonFiles = NativeMas.HasInstalledDaemonFiles;
 
     public MacAppStoreManagerTests()
     {
@@ -52,6 +55,8 @@ public sealed class MacAppStoreManagerTests : IDisposable
         ElevatedMas.UserIds = () => (501, 20);
         ElevatedMas.TouchIdSudoEnabled = () => false;
         NativeMas.HelperPath = () => null;
+        NativeMas.CanBootstrapWithHelper = _ => Task.FromResult(false);
+        NativeMas.HasInstalledDaemonFiles = () => false;
     }
 
     public void Dispose()
@@ -60,6 +65,8 @@ public sealed class MacAppStoreManagerTests : IDisposable
         ElevatedMas.UserIds = _userIds;
         ElevatedMas.TouchIdSudoEnabled = _touchIdSudoEnabled;
         NativeMas.HelperPath = _nativeHelperPath;
+        NativeMas.CanBootstrapWithHelper = _canBootstrapWithHelper;
+        NativeMas.HasInstalledDaemonFiles = _hasInstalledDaemonFiles;
         MacAppStorePkgOperationHelper.IsRoot = _isRoot;
         Settings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
@@ -441,6 +448,32 @@ public sealed class MacAppStoreManagerTests : IDisposable
             Operations(manager).GetParameters(App(manager), options, OperationType.Uninstall));
     }
 
+    [Fact]
+    public void ReinstallingAnAlreadyInstalledAppPassesForceAndUninstallForgetsInstallPath()
+    {
+        var (manager, _) = NewManager();
+        var operations = Operations(manager);
+        string appDir = Path.Combine(_testRoot, "Amphetamine.app");
+        Directory.CreateDirectory(appDir);
+
+        Package fresh = App(manager);
+        Assert.Equal(["get", Amphetamine], operations.GetParameters(fresh, new InstallOptions(), OperationType.Install));
+
+        manager.RecordInstallPath(Amphetamine, appDir);
+        Assert.Equal(["get", "--force", Amphetamine], operations.GetParameters(fresh, new InstallOptions(), OperationType.Install));
+
+        Assert.Equal(OperationVeredict.Success, operations.Verdict(fresh, OperationType.Uninstall, 0, [], _ => { }));
+        Assert.False(manager.HasRecordedInstallPath(fresh));
+        Assert.Equal(["get", Amphetamine], operations.GetParameters(fresh, new InstallOptions(), OperationType.Install));
+
+        Package taggedInstalled = App(manager);
+        taggedInstalled.Tag = PackageTag.AlreadyInstalled;
+        Assert.Equal(["get", "--force", Amphetamine], operations.GetParameters(taggedInstalled, new InstallOptions(), OperationType.Install));
+
+        var (legacy, _) = NewManager(2);
+        Assert.Equal(["purchase", Amphetamine], Operations(legacy).GetParameters(taggedInstalled, new InstallOptions(), OperationType.Install));
+    }
+
     [Theory]
     [InlineData(false, 7, OperationType.Install, true)]
     [InlineData(false, 4, OperationType.Update, true)]
@@ -550,21 +583,45 @@ public sealed class MacAppStoreManagerTests : IDisposable
         Assert.Equal(1, calls);
     }
 
-    [Theory]
-    [InlineData(NativeMas.Unavailable)]
-    [InlineData(NativeMas.SigningRequired)]
-    public async Task NativeHelperFallsBackOnlyWhenItExplicitlyDidNotStartMas(int nativeExit)
+    [Fact]
+    public async Task NativeHelperFallsBackOnlyWhenItExplicitlyDidNotStartMas()
     {
         NativeMas.HelperPath = () => "/app/UniGetUIMasHelper";
         List<string> calls = [];
         ElevatedMas.RunProcess = (info, _, _) =>
         {
             calls.Add(info.FileName);
-            return Task.FromResult(info.FileName == "/app/UniGetUIMasHelper" ? nativeExit : 0);
+            return Task.FromResult(info.FileName == "/app/UniGetUIMasHelper" ? NativeMas.Unavailable : 0);
         };
         var result = await ElevatedMas.RunAsync(MasPath, ["get", Amphetamine], "Install app", _ => { }, CancellationToken.None);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(["/app/UniGetUIMasHelper", ElevatedMas.OsaScriptPath], calls);
+    }
+
+    [Fact]
+    public async Task PasswordFallbackBootstrapsHelperWhenTouchIdIsAvailableAndNotDisabled()
+    {
+        NativeMas.HelperPath = () => "/app/UniGetUIMasHelper";
+        NativeMas.CanBootstrapWithHelper = _ => Task.FromResult(true);
+        ProcessStartInfo? osaScript = null;
+        ElevatedMas.RunProcess = (info, _, _) =>
+        {
+            if (info.FileName == "/app/UniGetUIMasHelper")
+                return Task.FromResult(NativeMas.Unavailable);
+            osaScript = info;
+            return Task.FromResult(0);
+        };
+
+        var result = await ElevatedMas.RunAsync(MasPath, ["get", "--force", Amphetamine], "Reinstall app", _ => { }, CancellationToken.None);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.NotNull(osaScript);
+        Assert.StartsWith("'/app/UniGetUIMasHelper' install-daemon >/dev/null 2>&1 || true; ", osaScript.ArgumentList[3]);
+        Assert.Contains("'--force'", osaScript.ArgumentList[3]);
+
+        Settings.Set(Settings.K.DisableMasTouchIdHelper, true);
+        Assert.Null(NativeMas.StartInfo(MasPath, ["get", Amphetamine], "Install app"));
+        Assert.Null(await NativeMas.GetBootstrapHelperPathAsync(["get", Amphetamine]));
     }
 
     [Fact]
@@ -588,7 +645,9 @@ public sealed class MacAppStoreManagerTests : IDisposable
     public void NativeHelperDoesNotReceiveCustomCommandLineSwitches()
     {
         NativeMas.HelperPath = () => "/app/UniGetUIMasHelper";
+        Assert.NotNull(NativeMas.StartInfo(MasPath, ["get", "--force", Amphetamine], "Reinstall app"));
         Assert.Null(NativeMas.StartInfo(MasPath, ["install", Amphetamine, "--anything"], "Install app"));
+        Assert.Null(NativeMas.StartInfo(MasPath, ["install", "--anything", Amphetamine], "Install app"));
         Assert.Null(NativeMas.StartInfo(MasPath, [], "Install app"));
     }
 
@@ -900,6 +959,8 @@ public sealed class MacAppStoreManagerTests : IDisposable
 
         Assert.Equal("mas", manager.Properties.Id);
         Assert.Equal("Mac App Store", manager.Properties.DisplayName);
+        Assert.Equal("MacAppStore", manager.DefaultSource.AsString);
+        Assert.Equal("Mac App Store", manager.DefaultSource.AsString_DisplayName);
         Assert.Equal("brew install mas", manager.Properties.InstallCommands.MacOS);
         Assert.Equal("PACKAGE_MANAGERS.md#mac-app-store", manager.Properties.SetupGuide);
         Assert.False(manager.Capabilities.SupportsCustomSources);
@@ -1124,5 +1185,82 @@ public sealed class MacAppStoreManagerTests : IDisposable
         var error = Assert.Throws<InvalidOperationException>(manager.Installed);
         Assert.Contains("Spotlight", error.Message);
         Assert.Empty(manager.Updates());
+    }
+
+    [Fact]
+    public void ExactIdSearchResolvesCompatibleSoftwareThroughMasLookupOnMas7()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+        const string universalAppId = "1462282993";
+        var manager = Listing(FakeMas(new()
+        {
+            ["version.out"] = "7.0.0\n",
+            ["config.out"] = Fixture("config.json"),
+            ["lookup.out"] = """{"adamID":1462282993,"name":"Devolutions Password Manager","kind":"software","version":"2026.3.5","icon512URL":"https://example.com/icon.png","description":"Vault"}""" + "\n",
+        }));
+        var record = LookupRecord(Amphetamine);
+        record["trackId"] = 1462282993;
+        record["kind"] = "software";
+        record["trackName"] = "Devolutions Password Manager";
+        manager.Catalog.Remember(record);
+        manager.LoadVersion();
+
+        Package found = Assert.Single(manager.Search(universalAppId));
+        Assert.Equal(universalAppId, found.Id);
+        Assert.Equal("Devolutions Password Manager", found.Name);
+        Assert.Equal("2026.3.5", found.VersionString);
+        Assert.Equal(["version", $"lookup --json {universalAppId}"], Calls());
+    }
+
+    [Fact]
+    public async Task ManagedOperationSurfacesStoreFailureExplanationInFailureMessage()
+    {
+        MacAppStorePkgOperationHelper.IsRoot = () => false;
+        var (manager, _) = NewManager();
+        ElevatedMas.RunProcess = (_, onLine, _) =>
+        {
+            onLine("Error: No downloads initiated for ADAM ID 6450432292");
+            return Task.FromResult(1);
+        };
+
+        using var operation = new UpdatePackageOperation(App(manager, "6450432292", "Universal Print"), new InstallOptions());
+        await operation.MainThread();
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Contains("administrator authorization and Apple Account sign-in are separate", operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public void ScreenshotsAcceptMacAndIpadLookupFields()
+    {
+        var macRecord = JsonNode.Parse("""{"macScreenshotUrls":["https://example.com/mac1.png"],"screenshotUrls":[]}""")!.AsObject();
+        var ipadRecord = JsonNode.Parse("""{"screenshotUrls":[],"ipadScreenshotUrls":["https://example.com/ipad1.png"]}""")!.AsObject();
+
+        Assert.Equal([new Uri("https://example.com/mac1.png")], AppStoreRecord.Screenshots(macRecord));
+        Assert.Equal([new Uri("https://example.com/ipad1.png")], AppStoreRecord.Screenshots(ipadRecord));
+    }
+
+    [Fact]
+    public async Task DisablingTouchIdWithoutInstalledDaemonRequiresNoElevationAndRestoresOnCancel()
+    {
+        NativeMas.HasInstalledDaemonFiles = () => false;
+        string message = await MacAppStore.ConfigureTouchIdAsync(enable: false);
+        Assert.Contains("disabled", message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(Settings.Get(Settings.K.DisableMasTouchIdHelper));
+
+        Settings.Set(Settings.K.DisableMasTouchIdHelper, false);
+        NativeMas.HasInstalledDaemonFiles = () => true;
+        string fakeHelper = Path.Combine(_testRoot, "UniGetUIMasHelper");
+        File.WriteAllText(fakeHelper, "");
+        NativeMas.HelperPath = () => fakeHelper;
+        ElevatedMas.RunProcess = (_, onLine, _) =>
+        {
+            onLine("0:19: execution error: User canceled. (-128)");
+            return Task.FromResult(1);
+        };
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => MacAppStore.ConfigureTouchIdAsync(enable: false));
+        Assert.False(Settings.Get(Settings.K.DisableMasTouchIdHelper));
     }
 }

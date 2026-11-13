@@ -29,6 +29,10 @@ public partial class MacAppStore : PackageManager
 
     internal AppStoreCatalog Catalog { get; }
 
+    public static Task<MasTouchIdStatus> GetTouchIdStatusAsync() => NativeMas.GetStatusAsync();
+
+    public static string DescribeTouchIdStatus(MasTouchIdStatus status) => NativeMas.DescribeStatus(status);
+
     public static Task<string> ConfigureTouchIdAsync(bool enable) => NativeMas.ConfigureAsync(enable);
 
     private readonly ConcurrentDictionary<string, string> _installPaths = new();
@@ -84,6 +88,7 @@ public partial class MacAppStore : PackageManager
             DefaultSource = appStore,
             KnownSources = [appStore],
         };
+        appStore.RefreshSourceNames();
 
         Catalog = new AppStoreCatalog(() => Storefront);
         DetailsHelper = new MacAppStorePkgDetailsHelper(this);
@@ -238,14 +243,32 @@ public partial class MacAppStore : PackageManager
             return [];
 
         // mas search treats an App Store ID as a name, but package links and the CLI resolve by ID.
-        if (terms.All(char.IsAsciiDigit) && Catalog.Get(terms) is { } record
-            && AppStoreRecord.Text(record, "kind") == "mac-software"
-            && AppStoreRecord.Text(record, "name", "trackName") is { } name)
+        if (terms.All(char.IsAsciiDigit))
         {
-            var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
-            logger.Log($"Resolved App Store ID {terms} in the {Storefront} storefront.");
-            logger.Close(0);
-            return [new Package(name.Trim(), terms, AppStoreRecord.Text(record, "version") ?? "", DefaultSource, this)];
+            if (Catalog.Get(terms) is { } record
+                && AppStoreRecord.Text(record, "kind") == "mac-software"
+                && AppStoreRecord.Text(record, "name", "trackName") is { } name)
+            {
+                var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
+                logger.Log($"Resolved App Store ID {terms} in the {Storefront} storefront.");
+                logger.Close(0);
+                return [new Package(name.Trim(), terms, AppStoreRecord.Text(record, "version") ?? "", DefaultSource, this)];
+            }
+
+            // Compatible iPhone/iPad apps on Apple Silicon report kind="software" in Apple's public
+            // lookup API alongside iPhone-only apps; mas lookup --json only returns apps offered on
+            // this Mac's App Store.
+            if (MasMajorVersion >= 7)
+            {
+                var lookupLines = RunListing(LoggableTaskType.FindPackages, $"lookup{JsonFlag} {terms}", out _, out _);
+                var lookedUp = MasOutput.ParseApps(lookupLines, outdated: false);
+                if (lookedUp.Count > 0)
+                {
+                    foreach (MasApp app in lookedUp)
+                        Catalog.Remember(app.Catalog);
+                    return ToPackages(lookedUp);
+                }
+            }
         }
 
         var lines = RunListing(LoggableTaskType.FindPackages, $"search{JsonFlag} {terms}", out int exitCode, out string errors);
@@ -291,6 +314,13 @@ public partial class MacAppStore : PackageManager
                 ? new Package(app.Name, app.Id, app.Version, DefaultSource, this)
                 : new Package(app.Name, app.Id, app.Version, app.NewVersion, DefaultSource, this))
             .ToArray();
+
+    internal void RecordInstallPath(string id, string path) => _installPaths[id] = path;
+
+    internal void ForgetInstallPath(string id) => _installPaths.TryRemove(id, out _);
+
+    internal bool HasRecordedInstallPath(IPackage package) =>
+        _installPaths.TryGetValue(package.Id, out string? path) && Directory.Exists(path);
 
     internal string? InstallPathOf(IPackage package)
     {

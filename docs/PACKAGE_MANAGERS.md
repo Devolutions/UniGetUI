@@ -284,45 +284,43 @@ brew install mas
 UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/bin`.
 
 - **Search and package IDs.** Search by app name or its numeric App Store ID. Exact IDs are resolved
-  through Apple's lookup service in the account's storefront, so package links and
+  through Apple's lookup service in the account's storefront (and `mas lookup` on mas 7+ for
+  compatible iPhone and iPad apps sold on the Mac App Store), so package links and
   `package install --manager mas --id <id>` can find apps without a prior name search.
 - **Apple Account.** mas uses the Apple Account signed in to the App Store app and cannot sign in
   by itself. Searching and listing installed apps and updates work without one; installing and
   updating apps need one. Depending on **Media & Purchases** in System Settings, the App Store may
   still ask for the Apple Account password, or Touch ID, for each app.
-- **Free and paid apps.** UniGetUI gets a free app with `mas get`, whether or not the account
-  already owns it. A paid app must first be bought in the App Store app; UniGetUI then downloads it
-  with `mas install`.
-- **Administrator authorization.** mas 4 and later need administrator rights to install and update apps,
-  and every release needs them to uninstall one. On macOS 13 or later, use **Settings > Package
-  managers > Mac App Store > Touch ID authorization > Set up Touch ID** to register UniGetUI's
-  bundled helper, then approve UniGetUI in **System Settings > General > Login Items & Extensions**.
-  macOS requires this one-time administrator approval before the helper can run. Subsequent
-  ordinary Mac App Store operations use a native Touch ID prompt, without editing sudo or PAM.
-  The helper requires an Apple-signed build: Developer ID for distribution, or Apple Development
-  for local testing. Ad-hoc development builds use the existing sudo/password path instead;
-  setup reports the signing requirement rather than registering a helper macOS cannot launch.
-  **Remove helper** unregisters it; you can also disable its background permission in System Settings.
-  If the helper is not approved, or the current user is not the active, locally signed-in
-  administrator, UniGetUI uses the existing sudo/password path. Custom command-line switches
-  also use that path: the helper accepts only an operation and a numeric App Store ID.
-  If Apple's Touch ID module is enabled for `sudo`, UniGetUI uses it; otherwise it uses
-  the native macOS administrator-password dialog. That AppleScript
-  dialog is not a reliable way to request Touch ID. UniGetUI never receives your password and does
+- **Free, paid and reinstalled apps.** UniGetUI gets a free app with `mas get`, whether or not the
+  account already owns it. A paid app must first be bought in the App Store app; UniGetUI then
+  downloads it with `mas install`. Reinstalling an already-installed app passes `--force`.
+- **Administrator and Touch ID authorization.** mas 4 and later need administrator rights to install
+  and update apps, and every release needs them to uninstall one. UniGetUI bundles an on-demand
+  LaunchDaemon helper (`com.devolutions.unigetui.mashelper`) installed into
+  `/Library/PrivilegedHelperTools/`. You can enable it ahead of time under **Settings > Package
+  managers > Mac App Store > Touch ID authorization > Set up Touch ID**, or let the first
+  password-authorized operation install it when Touch ID is available on the Mac. Once installed,
+  Mac App Store operations present macOS's native Touch ID sheet (with **Use Password…** built into
+  the same sheet) and stream live `mas` output without modifying `sudo` or PAM. **Remove helper**
+  boots out and deletes the daemon and remembers your preference not to reinstall it automatically.
+  Custom command-line switches bypass the helper and use the `sudo`/password path directly.
+  If Apple's Touch ID module is enabled for `sudo`, UniGetUI can also use it; otherwise it uses
+  the native macOS administrator-password dialog. UniGetUI never receives your password and does
   not change the system's `sudo` or Touch ID settings.
   The App Store still uses the account of the user running UniGetUI, even if another administrator
   authorizes the operation. When **Prohibit any kind of
   Elevation via UniGetUI Elevator or GSudo** is turned on, under **Settings > Administrator rights
   and other dangerous settings**, those operations fail instead. Uninstalling moves the app to the
   Trash.
-- **Native helper safety.** The helper validates the client's code signature against its own
-  using the XPC message's audit identity, verifies that the requesting user is the active
-  administrator, and performs biometric authentication in its own per-operation worker.
-  It does not trust a client-supplied authentication result. The prompt includes the actual
-  `mas` command and executable path. Before authentication, the helper copies itself and the
-  native mas binary into a private, root-owned staging directory and validates their signatures;
-  mas must have only absolute system-library imports. Homebrew's native executable beneath
-  its shell wrapper is supported. Script-only or externally linked mas builds fall back to
+- **Native helper safety.** Both XPC ends validate the message's audit identity against the helper's
+  code-signing requirement, verify that the requesting user is the active console administrator,
+  and perform authentication in a per-operation worker inside the user's login session. The helper
+  accepts only a supported verb, optional `--force` on install/update, and a numeric App Store ID.
+  The prompt always shows the authoritative `mas` command. Before authentication, the helper
+  verifies that `mas` lives in a root- or administrator-owned path without world-writable or sticky
+  directories, snapshots itself and the native `mas` binary into `/private/var/run/com.devolutions.unigetui.mashelper`,
+  and validates their signatures and system-only Mach-O imports. Homebrew's native executable beneath
+  its shell wrapper is supported. Script-only or externally linked `mas` builds fall back to
   password authorization. No passwords, biometric data, or reusable authorization tokens
   are collected or saved. The helper is hardened independently of the desktop app.
 - **Enabling Touch ID for sudo (optional, system-wide).** On macOS Sonoma and later, an administrator

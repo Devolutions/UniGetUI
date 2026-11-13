@@ -74,7 +74,7 @@ internal static class AppStoreRecord
     public static IReadOnlyList<Uri> Screenshots(JsonObject app)
     {
         List<Uri> screenshots = [];
-        foreach (string url in Strings(app, "screenshotURLs", "screenshotUrls"))
+        foreach (string url in Strings(app, "screenshotURLs", "macScreenshotUrls", "screenshotUrls", "ipadScreenshotUrls"))
             if (AsWebUrl(url) is { } uri)
                 screenshots.Add(uri);
         return screenshots;

@@ -68,19 +68,36 @@ int main(void)
 {
     @autoreleasepool
     {
-        assert(ValidOperation(@"get", @"409907375"));
-        assert(ValidOperation(@"uninstall", @"937984704"));
-        assert(!ValidOperation(@"exec", @"409907375"));
-        assert(!ValidOperation(@"install", @"1;id"));
-        assert(!ValidOperation(@"install", @""));
-        assert(!ValidOperation(@"install", @"１２３"));
-        assert(!ValidOperation(nil, @"1"));
-        assert(!ValidOperation(@"get", nil));
-        assert(!ValidOperation(@"get", @"123456789012345678901"));
+        assert(ValidOperation(@"get", NO, @"409907375"));
+        assert(ValidOperation(@"get", YES, @"409907375"));
+        assert(ValidOperation(@"install", YES, @"409907375"));
+        assert(ValidOperation(@"update", YES, @"409907375"));
+        assert(ValidOperation(@"uninstall", NO, @"937984704"));
+        assert(!ValidOperation(@"uninstall", YES, @"937984704"));
+        assert(!ValidOperation(@"purchase", YES, @"937984704"));
+        assert(!ValidOperation(@"upgrade", YES, @"937984704"));
+        assert(!ValidOperation(@"exec", NO, @"409907375"));
+        assert(!ValidOperation(@"install", NO, @"1;id"));
+        assert(!ValidOperation(@"install", NO, @""));
+        assert(!ValidOperation(@"install", NO, @"１２３"));
+        assert(!ValidOperation(nil, NO, @"1"));
+        assert(!ValidOperation(@"get", NO, nil));
+        assert(!ValidOperation(@"get", NO, @"123456789012345678901"));
+
+        assert([FormatAuthenticationReason(@"update", NO, @"1295203466",
+            @"UniGetUI wants to update Windows App from the Mac App Store.")
+            isEqualToString:@"update Windows App from the Mac App Store (mas update 1295203466)"]);
+        assert([FormatAuthenticationReason(@"get", YES, @"409907375",
+            @"UniGetUI wants to reinstall Apple Remote Desktop.")
+            isEqualToString:@"reinstall Apple Remote Desktop (mas get --force 409907375)"]);
+        assert([FormatAuthenticationReason(@"uninstall", NO, @"937984704", @"")
+            isEqualToString:@"run mas uninstall 937984704"]);
+
         assert(AuthenticationResult(YES, YES, 0) == 0);
         assert(AuthenticationResult(NO, YES, 0) == Canceled);
         assert(AuthenticationResult(YES, NO, LAErrorUserFallback) == Unavailable);
-        assert(AuthenticationResult(YES, NO, LAErrorBiometryLockout) == Unavailable);
+        assert(AuthenticationResult(YES, NO, LAErrorPasscodeNotSet) == Unavailable);
+        assert(AuthenticationResult(YES, NO, LAErrorNotInteractive) == Unavailable);
         assert(AuthenticationResult(YES, NO, LAErrorUserCancel) == Canceled);
         assert(AuthenticationResult(YES, NO, LAErrorSystemCancel) == Canceled);
         assert(AuthenticationResult(YES, NO, LAErrorAuthenticationFailed) == Canceled);
@@ -89,6 +106,35 @@ int main(void)
         assert(CleanEnvironment(501, 20)[@"BASH_ENV"] == nil);
         gid_t gid;
         assert(!ActiveAdministrator(0, &gid));
+
+        // Path trust policy: root and active-owner paths pass; sticky/world-writable/untrusted-group fail.
+        struct stat st;
+        memset(&st, 0, sizeof(st));
+        st.st_uid = 0; st.st_gid = 0; st.st_mode = S_IFDIR | 0755;
+        assert(TrustedStat(&st, 501));
+        st.st_uid = 501; st.st_gid = 80; st.st_mode = S_IFDIR | 0775;
+        assert(TrustedStat(&st, 501));
+        st.st_uid = 501; st.st_gid = 20; st.st_mode = S_IFDIR | 0775;
+        assert(!TrustedStat(&st, 501)); // group-writable outside wheel/admin
+        st.st_uid = 0; st.st_gid = 0; st.st_mode = S_IFDIR | 0777;
+        assert(!TrustedStat(&st, 501)); // world-writable
+        st.st_uid = 0; st.st_gid = 0; st.st_mode = S_IFDIR | S_ISVTX | 0755;
+        assert(!TrustedStat(&st, 501)); // sticky directory
+        st.st_uid = 59999; st.st_gid = 20; st.st_mode = S_IFREG | 0755;
+        assert(!TrustedStat(&st, 501)); // non-admin third-party user
+        assert(TrustedExecutablePath(@"/bin/ls", getuid()));
+        assert(!TrustedExecutablePath(@"relative/mas", getuid()));
+
+        NSString *plist = [[NSString alloc] initWithData:DaemonPlistData() encoding:NSUTF8StringEncoding];
+        assert([plist containsString:@"com.devolutions.unigetui.mashelper"]);
+        assert([plist containsString:@"<key>MachServices</key>"]);
+        assert(![plist containsString:@"RunAtLoad"]);
+        assert(![plist containsString:@"KeepAlive"]);
+        if (geteuid() != 0)
+        {
+            assert(InstallDaemon() == Failed);
+            assert(RemoveDaemon() == Failed);
+        }
 
         for (NSNumber *type in @[@(LC_LOAD_DYLIB), @(LC_LOAD_WEAK_DYLIB), @(LC_LOAD_UPWARD_DYLIB),
             @(LC_REEXPORT_DYLIB), @(LC_LAZY_LOAD_DYLIB)])
@@ -120,10 +166,6 @@ int main(void)
 
         SecRequirementRef requirement = OwnRequirement();
         assert(requirement != NULL);
-        // The build target signs this test executable ad hoc, never with an Apple identity.
-        assert(!AppleSignedHelper());
-        if (@available(macOS 13.0, *))
-            assert(Configure(YES) == SigningRequired);
         CheckMessageIdentity(requirement);
         xpc_object_t forged = xpc_dictionary_create(NULL, NULL, 0);
         assert(!TrustedMessage(forged, requirement));
@@ -137,16 +179,23 @@ int main(void)
         NSString *snapshot = [root stringByAppendingPathComponent:@"test-helper"];
         assert(Snapshot(SelfPath(), snapshot, requirement));
         assert(!Snapshot(SelfPath(), snapshot, requirement)); // never overwrite an existing destination
+        // Even a valid signed binary inside /private/tmp must be rejected by TrustedExecutablePath / ResolveMas.
+        NSString *untrustedMas = [root stringByAppendingPathComponent:@"mas"];
+        assert(Snapshot(SelfPath(), untrustedMas, requirement));
+        assert(!TrustedExecutablePath(untrustedMas, getuid()));
+        assert(ResolveMas(untrustedMas, getuid()) == nil);
         NSString *link = [root stringByAppendingPathComponent:@"link"];
         assert(symlink(SelfPath().fileSystemRepresentation, link.fileSystemRepresentation) == 0);
         assert(!Snapshot(link, [root stringByAppendingPathComponent:@"link-copy"], requirement));
         NSString *bad = [root stringByAppendingPathComponent:@"not-a-binary"];
         assert([script writeToFile:bad atomically:NO]);
         assert(!Snapshot(bad, [root stringByAppendingPathComponent:@"bad-copy"], NULL));
+        if ([NSFileManager.defaultManager fileExistsAtPath:@"/opt/homebrew/bin/mas"])
+            assert(ResolveMas(@"/opt/homebrew/bin/mas", getuid()) != nil);
         NSError *error = nil;
         assert([NSFileManager.defaultManager removeItemAtPath:root error:&error]);
         CFRelease(requirement);
-        puts("Native helper policy, authentication outcomes, authenticated IPC, and protected staging passed.");
+        puts("Native helper policy, path trust, authentication outcomes, authenticated IPC, and protected staging passed.");
         return 0;
     }
 }

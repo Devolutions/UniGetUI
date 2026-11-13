@@ -122,9 +122,7 @@
         <PropertyGroup>
             <_MacMasSource>$(MSBuildProjectDirectory)/../../scripts/macos</_MacMasSource>
         </PropertyGroup>
-        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -mmacosx-version-min=12.0 -framework Foundation -framework LocalAuthentication -framework Security -framework ServiceManagement -framework SystemConfiguration '$(_MacMasSource)/UniGetUIMasHelper.m' -o '$(TargetDir)UniGetUIMasHelper'" />
-        <Copy SourceFiles="$(_MacMasSource)/io.github.marticliment.unigetui.mashelper.plist"
-              DestinationFolder="$(MacAppBundleDir)/Contents/Library/LaunchDaemons" />
+        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -mmacosx-version-min=12.0 -Wl,-sectcreate,__TEXT,__info_plist,'$(_MacMasSource)/MasHelper-Info.plist' -framework Foundation -framework LocalAuthentication -framework Security -framework SystemConfiguration '$(_MacMasSource)/UniGetUIMasHelper.m' -o '$(TargetDir)UniGetUIMasHelper'" />
     </Target>
 
     <Target Name="BuildMacMasHelperForPublish" AfterTargets="Publish"
@@ -135,8 +133,7 @@
             <_MacMasArchitecture Condition="'$(RuntimeIdentifier)' == 'osx-x64'">x86_64</_MacMasArchitecture>
         </PropertyGroup>
         <Error Condition="'$(_MacMasArchitecture)' == ''" Text="A macOS RuntimeIdentifier is required to build the Mac App Store helper." />
-        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -arch $(_MacMasArchitecture) -mmacosx-version-min=12.0 -framework Foundation -framework LocalAuthentication -framework Security -framework ServiceManagement -framework SystemConfiguration '$(_MacMasSource)/UniGetUIMasHelper.m' -o '$(PublishDir)UniGetUIMasHelper'" />
-        <Copy SourceFiles="$(_MacMasSource)/io.github.marticliment.unigetui.mashelper.plist" DestinationFolder="$(PublishDir)" />
+        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -arch $(_MacMasArchitecture) -mmacosx-version-min=12.0 -Wl,-sectcreate,__TEXT,__info_plist,'$(_MacMasSource)/MasHelper-Info.plist' -framework Foundation -framework LocalAuthentication -framework Security -framework SystemConfiguration '$(_MacMasSource)/UniGetUIMasHelper.m' -o '$(PublishDir)UniGetUIMasHelper'" />
     </Target>
 
     <Target Name="BuildMacNotificationBridgeForPublish" AfterTargets="Publish"

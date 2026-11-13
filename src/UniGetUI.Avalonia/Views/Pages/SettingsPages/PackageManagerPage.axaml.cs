@@ -587,6 +587,8 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
 
 #if !WINDOWS
             case "MacAppStore":
+                disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
+                disableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
                 ExtraControls.Children.Add(disableNotifsCard);
                 ExtraControls.Children.Add(BuildMacAppStoreTouchIdCard());
                 break;
@@ -624,7 +626,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
     {
         var status = new TextBlock
         {
-            Text = CoreTools.Translate("Enable the UniGetUI helper once in System Settings to authorize Mac App Store operations with Touch ID. This does not change sudo settings. Only the active administrator can use it."),
+            Text = CoreTools.Translate("Install the UniGetUI helper once with your administrator password to authorize Mac App Store operations with Touch ID and stream live progress. This does not change sudo settings."),
             TextWrapping = TextWrapping.Wrap,
         };
         var enable = new Button { Content = CoreTools.Translate("Set up Touch ID") };
@@ -633,6 +635,22 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         buttons.Children.Add(enable);
         buttons.Children.Add(disable);
         var body = new StackPanel { Spacing = 8, Children = { status, buttons } };
+
+        async Task RefreshAsync()
+        {
+            try
+            {
+                var current = await MacAppStore.GetTouchIdStatusAsync();
+                status.Text = MacAppStore.DescribeTouchIdStatus(current);
+                enable.IsEnabled = !current.HelperReady || current.DisabledByUser;
+                disable.IsEnabled = current.HelperReady || !current.DisabledByUser;
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                Logger.Warn($"Could not read Mac App Store Touch ID status: {ex.Message}");
+            }
+        }
+
         async Task Configure(bool value)
         {
             buttons.IsEnabled = false;
@@ -640,24 +658,36 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             try
             {
                 status.Text = await MacAppStore.ConfigureTouchIdAsync(value);
+                var updated = await MacAppStore.GetTouchIdStatusAsync();
+                enable.IsEnabled = !updated.HelperReady || updated.DisabledByUser;
+                disable.IsEnabled = updated.HelperReady || !updated.DisabledByUser;
+            }
+            catch (OperationCanceledException ex)
+            {
+                status.Text = ex.Message;
             }
             catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
             {
                 Logger.Error(ex);
-                status.Text = CoreTools.Translate("Could not configure native Touch ID authorization.") + "\n" + ex.Message;
+                status.Text = CoreTools.Translate("Could not configure Touch ID authorization.") + "\n" + ex.Message;
             }
             finally
             {
                 buttons.IsEnabled = true;
             }
         }
+
         enable.Click += async (_, _) => await Configure(true);
         disable.Click += async (_, _) => await Configure(false);
+        _ = RefreshAsync();
+
         return new SettingsCard
         {
+            Name = "MacAppStoreTouchIdCard",
             Header = CoreTools.Translate("Touch ID authorization"),
             Description = body,
-            Margin = new Thickness(0, 8, 0, 0),
+            CornerRadius = new CornerRadius(0, 0, 8, 8),
+            BorderThickness = new Thickness(1, 0, 1, 1),
         };
     }
 #endif

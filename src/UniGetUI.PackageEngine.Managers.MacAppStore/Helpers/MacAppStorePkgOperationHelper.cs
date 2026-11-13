@@ -1,6 +1,7 @@
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -12,9 +13,9 @@ namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 
 /// <summary>
 /// mas 4 and later need root to install and update apps, and every release needs it to uninstall
-/// one, so those operations use configured sudo Touch ID support or the native password dialog
-/// (<see cref="ElevatedMas"/>). The others (mas 3 and earlier, or UniGetUI already running as root)
-/// run as an ordinary process.
+/// one, so those operations use the Touch ID helper, configured sudo Touch ID, or the native
+/// password dialog (<see cref="ElevatedMas"/>). The others (mas 3 and earlier, or UniGetUI already
+/// running as root) run as an ordinary process.
 /// </summary>
 internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IManagedPackageOperationHelper
 {
@@ -42,6 +43,12 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
             : IsLegacyMas ? "purchase" : "get",
     };
 
+    internal bool IsReinstall(IPackage package, OperationType operation) =>
+        operation == OperationType.Install
+        && !IsLegacyMas
+        && (package.Tag is PackageTag.AlreadyInstalled or PackageTag.IsUpgradable
+            || _manager.HasRecordedInstallPath(package));
+
     internal bool NeedsRoot(OperationType operation) =>
         !IsRoot() && (operation == OperationType.Uninstall || _manager.MasMajorVersion is 0 or >= 4);
 
@@ -50,7 +57,10 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
         InstallOptions options,
         OperationType operation)
     {
-        List<string> parameters = [Verb(package, operation), package.Id];
+        List<string> parameters = [Verb(package, operation)];
+        if (IsReinstall(package, operation))
+            parameters.Add("--force");
+        parameters.Add(package.Id);
         parameters.AddRange(
             operation switch
             {
@@ -66,7 +76,35 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode) =>
-        Verdict(returnCode, processOutput, message => Logger.Warn(message));
+        Verdict(package, operation, returnCode, processOutput, message => Logger.Warn(message));
+
+    public override string? GetFailureExplanation(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options = null) =>
+        ExplainFailure(processOutput);
+
+    internal static string? ExplainFailure(IReadOnlyList<string> output)
+    {
+        string elevationBlocked = CoreTools.Translate(
+            "The Mac App Store needs administrator rights for this operation, but elevation is prohibited in UniGetUI's settings.");
+        if (output.Any(line => line.Contains(elevationBlocked, StringComparison.Ordinal)))
+            return elevationBlocked;
+
+        if (output.Any(line => line.Contains("No downloads initiated", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("Redownload Unavailable", StringComparison.OrdinalIgnoreCase)))
+            return CoreTools.Translate(
+                "The Mac App Store did not start a download. Mac administrator authorization and Apple Account sign-in are separate. Open the App Store, try this app there, and complete any account prompts. Also check that the signed-in Apple Account owns it and that it is available in your region.");
+
+        if (output.Any(line => line.Contains("Sign in to the App Store", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("not signed in", StringComparison.OrdinalIgnoreCase)))
+            return CoreTools.Translate(
+                "Sign in to your Apple Account in the Mac App Store app, then try again.");
+
+        return null;
+    }
 
     public Task<OperationVeredict?> TryPerformAsync(IPackage package, InstallOptions options,
         OperationType operation, Action<string> log, Action<OperationProgress> progress,
@@ -94,15 +132,29 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
 
         IReadOnlyList<string> arguments = GetParameters(package, options, operation);
         var (exitCode, output) = await ElevatedMas.RunAsync(
-            _manager.Status.ExecutablePath, arguments, Prompt(package, operation), log, cancellationToken);
+            _manager.Status.ExecutablePath,
+            arguments,
+            Prompt(package, operation, IsReinstall(package, operation)),
+            log,
+            cancellationToken);
 
-        return Verdict(exitCode, output, log);
+        return Verdict(package, operation, exitCode, output, log);
     }
 
-    internal OperationVeredict Verdict(int exitCode, IReadOnlyList<string> output, Action<string> log)
+    internal OperationVeredict Verdict(int exitCode, IReadOnlyList<string> output, Action<string> log) =>
+        Verdict(null, OperationType.None, exitCode, output, log);
+
+    internal OperationVeredict Verdict(
+        IPackage? package,
+        OperationType operation,
+        int exitCode,
+        IReadOnlyList<string> output,
+        Action<string> log)
     {
         if (exitCode == 0)
         {
+            if (operation == OperationType.Uninstall && package is not null)
+                _manager.ForgetInstallPath(package.Id);
             _manager.InvalidateInstalledPackages();
             return OperationVeredict.Success;
         }
@@ -111,17 +163,18 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
             || output.Any(line => line.TrimEnd().EndsWith("(-128)", StringComparison.Ordinal)))
             return OperationVeredict.Canceled;
 
-        if (output.Any(line => line.Contains("No downloads initiated", StringComparison.OrdinalIgnoreCase)))
-            log(CoreTools.Translate(
-                "The Mac App Store did not start a download. Mac administrator authorization and Apple Account sign-in are separate. Open the App Store, try this app there, and complete any account prompts. Also check that the signed-in Apple Account owns it and that it is available in your region."));
+        if (ExplainFailure(output) is { } explanation
+            && !output.Any(line => line.Contains(explanation, StringComparison.Ordinal)))
+            log(explanation);
 
         return OperationVeredict.Failure;
     }
 
-    internal static string Prompt(IPackage package, OperationType operation) => operation switch
+    internal static string Prompt(IPackage package, OperationType operation, bool reinstall = false) => operation switch
     {
         OperationType.Uninstall => CoreTools.Translate("UniGetUI wants to uninstall {0}.", package.Name),
         OperationType.Update => CoreTools.Translate("UniGetUI wants to update {0} from the Mac App Store.", package.Name),
+        _ when reinstall => CoreTools.Translate("UniGetUI wants to reinstall {0} from the Mac App Store.", package.Name),
         _ => CoreTools.Translate("UniGetUI wants to install {0} from the Mac App Store.", package.Name),
     };
 }

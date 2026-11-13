@@ -675,9 +675,6 @@ jobs:
           test -f "${APP_BUNDLE}/Contents/MacOS/uniget"
           chmod +x "${APP_BUNDLE}/Contents/MacOS/uniget"
           test -f "${APP_BUNDLE}/Contents/MacOS/UniGetUIMasHelper"
-          mkdir -p "${APP_BUNDLE}/Contents/Library/LaunchDaemons"
-          mv "${APP_BUNDLE}/Contents/MacOS/io.github.marticliment.unigetui.mashelper.plist" \
-            "${APP_BUNDLE}/Contents/Library/LaunchDaemons/"
           sed "s|@VERSION@|${VERSION}|g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"

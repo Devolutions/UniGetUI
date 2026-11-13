@@ -2,6 +2,7 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.AptManager;
+using UniGetUI.PackageEngine.Managers.AurManager;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.CargoManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
@@ -41,6 +42,7 @@ public class ReinstallOnUpdateManagerTests
             { nameof(DotNet), true },
             { nameof(Homebrew), true },
             { nameof(Pacman), true },
+            { nameof(Aur), true },
             { nameof(Flatpak), false },
             { nameof(Cargo), false },
             { nameof(Vcpkg), false },
@@ -69,6 +71,7 @@ public class ReinstallOnUpdateManagerTests
             nameof(DotNet) => new DotNet(),
             nameof(Homebrew) => new Homebrew(),
             nameof(Pacman) => new Pacman(),
+            nameof(Aur) => new Aur(),
             nameof(Flatpak) => new Flatpak(),
             nameof(Cargo) => new Cargo(),
             nameof(Vcpkg) => new Vcpkg(),

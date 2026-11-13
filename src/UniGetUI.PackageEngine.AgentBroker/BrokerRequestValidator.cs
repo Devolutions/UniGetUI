@@ -183,6 +183,7 @@ public static partial class BrokerRequestValidator
     /// </summary>
     public static bool RequestsElevation(IPackage package, InstallOptions options) =>
         !Settings.Get(Settings.K.ProhibitElevation)
+        && !package.Manager.Capabilities.MustNotRunElevated
         && (package.OverridenOptions.RunAsAdministrator is true || options.RunAsAdministrator);
 
     /// <summary>

@@ -145,6 +145,7 @@ internal static class ManagerIconResolver
             "apt" => "apt",
             "dnf" => "dnf",
             "pacman" => "pacman",
+            "aur" => "pacman",
             "skills" => "skills",
             _ => "ms_store",
         };

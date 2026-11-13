@@ -33,26 +33,7 @@ internal abstract class TuiE2ETestBase : ConsoloniaAppTestBase<App>
         Args = [];
     }
 
-    protected override AppBuilder CreateAppBuilder()
-        => base.CreateAppBuilder().WithConsoleFonts().AfterPlatformServicesSetup(_ => UseFastRenderLoop());
-
-    // Consolonia renders at 30 fps. UnitTestConsole.WaitRendered waits for two composition
-    // commits, so every key press and typed character in a test cost about 130 ms.
-    // Avalonia 12 reference assemblies hide the render timer, so it is reached by reflection.
-    private static readonly Type RenderTimerType =
-        typeof(AvaloniaObject).Assembly.GetType("Avalonia.Rendering.IRenderTimer")
-        ?? throw new InvalidOperationException("Could not find Avalonia's render timer.");
-
-    private static void UseFastRenderLoop()
-    {
-        object locator = typeof(AvaloniaLocator).GetProperty("Current", BindingFlags.Static | BindingFlags.Public)?.GetValue(null)
-                         ?? throw new InvalidOperationException("Could not find Avalonia's service locator.");
-        object timer = locator.GetType().GetMethod("GetService", [typeof(Type)])?.Invoke(locator, [RenderTimerType])
-                       ?? throw new InvalidOperationException("Consolonia did not register a render timer.");
-        FieldInfo interval = timer.GetType().GetField("_timeBetweenTicks", BindingFlags.Instance | BindingFlags.NonPublic)
-                             ?? throw new InvalidOperationException($"Could not find the tick interval of {timer.GetType()}.");
-        interval.SetValue(timer, TimeSpan.FromMilliseconds(2));
-    }
+    protected override AppBuilder CreateAppBuilder() => base.CreateAppBuilder().WithConsoleFonts();
 
     internal static MainWindow Window
         => (MainWindow)((IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).MainWindow!;
@@ -141,6 +122,26 @@ internal abstract class TuiE2ETestBase : ConsoloniaAppTestBase<App>
 
     protected Task Key(Key key, RawModifiers modifiers = RawModifiers.None)
         => UITest.KeyInput(key, (Avalonia.Input.RawInputModifiers)modifiers);
+
+    // Consolonia renders at 30 fps. UnitTestConsole.WaitRendered waits for two composition
+    // commits, so every key press and typed character in a test cost about 130 ms.
+    // Avalonia 12 reference assemblies hide the render timer, so it is reached by reflection.
+    // The timer reads its interval on every tick, so it can be changed once the app runs.
+    private static readonly Type RenderTimerType =
+        typeof(AvaloniaObject).Assembly.GetType("Avalonia.Rendering.IRenderTimer")
+        ?? throw new InvalidOperationException("Could not find Avalonia's render timer.");
+
+    [SetUp]
+    public void UseFastRenderLoop()
+    {
+        object locator = typeof(AvaloniaLocator).GetProperty("Current", BindingFlags.Static | BindingFlags.Public)?.GetValue(null)
+                         ?? throw new InvalidOperationException("Could not find Avalonia's service locator.");
+        object? timer = locator.GetType().GetMethod("GetService", [typeof(Type)])?.Invoke(locator, [RenderTimerType]);
+        if (timer is null) return;
+        FieldInfo interval = timer.GetType().GetField("_timeBetweenTicks", BindingFlags.Instance | BindingFlags.NonPublic)
+                             ?? throw new InvalidOperationException($"Could not find the tick interval of {timer.GetType()}.");
+        interval.SetValue(timer, TimeSpan.FromMilliseconds(2));
+    }
 
     // UnitTestConsole.StringInput sleeps 2 x 50 ms per character, which made typing a path cost
     // seconds. Each character is sent the way KeyInput sends a key: press, release, render.

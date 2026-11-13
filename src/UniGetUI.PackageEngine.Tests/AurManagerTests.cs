@@ -152,7 +152,7 @@ public sealed class AurManagerTests
     {
         var args = AurOperationArguments.Build(OperationType.Install, "yay-bin", AurHelperKind.Unknown, "/usr/bin/pkexec", "");
 
-        Assert.Equal(["-S", "--aur", "--noconfirm", "--sudo=/usr/bin/pkexec", "yay-bin"], args);
+        Assert.Equal(["-S", "--aur", "--noconfirm", "--sudo=/usr/bin/pkexec", "aur/yay-bin"], args);
     }
 
     [Theory]
@@ -189,6 +189,70 @@ public sealed class AurManagerTests
     }
 
     [Fact]
+    public void ParsesSearchOutputCapturedFromRealParuAndYay()
+    {
+        const string paru =
+            "aur/pfetch 1.11.0-1 [+48 ~0.06]\n" +
+            "    A pretty system information tool written in POSIX sh.\n" +
+            "aur/pfetch-git r340.e18a095-1 [+15 ~0.00]\n" +
+            "    A pretty system information tool written in POSIX sh.\n";
+        const string yay =
+            "aur/scrapfetch-rs 0.1.5-1 (+0 0.00) [164d1h] \n" +
+            "    Small system info splash\n" +
+            "aur/scrapfetch-git r9.9650db3-3 (+1 0.00) [276d6h] \n" +
+            "    A tool for fetching system information. Written in C for Linux.\n";
+
+        Assert.Equal([new("pfetch", "1.11.0-1"), new("pfetch-git", "r340.e18a095-1")], AurOutputParser.ParseSearch(paru));
+        Assert.Equal([new("scrapfetch-rs", "0.1.5-1"), new("scrapfetch-git", "r9.9650db3-3")], AurOutputParser.ParseSearch(yay));
+    }
+
+    [Fact]
+    public void ParsesDetailsCapturedFromRealYay()
+    {
+        const string output =
+            "Repository                    : aur\n" +
+            "Name                          : visual-studio-code-bin\n" +
+            "Version                       : 1.146.0-1\n" +
+            "Description                   : Visual Studio Code (vscode): Editor for building and debugging modern web and cloud applications (official binary version)\n" +
+            "URL                           : https://code.visualstudio.com/\n" +
+            "Licenses                      : custom: commercial\n" +
+            "Groups                        : None\n" +
+            "Provides                      : code  vscode\n" +
+            "Depends On                    : libxkbfile  gnupg  gtk3  libsecret  nss\n" +
+            "                                gcc-libs  libnotify  libxss  glibc  lsof\n" +
+            "                                shared-mime-info  xdg-utils  alsa-lib\n" +
+            "Optional Deps                 : glib2  libdbusmenu-glib\n" +
+            "                                org.freedesktop.secrets  icu69  bubblewrap\n" +
+            "                                socat\n" +
+            "Make Deps                     : None\n" +
+            "Check Deps                    : None\n" +
+            "Conflicts With                : code\n" +
+            "Replaces                      : None\n" +
+            "AUR URL                       : https://aur.archlinux.org/packages/visual-studio-code-bin\n" +
+            "First Submitted               : Mon 18 Dec 2017 07:14:08 PM UTC\n" +
+            "Keywords                      : None\n" +
+            "Last Modified                 : Wed 11 Nov 2026 05:28:35 PM UTC\n" +
+            "Maintainer                    : dcelasun\n" +
+            "Popularity                    : 11.975223\n" +
+            "Votes                         : 1713\n" +
+            "Out-of-date                   : No\n" +
+            "\n";
+
+        var details = new PackageDetails(new PackageBuilder().WithId("visual-studio-code-bin").Build());
+
+        AurOutputParser.ParseDetails(output, details);
+
+        Assert.Equal("dcelasun", details.Publisher);
+        Assert.Equal("1.146.0-1", details.Version);
+        Assert.Equal("custom: commercial", details.License);
+        Assert.Equal("Wed 11 Nov 2026 05:28:35 PM UTC", details.UpdateDate);
+        Assert.Equal(13, details.Dependencies.Count(d => d.Mandatory));
+        Assert.Equal(
+            ["glib2", "libdbusmenu-glib", "org.freedesktop.secrets", "icu69", "bubblewrap", "socat"],
+            details.Dependencies.Where(d => !d.Mandatory).Select(d => d.Name));
+    }
+
+    [Fact]
     public void FallsBackToThePackagePageWhenTheHelperGivesNoAurUrl()
     {
         var details = new PackageDetails(new PackageBuilder().WithId("yay-bin").Build());
@@ -216,7 +280,7 @@ public sealed class AurManagerTests
         var args = AurOperationArguments.Build(OperationType.Install, "yay-bin", AurHelperKind.Paru, "/usr/bin/sudo", "-A");
 
         Assert.Equal(
-            ["-S", "--aur", "--skipreview", "--noconfirm", "--sudo=/usr/bin/sudo", "--sudoflags=-A", "yay-bin"],
+            ["-S", "--aur", "--skipreview", "--noconfirm", "--sudo=/usr/bin/sudo", "--sudoflags=-A", "aur/yay-bin"],
             args);
     }
 
@@ -228,7 +292,7 @@ public sealed class AurManagerTests
         Assert.Equal(
             [
                 "-S", "--aur", "--answerclean=None", "--answerdiff=None", "--answeredit=None",
-                "--noconfirm", "--sudo=/usr/bin/pkexec", "--sudoloop=false", "paru-bin",
+                "--noconfirm", "--sudo=/usr/bin/pkexec", "--sudoloop=false", "aur/paru-bin",
             ],
             args);
     }
@@ -239,7 +303,7 @@ public sealed class AurManagerTests
         var args = AurOperationArguments.Build(OperationType.Install, "yay-bin", AurHelperKind.Paru, "/usr/bin/pkexec", "");
 
         Assert.Equal(
-            ["-S", "--aur", "--skipreview", "--noconfirm", "--sudo=/usr/bin/pkexec", "--nosudoloop", "yay-bin"],
+            ["-S", "--aur", "--skipreview", "--noconfirm", "--sudo=/usr/bin/pkexec", "--nosudoloop", "aur/yay-bin"],
             args);
     }
 

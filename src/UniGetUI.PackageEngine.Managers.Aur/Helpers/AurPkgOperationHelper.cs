@@ -93,7 +93,7 @@ internal static class AurOperationArguments
             }
         }
 
-        parameters.Add(packageId);
+        parameters.Add(operation is OperationType.Uninstall ? packageId : $"aur/{packageId}");
         return parameters;
     }
 }

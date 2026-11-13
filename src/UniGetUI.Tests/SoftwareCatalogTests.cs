@@ -478,6 +478,7 @@ public sealed class SoftwareCatalogTests : IDisposable
         Assert.False(Entry.Matches("Anthropic.Claude.Other", "winget", "winget"));
     }
 
+#if WINDOWS // The Chocolatey manager is only built for Windows.
     [Theory]
     [InlineData("Chocolatey")]
     [InlineData("chocolatey")]
@@ -511,6 +512,7 @@ public sealed class SoftwareCatalogTests : IDisposable
         Assert.False(tile.ShowInstall);
         Assert.False(tile.CanInstall);
     }
+#endif
 
     [Fact]
     public void OtherManagersStillRequireTheInstalledSourceAndManagerToMatch()

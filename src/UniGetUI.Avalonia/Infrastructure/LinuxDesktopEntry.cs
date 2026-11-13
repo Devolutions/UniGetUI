@@ -161,7 +161,7 @@ internal static partial class LinuxDesktopEntry
         Dictionary<string, string> values = new(StringComparer.Ordinal)
         {
             ["COMMENT"] = EscapeString(EnglishComment),
-            ["EXEC"] = EscapeString(QuoteExecArgument(executablePath)),
+            ["EXEC"] = EscapeString(BuildExec(executablePath)),
             ["ICON"] = EscapeString(iconPath),
         };
 
@@ -179,6 +179,16 @@ internal static partial class LinuxDesktopEntry
 
         return entry.Append(GeneratedMarker).Append('\n').ToString();
     }
+
+    // GLib (GNOME, Xfce, Cinnamon) rejects an entry whose program, taken from Exec before
+    // field codes are expanded, does not exist, so the spec's "%%" for a literal '%' in the
+    // program path hides the entry. Such a path is passed as an argument to /bin/sh instead,
+    // where "%%" is expanded before the shell sees it. env would read a path containing '='
+    // as a variable assignment.
+    internal static string BuildExec(string executablePath) =>
+        executablePath.Contains('%')
+            ? $"/bin/sh -c {QuoteExecArgument("exec \"$0\"")} {QuoteExecArgument(executablePath)}"
+            : QuoteExecArgument(executablePath);
 
     internal static string QuoteExecArgument(string argument)
     {
@@ -230,7 +240,7 @@ internal static partial class LinuxDesktopEntry
     private static Dictionary<string, string> ManagedValues(string executablePath, string iconPath) =>
         new(StringComparer.Ordinal)
         {
-            ["Exec"] = EscapeString(QuoteExecArgument(executablePath)),
+            ["Exec"] = EscapeString(BuildExec(executablePath)),
             ["TryExec"] = EscapeString(executablePath),
             ["Icon"] = EscapeString(iconPath),
         };

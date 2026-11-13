@@ -351,6 +351,7 @@ public sealed class LinuxDesktopEntryTests : IDisposable
     [InlineData("/home/usér/Téléchargements/UniGetUI")]
     [InlineData("/home/user/'single'/UniGetUI")]
     [InlineData("/home/user/@EXEC@ and @ICON@/UniGetUI")]
+    [InlineData("/home/user/50%=x -n/UniGetUI")]
     public void GeneratedEntry_IsValidAndExecRunsTheExactPath(string exe)
     {
         const string icon = "/home/user/.local/share/UniGetUI/DesktopEntry/unigetui.png";
@@ -360,9 +361,44 @@ public sealed class LinuxDesktopEntryTests : IDisposable
         Assert.Equal("UniGetUI", entry["Name"]);
         Assert.Equal("false", entry["Terminal"]);
         Assert.EndsWith(";", entry["Categories"]);
-        Assert.Equal([exe], ParseExec(UnescapeString(entry["Exec"])));
+        Assert.Equal([exe], ProgramRunBy(ParseExec(UnescapeString(entry["Exec"]))));
         Assert.Equal(exe, UnescapeString(entry["TryExec"]));
         Assert.Equal(icon, UnescapeString(entry["Icon"]));
+    }
+
+    [Theory]
+    [InlineData("/opt/100% done/UniGetUI", true)]
+    [InlineData("/opt/a=b/UniGetUI", false)]
+    [InlineData("/opt/My Apps/UniGetUI", false)]
+    public void PercentInPath_IsRunThroughShSoGLibFindsTheProgram(string exe, bool wrapped)
+    {
+        // GLib checks Exec's program before expanding "%%", so the program itself must not contain one.
+        List<string> arguments = ParseExecUnexpanded(LinuxDesktopEntry.BuildExec(exe));
+
+        Assert.Equal(wrapped ? "/bin/sh" : exe, arguments[0]);
+        Assert.DoesNotContain('%', arguments[0]);
+    }
+
+    [Fact]
+    public void MovedFolder_ToAPathWithAPercent_IsRunThroughSh()
+    {
+        Ensure("/old/UniGetUI");
+
+        Assert.Equal(Outcome.Updated, Ensure("/new/100% done/UniGetUI"));
+        Dictionary<string, string> entry = ParseDesktopEntry(File.ReadAllText(EntryPath));
+        Assert.Equal(["/new/100% done/UniGetUI"], ProgramRunBy(ParseExec(UnescapeString(entry["Exec"]))));
+        Assert.Equal(Outcome.UpToDate, Ensure("/new/100% done/UniGetUI"));
+    }
+
+    // The argument list a launcher starts, reduced to the program it ends up running:
+    // a /bin/sh wrapper runs its "$0".
+    private static List<string> ProgramRunBy(List<string> arguments)
+    {
+        if (arguments[0] != "/bin/sh")
+            return arguments;
+
+        Assert.Equal(["/bin/sh", "-c", "exec \"$0\""], arguments.Take(3));
+        return arguments.Skip(3).ToList();
     }
 
     [Theory]
@@ -420,7 +456,9 @@ public sealed class LinuxDesktopEntryTests : IDisposable
         return result.ToString();
     }
 
-    private static List<string> ParseExec(string exec)
+    private static List<string> ParseExec(string exec) => ParseExecUnexpanded(exec).Select(ExpandFieldCodes).ToList();
+
+    private static List<string> ParseExecUnexpanded(string exec)
     {
         const string reserved = " \t\n\"'\\><~|&;$*?#()`";
         List<string> arguments = [];
@@ -467,7 +505,7 @@ public sealed class LinuxDesktopEntryTests : IDisposable
                 }
             }
 
-            arguments.Add(ExpandFieldCodes(argument.ToString()));
+            arguments.Add(argument.ToString());
         }
 
         return arguments;

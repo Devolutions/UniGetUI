@@ -1,11 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
+        <!-- Elsewhere the suite builds for the portable framework, so CI can run its Linux tests on Linux. -->
+        <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(PortableTargetFramework)</TargetFramework>
         <TargetFrameworks />
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
-        <PlatformTarget>x64</PlatformTarget>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <PlatformTarget Condition="$([MSBuild]::IsOSPlatform('Windows'))">x64</PlatformTarget>
+        <RuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Windows'))">win-x64</RuntimeIdentifier>
         <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
         <AppxGeneratePrisForPortableLibrariesEnabled>false</AppxGeneratePrisForPortableLibrariesEnabled>
         <AppxGetPackagePropertiesEnabled>false</AppxGetPackagePropertiesEnabled>
@@ -43,6 +45,11 @@
 
     <ItemGroup>
         <Using Include="Xunit" />
+    </ItemGroup>
+
+    <ItemGroup Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+        <!-- Uses the Chocolatey manager, which is only built for Windows. -->
+        <Compile Remove="CatalogPackageIdentitySetTests.cs" />
     </ItemGroup>
 
     <ItemGroup>

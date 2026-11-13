@@ -306,7 +306,9 @@ dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /p:Configuration=R
 The `.NET Tests` workflow runs the Windows build/tests, the full-trim NativeAOT publish and,
 on Ubuntu, the Linux and macOS self-update tests (`test-linux-self-update`, which the Windows
 job reports as skipped) in parallel jobs. `test-codebase` is the aggregate gate and requires
-all three to succeed.
+all three to succeed. That Ubuntu job also runs `LinuxDesktopEntryTests` from `UniGetUI.Tests`,
+which builds for the portable framework off Windows; a test there that needs a Windows-only
+manager goes under `#if WINDOWS`.
 The test job builds once with two MSBuild nodes and runs the complete suite with
 `--no-build /m:1`; keep test hosts serial because suites share on-disk state. NativeAOT
 already checks full trimming, so do not add a second warning-only full-trim publish.

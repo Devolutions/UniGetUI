@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Text;
 using Avalonia.Headless;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using Outcome = UniGetUI.Avalonia.Infrastructure.LinuxDesktopEntry.Outcome;
@@ -284,6 +285,75 @@ public sealed class LinuxDesktopEntryTests : IDisposable
         Settings.Set(Settings.K.DisableLinuxDesktopEntry, false);
         Assert.Equal(Outcome.Created, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
         Assert.True(File.Exists(EntryPath));
+    }, CancellationToken.None);
+
+    [Fact]
+    public void FailedEntryWrite_LeavesNoIconSoTheNextLaunchRetries()
+    {
+        Directory.CreateDirectory(_dataHome);
+        string applications = Path.Combine(_dataHome, "applications");
+        File.WriteAllText(applications, "");
+
+        Assert.ThrowsAny<IOException>(() => Ensure("/opt/portable/UniGetUI"));
+        Assert.False(File.Exists(IconPath));
+
+        File.Delete(applications);
+        Assert.Equal(Outcome.Created, Ensure("/opt/portable/UniGetUI"));
+    }
+
+    [Fact]
+    public Task FullRun_WaitsForAnotherProcessHoldingTheLock() => _session.Dispatch(async () =>
+    {
+        const string exe = "/home/user/Apps/UniGetUI.linux-x64/UniGetUI";
+        string lockPath = LinuxDesktopEntry.GetLockPath(_dataHome);
+        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
+
+        Task<Outcome> run;
+        using (new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+        {
+            run = Task.Run(() => LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+            await Task.Delay(300);
+            Assert.False(run.IsCompleted);
+            Assert.False(File.Exists(EntryPath));
+        }
+
+        Assert.Equal(Outcome.Created, await run);
+        return true;
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task FullRun_GivesUpWhenTheLockIsNeverReleased() => _session.Dispatch(() =>
+    {
+        string lockPath = LinuxDesktopEntry.GetLockPath(_dataHome);
+        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
+        TimeSpan previous = LinuxDesktopEntry.ProcessLockTimeout;
+        LinuxDesktopEntry.ProcessLockTimeout = TimeSpan.FromMilliseconds(200);
+        try
+        {
+            using FileStream held = new(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            Assert.Equal(
+                Outcome.Failed,
+                LinuxDesktopEntry.EnsureFor("/opt/portable/UniGetUI", _dataHome, [_systemDataDir]));
+            Assert.False(File.Exists(EntryPath));
+        }
+        finally
+        {
+            LinuxDesktopEntry.ProcessLockTimeout = previous;
+        }
+    }, CancellationToken.None);
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public Task SettingsCard_ShowsTheMenuEntryAsOnUnlessDisabled(bool disabled, bool expectedChecked) => _session.Dispatch(() =>
+    {
+        Settings.Set(Settings.K.DisableLinuxDesktopEntry, disabled);
+        Interface_P page = new();
+
+        Assert.Equal(expectedChecked, page.LinuxDesktopEntryCard.Checked);
+
+        page.LinuxDesktopEntryCard._checkbox.IsChecked = !expectedChecked;
+        Assert.Equal(!disabled, Settings.Get(Settings.K.DisableLinuxDesktopEntry));
     }, CancellationToken.None);
 
     [Theory]

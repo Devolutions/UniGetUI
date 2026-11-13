@@ -65,6 +65,16 @@ internal static partial class LinuxDesktopEntry
     {
         try
         {
+            if (!Path.IsPathRooted(dataHome))
+                return Outcome.Skipped;
+
+            using FileStream? processLock = AcquireProcessLock(dataHome);
+            if (processLock is null)
+            {
+                Logger.Warn("Another UniGetUI process held the Linux desktop entry lock; the entry was not checked");
+                return Outcome.Failed;
+            }
+
             Outcome outcome = Ensure(
                 executablePath,
                 dataHome,
@@ -82,6 +92,33 @@ internal static partial class LinuxDesktopEntry
         {
             Logger.Warn($"Could not create the Linux desktop entry: {ex.Message}");
             return Outcome.Failed;
+        }
+    }
+
+    internal static TimeSpan ProcessLockTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    internal static string GetLockPath(string dataHome) =>
+        Path.Combine(dataHome, "UniGetUI", "DesktopEntry", "desktop-entry.lock");
+
+    private static FileStream? AcquireProcessLock(string dataHome)
+    {
+        string lockPath = GetLockPath(dataHome);
+        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
+        DateTime deadline = DateTime.UtcNow + ProcessLockTimeout;
+        while (true)
+        {
+            try
+            {
+                return new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException) when (DateTime.UtcNow < deadline)
+            {
+                Thread.Sleep(50);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
         }
     }
 
@@ -132,10 +169,10 @@ internal static partial class LinuxDesktopEntry
 
         if (!enabled)
         {
-            if (generated)
-                File.Delete(entryPath);
             if (File.Exists(iconPath))
                 File.Delete(iconPath);
+            if (generated)
+                File.Delete(entryPath);
             return Outcome.Disabled;
         }
 
@@ -144,9 +181,9 @@ internal static partial class LinuxDesktopEntry
             if (!generated)
                 return Outcome.SystemEntryExists;
 
-            File.Delete(entryPath);
             if (File.Exists(iconPath))
                 File.Delete(iconPath);
+            File.Delete(entryPath);
             return Outcome.ReplacedBySystemEntry;
         }
 
@@ -155,8 +192,8 @@ internal static partial class LinuxDesktopEntry
             if (File.Exists(iconPath))
                 return Outcome.RemovedByUser;
 
-            WriteAtomically(iconPath, assets.Icon);
             WriteAtomically(entryPath, Encoding.UTF8.GetBytes(BuildEntry(assets, executablePath, iconPath)));
+            WriteAtomically(iconPath, assets.Icon);
             return Outcome.Created;
         }
 

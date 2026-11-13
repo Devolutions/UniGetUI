@@ -288,7 +288,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await EnterPage();
         await Type("tailspin-jq");
         await Key(K.Enter);
-        await WaitForTextAsync("tailspin-jq");
+        await WaitUntilAsync(() => Page(TuiPageIds.Discover).VisibleRows.Count == 1, "the search result");
         await Key(K.Down);
         await Type("o");
         await WaitUntilAsync(() => TuiModal.Top is InstallOptionsDialog { StateLoaded: true }, "the options to load");
@@ -477,7 +477,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await EnterPage();
         await Type("tailspin-jq");
         await Key(K.Enter);
-        await WaitForTextAsync("tailspin-jq");
+        await WaitUntilAsync(() => Page(TuiPageIds.Discover).VisibleRows.Count == 1, "the search result");
         await Key(K.Down);
         await Key(K.Enter);
         await WaitForDialogAsync("Package details");

@@ -399,7 +399,7 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await EnterPage();
         await Type("litware-fzf");
         await Key(K.Enter);
-        await WaitForTextAsync("litware-fzf");
+        await WaitUntilAsync(() => Window.GetPage<PackageListPage>(TuiPageIds.Discover).VisibleRows.Count == 1, "the search result");
         await Key(K.Down);
         await Type("i");
         await WaitForOperationsToFinishAsync();

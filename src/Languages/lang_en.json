@@ -3026,5 +3026,6 @@
   "Show installed Xcode versions": "Show installed Xcode versions",
   "Installed on this Mac": "Installed on this Mac",
   "Saved Apple ID in Keychain": "Saved Apple ID in Keychain",
-  "UniGetUI unlocks your saved Apple ID from the login keychain only when a download or verification needs it.": "UniGetUI unlocks your saved Apple ID from the login keychain only when a download or verification needs it."
+  "UniGetUI unlocks your saved Apple ID from the login keychain only when a download or verification needs it.": "UniGetUI unlocks your saved Apple ID from the login keychain only when a download or verification needs it.",
+  "Graphical interface for your package managers": "Graphical interface for your package managers"
 }

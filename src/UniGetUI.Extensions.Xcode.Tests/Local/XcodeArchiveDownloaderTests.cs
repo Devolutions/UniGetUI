@@ -33,6 +33,82 @@ public sealed class XcodeArchiveDownloaderTests : IDisposable
         Assert.False(File.Exists(path + ".part"));
     }
 
+    [Fact]
+    public async Task ChecksTheAppleSignatureBeforeKeepingADownload()
+    {
+        List<string> checkedFiles = [];
+
+        string path = await Downloader(new FakeApple(_archive), Signature(checkedFiles, signed: true))
+            .DownloadAsync(Download, Sha1, _ => { }, CancellationToken.None);
+
+        Assert.Equal([path + ".part"], checkedFiles);
+    }
+
+    [Fact]
+    public async Task DeletesADownloadThatIsNotSignedByApple()
+    {
+        List<string> checkedFiles = [];
+
+        XcodesException error = await Assert.ThrowsAsync<XcodesException>(() =>
+            Downloader(new FakeApple(_archive), Signature(checkedFiles, signed: false))
+                .DownloadForInstallAsync(Download, Sha1, _ => { }, CancellationToken.None));
+
+        Assert.Contains("not signed by Apple", error.Message);
+        Assert.Single(checkedFiles);
+        Assert.Equal(["lock"], Directory.GetFiles(CacheDirectory(Download, Sha1)).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task DownloadsAgainWhenTheCachedArchiveIsNotSignedByApple()
+    {
+        Directory.CreateDirectory(CacheDirectory(Download));
+        await File.WriteAllBytesAsync(ArchivePath(Download), [1, 2, 3]);
+        var server = new FakeApple(_archive);
+        int checks = 0;
+        XcodeToolRunner firstRefused = (_, _, _) => Task.FromResult(++checks == 1
+            ? new XcodesResult(1, "", "Could not open package")
+            : new XcodesResult(0, FakeArchiveSignature.Apple, ""));
+
+        string path = await Downloader(server, firstRefused).DownloadAsync(Download, null, _ => { }, CancellationToken.None);
+
+        Assert.Equal(_archive, await File.ReadAllBytesAsync(path));
+        Assert.Equal(2, checks);
+        Assert.Contains(Download, server.Requests);
+    }
+
+    [Fact]
+    public async Task LeavesAnEncryptedArchiveToTheCheckAfterExpansion()
+    {
+        var encrypted = new Uri("https://download.developer.apple.com/Developer_Tools/Xcode_26.4/Xcode_26.4.xip.aea");
+        List<string> checkedFiles = [];
+
+        string path = await Downloader(new FakeApple(_archive), Signature(checkedFiles, signed: false))
+            .DownloadAsync(encrypted, null, _ => { }, CancellationToken.None);
+
+        Assert.Equal(_archive, await File.ReadAllBytesAsync(path));
+        Assert.Empty(checkedFiles);
+    }
+
+    [Theory]
+    [InlineData("Status: signed Apple Software", "3. Apple Root CA", true)]
+    [InlineData("Status: signed by a developer certificate issued by Apple for distribution", "3. Apple Root CA", false)]
+    [InlineData("Status: no signature", "3. Apple Root CA", false)]
+    [InlineData("Status: signed Apple Software", "3. Other Root CA", false)]
+    [InlineData("Status: signed Apple Software", "", false)]
+    public void RecognizesOnlyArchivesSignedByAppleUnderItsRoot(string status, string root, bool expected)
+    {
+        string output = FakeArchiveSignature.Apple
+            .Replace("Status: signed Apple Software", status, StringComparison.Ordinal)
+            .Replace("3. Apple Root CA", root, StringComparison.Ordinal);
+
+        Assert.Equal(expected, XcodeArchiveSignature.IsAppleSignature(output));
+    }
+
+    [Fact]
+    public void RejectsAnAppleRootNameWithAnotherFingerprint()
+        => Assert.False(XcodeArchiveSignature.IsAppleSignature(
+            FakeArchiveSignature.Apple.Replace("B0 B1 73", "B0 B1 74", StringComparison.Ordinal)));
+
     [Theory]
     [InlineData(XcodeArchiveDownloader.AdcSessionExpiredResultCode, true)]
     [InlineData(2170, false)]
@@ -574,8 +650,18 @@ public sealed class XcodeArchiveDownloaderTests : IDisposable
         Assert.Empty(Directory.GetFileSystemEntries(_directory.Path));
     }
 
-    private XcodeArchiveDownloader Downloader(HttpMessageHandler server)
-        => new(new HttpClient(server), () => _directory.Path);
+    private XcodeArchiveDownloader Downloader(HttpMessageHandler server, XcodeToolRunner? signature = null)
+        => new(new HttpClient(server), () => _directory.Path, signature ?? FakeArchiveSignature.Signed);
+
+    private static XcodeToolRunner Signature(List<string> checkedFiles, bool signed) => (executable, arguments, _) =>
+    {
+        Assert.Equal(XcodeArchiveSignature.PkgUtil, executable);
+        Assert.Equal("--check-signature", arguments[0]);
+        checkedFiles.Add(arguments[1]);
+        return Task.FromResult(signed
+            ? new XcodesResult(0, FakeArchiveSignature.Apple, "")
+            : new XcodesResult(1, "Package \"Xcode_26.4.xip\":\n   Status: no signature\n", ""));
+    };
 
     private string CacheDirectory(Uri address, string? sha1 = null)
         => XcodeArchiveDownloader.CacheDirectory(_directory.Path, address, sha1);

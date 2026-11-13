@@ -72,7 +72,8 @@ public sealed class XcodesService
 
     /// <summary>
     /// Downloads an Xcode archive to UniGetUI's cache without installing it. A later installation can reuse it.
-    /// The archive's Apple signature and build are checked during installation, not by this method.
+    /// A <c>.xip</c> must carry Apple's signature before it is kept. The Xcode inside an archive, its build, and an
+    /// encrypted <c>.xip.aea</c> archive are checked during installation, not by this method.
     /// </summary>
     public Task<string> DownloadAsync(
         XcodeRelease release,

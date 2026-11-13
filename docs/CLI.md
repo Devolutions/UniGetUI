@@ -308,8 +308,10 @@ unknown. A specifically requested build and architecture are not substituted.
 **Download** saves the selected release's archive to UniGetUI's cache without installing Xcode.
 An installed version offers this action only when the catalog contains its exact version, build
 and architecture. The action uses the same Apple account, cache, resumable downloads and
-available catalog checksums as installation, but does not independently verify the archive's Apple
-signature or Xcode build; those checks happen during installation. The success notice can reveal
+available catalog checksums as installation. A `.xip` archive is kept only if macOS reports it as
+signed Apple Software under Apple Root CA (`pkgutil --check-signature`); otherwise it is deleted.
+An encrypted `.xip.aea` archive, and the Xcode build and app signature inside any archive, are
+checked during installation. The success notice can reveal
 the cached archive in Finder. Cache cleanup, or **Delete the download once Xcode is unpacked**
 after an install, may remove it; copy it elsewhere if it must be retained. The account is checked
 again after confirmation, the selected identity is resolved against the cached catalog before

@@ -138,7 +138,7 @@ public sealed class AppleCurlTransportTests
         await File.WriteAllTextAsync(Path.Combine(cache, "Xcode_26.4.xip.part"), archive[..3]);
         await File.WriteAllTextAsync(Path.Combine(cache, "validator"), tag);
 
-        string path = await new XcodeArchiveDownloader(client, () => directory.Path)
+        string path = await new XcodeArchiveDownloader(client, () => directory.Path, FakeArchiveSignature.Signed)
             .DownloadAsync(address, null, _ => { }, CancellationToken.None);
 
         Assert.Equal(archive, await File.ReadAllTextAsync(path));
@@ -179,7 +179,7 @@ public sealed class AppleCurlTransportTests
         using var directory = new TemporaryDirectory();
         using var client = new HttpClient(new RewriteDownloadToLoopback(server, Transport(server, new CookieContainer())));
 
-        string path = await new XcodeArchiveDownloader(client, () => directory.Path)
+        string path = await new XcodeArchiveDownloader(client, () => directory.Path, FakeArchiveSignature.Signed)
             .DownloadAsync(downloadUri, null, _ => { }, CancellationToken.None);
 
         Assert.Equal("archive-bytes", await File.ReadAllTextAsync(path));

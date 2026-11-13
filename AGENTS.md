@@ -13,7 +13,7 @@ Solution entry points:
 The codebase follows a **layered, modular structure** with ~40 projects:
 
 - **`UniGetUI.Avalonia/`** - Avalonia entry point, AXAML pages, controls, and app shell (`Program.cs`, `Views/MainWindow.axaml`)
-- **`SharedAssets/`** - shared app icons, symbols, splash images, and utility scripts used by packaging
+- **`SharedAssets/`** - shared app icons, symbols, and utility scripts used by packaging
 - **`UniGetUI.Core.*`** - Shared infrastructure: `Logger`, `Settings`, `Tools` (includes `CoreTools.Translate()`), `IconEngine`, `LanguageEngine`
 - **`UniGetUI.PackageEngine.Interfaces`** - Contracts: `IPackageManager`, `IPackage`, `IManagerSource`, `IPackageDetails`
 - **`UniGetUI.PackageEngine.PackageManagerClasses`** - Base implementations: `PackageManager` (abstract), `Package`, helpers (`BasePkgDetailsHelper`, `BasePkgOperationHelper`, `BaseSourceHelper`)

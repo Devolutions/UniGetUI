@@ -374,12 +374,14 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     // ─── Title bar ───────────────────────────────────────────────────────────
-    // Mirrors WinUI behavior: the version appears next to "UniGetUI" only when
+    public const string AppTitle = "Devolutions UniGetUI";
+
+    // Mirrors WinUI behavior: the version appears next to the app name only when
     // the ShowVersionNumberOnTitlebar setting is enabled (the setting is gated
     // on restart, so a one-shot read at construction is sufficient).
     public string TitleBarText { get; } = Settings.Get(Settings.K.ShowVersionNumberOnTitlebar)
-        ? $"UniGetUI {CoreTools.Translate("version {0}", CoreData.VersionName)}"
-        : "UniGetUI";
+        ? $"{AppTitle} {CoreTools.Translate("version {0}", CoreData.VersionName)}"
+        : AppTitle;
 
     // ─── Notifications (bottom-right toasts) ───────────────────────────────────
     // Persistent banners kept as singletons; RegisterBannerToast mirrors their IsOpen into Toasts.

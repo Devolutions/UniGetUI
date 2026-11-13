@@ -13,7 +13,7 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
         x:Class="UniGetUI.Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="UniGetUI"
+        Title="Devolutions UniGetUI"
         Width="1450"
         MinWidth="700"
         MinHeight="500">

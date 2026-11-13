@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Avalonia.Platform;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -14,6 +15,7 @@ internal static partial class LinuxDesktopEntry
     internal const string EnglishComment = "Graphical interface for your package managers";
 
     private const string MainGroup = "[Desktop Entry]";
+    private static readonly Lock Gate = new();
     private static readonly string[] DefaultDataDirs = ["/usr/local/share", "/usr/share"];
     private static readonly Uri IconAsset = new("avares://UniGetUI/Assets/icon.png");
     private static readonly Uri TemplateAsset = new("avares://UniGetUI/Assets/unigetui.desktop.in");
@@ -24,6 +26,7 @@ internal static partial class LinuxDesktopEntry
     {
         Skipped,
         Failed,
+        Disabled,
         SystemEntryExists,
         ReplacedBySystemEntry,
         NotGeneratedByUniGetUI,
@@ -54,10 +57,21 @@ internal static partial class LinuxDesktopEntry
             return Outcome.Skipped;
         }
 
+        lock (Gate)
+            return EnsureLocked(executablePath, dataHome, dataDirs);
+    }
+
+    private static Outcome EnsureLocked(string executablePath, string dataHome, IEnumerable<string> dataDirs)
+    {
         try
         {
-            Outcome outcome = Ensure(executablePath, dataHome, dataDirs, LoadAssets());
-            if (outcome is Outcome.Created or Outcome.Updated or Outcome.ReplacedBySystemEntry)
+            Outcome outcome = Ensure(
+                executablePath,
+                dataHome,
+                dataDirs,
+                LoadAssets(),
+                enabled: !Settings.Get(Settings.K.DisableLinuxDesktopEntry));
+            if (outcome is Outcome.Created or Outcome.Updated or Outcome.ReplacedBySystemEntry or Outcome.Disabled)
                 Logger.Info($"Linux desktop entry: {outcome} for {executablePath}");
             else
                 Logger.Debug($"Linux desktop entry left untouched: {outcome}");
@@ -101,7 +115,12 @@ internal static partial class LinuxDesktopEntry
     internal static string GetIconPath(string dataHome) =>
         Path.Combine(dataHome, "UniGetUI", "DesktopEntry", IconFileName);
 
-    internal static Outcome Ensure(string executablePath, string dataHome, IEnumerable<string> dataDirs, Assets assets)
+    internal static Outcome Ensure(
+        string executablePath,
+        string dataHome,
+        IEnumerable<string> dataDirs,
+        Assets assets,
+        bool enabled = true)
     {
         if (executablePath.Any(char.IsControl) || !Path.IsPathRooted(dataHome))
             return Outcome.Skipped;
@@ -110,6 +129,15 @@ internal static partial class LinuxDesktopEntry
         string iconPath = GetIconPath(dataHome);
         string[]? existing = File.Exists(entryPath) ? File.ReadAllText(entryPath).Split('\n') : null;
         bool generated = existing is not null && IsGenerated(existing);
+
+        if (!enabled)
+        {
+            if (generated)
+                File.Delete(entryPath);
+            if (File.Exists(iconPath))
+                File.Delete(iconPath);
+            return Outcome.Disabled;
+        }
 
         if (dataDirs.Any(dir => File.Exists(Path.Combine(dir, "applications", EntryFileName))))
         {

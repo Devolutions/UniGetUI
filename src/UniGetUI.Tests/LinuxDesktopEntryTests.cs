@@ -2,6 +2,8 @@ using System.Buffers.Binary;
 using System.Text;
 using Avalonia.Headless;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Core.Data;
+using UniGetUI.Core.SettingsEngine;
 using Outcome = UniGetUI.Avalonia.Infrastructure.LinuxDesktopEntry.Outcome;
 
 namespace UniGetUI.Tests;
@@ -23,12 +25,17 @@ public sealed class LinuxDesktopEntryTests : IDisposable
         _dataHome = Path.Combine(_root, "home");
         _systemDataDir = Path.Combine(_root, "usr-share");
         Directory.CreateDirectory(_systemDataDir);
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_root, "Data");
+        Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+        Settings.ResetSettings();
         LinuxDesktopEntry.Assets real = _session.Dispatch(LinuxDesktopEntry.LoadAssets, CancellationToken.None).GetAwaiter().GetResult();
         _assets = real with { Icon = IconBytes, Locale = "fr", LocalizedComment = "Interface graphique pour vos gestionnaires de paquets" };
     }
 
     public void Dispose()
     {
+        Settings.ResetSettings();
+        CoreData.TEST_DataDirectoryOverride = null;
         if (Directory.Exists(_root))
             Directory.Delete(_root, recursive: true);
     }
@@ -37,8 +44,8 @@ public sealed class LinuxDesktopEntryTests : IDisposable
     private string IconPath => LinuxDesktopEntry.GetIconPath(_dataHome);
     private string SystemEntryPath => Path.Combine(_systemDataDir, "applications", LinuxDesktopEntry.EntryFileName);
 
-    private Outcome Ensure(string executable, LinuxDesktopEntry.Assets? assets = null) =>
-        LinuxDesktopEntry.Ensure(executable, _dataHome, [_systemDataDir], assets ?? _assets);
+    private Outcome Ensure(string executable, LinuxDesktopEntry.Assets? assets = null, bool enabled = true) =>
+        LinuxDesktopEntry.Ensure(executable, _dataHome, [_systemDataDir], assets ?? _assets, enabled);
 
     private void AddSystemEntry()
     {
@@ -219,6 +226,65 @@ public sealed class LinuxDesktopEntryTests : IDisposable
         Assert.Equal(Outcome.Skipped, Ensure("/tmp/bad\nname/UniGetUI"));
         Assert.False(File.Exists(EntryPath));
     }
+
+    [Fact]
+    public void TurnedOff_RemovesTheGeneratedEntryAndIcon()
+    {
+        Ensure("/opt/portable/UniGetUI");
+
+        Assert.Equal(Outcome.Disabled, Ensure("/opt/portable/UniGetUI", enabled: false));
+        Assert.False(File.Exists(EntryPath));
+        Assert.False(File.Exists(IconPath));
+        Assert.Equal(Outcome.Disabled, Ensure("/opt/portable/UniGetUI", enabled: false));
+    }
+
+    [Fact]
+    public void TurnedOff_RemovesAnEntryOwnedByAnotherCopy()
+    {
+        Ensure(ExistingExecutable());
+
+        Assert.Equal(Outcome.Disabled, Ensure("/home/user/beta/UniGetUI", enabled: false));
+        Assert.False(File.Exists(EntryPath));
+    }
+
+    [Fact]
+    public void TurnedOff_KeepsAUserWrittenEntry()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(EntryPath)!);
+        const string custom = "[Desktop Entry]\nType=Application\nName=My UniGetUI\nExec=/somewhere/UniGetUI\n";
+        File.WriteAllText(EntryPath, custom);
+
+        Assert.Equal(Outcome.Disabled, Ensure("/opt/portable/UniGetUI", enabled: false));
+        Assert.Equal(custom, File.ReadAllText(EntryPath));
+    }
+
+    [Fact]
+    public void TurnedBackOn_RecreatesAnEntryTheUserHadDeleted()
+    {
+        Ensure("/opt/portable/UniGetUI");
+        File.Delete(EntryPath);
+        Assert.Equal(Outcome.RemovedByUser, Ensure("/opt/portable/UniGetUI"));
+
+        Ensure("/opt/portable/UniGetUI", enabled: false);
+
+        Assert.Equal(Outcome.Created, Ensure("/opt/portable/UniGetUI"));
+        Assert.True(File.Exists(EntryPath));
+    }
+
+    [Fact]
+    public Task FullRun_FollowsTheSetting() => _session.Dispatch(() =>
+    {
+        const string exe = "/home/user/Apps/UniGetUI.linux-x64/UniGetUI";
+        Assert.Equal(Outcome.Created, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+
+        Settings.Set(Settings.K.DisableLinuxDesktopEntry, true);
+        Assert.Equal(Outcome.Disabled, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+        Assert.False(File.Exists(EntryPath));
+
+        Settings.Set(Settings.K.DisableLinuxDesktopEntry, false);
+        Assert.Equal(Outcome.Created, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+        Assert.True(File.Exists(EntryPath));
+    }, CancellationToken.None);
 
     [Theory]
     [InlineData("SNAP", "/snap/code/200", true)]

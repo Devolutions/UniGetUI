@@ -49,6 +49,20 @@ public class SettingsSearchIndexTests
             result.Title.Equals("Repair the stored policy", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Search_ExposesTheApplicationsMenuSettingOnlyOnLinux()
+    {
+        Assert.Contains(
+            SettingsSearchIndex.Search("applications menu", limit: 100, isWindows: false, isMacOS: false, isLinux: true),
+            result => result.PageType == typeof(Interface_P) && result.Anchor == "LinuxDesktopEntryCard");
+        Assert.DoesNotContain(
+            SettingsSearchIndex.Search("applications menu", limit: 100, isWindows: true),
+            result => result.Anchor == "LinuxDesktopEntryCard");
+        Assert.DoesNotContain(
+            SettingsSearchIndex.Search("applications menu", limit: 100, isWindows: false, isMacOS: true),
+            result => result.Anchor == "LinuxDesktopEntryCard");
+    }
+
 #if UNIGETUI_XCODE_EXTENSION
     [Fact]
     public void Search_ExposesXcodeSettingsOnlyOnMac()

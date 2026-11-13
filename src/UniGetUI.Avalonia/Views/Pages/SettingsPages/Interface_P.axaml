@@ -95,6 +95,16 @@
                                      Command="{Binding EditAutostartSettingsCommand}"/>
             </StackPanel>
 
+            <Border Height="16" IsVisible="{Binding IsLinux}"/>
+
+            <settings:CheckboxCard x:Name="LinuxDesktopEntryCard"
+                                   SettingName="DisableLinuxDesktopEntry"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Show UniGetUI in the applications menu}"
+                                   StateChangedCommand="{Binding RefreshLinuxDesktopEntryCommand}"
+                                   CornerRadius="8"
+                                   IsVisible="{Binding IsLinux}"/>
+
             <settings:TranslatedTextBlock Text="Package lists"
                                           FontSize="14"
                                           FontWeight="SemiBold"

@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using global::Avalonia;
 using global::Avalonia.Controls;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
@@ -15,6 +16,8 @@ public partial class Interface_PViewModel : ViewModelBase
     public bool IsWindows { get; } = OperatingSystem.IsWindows();
 
     public bool IsMacOS { get; } = OperatingSystem.IsMacOS();
+
+    public bool IsLinux { get; } = OperatingSystem.IsLinux();
 
     [ObservableProperty] private string _iconCacheSizeText = "";
 
@@ -30,6 +33,10 @@ public partial class Interface_PViewModel : ViewModelBase
     [RelayCommand]
     private static void RefreshSystemTray()
         => MainWindow.Instance?.UpdateSystemTrayStatus();
+
+    [RelayCommand]
+    private static void RefreshLinuxDesktopEntry()
+        => _ = Task.Run(LinuxDesktopEntry.EnsureForCurrentProcess);
 
     [RelayCommand]
     private async Task ResetIconCache(Visual? _)

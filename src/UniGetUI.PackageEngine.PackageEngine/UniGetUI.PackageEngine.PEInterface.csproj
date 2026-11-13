@@ -73,6 +73,9 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pacman\UniGetUI.PackageEngine.Managers.Pacman.csproj">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Aur\UniGetUI.PackageEngine.Managers.Aur.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj">
             <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
         </ProjectReference>

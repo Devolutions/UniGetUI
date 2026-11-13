@@ -16,6 +16,14 @@ public class Pacman : PackageManager
 {
     public override bool ExpectsInstalledPackages => true;
 
+    public Func<bool> ForeignPackagesListedElsewhere { get; set; } = () => false;
+
+    public override int? CompareVersions(string versionA, string versionB) =>
+        AlpmVersion.Compare(versionA, versionB);
+
+    internal static string InstalledListingArguments(bool foreignPackagesListedElsewhere) =>
+        foreignPackagesListedElsewhere ? "-Qn" : "-Q";
+
     public Pacman()
     {
         Dependencies = [];
@@ -24,6 +32,7 @@ public class Pacman : PackageManager
         {
             CanReinstallOnUpdate = true,
             CanRunAsAdmin = true,
+            CanListDependencies = true,
             CanSkipIntegrityChecks = false,
             SupportsCustomSources = false,
             SupportsProxy = ProxySupport.No,
@@ -184,7 +193,7 @@ public class Pacman : PackageManager
             StartInfo = new ProcessStartInfo
             {
                 FileName = Status.ExecutablePath,
-                Arguments = "-Q",
+                Arguments = InstalledListingArguments(ForeignPackagesListedElsewhere()),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,

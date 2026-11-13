@@ -18,6 +18,7 @@ using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.Managers.WinInstallerManager;
 #else
 using UniGetUI.PackageEngine.Managers.AptManager;
+using UniGetUI.PackageEngine.Managers.AurManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
 using UniGetUI.PackageEngine.Managers.MacPkgManager;
@@ -54,6 +55,7 @@ namespace UniGetUI.PackageEngine
         public static readonly Apt? Apt = Create(() => new Apt());
         public static readonly Dnf? Dnf = Create(() => new Dnf());
         public static readonly Pacman? Pacman = Create(() => new Pacman());
+        public static readonly Aur? Aur = Create(() => new Aur());
         public static readonly Homebrew? Homebrew = Create(() => new Homebrew());
         public static readonly MacPkg? MacPkg = Create(() => new MacPkg());
         public static readonly Snap? Snap = Create(() => new Snap());
@@ -86,6 +88,25 @@ namespace UniGetUI.PackageEngine
             }
         }
 
+#if !WINDOWS
+        private static void ReloadInstalledPackagesWhenAurFinishesLate(Dictionary<IPackageManager, Task> initializeTasks)
+        {
+            if (Aur is null || !initializeTasks.TryGetValue(Aur, out Task? aurInitialization) || aurInitialization.IsCompleted)
+                return;
+
+            _ = aurInitialization.ContinueWith(
+                _ =>
+                {
+                    if (Aur.IsReady())
+                        _ = InstalledPackagesLoader.Instance.ReloadPackages();
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.Default
+            );
+        }
+#endif
+
         private static IPackageManager[] CreateManagers()
         {
             List<IPackageManager?> candidates = [Npm, Bun, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
@@ -106,7 +127,12 @@ namespace UniGetUI.PackageEngine
                 if (unknown || families.Contains("fedora") || families.Contains("rhel") || families.Contains("centos"))
                     candidates.Add(Dnf);
                 if (unknown || families.Contains("arch"))
+                {
                     candidates.Add(Pacman);
+                    candidates.Add(Aur);
+                    if (Pacman is not null && Aur is not null)
+                        Pacman.ForeignPackagesListedElsewhere = Aur.IsReady;
+                }
                 if (unknown || families.Contains("ubuntu") || families.Contains("debian") || families.Contains("fedora") || families.Contains("arch"))
                 {
                     candidates.Add(Snap);
@@ -141,18 +167,21 @@ namespace UniGetUI.PackageEngine
         {
             try
             {
-                List<Task> initializeTasks = [];
+                Dictionary<IPackageManager, Task> initializeTasks = [];
 
                 foreach (IPackageManager manager in Managers)
                 {
-                    initializeTasks.Add(Task.Run(manager.Initialize));
+                    initializeTasks[manager] = Task.Run(manager.Initialize);
                 }
 
-                Task ManagersMegaTask = Task.WhenAll(initializeTasks);
+                Task ManagersMegaTask = Task.WhenAll(initializeTasks.Values);
 
                 if (!ManagersMegaTask.Wait(TimeSpan.FromSeconds(ManagerLoadTimeout)))
                 {
                     Logger.Warn("Timeout: Not all package managers have finished initializing.");
+#if !WINDOWS
+                    ReloadInstalledPackagesWhenAurFinishesLate(initializeTasks);
+#endif
                 }
 
                 _ = InstalledPackagesLoader.Instance.ReloadPackages();

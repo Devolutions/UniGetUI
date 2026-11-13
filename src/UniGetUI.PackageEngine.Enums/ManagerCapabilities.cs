@@ -30,6 +30,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
     {
         public bool IsDummy = false;
         public bool CanRunAsAdmin = false;
+        public bool MustNotRunElevated = false;
+        public bool ElevatesItself = false;
         public bool CanSkipIntegrityChecks = false;
         public bool CanRunInteractively = false;
         public bool CanRemoveDataOnUninstall = false;

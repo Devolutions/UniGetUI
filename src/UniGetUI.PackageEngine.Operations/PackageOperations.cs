@@ -1633,6 +1633,12 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected override string? RefusalBeforeStart()
         {
+            if (Package.Manager.Capabilities.ElevatesItself && Settings.Get(Settings.K.ProhibitElevation))
+                return CoreTools.Translate(
+                    "{0} asks for administrator rights on its own to finish this operation, and elevation is prohibited in UniGetUI's settings.",
+                    Package.Manager.DisplayName
+                );
+
             if (Role is not OperationType.Update)
                 return null;
 

@@ -214,6 +214,10 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Aur/UniGetUI.PackageEngine.Managers.Aur.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="UniGetUI.PackageEngine.Managers.Pip/UniGetUI.PackageEngine.Managers.Pip.csproj">
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />

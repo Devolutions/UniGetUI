@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.AptManager;
+using UniGetUI.PackageEngine.Managers.AurManager;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.CargoManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
@@ -32,7 +33,7 @@ public class ManagerSetupGuideTests
     private static readonly Lazy<PackageManager[]> Managers = new(() =>
     [
         new Npm(), new Bun(), new Pip(), new Cargo(), new Vcpkg(), new DotNet(),
-        new Homebrew(), new MacPkg(), new Apt(), new Dnf(), new Pacman(), new Snap(), new Flatpak(),
+        new Homebrew(), new MacPkg(), new Apt(), new Dnf(), new Pacman(), new Aur(), new Snap(), new Flatpak(),
 #if WINDOWS
         new WinGet(), new Scoop(), new Chocolatey(), new WinInstaller(), new PowerShell(), new PowerShell7(),
 #endif
@@ -140,6 +141,7 @@ public class ManagerSetupGuideTests
     [InlineData("Apt")]
     [InlineData("Dnf")]
     [InlineData("Pacman")]
+    [InlineData("AUR")]
     [InlineData("Snap")]
     [InlineData("Flatpak")]
     public void ManagersThatDoNotRunOnWindowsOfferNoWindowsCommand(string name)

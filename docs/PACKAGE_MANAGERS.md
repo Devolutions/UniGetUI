@@ -59,7 +59,7 @@ macOS, the first terminal emulator UniGetUI finds on Linux).
 | [Cargo](#cargo) | Yes | Yes | Yes |
 | [vcpkg](#vcpkg) | Yes | Yes | Yes |
 | [Homebrew](#homebrew) | | Yes | Yes |
-| [Apt](#apt), [Dnf](#dnf), [Pacman](#pacman), [Snap](#snap), [Flatpak](#flatpak) | | | [Depends on the distribution](#linux-distributions) |
+| [Apt](#apt), [Dnf](#dnf), [Pacman](#pacman), [AUR](#aur), [Snap](#snap), [Flatpak](#flatpak) | | | [Depends on the distribution](#linux-distributions) |
 
 Installer packages published by your organization (`.msi`, `.exe`, `.pkg`, `.dmg`) need no package
 manager: see [WINDOWS_INSTALLER_FEEDS.md](WINDOWS_INSTALLER_FEEDS.md) and [PKG_FEEDS.md](PKG_FEEDS.md).
@@ -274,13 +274,13 @@ Check: `brew --version`
 
 UniGetUI decides which Linux package managers to offer from the `ID` and `ID_LIKE` lines of
 `/etc/os-release`, so a derivative counts as the distribution it names there. If the file cannot be
-read, all five are offered.
+read, all of them are offered.
 
 | Manager | Offered when `ID` or `ID_LIKE` contains |
 |---|---|
 | Apt | `debian` or `ubuntu` |
 | Dnf | `fedora`, `rhel` or `centos` |
-| Pacman | `arch` |
+| Pacman, AUR | `arch` |
 | Snap, Flatpak | `ubuntu`, `debian`, `fedora` or `arch` |
 
 ## Apt
@@ -303,6 +303,42 @@ Pacman is the package manager of Arch Linux and its derivatives; there is nothin
 UniGetUI finds `pacman` on `PATH`, in `/usr/bin` or in `/usr/local/bin`.
 
 Check: `pacman -Q pacman`
+
+## AUR
+
+UniGetUI reaches the [Arch User Repository](https://aur.archlinux.org/) through an AUR helper:
+`paru` or `yay`, whichever it finds first on `PATH`, in `/usr/bin` or in `/usr/local/bin` (paru is
+preferred when both are present; pick the other one under the manager's executable settings).
+Neither is in the official repositories; install one from the AUR itself following
+<https://github.com/Morganamilo/paru#installation> or <https://github.com/Jguer/yay#installation>.
+
+The manager lists the foreign packages `pacman -Qm` reports, which are usually AUR packages, and
+checks them for updates with the helper's `-Qua`. While it is enabled and its helper is found,
+Pacman lists only the packages of the official repositories (`pacman -Qn`), so no package appears
+twice; turn the AUR manager off and Pacman lists everything again. Because the installed list comes
+from pacman itself, AUR packages stay visible even when the helper is broken (for example after a
+libalpm update, until the helper is rebuilt). Development packages that paru reports as
+`latest-commit` are not offered as updates.
+
+Packages are built as your user, never as root, because `makepkg` refuses to run as root; the
+helper calls UniGetUI's own `sudo` (with its graphical askpass) or `pkexec` only to install the
+built package. For the same reason the AUR manager is unavailable while UniGetUI itself runs as
+root, and "Run as administrator" is ignored for AUR packages. Because the helper asks for those
+rights itself, AUR operations are refused while elevation is prohibited in UniGetUI's settings.
+yay's sudo loop is always turned off, since it runs `sudo -v` without the askpass flag and would
+wait forever for a terminal; paru's is turned off only for an elevator other than sudo, since it
+passes the flags along. UniGetUI passes its own `--sudoflags`, which replaces any `sudoflags` saved
+in yay's configuration; paru can only add to the `SudoFlags` of its `paru.conf`, so a value set
+there still reaches the elevator, which breaks operations when UniGetUI elevates with `pkexec`.
+Commands copied from UniGetUI to run in a terminal leave out these elevation options, so the
+helper prompts through its own `sudo` there. PKGBUILD review is skipped, since
+there is no terminal to show it in. A helper that is neither paru nor yay (judged from its
+`--version` output, then its file name) only gets the options both understand.
+
+AUR packages are user-produced and are not reviewed by Arch Linux. Check who maintains a package and
+read its PKGBUILD (linked from the package's AUR page) before installing it.
+
+Check: `paru --version` or `yay --version`
 
 ## Snap
 

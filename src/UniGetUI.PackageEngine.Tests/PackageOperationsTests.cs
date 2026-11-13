@@ -1868,10 +1868,29 @@ public sealed class PackageOperationsTests
     public async Task AnOperationWaitingOnTheManagerGateSeesVariablesPersistedWhileItWaited()
     {
         string name = "UNIGETUI_GATE_ENVIRONMENT_TEST_" + Guid.NewGuid().ToString("N");
+        string directory = Path.Join(Path.GetTempPath(), name);
+        string release = Path.Join(directory, "release");
+        string script = Path.Join(directory, "first.cmd");
         Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.User);
         Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.Process);
         try
         {
+            // The first operation holds the gate until the test releases it, so the second one
+            // waits on the gate however late a loaded thread pool lets it start.
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(
+                script,
+                $"""
+                @echo off
+                for /l %%i in (1,1,120) do (
+                    if exist "{release}" goto release
+                    ping -n 2 127.0.0.1 >nul
+                )
+                exit /b 1
+                :release
+                setx {name} fromfirst
+                """
+            );
             var manager = new PackageManagerBuilder()
                 .WithName($"GateManager{Guid.NewGuid():N}")
                 .ConfigureCapabilities(capabilities =>
@@ -1888,7 +1907,7 @@ public sealed class PackageOperationsTests
                 {
                     helper.ParametersFactory = (package, _, _) =>
                         package.Id == "first"
-                            ? ["ping", "-n", "3", "127.0.0.1", ">nul", "&", "setx", name, "fromfirst"]
+                            ? [script]
                             : ["echo", $"value=%{name}%"];
                     helper.ResultFactory = (_, _, _, _) => OperationVeredict.Success;
                 })
@@ -1910,7 +1929,9 @@ public sealed class PackageOperationsTests
             Task firstRun = first.MainThread();
             await WaitForConditionAsync(() => HasLine(first, "Start Time"));
             Task secondRun = second.MainThread();
-            await Task.WhenAll(firstRun, secondRun).WaitAsync(TimeSpan.FromSeconds(30));
+            await WaitForConditionAsync(secondWaited);
+            File.WriteAllText(release, "");
+            await Task.WhenAll(firstRun, secondRun).WaitAsync(TimeSpan.FromSeconds(60));
 
             Assert.True(secondWaited());
             Assert.Equal(OperationStatus.Succeeded, second.Status);
@@ -1921,6 +1942,8 @@ public sealed class PackageOperationsTests
             Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.User);
             Environment.SetEnvironmentVariable(name, null, EnvironmentVariableTarget.Process);
             PersistedEnvironment.TEST_ResetBaseline();
+            try { Directory.Delete(directory, recursive: true); }
+            catch (IOException) { }
         }
     }
 

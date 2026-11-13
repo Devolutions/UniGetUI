@@ -598,11 +598,7 @@ public static class IpcPackageApi
     {
         try
         {
-            if (InstalledPackagesLoader.Instance is { IsLoading: false } installedLoader)
-            {
-                await installedLoader.ReloadPackages();
-            }
-
+            await ReloadAfterCurrentLoadAsync(InstalledPackagesLoader.Instance);
             await RefreshUpgradablePackagesSnapshotAsync();
         }
         catch (Exception ex)
@@ -825,14 +821,19 @@ public static class IpcPackageApi
         return GetManagers(managerName).SelectMany(manager => manager.GetInstalledPackages()).ToArray();
     }
 
-    private static async Task RefreshUpgradablePackagesSnapshotAsync()
+    private static Task RefreshUpgradablePackagesSnapshotAsync()
+        => ReloadAfterCurrentLoadAsync(UpgradablePackagesLoader.Instance);
+
+    // A load that started before the package change returns stale data, so reload after it ends.
+    private static async Task ReloadAfterCurrentLoadAsync(AbstractPackageLoader? loader)
     {
-        if (UpgradablePackagesLoader.Instance is null || UpgradablePackagesLoader.Instance.IsLoading)
+        if (loader is null)
         {
             return;
         }
 
-        await UpgradablePackagesLoader.Instance.ReloadPackages();
+        await loader.WaitForCurrentLoadAsync();
+        await loader.ReloadPackages();
     }
 
     private static IReadOnlyList<IPackage> GetUpgradablePackagesSnapshot(string? managerName)
@@ -860,6 +861,9 @@ public static class IpcPackageApi
         {
             return [];
         }
+
+        // A reload clears the list first; reading it during the reload returns an empty or partial list.
+        loader.WaitForCurrentLoadAsync().GetAwaiter().GetResult();
 
         if (loader.Packages.Count > 0)
         {

@@ -16,6 +16,7 @@ internal static partial class LinuxDesktopEntry
 
     private const string MainGroup = "[Desktop Entry]";
     private static readonly Lock Gate = new();
+    private static int _settingChanged;
     private static readonly string[] DefaultDataDirs = ["/usr/local/share", "/usr/share"];
     private static readonly Uri IconAsset = new("avares://UniGetUI/Assets/icon.png");
     private static readonly Uri TemplateAsset = new("avares://UniGetUI/Assets/unigetui.desktop.in");
@@ -61,8 +62,17 @@ internal static partial class LinuxDesktopEntry
             return EnsureLocked(executablePath, dataHome, dataDirs);
     }
 
+    public static void RefreshAfterSettingChanged()
+    {
+        Interlocked.Exchange(ref _settingChanged, 1);
+        _ = Task.Run(EnsureForCurrentProcess);
+    }
+
+    internal static bool TakeSettingChanged() => Interlocked.Exchange(ref _settingChanged, 0) == 1;
+
     private static Outcome EnsureLocked(string executablePath, string dataHome, IEnumerable<string> dataDirs)
     {
+        bool settingChanged = false;
         try
         {
             if (!Path.IsPathRooted(dataHome))
@@ -75,12 +85,14 @@ internal static partial class LinuxDesktopEntry
                 return Outcome.Failed;
             }
 
+            settingChanged = TakeSettingChanged();
             Outcome outcome = Ensure(
                 executablePath,
                 dataHome,
                 dataDirs,
                 LoadAssets(),
-                enabled: !Settings.Get(Settings.K.DisableLinuxDesktopEntry));
+                enabled: !Settings.Get(Settings.K.DisableLinuxDesktopEntry),
+                recreateDeleted: settingChanged);
             if (outcome is Outcome.Created or Outcome.Updated or Outcome.ReplacedBySystemEntry or Outcome.Disabled)
                 Logger.Info($"Linux desktop entry: {outcome} for {executablePath}");
             else
@@ -90,6 +102,8 @@ internal static partial class LinuxDesktopEntry
         }
         catch (Exception ex)
         {
+            if (settingChanged)
+                Interlocked.Exchange(ref _settingChanged, 1);
             Logger.Warn($"Could not create the Linux desktop entry: {ex.Message}");
             return Outcome.Failed;
         }
@@ -157,7 +171,8 @@ internal static partial class LinuxDesktopEntry
         string dataHome,
         IEnumerable<string> dataDirs,
         Assets assets,
-        bool enabled = true)
+        bool enabled = true,
+        bool recreateDeleted = false)
     {
         if (executablePath.Any(char.IsControl) || !Path.IsPathRooted(dataHome))
             return Outcome.Skipped;
@@ -169,7 +184,7 @@ internal static partial class LinuxDesktopEntry
 
         if (!enabled)
         {
-            if (File.Exists(iconPath))
+            if ((generated || existing is null) && File.Exists(iconPath))
                 File.Delete(iconPath);
             if (generated)
                 File.Delete(entryPath);
@@ -189,7 +204,7 @@ internal static partial class LinuxDesktopEntry
 
         if (existing is null)
         {
-            if (File.Exists(iconPath))
+            if (File.Exists(iconPath) && !recreateDeleted)
                 return Outcome.RemovedByUser;
 
             WriteAtomically(entryPath, Encoding.UTF8.GetBytes(BuildEntry(assets, executablePath, iconPath)));

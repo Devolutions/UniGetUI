@@ -29,12 +29,14 @@ public sealed class LinuxDesktopEntryTests : IDisposable
         CoreData.TEST_DataDirectoryOverride = Path.Combine(_root, "Data");
         Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
         Settings.ResetSettings();
+        LinuxDesktopEntry.TakeSettingChanged();
         LinuxDesktopEntry.Assets real = _session.Dispatch(LinuxDesktopEntry.LoadAssets, CancellationToken.None).GetAwaiter().GetResult();
         _assets = real with { Icon = IconBytes, Locale = "fr", LocalizedComment = "Interface graphique pour vos gestionnaires de paquets" };
     }
 
     public void Dispose()
     {
+        LinuxDesktopEntry.TakeSettingChanged();
         Settings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
         if (Directory.Exists(_root))
@@ -354,6 +356,53 @@ public sealed class LinuxDesktopEntryTests : IDisposable
 
         page.LinuxDesktopEntryCard._checkbox.IsChecked = !expectedChecked;
         Assert.Equal(!disabled, Settings.Get(Settings.K.DisableLinuxDesktopEntry));
+    }, CancellationToken.None);
+
+    [Fact]
+    public void TurnedOff_KeepsTheIconOfAnUnmarkedEntryThatStillUsesIt()
+    {
+        Ensure("/opt/portable/UniGetUI");
+        string unmarked = File.ReadAllText(EntryPath).Replace(LinuxDesktopEntry.GeneratedMarker + "\n", "");
+        File.WriteAllText(EntryPath, unmarked);
+
+        Assert.Equal(Outcome.Disabled, Ensure("/opt/portable/UniGetUI", enabled: false));
+        Assert.Equal(unmarked, File.ReadAllText(EntryPath));
+        Assert.True(File.Exists(IconPath));
+    }
+
+    [Fact]
+    public Task FullRun_QuickOffThenOn_RecreatesAnEntryTheUserHadDeleted() => _session.Dispatch(() =>
+    {
+        const string exe = "/home/user/Apps/UniGetUI.linux-x64/UniGetUI";
+        LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]);
+        File.Delete(EntryPath);
+        Assert.Equal(Outcome.RemovedByUser, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+
+        Settings.Set(Settings.K.DisableLinuxDesktopEntry, true);
+        LinuxDesktopEntry.RefreshAfterSettingChanged();
+        Settings.Set(Settings.K.DisableLinuxDesktopEntry, false);
+        LinuxDesktopEntry.RefreshAfterSettingChanged();
+
+        Assert.Equal(Outcome.Created, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+        Assert.True(File.Exists(EntryPath));
+        Assert.Equal(Outcome.UpToDate, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task FullRun_SettingChangeIsKeptWhenTheRunFails() => _session.Dispatch(() =>
+    {
+        const string exe = "/home/user/Apps/UniGetUI.linux-x64/UniGetUI";
+        LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]);
+        File.Delete(EntryPath);
+        LinuxDesktopEntry.RefreshAfterSettingChanged();
+
+        string applications = Path.Combine(_dataHome, "applications");
+        Directory.Delete(applications);
+        File.WriteAllText(applications, "");
+        Assert.Equal(Outcome.Failed, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
+
+        File.Delete(applications);
+        Assert.Equal(Outcome.Created, LinuxDesktopEntry.EnsureFor(exe, _dataHome, [_systemDataDir]));
     }, CancellationToken.None);
 
     [Theory]

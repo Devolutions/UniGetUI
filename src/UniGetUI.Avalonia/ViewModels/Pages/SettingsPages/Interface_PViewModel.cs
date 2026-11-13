@@ -36,7 +36,7 @@ public partial class Interface_PViewModel : ViewModelBase
 
     [RelayCommand]
     private static void RefreshLinuxDesktopEntry()
-        => _ = Task.Run(LinuxDesktopEntry.EnsureForCurrentProcess);
+        => LinuxDesktopEntry.RefreshAfterSettingChanged();
 
     [RelayCommand]
     private async Task ResetIconCache(Visual? _)

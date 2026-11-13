@@ -183,56 +183,44 @@ Its format-agnostic parts live in the shared feed project described in the next 
 
 ## Mac App Store (mas)
 
-`UniGetUI.PackageEngine.Managers.MacAppStore` (id `mas`, macOS only) drives the
-[mas](https://github.com/mas-cli/mas) CLI; packages are App Store ids (adam ids).
+`UniGetUI.PackageEngine.Managers.MacAppStore` (id `mas`, macOS only) is built directly into UniGetUI
+with **no third-party CLI dependency** (portions adapted from MIT-licensed `mas-cli/mas`; see
+`src/UniGetUI.PackageEngine.Managers.MacAppStore/THIRD_PARTY_NOTICES.md`); packages are App Store
+ids (adam ids).
 
-- Listings parse both mas 7's `--json` lines and the tables of older releases (`MasOutput`), and the
-  verbs follow the mas major version: `get`/`update` from 3, `purchase`/`upgrade` before.
-- Details, icons and screenshots come from Apple's lookup API (`AppStoreCatalog`), for the account's
-  storefront (`mas config`). It is rate-limited, so ids from listings are queued with `Want` and
-  fetched up to 100 per request, with misses and failures cached; `Peek` never goes to the network.
-- A free app is installed with `get`, which acquires it for the account; one with a price must
-  already be owned and is downloaded with `install`. Reinstalling an already-installed app on mas 3+
-  passes `--force`.
-- mas 4 and later need root to install and update, and every release to uninstall. The operation
-  helper is an `IManagedPackageOperationHelper` using `ElevatedMas`, and overrides
-  `GetFailureExplanation` (applied by `PackageOperation.PerformLocalOperation` too) so store-side
-  failures surface directly in `Metadata.FailureMessage`.
-- `NativeMas` drives `UniGetUIMasHelper` (`scripts/macos/UniGetUIMasHelper.m`, with embedded
-  `scripts/macos/MasHelper-Info.plist`), an on-demand `MachServices` LaunchDaemon installed as root
-  at `/Library/PrivilegedHelperTools/com.devolutions.unigetui.mashelper` and
-  `/Library/LaunchDaemons/com.devolutions.unigetui.mashelper.plist` (never `SMAppService`, whose
-  `BundleProgram` launch constraint rejects ad-hoc builds). It can be installed or removed from the
-  Mac App Store settings page (`DisableMasTouchIdHelper` remembers explicit removal) or bootstrapped
-  behind the first password-authorized operation when Touch ID is available. No sudo/PAM edits or
-  client-supplied biometric success flags.
-- The native helper is separately hardened with empty entitlements. Both XPC ends validate the
-  message audit identity with `SecCodeCreateWithXPCMessage` against their own designated requirement,
-  and `HelperReady` checks root ownership, signature, byte equality against the current bundled
-  helper, and `launchctl` registration before connecting. Only the active console administrator may
-  request one of six verbs, optional `--force` (only for `get`/`install`/`update`), and a numeric
-  app ID. `ResolveMas` enforces a component-by-component trusted-path check (root/admin owned, no
-  world-writable, sticky, or non-admin group-writable directories) before snapshotting both its
-  worker and `mas` (signature integrity, bounded Mach-O with absolute system-library imports) in
-  `/private/var/run/com.devolutions.unigetui.mashelper`. The worker enters the user's bootstrap
-  session, temporarily changes effective identity for `LAContext` (`LAPolicyDeviceOwnerAuthentication`,
-  offering Touch ID, Apple Watch, and in-sheet password fallback), restores root only inside that
-  worker, and runs the protected `mas` copy with `SUDO_UID/GID`. Native cancellation stays canceled;
-  transport/command failures never retry. Exit 77 (unavailable) exclusively means `mas` did not
-  start and password fallback is safe; raw `mas` failures are normalized so they cannot impersonate
-  protocol outcomes.
-- Without the native helper, when Apple's `pam_tid.so` is configured for sudo, `ElevatedMas` uses
-  `sudo -S` with closed stdin, never `-A` (Apple suppresses Touch ID in askpass mode). Otherwise,
-  or if sudo cannot authenticate, it uses `osascript`'s native password dialog with `launchctl asuser <uid>`
-  and `SUDO_UID`/`SUDO_GID`. A per-operation marker emitted by the root shell before exec
-  distinguishes an authentication failure from a command failure: once it appears, never retry the
-  command through the other path. Cancellation in the dialog returns error -128.
-- The helper returns null (the ordinary process path) when no root is needed or UniGetUI already runs
-  as root. Tests swap `NativeMas.HelperPath`, `NativeMas.CanBootstrapWithHelper`,
+- Installed apps come from `UniGetUIMasHelper list`, which queries Spotlight (`NSMetadataQuery` over
+  `/Applications` and any `com.apple.appstored` `PreferredVolume`, canonicalizing paths, skipping
+  TestFlight `adamID == 0` entries and missing bundles, and auto-indexing bundles with
+  `_MASReceipt/receipt` or `Wrapper/iTunesMetadata.plist`).
+- Storefront resolution reads `ISAccountService.storeFrontWithReplyBlock:` (`UniGetUIMasHelper storefront`)
+  and normalizes numeric StoreFront IDs and ISO territories (`AppStoreRegion`) to Apple's two-letter
+  catalog country code.
+- Search, update detection, details, icons and screenshots use `AppStoreCatalog` (`itunes.apple.com/search`
+  and batched `itunes.apple.com/lookup`, up to 100 IDs per request, with misses and failures cached;
+  `Peek` never goes to the network). Apple Silicon Macs also surface `kind == "software"` apps whose
+  `supportedDevices` include `MacDesktop-MacDesktop`. Update detection skips `mac-software` releases
+  whose `minimumOsVersion` exceeds `CurrentMacOSVersion`.
+- A free app is acquired and installed with `get` (`STDQ`), paid owned apps redownload with `install`
+  (`STDRDL`), updates run `update`, and uninstalls move verified App Store bundles into the requesting
+  user's Trash. `GetExtraMaintenanceActions` provides `reset-cache` (`UniGetUIMasHelper reset`).
+- Downloads and installs run in `UniGetUIMasHelper` (`CommerceKit`/`StoreFoundation` `CKPurchaseController`
+  + `CKDownloadQueueObserver`), streaming structured `@@UNIGETUI_PROGRESS@@` updates into
+  `OperationProgress`, hard-linking `.pkg` and `receipt` artifacts from `CKDownloadDirectory` to handle
+  macOS's `PKInstallErrorDomain` 201 restriction via root `/usr/sbin/installer -dumplog -pkg`, and
+  registering the installed bundle with `mdimport` and `LSRegisterURL`.
+- `NativeMas` drives the on-demand `MachServices` LaunchDaemon at
+  `/Library/PrivilegedHelperTools/com.devolutions.unigetui.mashelper` and
+  `/Library/LaunchDaemons/com.devolutions.unigetui.mashelper.plist` (never `SMAppService`), using
+  authenticated XPC (`SecCodeCreateWithXPCMessage`), root staging in
+  `/private/var/run/com.devolutions.unigetui.mashelper`, and `LAContext`
+  (`LAPolicyDeviceOwnerAuthentication`, offering Touch ID, Apple Watch, and in-sheet password fallback).
+  It never accepts an external executable path or shell command. Fallback uses configured `pam_tid.so`
+  `sudo -S` or `osascript` (`launchctl asuser <uid> UniGetUIMasHelper perform-root ...`), bootstrapping
+  the helper on the first password-authorized operation unless `DisableMasTouchIdHelper` is set.
+- Tests swap `NativeMas.HelperPath`, `NativeMas.CanBootstrapWithHelper`,
   `NativeMas.HasInstalledDaemonFiles`, `ElevatedMas.RunProcess`, `ElevatedMas.UserIds`,
   `ElevatedMas.TouchIdSudoEnabled`, `MacAppStorePkgOperationHelper.IsRoot` and
-  `AppStoreCatalog.Download`. macOS engine tests also build/run `scripts/macos/MasHelperTests.m`
-  for native boundary, path-trust, IPC, and staging checks without registering a daemon.
+  `AppStoreCatalog.Download`, plus `scripts/macos/MasHelperTests.m` on macOS.
 
 ## Installer feeds shared by macOS and Windows
 

@@ -8,14 +8,15 @@ using UniGetUI.Core.Tools;
 namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager.Internal;
 
 /// <summary>
-/// App Store records (description, icon, screenshots, price) for the apps mas lists.
-/// Apple's lookup API allows only about twenty requests a minute, so asking once per package would
-/// throttle a page of icons. Records are cached, and a lookup also fetches every other app the last
-/// listings showed that is not cached yet, so a page of installed apps costs one request.
+/// App Store catalog search and lookup against Apple's public iTunes Search API
+/// (<c>itunes.apple.com/search</c> and <c>itunes.apple.com/lookup</c>), ported from MIT-licensed
+/// <c>mas-cli/mas</c>. Apple's lookup API allows only about twenty requests a minute, so records are
+/// cached and lookups batch up to 100 queued app IDs per request.
 /// </summary>
 internal sealed class AppStoreCatalog
 {
     internal const int MaxIdsPerLookup = 100;
+    internal const int MaxSearchResults = 50;
     private static readonly TimeSpan MissedRetryDelay = TimeSpan.FromHours(1);
     private static readonly TimeSpan FailedRetryDelay = TimeSpan.FromMinutes(2);
 
@@ -31,10 +32,17 @@ internal sealed class AppStoreCatalog
         _storefront = storefront;
     }
 
-    /// <summary>Downloads a lookup URL. Replaceable for tests.</summary>
+    /// <summary>Downloads a lookup or search URL. Replaceable for tests.</summary>
     internal Func<Uri, string> Download { get; set; } = DownloadString;
 
-    /// <summary>Keeps a record mas already printed (<c>mas search --json</c>), saving a lookup.</summary>
+    public void Clear()
+    {
+        _records.Clear();
+        _missed.Clear();
+        _failedUntil = DateTime.MinValue;
+    }
+
+    /// <summary>Keeps a catalog record already fetched from search or lookup.</summary>
     public void Remember(JsonObject? record)
     {
         if (record is not null && AppStoreRecord.IsCatalogRecord(record))
@@ -82,6 +90,90 @@ internal sealed class AppStoreCatalog
         }
     }
 
+    /// <summary>Ensures all requested IDs have been looked up in batches of up to 100.</summary>
+    public IReadOnlyDictionary<string, JsonObject> GetMany(IEnumerable<string> ids)
+    {
+        string[] unique = ids.Where(id => id.Length > 0).Distinct(StringComparer.Ordinal).ToArray();
+        if (unique.Length == 0 || DateTime.UtcNow < _failedUntil)
+            return SnapshotFor(unique);
+
+        if (unique.All(id => _records.ContainsKey(id) || RecentlyMissed(id)))
+            return SnapshotFor(unique);
+
+        _lookupLock.Wait();
+        try
+        {
+            if (DateTime.UtcNow >= _failedUntil)
+            {
+                string[] pending = unique
+                    .Where(id => !_records.ContainsKey(id) && !RecentlyMissed(id))
+                    .ToArray();
+                for (int offset = 0; offset < pending.Length && DateTime.UtcNow >= _failedUntil; offset += MaxIdsPerLookup)
+                {
+                    string[] chunk = pending.Skip(offset).Take(MaxIdsPerLookup).ToArray();
+                    Lookup(chunk);
+                }
+            }
+        }
+        finally
+        {
+            _lookupLock.Release();
+        }
+
+        return SnapshotFor(unique);
+    }
+
+    public IReadOnlyList<JsonObject> Search(string terms, bool includeAppleSiliconIosApps)
+    {
+        string storefront = _storefront();
+        string desktopJson = Download(SearchUrl(terms, storefront, desktopOnly: true));
+        IReadOnlyList<JsonObject> desktop = ParseLookup(desktopJson);
+        List<JsonObject> merged = [];
+        HashSet<string> seen = new(StringComparer.Ordinal);
+
+        foreach (JsonObject app in desktop)
+        {
+            if (AppStoreRecord.Id(app) is not { } id
+                || !AppStoreRecord.SupportsMac(app, includeAppleSiliconIosApps)
+                || !seen.Add(id))
+                continue;
+            Remember(app);
+            merged.Add(app);
+        }
+
+        if (includeAppleSiliconIosApps)
+        {
+            try
+            {
+                string compatibleJson = Download(SearchUrl(terms, storefront, desktopOnly: false));
+                foreach (JsonObject app in ParseLookup(compatibleJson))
+                {
+                    if (AppStoreRecord.Id(app) is not { } id
+                        || !AppStoreRecord.SupportsMac(app, isAppleSilicon: true)
+                        || !seen.Add(id))
+                        continue;
+                    Remember(app);
+                    merged.Add(app);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not query compatible Apple Silicon App Store results for '{terms}': {ex.Message}");
+            }
+        }
+
+        return merged;
+    }
+
+    private Dictionary<string, JsonObject> SnapshotFor(IEnumerable<string> ids)
+    {
+        Dictionary<string, JsonObject> found = new(StringComparer.Ordinal);
+        foreach (string id in ids)
+            if (_records.TryGetValue(id, out JsonObject? record))
+                found[id] = record;
+        return found;
+    }
+
     private void Lookup(IReadOnlyList<string> ids)
     {
         Uri url = LookupUrl(ids, _storefront());
@@ -111,7 +203,13 @@ internal sealed class AppStoreCatalog
         _missed.TryGetValue(id, out DateTime when) && DateTime.UtcNow - when < MissedRetryDelay;
 
     internal static Uri LookupUrl(IEnumerable<string> ids, string storefront) =>
-        new($"https://itunes.apple.com/lookup?id={string.Join(',', ids)}&country={Uri.EscapeDataString(storefront.ToLowerInvariant())}");
+        new($"https://itunes.apple.com/lookup?id={string.Join(',', ids)}&media=software&country={Uri.EscapeDataString(storefront.ToLowerInvariant())}");
+
+    internal static Uri SearchUrl(string terms, string storefront, bool desktopOnly = true)
+    {
+        string entity = desktopOnly ? "&entity=desktopSoftware" : "";
+        return new($"https://itunes.apple.com/search?term={Uri.EscapeDataString(terms)}&media=software{entity}&limit={MaxSearchResults}&country={Uri.EscapeDataString(storefront.ToLowerInvariant())}");
+    }
 
     internal static IReadOnlyList<JsonObject> ParseLookup(string json)
     {

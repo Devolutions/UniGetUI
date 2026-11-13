@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Globalization;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager.Internal;
 
@@ -12,6 +14,7 @@ internal static class NativeMas
 {
     internal const string InstalledHelperPath = "/Library/PrivilegedHelperTools/com.devolutions.unigetui.mashelper";
     internal const string DaemonPlistPath = "/Library/LaunchDaemons/com.devolutions.unigetui.mashelper.plist";
+    internal const string ProgressPrefix = "@@UNIGETUI_PROGRESS@@";
     internal const int Unavailable = 77;
     internal const int Canceled = 128;
     internal const int CancellationResult = -128;
@@ -21,7 +24,7 @@ internal static class NativeMas
     internal static Func<bool> HasInstalledDaemonFiles { get; set; } =
         () => File.Exists(InstalledHelperPath) || File.Exists(DaemonPlistPath);
 
-    private static string? FindHelper()
+    internal static string? FindHelper()
     {
         if (!OperatingSystem.IsMacOSVersionAtLeast(12))
             return null;
@@ -30,12 +33,18 @@ internal static class NativeMas
     }
 
     internal static bool SupportsOperationArguments(IReadOnlyList<string> arguments) =>
-        arguments.Count == 2
-        || (arguments.Count == 3 && arguments[1] == "--force");
+        (arguments.Count == 2
+            && arguments[0] is "get" or "install" or "update" or "uninstall"
+            && arguments[1].Length is > 0 and <= 20
+            && arguments[1].All(char.IsAsciiDigit))
+        || (arguments.Count == 3
+            && arguments[0] is "get" or "install" or "update"
+            && arguments[1] == "--force"
+            && arguments[2].Length is > 0 and <= 20
+            && arguments[2].All(char.IsAsciiDigit));
 
-    internal static ProcessStartInfo? StartInfo(string masPath, IReadOnlyList<string> arguments, string prompt)
+    internal static ProcessStartInfo? StartInfo(IReadOnlyList<string> arguments, string prompt)
     {
-        // Custom command-line switches stay on the password/sudo path, not the narrow helper protocol.
         if (Settings.Get(Settings.K.DisableMasTouchIdHelper)
             || !SupportsOperationArguments(arguments)
             || HelperPath() is not { } helper)
@@ -50,11 +59,40 @@ internal static class NativeMas
             CreateNoWindow = true,
         };
         start.ArgumentList.Add("run");
-        start.ArgumentList.Add(masPath);
         foreach (string argument in arguments)
             start.ArgumentList.Add(argument);
         start.ArgumentList.Add(prompt);
         return start;
+    }
+
+    internal static bool TryParseProgressLine(string line, out OperationProgress progress)
+    {
+        progress = OperationProgress.Unknown;
+        if (!line.StartsWith(ProgressPrefix, StringComparison.Ordinal))
+            return false;
+
+        string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 5)
+            return true;
+
+        string stage = parts[1];
+        _ = int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int percent);
+        _ = long.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out long downloaded);
+        _ = long.TryParse(parts[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out long total);
+
+        progress = stage switch
+        {
+            "downloading" when total > 4096 && downloaded >= 0 =>
+                OperationProgress.FromDownload((ulong)downloaded, (ulong)total),
+            "downloading" when percent is >= 0 and <= 100 =>
+                new OperationProgress(OperationProgressStage.Downloading, percent, null, null, null),
+            "downloading" => OperationProgress.ForStage(OperationProgressStage.Downloading),
+            "installing" => OperationProgress.ForStage(OperationProgressStage.Installing),
+            "updating" => OperationProgress.ForStage(OperationProgressStage.Updating),
+            "uninstalling" => OperationProgress.ForStage(OperationProgressStage.Uninstalling),
+            _ => OperationProgress.Unknown,
+        };
+        return true;
     }
 
     internal static async Task<string?> GetBootstrapHelperPathAsync(IReadOnlyList<string> arguments)

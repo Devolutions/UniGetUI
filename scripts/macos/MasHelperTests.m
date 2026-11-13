@@ -74,8 +74,7 @@ int main(void)
         assert(ValidOperation(@"update", YES, @"409907375"));
         assert(ValidOperation(@"uninstall", NO, @"937984704"));
         assert(!ValidOperation(@"uninstall", YES, @"937984704"));
-        assert(!ValidOperation(@"purchase", YES, @"937984704"));
-        assert(!ValidOperation(@"upgrade", YES, @"937984704"));
+        assert(!ValidOperation(@"get", NO, @"0")); // TestFlight / invalid zero ID
         assert(!ValidOperation(@"exec", NO, @"409907375"));
         assert(!ValidOperation(@"install", NO, @"1;id"));
         assert(!ValidOperation(@"install", NO, @""));
@@ -86,12 +85,22 @@ int main(void)
 
         assert([FormatAuthenticationReason(@"update", NO, @"1295203466",
             @"UniGetUI wants to update Windows App from the Mac App Store.")
-            isEqualToString:@"update Windows App from the Mac App Store (mas update 1295203466)"]);
+            isEqualToString:@"update Windows App from the Mac App Store (App Store update 1295203466)"]);
         assert([FormatAuthenticationReason(@"get", YES, @"409907375",
             @"UniGetUI wants to reinstall Apple Remote Desktop.")
-            isEqualToString:@"reinstall Apple Remote Desktop (mas get --force 409907375)"]);
+            isEqualToString:@"reinstall Apple Remote Desktop (App Store get --force 409907375)"]);
         assert([FormatAuthenticationReason(@"uninstall", NO, @"937984704", @"")
-            isEqualToString:@"run mas uninstall 937984704"]);
+            isEqualToString:@"uninstall App Store app 937984704"]);
+
+        // Outermost registered .app bundle extraction from /usr/sbin/installer -dumplog output.
+        NSString *installerLog =
+            @"installer: PackageKit: Registered bundle file:///Applications/Example%20App.app/Contents/Library/LoginItems/Helper.app/ for uid 0\n"
+             "installer: PackageKit: Registered bundle file:///Applications/Example%20App.app/ for uid 0\n";
+        assert([InstalledBundlePathFromInstallerLog(installerLog) isEqualToString:@"/Applications/Example App.app"]);
+        assert(InstalledBundlePathFromInstallerLog(@"PackageKit: Registered bundle file:///tmp/Evil.app/ for uid 0") == nil);
+        assert(InstalledBundlePathFromInstallerLog(@"PackageKit: Registered bundle https://example.com/App.app for uid 0") == nil);
+        assert(!IsAllowedAppBundleForUninstall(@"/Applications"));
+        assert(!IsAllowedAppBundleForUninstall(@"/tmp/Evil.app"));
 
         assert(AuthenticationResult(YES, YES, 0) == 0);
         assert(AuthenticationResult(NO, YES, 0) == Canceled);
@@ -179,23 +188,33 @@ int main(void)
         NSString *snapshot = [root stringByAppendingPathComponent:@"test-helper"];
         assert(Snapshot(SelfPath(), snapshot, requirement));
         assert(!Snapshot(SelfPath(), snapshot, requirement)); // never overwrite an existing destination
-        // Even a valid signed binary inside /private/tmp must be rejected by TrustedExecutablePath / ResolveMas.
-        NSString *untrustedMas = [root stringByAppendingPathComponent:@"mas"];
-        assert(Snapshot(SelfPath(), untrustedMas, requirement));
-        assert(!TrustedExecutablePath(untrustedMas, getuid()));
-        assert(ResolveMas(untrustedMas, getuid()) == nil);
+        // Even a valid signed binary inside /private/tmp must be rejected by TrustedExecutablePath.
+        NSString *untrustedHelper = [root stringByAppendingPathComponent:@"helper-in-tmp"];
+        assert(Snapshot(SelfPath(), untrustedHelper, requirement));
+        assert(!TrustedExecutablePath(untrustedHelper, getuid()));
         NSString *link = [root stringByAppendingPathComponent:@"link"];
         assert(symlink(SelfPath().fileSystemRepresentation, link.fileSystemRepresentation) == 0);
         assert(!Snapshot(link, [root stringByAppendingPathComponent:@"link-copy"], requirement));
         NSString *bad = [root stringByAppendingPathComponent:@"not-a-binary"];
         assert([script writeToFile:bad atomically:NO]);
         assert(!Snapshot(bad, [root stringByAppendingPathComponent:@"bad-copy"], NULL));
-        if ([NSFileManager.defaultManager fileExistsAtPath:@"/opt/homebrew/bin/mas"])
-            assert(ResolveMas(@"/opt/homebrew/bin/mas", getuid()) != nil);
+
+        // Verify hard-link preservation refreshes only when a new inode appears.
+        NSString *pkg1 = [root stringByAppendingPathComponent:@"first.pkg"];
+        assert([@"pkg-v1" writeToFile:pkg1 atomically:NO encoding:NSUTF8StringEncoding error:NULL]);
+        NSURL *stagingURL = [NSURL fileURLWithPath:root isDirectory:YES];
+        NSString *linked = RefreshHardLink(pkg1, nil, stagingURL, 409907375);
+        assert(linked != nil && SameInode(pkg1, linked));
+        assert([RefreshHardLink(pkg1, linked, stagingURL, 409907375) isEqualToString:linked]);
+        NSString *pkg2 = [root stringByAppendingPathComponent:@"second.pkg"];
+        assert([@"pkg-v2" writeToFile:pkg2 atomically:NO encoding:NSUTF8StringEncoding error:NULL]);
+        NSString *relinked = RefreshHardLink(pkg2, linked, stagingURL, 409907375);
+        assert(relinked != nil && SameInode(pkg2, relinked) && ![relinked isEqualToString:linked]);
+
         NSError *error = nil;
         assert([NSFileManager.defaultManager removeItemAtPath:root error:&error]);
         CFRelease(requirement);
-        puts("Native helper policy, path trust, authentication outcomes, authenticated IPC, and protected staging passed.");
+        puts("Native helper policy, path trust, installer bundle parsing, hard-link staging, and authenticated IPC passed.");
         return 0;
     }
 }

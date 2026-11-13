@@ -85,7 +85,7 @@
 
     <Target Name="BuildNativeMasHelperTests" AfterTargets="Build"
             Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(TargetFramework)' == '$(PortableTargetFramework)'">
-        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -mmacosx-version-min=12.0 -Wl,-sectcreate,__TEXT,__info_plist,'$(MSBuildProjectDirectory)/../../scripts/macos/MasHelper-Info.plist' -framework Foundation -framework LocalAuthentication -framework Security -framework SystemConfiguration '$(MSBuildProjectDirectory)/../../scripts/macos/MasHelperTests.m' -o '$(TargetDir)MasHelperNativeTests'" />
+        <Exec Command="xcrun clang -fobjc-arc -Wall -Wextra -Werror -mmacosx-version-min=12.0 -Wl,-sectcreate,__TEXT,__info_plist,'$(MSBuildProjectDirectory)/../../scripts/macos/MasHelper-Info.plist' -F &quot;$(xcrun --show-sdk-path)/System/Library/PrivateFrameworks&quot; -framework AppKit -framework CoreServices -framework Foundation -framework LocalAuthentication -framework Security -framework SystemConfiguration -framework CommerceKit -framework StoreFoundation '$(MSBuildProjectDirectory)/../../scripts/macos/MasHelperTests.m' -o '$(TargetDir)MasHelperNativeTests'" />
         <Exec Command="codesign --force --options runtime --entitlements '$(MSBuildProjectDirectory)/../../scripts/macos/MasHelper.entitlements' --sign - '$(TargetDir)MasHelperNativeTests'" />
     </Target>
 </Project>

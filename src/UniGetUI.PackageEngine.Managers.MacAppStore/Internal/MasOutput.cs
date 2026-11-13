@@ -16,7 +16,8 @@ internal sealed record MasApp(
     string Version,
     string? NewVersion = null,
     string? Path = null,
-    JsonObject? Catalog = null
+    JsonObject? Catalog = null,
+    string? BundleId = null
 );
 
 /// <summary>
@@ -88,7 +89,7 @@ internal static partial class MasOutput
             return null;
 
         return new MasApp(id, name.Trim(), version, outdated ? newVersion : null,
-            AppStoreRecord.Text(json, "path"), json);
+            AppStoreRecord.Text(json, "path"), json, AppStoreRecord.Text(json, "bundleID", "bundleId"));
     }
 
     private static MasApp? ParseTableLine(string line, bool outdated)
@@ -116,16 +117,22 @@ internal static partial class MasOutput
     {
         string[] all = lines.ToArray();
         string text = string.Join('\n', all).Trim();
+        if (text.Length == 0)
+            return null;
+
         if (text.StartsWith('{'))
         {
             try
             {
                 if (JsonNode.Parse(text) is JsonObject json)
-                    return CountryCode(AppStoreRecord.Text(json, "store"))
-                        ?? CountryCode(AppStoreRecord.Text(json, "region"));
+                    return AppStoreRegion.FromStoreFrontHeader(AppStoreRecord.Text(json, "store"))
+                        ?? AppStoreRegion.FromStoreFrontHeader(AppStoreRecord.Text(json, "region"));
             }
             catch (JsonException) { }
         }
+
+        if (AppStoreRegion.FromStoreFrontHeader(text) is { } direct)
+            return direct;
 
         string? store = null, region = null;
         foreach (string line in all)
@@ -134,13 +141,10 @@ internal static partial class MasOutput
             if (!match.Success)
                 continue;
             if (match.Groups[1].Value == "store")
-                store ??= CountryCode(match.Groups[2].Value);
+                store ??= AppStoreRegion.FromStoreFrontHeader(match.Groups[2].Value);
             else
-                region ??= CountryCode(match.Groups[2].Value);
+                region ??= AppStoreRegion.FromStoreFrontHeader(match.Groups[2].Value);
         }
         return store ?? region;
     }
-
-    private static string? CountryCode(string? value) =>
-        value is { Length: 2 } && value.All(char.IsAsciiLetter) ? value.ToUpperInvariant() : null;
 }

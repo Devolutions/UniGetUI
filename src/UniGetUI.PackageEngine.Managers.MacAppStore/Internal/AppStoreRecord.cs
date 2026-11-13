@@ -80,9 +80,54 @@ internal static class AppStoreRecord
         return screenshots;
     }
 
-    /// <summary>Whether this is a catalog record, rather than the bare installed-app data of <c>mas list</c>.</summary>
+    /// <summary>Whether this is a catalog record, rather than the bare installed-app data of Spotlight.</summary>
     public static bool IsCatalogRecord(JsonObject app) =>
         Id(app) is not null && (Icon(app) is not null || Text(app, "description") is not null);
+
+    public static string? Kind(JsonObject app) => Text(app, "kind");
+
+    /// <summary>
+    /// Native Mac apps report <c>mac-software</c>; compatible iPhone/iPad apps offered on the Mac App
+    /// Store for Apple Silicon report <c>software</c> and include <c>MacDesktop-MacDesktop</c> in
+    /// <c>supportedDevices</c> (ported from <c>mas-cli/mas</c> <c>CatalogApp.swift</c>).
+    /// </summary>
+    public static bool SupportsMac(JsonObject app, bool isAppleSilicon)
+    {
+        string? kind = Kind(app);
+        if (kind == "mac-software")
+            return true;
+        return isAppleSilicon
+            && kind == "software"
+            && Strings(app, "supportedDevices").Contains("MacDesktop-MacDesktop", StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Minimum macOS version required by a <c>mac-software</c> release, or null when unrestricted
+    /// (for <c>software</c> records, Apple's <c>minimumOsVersion</c> names an iOS version instead).
+    /// </summary>
+    public static Version? MinimumMacOSVersion(JsonObject app)
+    {
+        if (Kind(app) != "mac-software" || Text(app, "minimumOSVersion", "minimumOsVersion") is not { } raw)
+            return null;
+
+        string[] parts = raw.Trim().Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0 || !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int major))
+            return null;
+        int minor = parts.Length >= 2 && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int m) ? m : 0;
+        int patch = parts.Length >= 3 && int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int p) ? p : 0;
+        return new Version(major, minor, patch);
+    }
+
+    public static bool IsCompatibleWithMacOS(JsonObject app, Version currentMacOS)
+    {
+        if (MinimumMacOSVersion(app) is not { } required)
+            return true;
+        Version normalizedCurrent = new(
+            Math.Max(0, currentMacOS.Major),
+            Math.Max(0, currentMacOS.Minor),
+            Math.Max(0, currentMacOS.Build));
+        return normalizedCurrent >= required;
+    }
 
     private static Uri? AsWebUrl(string? text) =>
         Uri.TryCreate(text, UriKind.Absolute, out Uri? url) && (url.Scheme == Uri.UriSchemeHttps || url.Scheme == Uri.UriSchemeHttp)

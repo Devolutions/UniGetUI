@@ -3,10 +3,14 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager.Internal;
 
-/// <summary>Uses the opt-in native helper, configured sudo Touch ID, or the administrator-password dialog.</summary>
+/// <summary>
+/// Runs UniGetUI's built-in Mac App Store helper via the Touch ID LaunchDaemon, configured sudo
+/// Touch ID, or macOS's native administrator-password dialog.
+/// </summary>
 internal static partial class ElevatedMas
 {
     internal const string OsaScriptPath = "/usr/bin/osascript";
@@ -73,36 +77,28 @@ internal static partial class ElevatedMas
             && HasModule(Rows(localConfiguration)));
     }
 
-    private static string[] CommandArguments(string masPath, IEnumerable<string> arguments, uint userId, uint groupId)
-    {
-        // mas drops its effective identity to SUDO_UID/GID for Store services. Authorization
-        // Services does not set these; preserve the requesting user, not the authorizing admin.
-        return
-        [
-            "/usr/bin/env",
-            "SUDO_UID=" + userId.ToString(CultureInfo.InvariantCulture),
-            "SUDO_GID=" + groupId.ToString(CultureInfo.InvariantCulture),
-            masPath,
-            .. arguments,
-        ];
-    }
+    private static string[] PerformRootArguments(string helperPath, IEnumerable<string> arguments, uint userId) =>
+    [
+        helperPath,
+        "perform-root",
+        userId.ToString(CultureInfo.InvariantCulture),
+        .. arguments,
+    ];
 
     // Authorization Services starts the command from the system-wide authtrampoline, outside the
-    // user's login session, where the App Store's per-user services cannot be reached and mas waits
-    // forever for its purchase request. asuser runs it in the user's bootstrap context, as sudo would.
-    internal static string Command(string masPath, IEnumerable<string> arguments, uint userId, uint groupId) =>
+    // user's login session, where the App Store's per-user services cannot be reached. asuser runs
+    // the helper in the user's bootstrap context while preserving real root for installer/Trash.
+    internal static string Command(string helperPath, IEnumerable<string> arguments, uint userId) =>
         string.Join(' ', new[] { LaunchctlPath, "asuser", userId.ToString(CultureInfo.InvariantCulture) }
-            .Concat(CommandArguments(masPath, arguments, userId, groupId))
+            .Concat(PerformRootArguments(helperPath, arguments, userId))
             .Select(CoreTools.QuoteForPosixShell)) + " 2>&1";
 
     internal static string CommandWithHelperBootstrap(
         string helperPath,
-        string masPath,
         IEnumerable<string> arguments,
-        uint userId,
-        uint groupId) =>
+        uint userId) =>
         $"{CoreTools.QuoteForPosixShell(helperPath)} install-daemon >/dev/null 2>&1 || true; "
-        + Command(masPath, arguments, userId, groupId);
+        + Command(helperPath, arguments, userId);
 
     private static ProcessStartInfo StartInfo(string executable) => new(executable)
     {
@@ -113,39 +109,53 @@ internal static partial class ElevatedMas
         CreateNoWindow = true,
     };
 
-    public static async Task<(int ExitCode, IReadOnlyList<string> Output)> RunAsync(
-        string masPath,
-        IEnumerable<string> masArguments,
+    public static Task<(int ExitCode, IReadOnlyList<string> Output)> RunAsync(
+        string helperPath,
+        IEnumerable<string> operationArguments,
         string prompt,
         Action<string> log,
+        CancellationToken cancellationToken) =>
+        RunAsync(helperPath, operationArguments, prompt, log, _ => { }, cancellationToken);
+
+    public static async Task<(int ExitCode, IReadOnlyList<string> Output)> RunAsync(
+        string helperPath,
+        IEnumerable<string> operationArguments,
+        string prompt,
+        Action<string> log,
+        Action<OperationProgress> progress,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var (userId, groupId) = UserIds();
-        string[] arguments = masArguments.ToArray();
+        var (userId, _) = UserIds();
+        string[] arguments = operationArguments.ToArray();
 
         // Killing an elevation process does not reliably stop its privileged child. Hold the manager
         // gate rather than orphan an installer or report cancellation while it is still running.
-        // Cancel in the system authorization dialog itself is returned as AppleScript error -128.
         using var registration = cancellationToken.Register(() => log(CoreTools.Translate(
             "Cancellation was requested. Waiting for the authorized Mac App Store operation to finish; check its state in the App Store.")));
         List<string> output = [];
         void OnLine(string line)
         {
+            if (NativeMas.TryParseProgressLine(line, out OperationProgress parsed))
+            {
+                if (parsed != OperationProgress.Unknown)
+                    progress(parsed);
+                return;
+            }
             lock (output)
                 output.Add(line);
             log(line);
         }
 
-        if (NativeMas.StartInfo(masPath, arguments, prompt) is { } native)
+        if (NativeMas.StartInfo(arguments, prompt) is { } native)
         {
             log(CoreTools.Translate("Checking Touch ID authorization for the Mac App Store."));
             cancellationToken.ThrowIfCancellationRequested();
             int nativeExit = await RunProcess(native, OnLine, CancellationToken.None);
             if (nativeExit == NativeMas.Canceled)
                 return (NativeMas.CancellationResult, output.ToArray());
-            // Unavailable is emitted only before mas starts. Transport errors or a failed mas
-            // command never trigger a retry.
+            // Unavailable is emitted only before the store operation starts. Transport errors or a
+            // failed store operation never trigger a retry.
             if (nativeExit != NativeMas.Unavailable)
                 return (nativeExit, output.ToArray());
             cancellationToken.ThrowIfCancellationRequested();
@@ -164,7 +174,7 @@ internal static partial class ElevatedMas
             string[] sudoArguments =
             [
                 "-S", "-p", "", "--", "/bin/sh", "-c", SudoCommandScript, "unigetui-mas", marker,
-                .. CommandArguments(masPath, arguments, userId, groupId),
+                .. PerformRootArguments(helperPath, arguments, userId),
             ];
             foreach (string argument in sudoArguments)
                 sudo.ArgumentList.Add(argument);
@@ -177,8 +187,6 @@ internal static partial class ElevatedMas
                 else
                     OnLine(line);
             }, CancellationToken.None);
-            // An installer failure must never cause a second install through the password path.
-            // The root shell emits this marker before exec, including when exec itself fails.
             if (commandStarted)
             {
                 lock (output)
@@ -194,8 +202,8 @@ internal static partial class ElevatedMas
 
         string? bootstrapHelper = await NativeMas.GetBootstrapHelperPathAsync(arguments);
         string shellCommand = bootstrapHelper is not null
-            ? CommandWithHelperBootstrap(bootstrapHelper, masPath, arguments, userId, groupId)
-            : Command(masPath, arguments, userId, groupId);
+            ? CommandWithHelperBootstrap(bootstrapHelper, arguments, userId)
+            : Command(helperPath, arguments, userId);
         if (bootstrapHelper is not null)
             log(CoreTools.Translate(
                 "Touch ID is not set up yet. After you enter your administrator password once, future Mac App Store operations can use Touch ID."));

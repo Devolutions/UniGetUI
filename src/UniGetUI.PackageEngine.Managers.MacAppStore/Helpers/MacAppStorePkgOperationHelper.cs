@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -12,10 +13,9 @@ using UniGetUI.PackageEngine.Serializable;
 namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 
 /// <summary>
-/// mas 4 and later need root to install and update apps, and every release needs it to uninstall
-/// one, so those operations use the Touch ID helper, configured sudo Touch ID, or the native
-/// password dialog (<see cref="ElevatedMas"/>). The others (mas 3 and earlier, or UniGetUI already
-/// running as root) run as an ordinary process.
+/// Built-in Mac App Store operations run through <c>UniGetUIMasHelper</c> (<see cref="ElevatedMas"/>),
+/// using <c>CommerceKit</c>/<c>StoreFoundation</c>, <c>/usr/sbin/installer</c> for package installation,
+/// and macOS Trash for uninstalls, with live download progress reporting.
 /// </summary>
 internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IManagedPackageOperationHelper
 {
@@ -27,30 +27,25 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
     public MacAppStorePkgOperationHelper(MacAppStore manager)
         : base(manager) { _manager = manager; }
 
-    // An unknown version (0) is treated as a current one.
-    private bool IsLegacyMas => _manager.MasMajorVersion is > 0 and < 3;
-
     /// <summary>
-    /// The mas command for an operation. "get" acquires a free app, whether or not the account
-    /// already has it; a paid app must already be bought, and "install" downloads it again.
+    /// The operation verb for <c>UniGetUIMasHelper</c>. "get" acquires a free app, whether or not
+    /// the account already owns it; a paid app must already be bought, and "install" redownloads it.
     /// </summary>
     internal string Verb(IPackage package, OperationType operation) => operation switch
     {
         OperationType.Uninstall => "uninstall",
-        OperationType.Update => IsLegacyMas ? "upgrade" : "update",
+        OperationType.Update => "update",
         _ => _manager.Catalog.Peek(package.Id) is { } app && AppStoreRecord.Price(app) > 0
             ? "install"
-            : IsLegacyMas ? "purchase" : "get",
+            : "get",
     };
 
     internal bool IsReinstall(IPackage package, OperationType operation) =>
         operation == OperationType.Install
-        && !IsLegacyMas
         && (package.Tag is PackageTag.AlreadyInstalled or PackageTag.IsUpgradable
             || _manager.HasRecordedInstallPath(package));
 
-    internal bool NeedsRoot(OperationType operation) =>
-        !IsRoot() && (operation == OperationType.Uninstall || _manager.MasMajorVersion is 0 or >= 4);
+    internal static bool NeedsRoot() => !IsRoot();
 
     protected override IReadOnlyList<string> _getOperationParameters(
         IPackage package,
@@ -61,15 +56,17 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
         if (IsReinstall(package, operation))
             parameters.Add("--force");
         parameters.Add(package.Id);
-        parameters.AddRange(
-            operation switch
-            {
-                OperationType.Update => options.CustomParameters_Update,
-                OperationType.Uninstall => options.CustomParameters_Uninstall,
-                _ => options.CustomParameters_Install,
-            });
         return parameters;
     }
+
+    protected override IReadOnlyList<string> _getOperationParameters(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation,
+        bool standalone) =>
+        standalone
+            ? throw new InvalidOperationException("Mac App Store apps are installed by UniGetUI itself and have no standalone CLI command line.")
+            : _getOperationParameters(package, options, operation);
 
     protected override OperationVeredict _getOperationResult(
         IPackage package,
@@ -109,19 +106,48 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
     public Task<OperationVeredict?> TryPerformAsync(IPackage package, InstallOptions options,
         OperationType operation, Action<string> log, Action<OperationProgress> progress,
         CancellationToken cancellationToken) =>
-        // Operations start on the UI thread; the price lookup and the wait for mas run off it.
-        Task.Run(() => PerformAsync(package, options, operation, log, cancellationToken), CancellationToken.None);
+        // Operations start on the UI thread; the price lookup and the store download run off it.
+        Task.Run(() => PerformAsync(package, options, operation, log, progress, cancellationToken), CancellationToken.None);
 
     private async Task<OperationVeredict?> PerformAsync(IPackage package, InstallOptions options,
-        OperationType operation, Action<string> log, CancellationToken cancellationToken)
+        OperationType operation, Action<string> log, Action<OperationProgress> progress,
+        CancellationToken cancellationToken)
     {
-        // The price decides between "get" and "install"; cached, it also reaches the command line
-        // an ordinary process builds when this returns null.
         if (operation == OperationType.Install)
             _manager.Catalog.Get(package.Id);
 
-        if (!NeedsRoot(operation))
-            return null;
+        if (!NeedsRoot())
+        {
+            IReadOnlyList<string> directArgs = GetParameters(package, options, operation);
+            var (userId, _) = ElevatedMas.UserIds();
+            ProcessStartInfo start = new(_manager.Status.ExecutablePath)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                CreateNoWindow = true,
+            };
+            start.ArgumentList.Add("perform-root");
+            start.ArgumentList.Add(userId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            foreach (string arg in directArgs)
+                start.ArgumentList.Add(arg);
+
+            List<string> rootLines = [];
+            int directExit = await ElevatedMas.RunProcess(start, line =>
+            {
+                if (NativeMas.TryParseProgressLine(line, out OperationProgress parsed))
+                {
+                    if (parsed != OperationProgress.Unknown)
+                        progress(parsed);
+                    return;
+                }
+                lock (rootLines)
+                    rootLines.Add(line);
+                log(line);
+            }, CancellationToken.None);
+            return Verdict(package, operation, directExit, rootLines, log);
+        }
 
         if (Settings.Get(Settings.K.ProhibitElevation))
         {
@@ -136,6 +162,7 @@ internal sealed class MacAppStorePkgOperationHelper : BasePkgOperationHelper, IM
             arguments,
             Prompt(package, operation, IsReinstall(package, operation)),
             log,
+            progress,
             cancellationToken);
 
         return Verdict(package, operation, exitCode, output, log);

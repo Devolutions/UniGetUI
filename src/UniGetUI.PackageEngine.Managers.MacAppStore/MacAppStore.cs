@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json.Nodes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
@@ -16,17 +18,12 @@ using UniGetUI.PackageEngine.PackageClasses;
 namespace UniGetUI.PackageEngine.Managers.MacAppStoreManager;
 
 /// <summary>
-/// Apps from the Mac App Store, driven by the mas command-line tool (https://github.com/mas-cli/mas).
-/// Packages are identified by their App Store ID. Descriptions, icons and screenshots come from
-/// Apple's public lookup API (<see cref="AppStoreCatalog"/>).
+/// Built-in Mac App Store package manager, using Apple's Spotlight metadata, iTunes Search/Lookup
+/// API (<see cref="AppStoreCatalog"/>), and <c>CommerceKit</c>/<c>StoreFoundation</c> through
+/// UniGetUI's bundled <c>UniGetUIMasHelper</c>. Requires no third-party CLI tools.
 /// </summary>
 public partial class MacAppStore : PackageManager
 {
-    internal const string INSTALL_COMMAND = "brew install mas";
-
-    // Homebrew's prefixes, where mas usually lives, in case they are not on UniGetUI's PATH.
-    private static readonly string[] MAS_PATHS = ["/opt/homebrew/bin/mas", "/usr/local/bin/mas"];
-
     internal AppStoreCatalog Catalog { get; }
 
     public static Task<MasTouchIdStatus> GetTouchIdStatusAsync() => NativeMas.GetStatusAsync();
@@ -39,8 +36,21 @@ public partial class MacAppStore : PackageManager
     private readonly Lock _storefrontLock = new();
     private string? _storefront;
 
-    /// <summary>The major version of mas, which decides its verbs, its output and whether it needs root.</summary>
-    internal int MasMajorVersion { get; set; }
+    internal bool IsAppleSilicon { get; init; } =
+        RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64;
+
+    internal Version CurrentMacOSVersion { get; init; } = Environment.OSVersion.Version;
+
+    protected override IEnumerable<ManagerMaintenanceAction> GetExtraMaintenanceActions()
+    {
+        yield return new ManagerMaintenanceAction
+        {
+            Id = "reset-cache",
+            Title = CoreTools.Translate("Reset App Store cache"),
+            Description = CoreTools.Translate("Restart stuck App Store background agents and clear cached downloads."),
+            RunAsync = () => RunMaintenanceCommandAsync(Status.ExecutablePath, "reset"),
+        };
+    }
 
     public MacAppStore()
     {
@@ -75,13 +85,12 @@ public partial class MacAppStore : PackageManager
             Name = "MacAppStore",
             DisplayName = "Mac App Store",
             SetupGuide = "PACKAGE_MANAGERS.md#mac-app-store",
-            InstallCommands = new(MacOS: INSTALL_COMMAND),
             Description = CoreTools.Translate(
-                "Apple's app store for macOS, through the mas command-line tool.<br>Contains: <b>Apps from the Mac App Store</b>"
+                "Apple's official app store for macOS, built into UniGetUI.<br>Contains: <b>Apps from the Mac App Store</b>"
             ),
             IconId = IconType.MacAppStore,
             ColorIconId = "mas_color",
-            ExecutableFriendlyName = "mas",
+            ExecutableFriendlyName = "UniGetUIMasHelper",
             InstallVerb = "get",
             UpdateVerb = "update",
             UninstallVerb = "uninstall",
@@ -95,25 +104,16 @@ public partial class MacAppStore : PackageManager
         OperationHelper = new MacAppStorePkgOperationHelper(this);
     }
 
-    // ── Executable discovery ───────────────────────────────────────────────
+    // ── Built-in helper discovery ──────────────────────────────────────────
 
-    public override IReadOnlyList<string> FindCandidateExecutableFiles()
-    {
-        if (!OperatingSystem.IsMacOS())
-            return [];
-
-        var candidates = new List<string>(CoreTools.WhichMultiple("mas"));
-        foreach (string path in MAS_PATHS)
-        {
-            if (File.Exists(path) && !candidates.Contains(path))
-                candidates.Add(path);
-        }
-        return candidates;
-    }
+    public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
+        OperatingSystem.IsMacOS() && NativeMas.HelperPath() is { } helper ? [helper] : [];
 
     protected override void _loadManagerExecutableFile(out bool found, out string path, out string callArguments)
     {
-        (found, path) = GetExecutableFile();
+        var candidates = FindCandidateExecutableFiles();
+        found = candidates.Count > 0;
+        path = found ? candidates[0] : "";
         callArguments = "";
     }
 
@@ -131,27 +131,23 @@ public partial class MacAppStore : PackageManager
 
     protected override void _loadManagerVersion(out string version)
     {
-        using var p = new Process { StartInfo = MakeStartInfo("version") };
-        p.Start();
-        string output = p.StandardOutput.ReadToEnd();
-        p.StandardError.ReadToEnd();
-        p.WaitForExit();
-
-        version = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .FirstOrDefault() ?? "";
-        MasMajorVersion = MasOutput.ParseMajorVersion(version);
+        version = $"macOS {Environment.OSVersion.Version}";
         lock (_storefrontLock)
             _storefront = null;
     }
 
-    // mas 7 prints JSON on request; older releases only print tables.
-    private string JsonFlag => MasMajorVersion >= 7 ? " --json" : "";
+    public override void RefreshPackageIndexes()
+    {
+        Catalog.Clear();
+        lock (_storefrontLock)
+            _storefront = null;
+    }
 
     // ── Storefront ─────────────────────────────────────────────────────────
 
     /// <summary>
-    /// The two-letter country of the App Store account, which decides the catalog lookups see (an
-    /// app sold in one country may not exist in another). Asked of mas once per session.
+    /// The two-letter country of the signed-in App Store account (via <c>ISAccountService</c>),
+    /// falling back to the normalized macOS region (<see cref="AppStoreRegion"/>).
     /// </summary>
     internal string Storefront
     {
@@ -169,11 +165,11 @@ public partial class MacAppStore : PackageManager
 
     private string ReadStorefront()
     {
-        if (MasMajorVersion >= 3 && Status.Found)
+        if (Status.Found && File.Exists(Status.ExecutablePath))
         {
             try
             {
-                using var p = new Process { StartInfo = MakeStartInfo("config" + JsonFlag) };
+                using var p = new Process { StartInfo = MakeStartInfo("storefront") };
                 p.Start();
                 string output = p.StandardOutput.ReadToEnd();
                 p.StandardError.ReadToEnd();
@@ -183,26 +179,24 @@ public partial class MacAppStore : PackageManager
             }
             catch (Exception ex)
             {
-                Logger.Warn($"Could not read the App Store country from mas: {ex.Message}");
+                Logger.Warn($"Could not read the App Store country from StoreFoundation: {ex.Message}");
             }
         }
 
         try
         {
-            string region = RegionInfo.CurrentRegion.TwoLetterISORegionName;
-            if (region.Length == 2 && region.All(char.IsAsciiLetter) && region != "IV")
-                return region.ToUpperInvariant();
+            return AppStoreRegion.NormalizeTerritory(RegionInfo.CurrentRegion.TwoLetterISORegionName);
         }
         catch (Exception ex)
         {
             Logger.Warn($"Could not read the system region: {ex.Message}");
+            return "US";
         }
-        return "US";
     }
 
-    // ── Package listing ────────────────────────────────────────────────────
+    // ── Package listing & catalog search ───────────────────────────────────
 
-    private List<string> RunListing(LoggableTaskType type, string arguments, out int exitCode, out string errors)
+    private List<string> RunHelperListing(LoggableTaskType type, string arguments, out int exitCode, out string errors)
     {
         using var p = new Process { StartInfo = MakeStartInfo(arguments) };
         IProcessTaskLogger logger = TaskLogger.CreateNew(type, p);
@@ -226,10 +220,6 @@ public partial class MacAppStore : PackageManager
         return lines;
     }
 
-    /// <summary>
-    /// Search terms as mas reads them: it joins its arguments with spaces. A term starting with a
-    /// dash would be read as an option, so leading dashes are dropped.
-    /// </summary>
     internal static string SearchTerms(string query) =>
         string.Join(' ', CoreTools.EnsureSafeQueryString(query)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -242,71 +232,81 @@ public partial class MacAppStore : PackageManager
         if (terms.Length == 0)
             return [];
 
-        // mas search treats an App Store ID as a name, but package links and the CLI resolve by ID.
-        if (terms.All(char.IsAsciiDigit))
+        var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
+        try
         {
-            if (Catalog.Get(terms) is { } record
-                && AppStoreRecord.Text(record, "kind") == "mac-software"
-                && AppStoreRecord.Text(record, "name", "trackName") is { } name)
+            // Numeric queries resolve exact App Store IDs first (for package links and CLI by-ID installs).
+            if (terms.All(char.IsAsciiDigit)
+                && Catalog.Get(terms) is { } record
+                && AppStoreRecord.SupportsMac(record, IsAppleSilicon)
+                && AppStoreRecord.Text(record, "name", "trackName") is { } exactName)
             {
-                var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
                 logger.Log($"Resolved App Store ID {terms} in the {Storefront} storefront.");
                 logger.Close(0);
-                return [new Package(name.Trim(), terms, AppStoreRecord.Text(record, "version") ?? "", DefaultSource, this)];
+                return [new Package(exactName.Trim(), terms, AppStoreRecord.Text(record, "version") ?? "", DefaultSource, this)];
             }
 
-            // Compatible iPhone/iPad apps on Apple Silicon report kind="software" in Apple's public
-            // lookup API alongside iPhone-only apps; mas lookup --json only returns apps offered on
-            // this Mac's App Store.
-            if (MasMajorVersion >= 7)
+            IReadOnlyList<JsonObject> results = Catalog.Search(terms, IsAppleSilicon);
+            List<Package> packages = [];
+            foreach (JsonObject app in results)
             {
-                var lookupLines = RunListing(LoggableTaskType.FindPackages, $"lookup{JsonFlag} {terms}", out _, out _);
-                var lookedUp = MasOutput.ParseApps(lookupLines, outdated: false);
-                if (lookedUp.Count > 0)
+                if (AppStoreRecord.Id(app) is { } id
+                    && AppStoreRecord.Text(app, "name", "trackName") is { } name)
                 {
-                    foreach (MasApp app in lookedUp)
-                        Catalog.Remember(app.Catalog);
-                    return ToPackages(lookedUp);
+                    packages.Add(new Package(name.Trim(), id, AppStoreRecord.Text(app, "version") ?? "", DefaultSource, this));
                 }
             }
+
+            logger.Log($"Found {packages.Count} Mac App Store package(s) for '{terms}' in {Storefront}.");
+            logger.Close(0);
+            return packages;
         }
-
-        var lines = RunListing(LoggableTaskType.FindPackages, $"search{JsonFlag} {terms}", out int exitCode, out string errors);
-        var apps = MasOutput.ParseApps(lines, outdated: false);
-        // mas fails a search that finds nothing.
-        if (apps.Count == 0 && exitCode != 0 && !errors.Contains("No apps found", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException($"mas search failed with exit code {exitCode}: {errors.Trim()}");
-
-        foreach (MasApp app in apps)
-            Catalog.Remember(app.Catalog);
-        return ToPackages(apps);
+        catch (Exception ex)
+        {
+            logger.Error(ex);
+            logger.Close(1);
+            throw;
+        }
     }
 
-    protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
+    private IReadOnlyList<MasApp> ReadInstalledApps(LoggableTaskType taskType)
     {
-        var lines = RunListing(LoggableTaskType.ListInstalledPackages, "list" + JsonFlag, out int exitCode, out string errors);
+        var lines = RunHelperListing(taskType, "list", out int exitCode, out string errors);
         var apps = MasOutput.ParseApps(lines, outdated: false);
         if (apps.Count == 0 && exitCode != 0)
-            throw new InvalidOperationException($"mas list failed with exit code {exitCode}: {errors.Trim()}");
+            throw new InvalidOperationException($"Mac App Store Spotlight listing failed with exit code {exitCode}: {errors.Trim()}");
 
         foreach (MasApp app in apps)
             if (!string.IsNullOrEmpty(app.Path))
                 _installPaths[app.Id] = app.Path;
         Catalog.Want(apps.Select(app => app.Id));
-        return ToPackages(apps);
+        return apps;
     }
+
+    protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
+        ToPackages(ReadInstalledApps(LoggableTaskType.ListInstalledPackages));
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
-        var lines = RunListing(LoggableTaskType.ListUpdates, "outdated" + JsonFlag, out int exitCode, out string errors);
-        var apps = MasOutput.ParseApps(lines, outdated: true);
-        // mas also fails when it cannot look up one installed app (one removed from the store, say),
-        // while still listing the others, so a failure only counts when nothing was listed.
-        if (apps.Count == 0 && exitCode != 0)
-            Logger.Warn($"mas outdated exited with code {exitCode}: {errors.Trim()}");
+        var installed = ReadInstalledApps(LoggableTaskType.ListUpdates);
+        if (installed.Count == 0)
+            return [];
 
-        Catalog.Want(apps.Select(app => app.Id));
-        return ToPackages(apps);
+        IReadOnlyDictionary<string, JsonObject> catalogById = Catalog.GetMany(installed.Select(app => app.Id));
+        List<Package> updates = [];
+        foreach (MasApp app in installed)
+        {
+            if (!catalogById.TryGetValue(app.Id, out JsonObject? record))
+                continue;
+            if (!AppStoreRecord.IsCompatibleWithMacOS(record, CurrentMacOSVersion))
+                continue;
+            if (AppStoreRecord.Text(record, "version") is not { Length: > 0 } latestVersion)
+                continue;
+            if (CompareVersions(latestVersion, app.Version) is > 0)
+                updates.Add(new Package(app.Name, app.Id, app.Version, latestVersion, DefaultSource, this));
+        }
+
+        return updates;
     }
 
     private Package[] ToPackages(IEnumerable<MasApp> apps) =>
@@ -326,7 +326,6 @@ public partial class MacAppStore : PackageManager
     {
         if (_installPaths.TryGetValue(package.Id, out string? path) && Directory.Exists(path))
             return path;
-        // mas before 7 does not report paths; App Store apps install to /Applications by name.
         string guess = Path.Join("/Applications", package.Name + ".app");
         return Directory.Exists(guess) ? guess : null;
     }

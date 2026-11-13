@@ -273,75 +273,64 @@ Check: `brew --version`
 
 ## Mac App Store
 
-UniGetUI installs, updates and uninstalls Mac App Store apps through
-[mas](https://github.com/mas-cli/mas), a command-line client for the App Store. Install it with
-Homebrew, or download the installer from <https://github.com/mas-cli/mas/releases>:
-
-```shell
-brew install mas
-```
-
-UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/bin`.
+Mac App Store support is built directly into UniGetUI on macOS and requires **no third-party CLI tools**.
+Installed apps are discovered through Spotlight (`NSMetadataQuery` and App Store bundle receipts, including
+external App Store install volumes configured in macOS), catalog search and metadata come from Apple's
+iTunes Search and Lookup API (`itunes.apple.com`), and downloads, updates, and uninstalls run through
+UniGetUI's bundled `UniGetUIMasHelper` using macOS frameworks (`CommerceKit`, `StoreFoundation`,
+`/usr/sbin/installer`, and macOS Trash).
 
 - **Search and package IDs.** Search by app name or its numeric App Store ID. Exact IDs are resolved
-  through Apple's lookup service in the account's storefront (and `mas lookup` on mas 7+ for
-  compatible iPhone and iPad apps sold on the Mac App Store), so package links and
-  `package install --manager mas --id <id>` can find apps without a prior name search.
-- **Apple Account.** mas uses the Apple Account signed in to the App Store app and cannot sign in
-  by itself. Searching and listing installed apps and updates work without one; installing and
-  updating apps need one. Depending on **Media & Purchases** in System Settings, the App Store may
-  still ask for the Apple Account password, or Touch ID, for each app.
-- **Free, paid and reinstalled apps.** UniGetUI gets a free app with `mas get`, whether or not the
-  account already owns it. A paid app must first be bought in the App Store app; UniGetUI then
-  downloads it with `mas install`. Reinstalling an already-installed app passes `--force`.
-- **Administrator and Touch ID authorization.** mas 4 and later need administrator rights to install
-  and update apps, and every release needs them to uninstall one. UniGetUI bundles an on-demand
-  LaunchDaemon helper (`com.devolutions.unigetui.mashelper`) installed into
-  `/Library/PrivilegedHelperTools/`. You can enable it ahead of time under **Settings > Package
-  managers > Mac App Store > Touch ID authorization > Set up Touch ID**, or let the first
-  password-authorized operation install it when Touch ID is available on the Mac. Once installed,
-  Mac App Store operations present macOS's native Touch ID sheet (with **Use Password…** built into
-  the same sheet) and stream live `mas` output without modifying `sudo` or PAM. **Remove helper**
-  boots out and deletes the daemon and remembers your preference not to reinstall it automatically.
-  Custom command-line switches bypass the helper and use the `sudo`/password path directly.
+  through Apple's lookup service in the account's storefront (including compatible iPhone and iPad apps
+  offered on the Mac App Store for Apple Silicon Macs), so package links and
+  `package install --manager mas --id <id>` find apps without a prior name search.
+- **Apple Account.** UniGetUI uses the Apple Account signed in to the macOS App Store app and reads its
+  active storefront automatically (with territory normalization for regions that share another country's
+  storefront). Searching and listing installed apps and updates work without signing in; installing and
+  updating apps require an Apple Account signed in to the App Store app.
+- **OS compatibility checks.** Updates whose minimum macOS requirement exceeds the running macOS version
+  are automatically filtered out rather than offered as broken updates.
+- **Free, paid and reinstalled apps.** Free apps are acquired and installed automatically (`STDQ`), whether
+  or not the account already owns them. Paid apps must first be purchased in the App Store app and are then
+  redownloaded (`STDRDL`). Reinstalling an already-installed app is supported directly.
+- **Administrator and Touch ID authorization.** Installing, updating, and uninstalling App Store apps
+  in `/Applications` require administrator rights. UniGetUI bundles an on-demand `MachServices`
+  LaunchDaemon (`com.devolutions.unigetui.mashelper`) installed into `/Library/PrivilegedHelperTools/`.
+  You can enable it ahead of time under **Settings > Package managers > Mac App Store > Touch ID
+  authorization > Set up Touch ID**, or let the first password-authorized operation install it when
+  Touch ID is available on the Mac. Once installed, Mac App Store operations present macOS's native
+  Touch ID sheet (with **Use Password…** built into the same sheet) and stream live byte/percentage
+  download progress without modifying `sudo` or PAM. **Remove helper** boots out and deletes the daemon
+  and remembers your preference not to reinstall it automatically.
   If Apple's Touch ID module is enabled for `sudo`, UniGetUI can also use it; otherwise it uses
   the native macOS administrator-password dialog. UniGetUI never receives your password and does
   not change the system's `sudo` or Touch ID settings.
-  The App Store still uses the account of the user running UniGetUI, even if another administrator
+  The App Store always uses the Apple Account of the user running UniGetUI, even if another administrator
   authorizes the operation. When **Prohibit any kind of
   Elevation via UniGetUI Elevator or GSudo** is turned on, under **Settings > Administrator rights
   and other dangerous settings**, those operations fail instead. Uninstalling moves the app to the
-  Trash.
+  requesting user's Trash.
 - **Native helper safety.** Both XPC ends validate the message's audit identity against the helper's
   code-signing requirement, verify that the requesting user is the active console administrator,
   and perform authentication in a per-operation worker inside the user's login session. The helper
-  accepts only a supported verb, optional `--force` on install/update, and a numeric App Store ID.
-  The prompt always shows the authoritative `mas` command. Before authentication, the helper
-  verifies that `mas` lives in a root- or administrator-owned path without world-writable or sticky
-  directories, snapshots itself and the native `mas` binary into `/private/var/run/com.devolutions.unigetui.mashelper`,
-  and validates their signatures and system-only Mach-O imports. Homebrew's native executable beneath
-  its shell wrapper is supported. Script-only or externally linked `mas` builds fall back to
-  password authorization. No passwords, biometric data, or reusable authorization tokens
-  are collected or saved. The helper is hardened independently of the desktop app.
+  accepts only a supported verb and a numeric App Store ID — never an external executable path, shell
+  command, or custom CLI switch. Before authentication, the helper snapshots itself into
+  `/private/var/run/com.devolutions.unigetui.mashelper` and validates its signature and system-only
+  Mach-O imports. No passwords, biometric data, or reusable authorization tokens are collected or saved.
+  The helper is hardened independently of the desktop app.
 - **Enabling Touch ID for sudo (optional, system-wide).** On macOS Sonoma and later, an administrator
   can create `/etc/pam.d/sudo_local` from Apple's `/etc/pam.d/sudo_local.template` and uncomment
   `auth sufficient pam_tid.so`. Preserve any existing local rules rather than overwriting the file;
   `/etc/pam.d/sudo` must include `sudo_local`. This changes authentication for **all sudo commands**,
-  not just UniGetUI, and retains the standard password fallback. UniGetUI also recognizes the
-  `pam_tid.so` rule directly in `/etc/pam.d/sudo` on older systems. An enrolled fingerprint and a
-  local graphical login session are needed; macOS can still require a password. UniGetUI avoids
-  `sudo -A`, because Apple's Touch ID module explicitly disables its UI in askpass mode.
-- **Progress and cancellation.** The native helper and sudo paths stream output; AppleScript's
-  password path buffers it until mas finishes. Canceling the native helper's Touch ID prompt
-  cancels the operation, without opening another prompt. Choosing **Use Password**, or unavailable
-  or locked-out biometrics, permits password fallback only before mas starts.
-  If sudo's Touch ID is unavailable or declined, UniGetUI falls back to the native
-  password dialog, where you can cancel. sudo does not distinguish a Touch ID cancellation from
-  other authentication failures. Once the command has started, even a failure never retries it
-  through the other path. UniGetUI waits for a submitted privileged operation to finish even if
-  cancellation is requested, rather than leave an installer running untracked. Check the App Store
-  for its live download state. A lost helper connection is an error, never a reason to run the
-  installation a second time. Do not remove the helper while an operation is running.
+  not just UniGetUI, and retains the standard password fallback. UniGetUI avoids `sudo -A`, because
+  Apple's Touch ID module explicitly disables its UI in askpass mode.
+- **Progress, cache reset, and cancellation.** The native helper and `sudo` paths stream live download
+  progress (`OperationProgress`) and phase messages; AppleScript's password path buffers output until
+  completion. Canceling the Touch ID prompt cancels the operation without opening another prompt.
+  Once a store operation has started, failures never trigger automatic retries. UniGetUI waits for a
+  submitted privileged operation to finish rather than leave an installer running untracked. Use
+  **Reset App Store cache** in the manager maintenance menu to restart stuck user store agents and clear
+  cached partial downloads.
 - **No downloads initiated / Redownload unavailable.** This is a store-side failure after
   authorization, not a rejection of your macOS password. Mac administrator authorization and Apple
   Account sign-in are separate. Open the app in the App Store, try there, and complete any account
@@ -352,9 +341,7 @@ UniGetUI finds `mas` on `PATH`, and also in `/opt/homebrew/bin` and `/usr/local/
 - **Versions.** The App Store only offers the latest version of an app, so UniGetUI cannot install
   a specific version.
 - **Details.** Descriptions, icons and screenshots come from Apple's public lookup service
-  (`itunes.apple.com`), for the country of the account signed in to the App Store.
-
-Check: `mas version`
+  (`itunes.apple.com`), for the storefront of the account signed in to the App Store.
 
 ## Linux distributions
 

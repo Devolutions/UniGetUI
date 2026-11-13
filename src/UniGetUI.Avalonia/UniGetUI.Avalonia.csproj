@@ -326,8 +326,6 @@
         <AvaloniaResource Include="Assets\Images\launcher.png" />
         <AvaloniaResource Include="Assets\Images\Trophee.png" />
         <AvaloniaResource Include="Assets\Images\Empty_inbox.png" />
-        <AvaloniaResource Include="..\SharedAssets\Assets\SplashScreen.png" Link="Assets\SplashScreen.png" />
-        <AvaloniaResource Include="..\SharedAssets\Assets\SplashScreen.theme-dark.png" Link="Assets\SplashScreen.theme-dark.png" />
         <!-- Tray status icon variants: status colour encoded by the corner dot; light/dark tone per taskbar theme. -->
         <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_empty_black_legacy.ico" Link="Assets\tray_empty_black_legacy.ico" />
         <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_empty_white_legacy.ico" Link="Assets\tray_empty_white_legacy.ico" />
@@ -409,9 +407,6 @@
       </Compile>
       <Compile Update="Views\MainWindow.axaml.cs">
         <DependentUpon>MainWindow.axaml</DependentUpon>
-      </Compile>
-      <Compile Update="Views\SplashWindow.axaml.cs">
-        <DependentUpon>SplashWindow.axaml</DependentUpon>
       </Compile>
       <Compile Update="Views\Pages\AbstractPackagesPage.axaml.cs">
         <DependentUpon>AbstractPackagesPage.axaml</DependentUpon>

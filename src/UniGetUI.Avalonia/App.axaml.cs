@@ -99,30 +99,14 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Apply the saved theme before any window is shown so the splash
-            // appears in the user's preferred light/dark variant from the start.
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
-
-            // Show the splash before any heavy initialization. Skipped in daemon
-            // mode since the app isn't supposed to be visible at all.
-            SplashWindow? splash = null;
-            if (!CoreData.WasDaemon)
-            {
-                splash = new SplashWindow();
-                splash.Show();
-            }
-
-            // Defer the rest of startup so the splash gets a chance to paint
-            // before we block the UI thread loading package managers and the
-            // main window XAML. Without this the splash window appears empty
-            // until init completes, defeating its purpose.
-            Dispatcher.UIThread.Post(() => StartMainWindow(desktop, splash), DispatcherPriority.Background);
+            Dispatcher.UIThread.Post(() => StartMainWindow(desktop), DispatcherPriority.Background);
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static void StartMainWindow(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow? splash)
+    private static void StartMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
     {
         if (OperatingSystem.IsMacOS())
         {
@@ -133,24 +117,24 @@ public partial class App : Application
             //
             // Only macOS reads its environment from a login shell, so only macOS finishes startup
             // asynchronously; every other platform stays on the synchronous path below.
-            ResumeStartupAfterMacOSEnvironment(desktop, splash);
+            ResumeStartupAfterMacOSEnvironment(desktop);
             return;
         }
 
         ProcessEnvironmentConfigurator.ApplyProxySettingsToProcess();
-        CreateAndShowMainWindow(desktop, splash);
+        CreateAndShowMainWindow(desktop);
     }
 
     /// <summary>
     /// #5236: resolving PATH spawns a login shell that can be slow, or stuck for good. Keep it off
-    /// the UI thread so the splash keeps painting, then finish startup once it answers.
+    /// the UI thread so the app stays responsive, then finish startup once it answers.
     /// </summary>
     /// <remarks>
     /// `async void` on purpose: it hands failures to Dispatcher.UnhandledException (and from there
     /// to the crash handler), whereas a dropped Task would swallow them.
     /// </remarks>
     private static async void ResumeStartupAfterMacOSEnvironment(
-        IClassicDesktopStyleApplicationLifetime desktop, SplashWindow? splash)
+        IClassicDesktopStyleApplicationLifetime desktop)
     {
         // The dispatcher keeps pumping meanwhile, so the app can be asked to quit before the main
         // window exists. Nothing routes that through MainWindow.QuitApplication() yet, so watch for
@@ -174,15 +158,13 @@ public partial class App : Application
         {
             Logger.Warn("The application was asked to quit before startup completed; "
                       + "the main window will not be created");
-            splash?.Close();
             return;
         }
 
-        CreateAndShowMainWindow(desktop, splash);
+        CreateAndShowMainWindow(desktop);
     }
 
-    private static void CreateAndShowMainWindow(
-        IClassicDesktopStyleApplicationLifetime desktop, SplashWindow? splash)
+    private static void CreateAndShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
     {
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
@@ -209,17 +191,6 @@ public partial class App : Application
                 if (e.Kind == ActivationKind.Reopen)
                     mainWindow.ShowFromTray();
             };
-        }
-
-        if (splash is not null)
-        {
-            var splashRef = splash;
-            void CloseSplashOnce(object? s, EventArgs e)
-            {
-                mainWindow.Opened -= CloseSplashOnce;
-                splashRef.Close();
-            }
-            mainWindow.Opened += CloseSplashOnce;
         }
 
         // Framework auto-show already passed (we deferred via Dispatcher.Post), so we have to

@@ -97,6 +97,7 @@ internal static class AurOutputParser
 
     public static void ParseDetails(string output, IPackageDetails details)
     {
+        details.Dependencies.Clear();
         string lastKey = "";
         Uri? aurUrl = null;
         foreach (var rawLine in output.Split('\n'))

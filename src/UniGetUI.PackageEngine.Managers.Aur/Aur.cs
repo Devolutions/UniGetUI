@@ -181,7 +181,7 @@ public class Aur : PackageManager
         var results = parse(output);
         int exitCode = ListingExitCode(p.ExitCode, results.Count, errors);
         logger.Close(exitCode);
-        if (exitCode != 0 && results.Count == 0)
+        if (exitCode != 0)
             throw new InvalidOperationException($"{Path.GetFileName(p.StartInfo.FileName)} exited with code {exitCode}: {errors.Trim()}");
         return results;
     }

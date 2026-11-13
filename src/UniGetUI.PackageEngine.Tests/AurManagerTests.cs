@@ -160,6 +160,30 @@ public sealed class AurManagerTests
             args);
     }
 
+    [Theory]
+    [InlineData(AurHelperKind.Paru, OperationType.Install, new[] { "-S", "--aur", "--skipreview", "--noconfirm", "aur/pfetch" })]
+    [InlineData(AurHelperKind.Yay, OperationType.Update, new[] { "-S", "--aur", "--answerclean=None", "--answerdiff=None", "--answeredit=None", "--noconfirm", "aur/pfetch" })]
+    [InlineData(AurHelperKind.Yay, OperationType.Uninstall, new[] { "-Rs", "--noconfirm", "pfetch" })]
+    public void CommandsForATerminalLeaveElevationToTheHelpersOwnSudo(AurHelperKind helper, OperationType operation, string[] expected)
+    {
+        Assert.Equal(expected, AurOperationArguments.BuildForTerminal(operation, "pfetch", helper));
+    }
+
+    [Fact]
+    public void ReloadingDetailsReplacesTheDependenciesInsteadOfAddingToThem()
+    {
+        const string output =
+            "Name            : pfetch\n" +
+            "Depends On      : bash  coreutils\n" +
+            "Optional Deps   : glib2\n";
+        var details = new PackageDetails(new PackageBuilder().WithId("pfetch").Build());
+
+        AurOutputParser.ParseDetails(output, details);
+        AurOutputParser.ParseDetails(output, details);
+
+        Assert.Equal(["bash", "coreutils", "glib2"], details.Dependencies.Select(d => d.Name));
+    }
+
     [Fact]
     public void AurManagerElevatesOnItsOwnListsDependenciesAndNeverUninstallsBeforeUpdating()
     {
@@ -176,7 +200,7 @@ public sealed class AurManagerTests
     {
         var args = AurOperationArguments.Build(OperationType.Install, "yay-bin", AurHelperKind.Unknown, "/usr/bin/pkexec", "");
 
-        Assert.Equal(["-S", "--aur", "--noconfirm", "--sudo=/usr/bin/pkexec", "aur/yay-bin"], args);
+        Assert.Equal(["-S", "--aur", "--noconfirm", "--sudo=/usr/bin/pkexec", "--sudoflags=", "aur/yay-bin"], args);
     }
 
     [Theory]
@@ -318,7 +342,7 @@ public sealed class AurManagerTests
         Assert.Equal(
             [
                 "-S", "--aur", "--answerclean=None", "--answerdiff=None", "--answeredit=None",
-                "--noconfirm", "--sudoloop=false", "--sudo=/usr/bin/pkexec", "aur/paru-bin",
+                "--noconfirm", "--sudoloop=false", "--sudo=/usr/bin/pkexec", "--sudoflags=", "aur/paru-bin",
             ],
             args);
     }
@@ -329,7 +353,7 @@ public sealed class AurManagerTests
         var args = AurOperationArguments.Build(OperationType.Install, "yay-bin", AurHelperKind.Paru, "/usr/bin/pkexec", "");
 
         Assert.Equal(
-            ["-S", "--aur", "--skipreview", "--noconfirm", "--sudo=/usr/bin/pkexec", "--nosudoloop", "aur/yay-bin"],
+            ["-S", "--aur", "--skipreview", "--noconfirm", "--sudo=/usr/bin/pkexec", "--sudoflags=", "--nosudoloop", "aur/yay-bin"],
             args);
     }
 

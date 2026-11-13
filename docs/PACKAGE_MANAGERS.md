@@ -327,7 +327,11 @@ root, and "Run as administrator" is ignored for AUR packages. Because the helper
 rights itself, AUR operations are refused while elevation is prohibited in UniGetUI's settings.
 yay's sudo loop is always turned off, since it runs `sudo -v` without the askpass flag and would
 wait forever for a terminal; paru's is turned off only for an elevator other than sudo, since it
-passes the flags along. PKGBUILD review is skipped, since
+passes the flags along. UniGetUI passes its own `--sudoflags`, which replaces any `sudoflags` saved
+in yay's configuration; paru can only add to the `SudoFlags` of its `paru.conf`, so a value set
+there still reaches the elevator, which breaks operations when UniGetUI elevates with `pkexec`.
+Commands copied from UniGetUI to run in a terminal leave out these elevation options, so the
+helper prompts through its own `sudo` there. PKGBUILD review is skipped, since
 there is no terminal to show it in. A helper that is neither paru nor yay (judged from its
 `--version` output, then its file name) only gets the options both understand.
 

@@ -88,6 +88,25 @@ namespace UniGetUI.PackageEngine
             }
         }
 
+#if !WINDOWS
+        private static void ReloadInstalledPackagesWhenAurFinishesLate(Dictionary<IPackageManager, Task> initializeTasks)
+        {
+            if (Aur is null || !initializeTasks.TryGetValue(Aur, out Task? aurInitialization) || aurInitialization.IsCompleted)
+                return;
+
+            _ = aurInitialization.ContinueWith(
+                _ =>
+                {
+                    if (Aur.IsReady())
+                        _ = InstalledPackagesLoader.Instance.ReloadPackages();
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.Default
+            );
+        }
+#endif
+
         private static IPackageManager[] CreateManagers()
         {
             List<IPackageManager?> candidates = [Npm, Bun, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
@@ -148,18 +167,21 @@ namespace UniGetUI.PackageEngine
         {
             try
             {
-                List<Task> initializeTasks = [];
+                Dictionary<IPackageManager, Task> initializeTasks = [];
 
                 foreach (IPackageManager manager in Managers)
                 {
-                    initializeTasks.Add(Task.Run(manager.Initialize));
+                    initializeTasks[manager] = Task.Run(manager.Initialize);
                 }
 
-                Task ManagersMegaTask = Task.WhenAll(initializeTasks);
+                Task ManagersMegaTask = Task.WhenAll(initializeTasks.Values);
 
                 if (!ManagersMegaTask.Wait(TimeSpan.FromSeconds(ManagerLoadTimeout)))
                 {
                     Logger.Warn("Timeout: Not all package managers have finished initializing.");
+#if !WINDOWS
+                    ReloadInstalledPackagesWhenAurFinishesLate(initializeTasks);
+#endif
                 }
 
                 _ = InstalledPackagesLoader.Instance.ReloadPackages();

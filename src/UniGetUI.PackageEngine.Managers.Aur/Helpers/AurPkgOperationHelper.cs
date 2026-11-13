@@ -20,13 +20,22 @@ internal sealed class AurPkgOperationHelper : BasePkgOperationHelper
         IPackage package,
         InstallOptions options,
         OperationType operation)
+        => _getOperationParameters(package, options, operation, standalone: false);
+
+    protected override IReadOnlyList<string> _getOperationParameters(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation,
+        bool standalone)
     {
-        List<string> parameters = AurOperationArguments.Build(
-            operation,
-            package.Id,
-            _aur.HelperKind,
-            CoreData.ElevatorPath,
-            CoreData.ElevatorArgs);
+        List<string> parameters = standalone
+            ? AurOperationArguments.BuildForTerminal(operation, package.Id, _aur.HelperKind)
+            : AurOperationArguments.Build(
+                operation,
+                package.Id,
+                _aur.HelperKind,
+                CoreData.ElevatorPath,
+                CoreData.ElevatorArgs);
 
         parameters.AddRange(
             operation switch
@@ -58,6 +67,34 @@ internal static class AurOperationArguments
         string elevatorPath,
         string elevatorArgs)
     {
+        List<string> parameters = Operation(operation, helper);
+        if (helper is AurHelperKind.Yay)
+            parameters.Add("--sudoloop=false");
+
+        if (!string.IsNullOrWhiteSpace(elevatorPath))
+        {
+            parameters.Add($"--sudo={elevatorPath}");
+            parameters.Add($"--sudoflags={elevatorArgs.Trim()}");
+            if (helper is AurHelperKind.Paru && !Path.GetFileName(elevatorPath).Equals("sudo", StringComparison.Ordinal))
+                parameters.Add("--nosudoloop");
+        }
+
+        parameters.Add(Target(operation, packageId));
+        return parameters;
+    }
+
+    public static List<string> BuildForTerminal(OperationType operation, string packageId, AurHelperKind helper)
+    {
+        List<string> parameters = Operation(operation, helper);
+        parameters.Add(Target(operation, packageId));
+        return parameters;
+    }
+
+    private static string Target(OperationType operation, string packageId) =>
+        operation is OperationType.Uninstall ? packageId : $"aur/{packageId}";
+
+    private static List<string> Operation(OperationType operation, AurHelperKind helper)
+    {
         List<string> parameters =
         [
             operation switch
@@ -78,19 +115,6 @@ internal static class AurOperationArguments
         }
 
         parameters.Add("--noconfirm");
-        if (helper is AurHelperKind.Yay)
-            parameters.Add("--sudoloop=false");
-
-        if (!string.IsNullOrWhiteSpace(elevatorPath))
-        {
-            parameters.Add($"--sudo={elevatorPath}");
-            if (!string.IsNullOrWhiteSpace(elevatorArgs))
-                parameters.Add($"--sudoflags={elevatorArgs.Trim()}");
-            if (helper is AurHelperKind.Paru && !Path.GetFileName(elevatorPath).Equals("sudo", StringComparison.Ordinal))
-                parameters.Add("--nosudoloop");
-        }
-
-        parameters.Add(operation is OperationType.Uninstall ? packageId : $"aur/{packageId}");
         return parameters;
     }
 }

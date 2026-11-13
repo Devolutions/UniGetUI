@@ -180,6 +180,7 @@ internal static class AvaloniaBootstrapper
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
                 TaskScheduler.Default);
+        _ = Task.Run(LinuxDesktopEntry.EnsureForCurrentProcess);
         _ = Task.Run(IconDatabase.Instance.LoadFromCacheAsync)
             .ContinueWith(
                 t => Logger.Error(t.Exception!),

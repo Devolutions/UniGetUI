@@ -33,7 +33,8 @@ public static class SettingsSearchIndex
         Type PageType,
         string? Anchor,
         bool WindowsOnly = false,
-        bool MacOnly = false);
+        bool MacOnly = false,
+        bool LinuxOnly = false);
 
     // Order matters only as a tie-break for equally-ranked matches.
     private static readonly Entry[] Entries =
@@ -61,6 +62,7 @@ public static class SettingsSearchIndex
         new("Keep UniGetUI running in the background when its window is closed", ["system tray", "background", "minimize to tray", "close", "quit"], typeof(Interface_P), "DisableSystemTrayCard"),
         new("Show the UniGetUI icon in the system tray", ["system tray", "tray icon", "hide icon", "notification area"], typeof(Interface_P), "SystemTrayIconCard"),
         new("Manage UniGetUI autostart behaviour", ["autostart", "run at login", "startup"], typeof(Interface_P), "EditAutostartSettings"),
+        new("Show UniGetUI in the applications menu", ["applications menu", "app menu", "desktop entry", "launcher", "shortcut"], typeof(Interface_P), "LinuxDesktopEntryCard", LinuxOnly: true),
         new("Show package icons on package lists", ["package icons"], typeof(Interface_P), "InterfacePackageListsCard"),
         new("Show illustrations on package lists", ["illustrations", "package illustrations"], typeof(Interface_P), "PackageIllustrationsCard"),
         new("Clear the icon cache", ["icon cache", "clear cache", "cache size"], typeof(Interface_P), "ResetIconCache"),
@@ -185,10 +187,10 @@ public static class SettingsSearchIndex
 
     public static IReadOnlyList<SettingsSearchResult> Search(string query, int limit = 8)
     {
-        return Search(query, limit, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+        return Search(query, limit, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), OperatingSystem.IsLinux());
     }
 
-    internal static IReadOnlyList<SettingsSearchResult> Search(string query, int limit, bool isWindows, bool isMacOS = false)
+    internal static IReadOnlyList<SettingsSearchResult> Search(string query, int limit, bool isWindows, bool isMacOS = false, bool isLinux = false)
     {
         var queryWords = Tokenize(query);
         if (queryWords.Count == 0) return [];
@@ -199,6 +201,7 @@ public static class SettingsSearchIndex
         {
             if (e.WindowsOnly && !isWindows) continue;
             if (e.MacOnly && !isMacOS) continue;
+            if (e.LinuxOnly && !isLinux) continue;
 
             int score = Rank(queryWords, CoreTools.Translate(e.Title), e.Title, e.Keywords);
             if (score < NoMatch)

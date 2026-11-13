@@ -54,6 +54,9 @@
 .PARAMETER IconSourcePath
     Source path for the installed desktop icon.
 
+.PARAMETER DesktopTemplatePath
+    Desktop entry template shared with the runtime entry the .tar.gz build writes.
+
 .PARAMETER MinGlibcVersion
     Minimum glibc version recorded in the .deb Depends field (e.g. "2.27").
     When omitted, it is detected from the binaries in SourceDir.
@@ -86,6 +89,7 @@ param(
     [string] $AppExecutableName = 'UniGetUI',
     [string] $LauncherName      = 'unigetui',
     [string] $IconSourcePath    = (Join-Path $PSScriptRoot '..' 'src' 'SharedAssets' 'Assets' 'Images' 'icon.png'),
+    [string] $DesktopTemplatePath = (Join-Path $PSScriptRoot '..' 'src' 'SharedAssets' 'Linux' 'unigetui.desktop.in'),
     [string] $MinGlibcVersion   = ''
 )
 
@@ -98,6 +102,7 @@ if ($LauncherName -eq 'uniget') {
 $SourceDir  = (Resolve-Path $SourceDir).Path
 $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 $IconSourcePath = (Resolve-Path $IconSourcePath).Path
+$DesktopTemplatePath = (Resolve-Path $DesktopTemplatePath).Path
 $OutDir     = Split-Path $OutputPath
 if ($OutDir) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 
@@ -110,6 +115,22 @@ $IconInstallPath = "$IconInstallDir/$IconTargetName"
 $DesktopFilePath = "/usr/share/applications/$LauncherName.desktop"
 $LauncherPath = "/usr/bin/$LauncherName"
 $CliLauncherPath = '/usr/bin/uniget'
+
+function Format-DesktopEntry {
+    param(
+        [Parameter(Mandatory)]
+        [string] $Template,
+
+        [Parameter(Mandatory)]
+        [hashtable] $Values
+    )
+
+    $entry = [regex]::Replace(
+        $Template.Replace("`r`n", "`n"),
+        '@(COMMENT|EXEC|ICON)@',
+        { param($match) $Values[$match.Groups[1].Value] })
+    return $entry.TrimEnd("`n") + "`n"
+}
 
 function New-LinuxIntegrationAssets {
     param(
@@ -150,19 +171,9 @@ function New-LinuxIntegrationAssets {
 
     $desktopEntryFullPath = Join-Path $StageRoot $DesktopFilePath.TrimStart('/')
     New-Item -ItemType Directory -Path (Split-Path $desktopEntryFullPath -Parent) -Force | Out-Null
-    $desktopEntry = @(
-        '[Desktop Entry]',
-        'Version=1.0',
-        'Type=Application',
-        'Name=UniGetUI',
-        "Comment=$Description",
-        "Exec=$LauncherPath",
-        "Icon=$LauncherName",
-        'Terminal=false',
-        'Categories=System;Utility;',
-        'StartupNotify=true',
-        ''
-    ) -join "`n"
+    $desktopEntry = Format-DesktopEntry `
+        -Template ([System.IO.File]::ReadAllText($DesktopTemplatePath)) `
+        -Values @{ COMMENT = $Description; EXEC = $LauncherPath; ICON = $LauncherName }
     [System.IO.File]::WriteAllText($desktopEntryFullPath, $desktopEntry)
     & chmod 644 $desktopEntryFullPath
     if ($LASTEXITCODE -ne 0) { throw "chmod (desktop entry) exited $LASTEXITCODE" }

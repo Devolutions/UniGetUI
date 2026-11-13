@@ -323,7 +323,11 @@ libalpm update, until the helper is rebuilt). Development packages that paru rep
 Packages are built as your user, never as root, because `makepkg` refuses to run as root; the
 helper calls UniGetUI's own `sudo` (with its graphical askpass) or `pkexec` only to install the
 built package. For the same reason the AUR manager is unavailable while UniGetUI itself runs as
-root, and "Run as administrator" is ignored for AUR packages. PKGBUILD review is skipped, since
+root, and "Run as administrator" is ignored for AUR packages. Because the helper asks for those
+rights itself, AUR operations are refused while elevation is prohibited in UniGetUI's settings.
+yay's sudo loop is always turned off, since it runs `sudo -v` without the askpass flag and would
+wait forever for a terminal; paru's is turned off only for an elevator other than sudo, since it
+passes the flags along. PKGBUILD review is skipped, since
 there is no terminal to show it in. A helper that is neither paru nor yay (judged from its
 `--version` output, then its file name) only gets the options both understand.
 

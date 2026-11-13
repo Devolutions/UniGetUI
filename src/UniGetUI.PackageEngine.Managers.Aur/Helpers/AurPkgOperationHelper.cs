@@ -78,19 +78,16 @@ internal static class AurOperationArguments
         }
 
         parameters.Add("--noconfirm");
+        if (helper is AurHelperKind.Yay)
+            parameters.Add("--sudoloop=false");
 
         if (!string.IsNullOrWhiteSpace(elevatorPath))
         {
             parameters.Add($"--sudo={elevatorPath}");
             if (!string.IsNullOrWhiteSpace(elevatorArgs))
                 parameters.Add($"--sudoflags={elevatorArgs.Trim()}");
-            if (!Path.GetFileName(elevatorPath).Equals("sudo", StringComparison.Ordinal))
-            {
-                if (helper is AurHelperKind.Paru)
-                    parameters.Add("--nosudoloop");
-                else if (helper is AurHelperKind.Yay)
-                    parameters.Add("--sudoloop=false");
-            }
+            if (helper is AurHelperKind.Paru && !Path.GetFileName(elevatorPath).Equals("sudo", StringComparison.Ordinal))
+                parameters.Add("--nosudoloop");
         }
 
         parameters.Add(operation is OperationType.Uninstall ? packageId : $"aur/{packageId}");

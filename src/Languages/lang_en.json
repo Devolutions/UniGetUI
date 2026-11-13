@@ -605,6 +605,7 @@
   "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.": "{0} was not updated to {1}: a newer version is already installed. Reload the updates list.",
   "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.": "{0} was not updated: major updates are skipped for this package and the version to update to is unknown. Update it from the updates list, or request a specific version.",
   "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.": "{0} was not updated to {1}: {2} cannot install that exact version right now. Reload the updates list.",
+  "{0} asks for administrator rights on its own to finish this operation, and elevation is prohibited in UniGetUI's settings.": "{0} asks for administrator rights on its own to finish this operation, and elevation is prohibited in UniGetUI's settings.",
   "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.": "{0} was not updated to {1}: major updates are skipped for this package. Reload the updates list to see an update within the installed major version, or turn off \"Skip major updates\" to install it.",
   "Ignore changes after the first": "Ignore changes after the first",
   "version numbers": "version numbers",

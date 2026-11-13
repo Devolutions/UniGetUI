@@ -42,7 +42,7 @@ public class ReinstallOnUpdateManagerTests
             { nameof(DotNet), true },
             { nameof(Homebrew), true },
             { nameof(Pacman), true },
-            { nameof(Aur), true },
+            { nameof(Aur), false },
             { nameof(Flatpak), false },
             { nameof(Cargo), false },
             { nameof(Vcpkg), false },

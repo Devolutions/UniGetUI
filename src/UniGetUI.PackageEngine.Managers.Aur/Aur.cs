@@ -27,9 +27,10 @@ public class Aur : PackageManager
 
         Capabilities = new ManagerCapabilities
         {
-            CanReinstallOnUpdate = true,
             CanRunAsAdmin = false,
             MustNotRunElevated = true,
+            ElevatesItself = true,
+            CanListDependencies = true,
             CanSkipIntegrityChecks = false,
             SupportsCustomSources = false,
             SupportsProxy = ProxySupport.No,
@@ -134,8 +135,10 @@ public class Aur : PackageManager
 
     internal static int ListingExitCode(int exitCode, int resultCount, string stderr)
     {
-        bool reportsError = stderr.Contains("error", StringComparison.OrdinalIgnoreCase);
-        return exitCode == 1 && resultCount == 0 && !reportsError ? 0 : exitCode;
+        bool onlyWarnings = stderr
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .All(line => line.StartsWith("warning:", StringComparison.OrdinalIgnoreCase));
+        return exitCode == 1 && resultCount == 0 && onlyWarnings ? 0 : exitCode;
     }
 
     internal Process CreateListingProcess(IEnumerable<string> arguments, string? executable = null)
@@ -155,6 +158,7 @@ public class Aur : PackageManager
             p.StartInfo.ArgumentList.Add(argument);
         p.StartInfo.Environment["LANG"] = "C";
         p.StartInfo.Environment["LC_ALL"] = "C";
+        p.StartInfo.Environment.Remove("LANGUAGE");
         return p;
     }
 

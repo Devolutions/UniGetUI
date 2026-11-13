@@ -148,6 +148,30 @@ public sealed class AurManagerTests
     }
 
     [Fact]
+    public void YayAlwaysTurnsItsSudoLoopOffBecauseTheLoopIgnoresTheSudoFlags()
+    {
+        var args = AurOperationArguments.Build(OperationType.Install, "pfetch", AurHelperKind.Yay, "/usr/bin/sudo", "-A");
+
+        Assert.Equal(
+            [
+                "-S", "--aur", "--answerclean=None", "--answerdiff=None", "--answeredit=None",
+                "--noconfirm", "--sudoloop=false", "--sudo=/usr/bin/sudo", "--sudoflags=-A", "aur/pfetch",
+            ],
+            args);
+    }
+
+    [Fact]
+    public void AurManagerElevatesOnItsOwnListsDependenciesAndNeverUninstallsBeforeUpdating()
+    {
+        var capabilities = new Aur().Capabilities;
+
+        Assert.True(capabilities.ElevatesItself);
+        Assert.True(capabilities.MustNotRunElevated);
+        Assert.True(capabilities.CanListDependencies);
+        Assert.False(capabilities.CanReinstallOnUpdate);
+    }
+
+    [Fact]
     public void AnUnidentifiedHelperOnlyGetsTheOptionsBothHelpersUnderstand()
     {
         var args = AurOperationArguments.Build(OperationType.Install, "yay-bin", AurHelperKind.Unknown, "/usr/bin/pkexec", "");
@@ -159,6 +183,8 @@ public sealed class AurManagerTests
     [InlineData(1, 0, "", 0)]
     [InlineData(1, 0, "error: failed to fetch https://aur.archlinux.org/rpc\n", 1)]
     [InlineData(1, 0, " -> Error during AUR search: Too many package results.\n", 1)]
+    [InlineData(1, 0, " -> Get \"https://aur.archlinux.org/rpc?v=5\": dial tcp: lookup aur.archlinux.org: no such host\n", 1)]
+    [InlineData(1, 0, "warning: Packages not in the AUR: my-local-pkg\nsomething unexpected\n", 1)]
     [InlineData(1, 0, "warning: Packages not in the AUR: my-local-pkg\n", 0)]
     [InlineData(127, 0, "", 127)]
     [InlineData(1, 3, "error: one package failed\n", 1)]
@@ -292,7 +318,7 @@ public sealed class AurManagerTests
         Assert.Equal(
             [
                 "-S", "--aur", "--answerclean=None", "--answerdiff=None", "--answeredit=None",
-                "--noconfirm", "--sudo=/usr/bin/pkexec", "--sudoloop=false", "aur/paru-bin",
+                "--noconfirm", "--sudoloop=false", "--sudo=/usr/bin/pkexec", "aur/paru-bin",
             ],
             args);
     }

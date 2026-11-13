@@ -32,6 +32,7 @@ public class Pacman : PackageManager
         {
             CanReinstallOnUpdate = true,
             CanRunAsAdmin = true,
+            CanListDependencies = true,
             CanSkipIntegrityChecks = false,
             SupportsCustomSources = false,
             SupportsProxy = ProxySupport.No,

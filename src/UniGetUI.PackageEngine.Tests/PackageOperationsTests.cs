@@ -3421,6 +3421,41 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task AManagerThatElevatesItselfIsRefusedWhenElevationIsProhibited()
+    {
+        bool originalProhibitElevation = Settings.Get(Settings.K.ProhibitElevation);
+        Settings.Set(Settings.K.ProhibitElevation, true);
+        try
+        {
+            bool launched = false;
+            var manager = new PackageManagerBuilder()
+                .WithName($"SelfElevatingManager{Guid.NewGuid():N}")
+                .ConfigureCapabilities(capabilities => capabilities with { ElevatesItself = true })
+                .ConfigureOperation(helper => helper.ParametersFactory = (_, _, _) =>
+                {
+                    launched = true;
+                    return ["install"];
+                })
+                .Build();
+            var package = new PackageBuilder().WithManager(manager).WithId("Contoso.Tool").Build();
+            InitializeLoaders();
+            using var operation = new InstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+
+            await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+            Assert.Equal(OperationStatus.Failed, operation.Status);
+            Assert.False(launched);
+            Assert.Contains(
+                operation.GetOutput(),
+                line => line.Item1.Contains("elevation is prohibited", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Settings.Set(Settings.K.ProhibitElevation, originalProhibitElevation);
+        }
+    }
+
+    [Fact]
     public async Task ProhibitElevationSettingForcesStandardBrokerElevation()
     {
         bool originalProhibitElevation = Settings.Get(Settings.K.ProhibitElevation);

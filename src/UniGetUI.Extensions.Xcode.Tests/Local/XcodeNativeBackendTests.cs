@@ -26,7 +26,9 @@ public sealed class XcodeNativeBackendTests : IDisposable
         _tools.Add($"{executable} {string.Join(' ', arguments)}");
         return Task.FromResult(executable == "/usr/bin/xcode-select" && selected is not null
             ? new XcodesResult(0, selected + "\n", "")
-            : new XcodesResult(1, "", "refused by the test"));
+            : executable == XcodeArchiveSignature.PkgUtil
+                ? new XcodesResult(0, FakeArchiveSignature.Apple, "")
+                : new XcodesResult(1, "", "refused by the test"));
     };
 
     private XcodeNativeBackend Backend(IXcodeReleasesCatalog catalog, AppleAccount? account = null,
@@ -612,7 +614,7 @@ public sealed class XcodeNativeBackendTests : IDisposable
         try
         {
             using var client = new HttpClient(new FakeApple());
-            var other = new XcodeArchiveDownloader(client, () => _archives.Path);
+            var other = new XcodeArchiveDownloader(client, () => _archives.Path, FakeArchiveSignature.Signed);
             XcodesException error = await Assert.ThrowsAsync<XcodesException>(() =>
                 other.DownloadAsync(release.Download!, null, _ => { }, limit.Token));
             Assert.Contains("locked", error.Message);
@@ -870,9 +872,9 @@ public sealed class XcodeNativeBackendTests : IDisposable
 
         Assert.Equal(archive, path);
         Assert.Equal(content, await File.ReadAllBytesAsync(path));
-        Assert.Empty(_tools);
+        Assert.Equal([$"{XcodeArchiveSignature.PkgUtil} --check-signature {archive}"], _tools);
         using var client = new HttpClient(new FakeApple());
-        var other = new XcodeArchiveDownloader(client, () => _archives.Path);
+        var other = new XcodeArchiveDownloader(client, () => _archives.Path, FakeArchiveSignature.Signed);
         Assert.Equal(archive, await other.DownloadAsync(release.Download!, sha1, _ => { }, CancellationToken.None));
     }
 
@@ -1171,7 +1173,7 @@ public sealed class XcodeNativeBackendTests : IDisposable
         Assert.Contains("Could not save the Apple session", error.Message);
         Assert.DoesNotContain(_tools, call => call.Contains("/usr/bin/xip", StringComparison.Ordinal));
         using var client = new HttpClient(new FakeApple());
-        var other = new XcodeArchiveDownloader(client, () => _archives.Path);
+        var other = new XcodeArchiveDownloader(client, () => _archives.Path, FakeArchiveSignature.Signed);
         Assert.Equal(archive, await other.DownloadAsync(release.Download!, null, _ => { }, CancellationToken.None));
     }
 

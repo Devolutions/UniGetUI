@@ -19,6 +19,7 @@ internal sealed class XcodeNativeBackend : IXcodeBackend
 
     private readonly IXcodeReleasesCatalog _catalog;
     private readonly AppleAccount _account;
+    private readonly XcodeToolRunner _quick;
     private readonly XcodeToolRunner _slow;
     private readonly Func<string> _archiveDirectory;
     private readonly XcodeArchitecture _machine;
@@ -34,7 +35,7 @@ internal sealed class XcodeNativeBackend : IXcodeBackend
         _catalog = catalog;
         _account = account;
         _archiveDirectory = archiveDirectory;
-        quick ??= XcodeTools.Quick;
+        _quick = quick ??= XcodeTools.Quick;
         _slow = slow ?? XcodeTools.Long;
         _machine = machine ?? (RuntimeInformation.OSArchitecture == Architecture.Arm64
             ? XcodeArchitecture.AppleSilicon : XcodeArchitecture.Intel);
@@ -225,7 +226,7 @@ internal sealed class XcodeNativeBackend : IXcodeBackend
                             archive = await download(entry.Download!, entry.Sha1, Progress, cancellationToken).ConfigureAwait(false);
                         else
                         {
-                            archiveLease = await new XcodeArchiveDownloader(_account.Http, () => archiveRoot)
+                            archiveLease = await new XcodeArchiveDownloader(_account.Http, () => archiveRoot, _quick)
                                 .DownloadForInstallAsync(entry.Download!, entry.Sha1, Progress, cancellationToken).ConfigureAwait(false);
                             archive = archiveLease.Path;
                         }

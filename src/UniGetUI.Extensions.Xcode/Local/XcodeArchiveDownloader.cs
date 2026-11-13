@@ -13,10 +13,11 @@ namespace UniGetUI.Extensions.Xcode.Local;
 
 /// <summary>
 /// Downloads an Xcode archive from Apple's developer download host with the signed-in account's cookies. A partial
-/// download is resumed when a checksum or strong server validator is available. A finished one is reused, and a
-/// checksum from the catalog is verified before the archive is handed on. Nothing it receives is logged.
+/// download is resumed when a checksum or strong server validator is available. A finished one is reused. Before
+/// the archive is handed on, a checksum from the catalog is verified, and a <c>.xip</c> must carry Apple's signature.
+/// Nothing it receives is logged.
 /// </summary>
-internal sealed class XcodeArchiveDownloader(HttpClient http, Func<string> archiveDirectory)
+internal sealed class XcodeArchiveDownloader(HttpClient http, Func<string> archiveDirectory, XcodeToolRunner tools)
 {
     internal const string UnauthorizedMessage =
         "Apple refused the download or returned an unauthorized page. The session, developer access, or agreements "
@@ -84,13 +85,14 @@ internal sealed class XcodeArchiveDownloader(HttpClient http, Func<string> archi
 
         if (File.Exists(archive))
         {
-            if (new FileInfo(archive).Length > 0 && (sha1 is null || await MatchesAsync(archive, sha1, cancellationToken)))
+            if (new FileInfo(archive).Length > 0 && (sha1 is null || await MatchesAsync(archive, sha1, cancellationToken))
+                && await IsSignedAsync(archive, name, cancellationToken))
             {
                 Logger.Info($"Xcode: reusing the downloaded archive {name}");
                 progress(1);
                 return archive;
             }
-            Logger.Warn($"Xcode: the downloaded archive {name} is empty or does not match its checksum and is downloaded again");
+            Logger.Warn($"Xcode: the downloaded archive {name} is empty, does not match its checksum or is not signed by Apple, and is downloaded again");
             File.Delete(archive);
         }
 
@@ -104,9 +106,28 @@ internal sealed class XcodeArchiveDownloader(HttpClient http, Func<string> archi
             File.Delete(validator);
             throw new XcodesException($"The downloaded archive {name} is damaged: its checksum does not match. Try again.");
         }
-        File.Move(partial, archive, overwrite: false);
         File.Delete(validator);
+        if (!await IsSignedAsync(partial, name, cancellationToken))
+        {
+            File.Delete(partial);
+            throw new XcodesException(
+                $"The downloaded archive {name} is not signed by Apple, so it was deleted. Try again.");
+        }
+        File.Move(partial, archive, overwrite: false);
         return archive;
+    }
+
+    private async Task<bool> IsSignedAsync(string file, string name, CancellationToken cancellationToken)
+    {
+        if (!XcodeArchiveSignature.CanCheck(name))
+        {
+            Logger.Info("Xcode: an encrypted archive's signature is checked on the Xcode it contains, after expansion");
+            return true;
+        }
+        if (await XcodeArchiveSignature.IsAppleSignedAsync(tools, file, cancellationToken))
+            return true;
+        Logger.Warn($"Xcode: {name} is not signed by Apple");
+        return false;
     }
 
     internal sealed class ArchiveLease(string path, FileStream cacheLock) : IDisposable

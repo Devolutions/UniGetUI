@@ -928,6 +928,57 @@ public partial class MainWindowViewModel : ViewModelBase
         else if (ReferenceEquals(leftPage, ReleaseNotesPage)) { ReleaseNotesPage?.Dispose(); ReleaseNotesPage = null; }
     }
 
+    // True while the window is off screen (hidden to the tray or minimized) and the current page
+    // has been told to stop its periodic work through OnLeave.
+    private bool _suspendedForBackground;
+
+    /// <summary>
+    /// Called when the main window goes off screen. Pages only stop their periodic work in
+    /// OnLeave, which navigation calls, so without this the page that was open when the window
+    /// was hidden to the tray kept running in the background indefinitely: the Software Catalog
+    /// rescans the installed and upgradable lists every two seconds, Manager Health keeps
+    /// refreshing, the log pages keep the whole log in memory, and Help / Release Notes keep a
+    /// WebView2 process cluster alive.
+    /// </summary>
+    /// <param name="releaseWebViews">
+    /// True when the window was hidden (not merely minimized): the WebView2 pages are then
+    /// dropped as well, and rebuilt when the window is shown again.
+    /// </param>
+    public void SuspendForBackground(bool releaseWebViews)
+    {
+        var page = CurrentPageContent as Control;
+
+        // Settings pages do no background work, and their OnLeave resets them to the settings
+        // home page, which would lose the user's place on every minimize.
+        if (page is SettingsBasePage) return;
+
+        if (!_suspendedForBackground)
+        {
+            _suspendedForBackground = true;
+            (page as IEnterLeaveListener)?.OnLeave();
+        }
+
+        if (releaseWebViews && page is not null
+            && (ReferenceEquals(page, HelpPage) || ReferenceEquals(page, ReleaseNotesPage)))
+        {
+            CurrentPageContent = null;
+            ReleaseWebViewPage(page);
+        }
+    }
+
+    /// <summary>
+    /// Called when the main window comes back on screen; undoes <see cref="SuspendForBackground"/>.
+    /// </summary>
+    public void ResumeFromBackground()
+    {
+        if (!_suspendedForBackground) return;
+        _suspendedForBackground = false;
+
+        if (CurrentPageContent is null && _currentPage is not PageType.Null)
+            CurrentPageContent = GetPageForType(_currentPage);
+        (CurrentPageContent as IEnterLeaveListener)?.OnEnter();
+    }
+
     private Control GetPageForType(PageType type) =>
         type switch
         {
@@ -1050,7 +1101,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (oldPage is ISearchBoxPage oldSPage)
                 oldSPage.QueryBackup = GlobalSearchText;
-            (oldPage as IEnterLeaveListener)?.OnLeave();
+            // A page suspended while the window was off screen has already left; navigating
+            // (e.g. from a tray or toast action) ends the suspension instead of leaving it twice.
+            if (_suspendedForBackground)
+                _suspendedForBackground = false;
+            else
+                (oldPage as IEnterLeaveListener)?.OnLeave();
 
             CurrentPageContent = newPage;
             _oldPage = _currentPage;

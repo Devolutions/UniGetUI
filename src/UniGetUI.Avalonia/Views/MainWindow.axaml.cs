@@ -2411,7 +2411,20 @@ public partial class MainWindow : Window
     }
 
     private void UpdateOnScreenState()
-        => _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+    {
+        bool wasOnScreen = _isOnScreen;
+        _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        // Stop the open page's periodic work while nobody can see it (see SuspendForBackground).
+        // Suspending again is harmless, and lets a minimized window that is then hidden to the
+        // tray release its web views too.
+        if (!_isOnScreen)
+            viewModel.SuspendForBackground(releaseWebViews: !IsVisible);
+        else if (!wasOnScreen)
+            viewModel.ResumeFromBackground();
+    }
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level, string? launchAction = null) =>
         ShowBanner(title, message, level, launchAction);

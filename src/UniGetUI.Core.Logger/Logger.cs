@@ -4,7 +4,17 @@ namespace UniGetUI.Core.Logging
 {
     public static class Logger
     {
+        // The in-memory log backs the log pages and the IPC log API. It used to keep every entry
+        // for the life of the process, so a UniGetUI left running in the tray grew without bound
+        // (every update check logs several lines per manager). Keep only the most recent entries;
+        // the complete log is still written to the session log file. Trimmed in chunks so that
+        // appending stays O(1) amortized.
+        public const int MAX_RETAINED_ENTRIES = 10_000;
+        public const int TRIM_CHUNK = 1_000;
+
         private static readonly List<LogEntry> LogContents = [];
+        private static readonly Lock LogContentsLock = new();
+        private static long _totalLogged;
         private static readonly Lock LogWriteLock = new();
         private static string SessionLogPath => Path.Combine(AppPaths.ScratchDirectory, "session.log");
 
@@ -34,7 +44,13 @@ namespace UniGetUI.Core.Logging
             content = Redact(content);
             Diagnostics.Debug.WriteLine($"[{caller}] " + content);
             AppendToSessionLog(content);
-            LogContents.Add(new LogEntry(content, severity));
+            lock (LogContentsLock)
+            {
+                LogContents.Add(new LogEntry(content, severity));
+                _totalLogged++;
+                if (LogContents.Count > MAX_RETAINED_ENTRIES + TRIM_CHUNK)
+                    LogContents.RemoveRange(0, LogContents.Count - MAX_RETAINED_ENTRIES);
+            }
         }
 
         private static void AppendToSessionLog(string text)
@@ -106,9 +122,42 @@ namespace UniGetUI.Core.Logging
             [System.Runtime.CompilerServices.CallerMemberName] string caller = ""
         ) => Add(e.ToString(), LogEntry.SeverityLevel.Error, caller);
 
+        /// <summary>
+        /// The most recent log entries still held in memory (oldest first). Older entries are
+        /// dropped once the in-memory log is full, so this array's length is not a running
+        /// position: use <see cref="TotalLogged"/> and <see cref="GetLogsSince"/> for that.
+        /// </summary>
         public static LogEntry[] GetLogs()
         {
-            return LogContents.ToArray();
+            lock (LogContentsLock)
+                return LogContents.ToArray();
+        }
+
+        /// <summary>
+        /// The number of entries logged since the process started, including those no longer
+        /// held in memory. Unlike <c>GetLogs().Length</c>, it keeps growing once the log is full.
+        /// </summary>
+        public static long TotalLogged
+        {
+            get
+            {
+                lock (LogContentsLock)
+                    return _totalLogged;
+            }
+        }
+
+        /// <summary>
+        /// The entries logged after <paramref name="marker"/>, a value previously read from
+        /// <see cref="TotalLogged"/>, as far as they are still held in memory.
+        /// </summary>
+        public static LogEntry[] GetLogsSince(long marker)
+        {
+            lock (LogContentsLock)
+            {
+                long firstRetained = _totalLogged - LogContents.Count;
+                int start = (int)Math.Clamp(marker - firstRetained, 0, LogContents.Count);
+                return LogContents.GetRange(start, LogContents.Count - start).ToArray();
+            }
         }
     }
 }

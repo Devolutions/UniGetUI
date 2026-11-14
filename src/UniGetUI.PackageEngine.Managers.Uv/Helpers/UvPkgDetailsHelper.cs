@@ -101,8 +101,12 @@ internal sealed class UvPkgDetailsHelper : BasePkgDetailsHelper
         return tool?.ToolEnvironmentPath;
     }
 
-    protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
-    {
-        return PyPIProjectClient.ParseVersions(PyPIProjectClient.FetchJson(package.Id));
-    }
+    protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package) =>
+        ListVersions(package, includePreReleases: false);
+
+    internal IReadOnlyList<string> GetVersionsIncludingPreReleases(IPackage package) =>
+        ListVersions(package, includePreReleases: true);
+
+    private IReadOnlyList<string> ListVersions(IPackage package, bool includePreReleases) =>
+        PyPIProjectClient.ParseVersions(PyPIProjectClient.FetchJson(package.Id), includePreReleases);
 }

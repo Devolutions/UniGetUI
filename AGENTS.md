@@ -149,6 +149,10 @@ Python CLI tools installed into uv's isolated tool environments.
   `PyPIIndexClient` serves the `/simple` project-name list and search matches,
   `PyPIProjectClient` serves latest-version lookups. Pip and uv each hold their own cache
   files under that service, so neither manager's index behaviour leaks into the other's.
+  `PyPIProjectClient.ParseVersions` orders releases newest first, drops releases whose every
+  file is yanked, and drops pre-releases unless asked, so uv's version dropdown lists stable
+  releases only; uv's `ListVersionsForUpdateSelection` override keeps pre-releases available
+  to within-major update selection, as Pip does.
 - `uv python list --output-format json` is the interpreter catalogue; a row with a non-null
   `path` is installed, one with a non-null `url` is downloadable. `UvPythonService` parses it
   and `UvPkgOperationHelper.ListPythonInterpreters()` exposes it to the install-options dialog

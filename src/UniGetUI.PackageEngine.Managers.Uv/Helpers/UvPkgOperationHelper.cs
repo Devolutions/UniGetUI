@@ -42,6 +42,12 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
 
         if (operation is not OperationType.Uninstall)
         {
+            if (options.PreRelease)
+            {
+                parameters.Add("--prerelease");
+                parameters.Add("allow");
+            }
+
             OverridenInstallationOptions overrides = package.OverridenOptions;
             UvToolInstallRecord? recorded = operation is OperationType.Update
                 ? UvToolInstallRecords.Get(package.Id)

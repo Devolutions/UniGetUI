@@ -13,6 +13,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
     /// <summary>
     /// Reads package metadata, the version list and the latest version of a PyPI project from
     /// the JSON API at https://pypi.org/pypi/{id}/json. Shared by every manager backed by PyPI.
+    /// Versions whose every release file is yanked are dropped from the version list.
     /// </summary>
     internal static class PyPIProjectClient
     {
@@ -93,7 +94,11 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
         internal static string? ParseMetadataVersion(string json) =>
             (JsonNode.Parse(json) as JsonObject)?["info"]?["version"]?.GetValue<string>();
 
-        internal static IReadOnlyList<string> ParseVersions(string json)
+        /// <summary>
+        /// Orders the releases of a project newest first. When <paramref name="includePreReleases"/>
+        /// is false, pre-release versions are left out; yanked releases are dropped in both modes.
+        /// </summary>
+        internal static IReadOnlyList<string> ParseVersions(string json, bool includePreReleases)
         {
             JsonObject? releases = (JsonNode.Parse(json) as JsonObject)?["releases"] as JsonObject;
             if (releases is null)
@@ -102,10 +107,20 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
                 );
 
             List<(PythonVersion Parsed, string Raw)> candidates = [];
-            foreach ((string key, _) in releases)
+            foreach ((string key, JsonNode? value) in releases)
             {
-                if (PythonVersion.TryParse(key, out PythonVersion parsed))
-                    candidates.Add((parsed, key));
+                if (!PythonVersion.TryParse(key, out PythonVersion parsed))
+                    continue;
+
+                if (!includePreReleases && parsed.IsPreRelease)
+                    continue;
+
+                // A partial yank keeps the version: at least one installable file remains.
+                if (value is JsonArray files && files.Count > 0
+                    && files.All(file => file is JsonObject entry && IsYanked(entry)))
+                    continue;
+
+                candidates.Add((parsed, key));
             }
 
             return candidates
@@ -113,6 +128,15 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
                 .Select(candidate => candidate.Raw)
                 .ToList();
         }
+
+        private static bool IsYanked(JsonObject file) =>
+            file["yanked"] is JsonValue yanked
+            && yanked.GetValueKind() switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.String => !string.IsNullOrEmpty(yanked.GetValue<string>()),
+                _ => false,
+            };
 
         internal static PyPIPackageMetadata? ParseMetadata(string json)
         {

@@ -53,6 +53,41 @@ namespace UniGetUI.Core.Logging
             }
         }
 
+        // The session log file is shared by every UniGetUI process (the app, each CLI call, the
+        // helpers) and was only ever appended to, so it grew for as long as the temp folder
+        // lived. Once it passes MAX_SESSION_LOG_BYTES it is moved to "session.log.old", replacing
+        // the previous one, so the two files together stay bounded and recent history survives.
+        public const long MAX_SESSION_LOG_BYTES = 5 * 1024 * 1024;
+
+        // The size is only looked up every so many writes: a file stat per log line is not free.
+        private const int WRITES_BETWEEN_SIZE_CHECKS = 200;
+        private static int _writesUntilSizeCheck; // 0: check on this process's first write
+
+        public static string GetRotatedSessionLogPath() => SessionLogPath + ".old";
+
+        /// <summary>
+        /// Moves <paramref name="path"/> to <paramref name="path"/>.old, replacing it, when the
+        /// file has reached <paramref name="maxBytes"/>. Never throws: another process may hold
+        /// or move the file at the same time, and logging must go on either way.
+        /// </summary>
+        /// <returns>Whether the file was rotated.</returns>
+        public static bool RotateLogFileIfTooLarge(string path, long maxBytes)
+        {
+            try
+            {
+                var file = new FileInfo(path);
+                if (!file.Exists || file.Length < maxBytes)
+                    return false;
+
+                File.Move(path, path + ".old", overwrite: true);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static void AppendToSessionLog(string text)
         {
             try
@@ -61,6 +96,12 @@ namespace UniGetUI.Core.Logging
                 Directory.CreateDirectory(Path.GetDirectoryName(sessionLogPath)!);
                 lock (LogWriteLock)
                 {
+                    if (--_writesUntilSizeCheck < 0)
+                    {
+                        _writesUntilSizeCheck = WRITES_BETWEEN_SIZE_CHECKS;
+                        RotateLogFileIfTooLarge(sessionLogPath, MAX_SESSION_LOG_BYTES);
+                    }
+
                     File.AppendAllText(
                         sessionLogPath,
                         $"[{DateTime.Now:yyyy-MM-dd h:mm:ss tt}] {text}{Environment.NewLine}"

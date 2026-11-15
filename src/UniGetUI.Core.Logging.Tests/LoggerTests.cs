@@ -57,6 +57,45 @@ namespace UniGetUI.Core.Logging.Tests
         }
 
         [Fact]
+        public void LogFileIsRotatedOnlyOnceItReachesTheLimit()
+        {
+            string directory = Directory.CreateTempSubdirectory("unigetui-log-rotation-").FullName;
+            try
+            {
+                string path = Path.Join(directory, "session.log");
+                string rotated = path + ".old";
+
+                Assert.False(Logger.RotateLogFileIfTooLarge(path, 100));
+
+                File.WriteAllText(path, new string('a', 99));
+                Assert.False(Logger.RotateLogFileIfTooLarge(path, 100));
+                Assert.False(File.Exists(rotated));
+
+                File.WriteAllText(path, new string('b', 100));
+                Assert.True(Logger.RotateLogFileIfTooLarge(path, 100));
+                Assert.False(File.Exists(path));
+                Assert.Equal(new string('b', 100), File.ReadAllText(rotated));
+
+                // A second rotation replaces the previous rotated file, so only two files ever exist.
+                File.WriteAllText(path, new string('c', 150));
+                Assert.True(Logger.RotateLogFileIfTooLarge(path, 100));
+                Assert.Equal(new string('c', 150), File.ReadAllText(rotated));
+                Assert.Equal(["session.log.old"], Directory.GetFiles(directory).Select(Path.GetFileName));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void RotatingALogFileThatCannotBeMovedDoesNotThrow()
+        {
+            string missingDirectory = Path.Join(Path.GetTempPath(), $"unigetui-missing-{Guid.NewGuid():N}");
+            Assert.False(Logger.RotateLogFileIfTooLarge(Path.Join(missingDirectory, "session.log"), 1));
+        }
+
+        [Fact]
         public async Task ConcurrentLoggingDoesNotLoseOrCorruptEntries()
         {
             long marker = Logger.TotalLogged;

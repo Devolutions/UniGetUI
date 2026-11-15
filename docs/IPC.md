@@ -235,6 +235,11 @@ These keys are used by package-related endpoints such as install, update, uninst
 | `location` | Install location override |
 | `outputPath` | Download output path. Defaults to the download location configured in the settings, or to the user's Downloads folder |
 
+The `scope` parameter accepts `user` or `local` for the user scope and `machine` or `global` for the machine scope, case-insensitively.
+These manager-relative labels do not establish operating-system ownership.
+When installed rows have different reported scopes, update, uninstall, and reinstall requests must select a matching scope rather than guessing.
+Pip reports `machine` for its installed rows without distinguishing where each package was installed, so that label alone cannot establish its scope.
+
 ### App navigation query parameters
 
 | Query key | Meaning |

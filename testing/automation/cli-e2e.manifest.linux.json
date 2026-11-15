@@ -36,6 +36,7 @@
       "packageId": "cowsay",
       "installVersion": "1.5.0",
       "scope": "Global",
+      "expectedReportedScope": "machine",
       "roles": [
         "bundle",
         "update-manager",

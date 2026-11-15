@@ -614,6 +614,8 @@ Windows only. A folder rule names the subfolder of the current user's Start Menu
 | `package update-all` | None | `--manager <id>`, `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Queues an update for every available update and returns their operation ids. With `--wait true`, waits for all of them (default timeout 3600 seconds) and exits with `1` if any did not succeed or the wait timed out. Works in headless sessions. |
 | `package update-manager` | `--manager <id>` | `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Same as `package update-all --manager <id>`. |
 
+For package operations, `--scope` accepts `user` or `local` and `machine` or `global` case-insensitively; these labels are manager-relative and do not establish operating-system ownership.
+
 ## Headless behavior
 
 When UniGetUI is started with `--headless`, it exposes the same automation API without opening a window.

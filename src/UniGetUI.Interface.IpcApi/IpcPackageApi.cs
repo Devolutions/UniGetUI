@@ -684,7 +684,7 @@ public static class IpcPackageApi
 
         if (!string.IsNullOrWhiteSpace(request.Scope))
         {
-            options.InstallationScope = request.Scope;
+            options.InstallationScope = ScopeForOptions(request.Scope);
         }
 
         if (request.PreRelease.HasValue)
@@ -851,12 +851,14 @@ public static class IpcPackageApi
             installed.Length > 0
             && installed.Select(p => p.NormalizedReportedScope).Distinct().Count() == 1;
 
-        var usable = target is null
+        bool placeholderLabels = installedScopesAreUnique && HasPlaceholderScopeLabels(installed[0]);
+
+        var usable = target is null || placeholderLabels
             ? upgradable
             : upgradable
                 .Where(p =>
                     p.NormalizedReportedScope == target
-                    || (p.NormalizedReportedScope is null && installed.Length > 0 && installedScopesAreUnique)
+                    || (p.NormalizedReportedScope is null && installedScopesAreUnique)
                 )
                 .ToArray();
 
@@ -880,8 +882,39 @@ public static class IpcPackageApi
             );
     }
 
+    // The literal request aliases "Global" and "Local" mean machine and user. Other values are
+    // lowercased and trimmed for comparison only; ApplyRequestOptions keeps them as requested.
+    private static string? CanonicalScope(string? scope)
+    {
+        if (string.IsNullOrWhiteSpace(scope))
+        {
+            return null;
+        }
+
+        string lowered = scope.Trim().ToLowerInvariant();
+        return lowered switch
+        {
+            "global" or PackageScope.Machine => PackageScope.Machine,
+            "local" or PackageScope.User => PackageScope.User,
+            _ => lowered,
+        };
+    }
+
+    private static string ScopeForOptions(string scope) =>
+        CanonicalScope(scope) is { } canonical
+        && (canonical == PackageScope.Machine || canonical == PackageScope.User)
+            ? canonical
+            : scope;
+
     private static string? NormalizeRequestedScope(IpcPackageActionRequest request) =>
-        string.IsNullOrWhiteSpace(request.Scope) ? null : request.Scope.Trim().ToLowerInvariant();
+        CanonicalScope(request.Scope);
+
+    // Pip's list parsers (installed and outdated) label every row machine regardless of where the
+    // package lives, so that one label cannot contradict a request. Only machine is known to be
+    // that unconditional placeholder; any other Pip label is not assumed to be placeholder data.
+    private static bool HasPlaceholderScopeLabels(IPackage package) =>
+        package.Manager.Id.Equals("pip", StringComparison.OrdinalIgnoreCase)
+        && package.NormalizedReportedScope == PackageScope.Machine;
 
     private static IPackage SelectScopedCopy(
         IReadOnlyList<IPackage> candidates,
@@ -889,16 +922,16 @@ public static class IpcPackageApi
         string packageId
     )
     {
-        if (scope is not null)
+        // When every copy reports one scope, the request only conflicts with a reliably known
+        // label; unknown labels and Pip's unconditional machine label cannot contradict it.
+        if (candidates.Select(p => p.NormalizedReportedScope).Distinct().Count() <= 1)
         {
-            var matching = candidates.Where(p => p.NormalizedReportedScope == scope).ToArray();
-            if (matching.Length > 0)
-            {
-                return matching[0];
-            }
-
-            // Only copies of unknown scope are left: they are not proven to be elsewhere.
-            if (candidates.All(p => p.NormalizedReportedScope is null))
+            if (
+                scope is null
+                || candidates[0].NormalizedReportedScope is null
+                || candidates[0].NormalizedReportedScope == scope
+                || HasPlaceholderScopeLabels(candidates[0])
+            )
             {
                 return candidates[0];
             }
@@ -908,14 +941,22 @@ public static class IpcPackageApi
             );
         }
 
-        if (candidates.Select(p => p.NormalizedReportedScope).Distinct().Count() > 1)
+        if (scope is not null)
         {
+            var matching = candidates.Where(p => p.NormalizedReportedScope == scope).ToArray();
+            if (matching.Length > 0)
+            {
+                return matching[0];
+            }
+
             throw new InvalidOperationException(
-                $"\"{packageId}\" is installed in more than one scope; specify the scope to use."
+                $"No installation of \"{packageId}\" in the \"{scope}\" scope was found."
             );
         }
 
-        return candidates[0];
+        throw new InvalidOperationException(
+            $"\"{packageId}\" is installed in more than one scope; specify the scope to use."
+        );
     }
 
     private static IPackage FindInstalledPackage(IpcPackageActionRequest request)

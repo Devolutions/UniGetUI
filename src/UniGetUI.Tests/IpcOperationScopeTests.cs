@@ -1,23 +1,53 @@
+using UniGetUI.Core.Data;
 using UniGetUI.Interface;
+using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
+using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
+using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 
 namespace UniGetUI.Tests;
 
 // Mutating IPC operations must act on the installation of the requested scope and refuse to guess
 // between scope copies. Failures happen before any operation is created, so nothing is launched.
-public sealed class IpcOperationScopeTests
+public sealed class IpcOperationScopeTests : IDisposable
 {
-    private static async Task<(Pip Manager, InstalledPackagesLoader Installed, UpgradablePackagesLoader Upgradable)> CreateLoadersAsync(
+    private readonly string _testRoot = Path.Combine(
+        Path.GetTempPath(),
+        "UniGetUI.IpcOperationScopeTests",
+        Guid.NewGuid().ToString("N")
+    );
+
+    public IpcOperationScopeTests()
+    {
+        Directory.CreateDirectory(Path.Combine(_testRoot, "Data"));
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
+    }
+
+    public void Dispose()
+    {
+        CoreData.TEST_DataDirectoryOverride = null;
+        try
+        {
+            Directory.Delete(_testRoot, true);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static async Task<(IPackageManager Manager, InstalledPackagesLoader Installed, UpgradablePackagesLoader Upgradable)> CreateLoadersAsync(
         string?[] installedScopes,
-        string?[] upgradableScopes
+        string?[] upgradableScopes,
+        IPackageManager? manager = null
     )
     {
-        var manager = new Pip();
+        manager ??= new Pip();
         _ = new DiscoverablePackagesLoader([manager]);
         var upgradable = new UpgradablePackagesLoader([manager]);
         var installed = new InstalledPackagesLoader([manager]);
@@ -41,7 +71,7 @@ public sealed class IpcOperationScopeTests
         return (manager, installed, upgradable);
     }
 
-    private static IpcPackageActionRequest Request(Pip manager, string? scope) => new()
+    private static IpcPackageActionRequest Request(IPackageManager manager, string? scope) => new()
     {
         PackageId = "requests",
         ManagerName = manager.Id,
@@ -79,13 +109,234 @@ public sealed class IpcOperationScopeTests
     [MemberData(nameof(OperationIndexes))]
     public async Task EveryMutatingOperationRefusesAScopeThatHasNoInstallation(int operation)
     {
-        var (manager, _, _) = await CreateLoadersAsync([PackageScope.User], []);
+        var (manager, _, _) = await CreateLoadersAsync([PackageScope.User, null], []);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             Operations[operation](Request(manager, PackageScope.Global))
         );
 
         Assert.Contains("No installation of \"requests\" in the \"machine\" scope", ex.Message);
+    }
+
+    [Fact]
+    public async Task PipMachinePlaceholderDoesNotBlockAUserScopeRequest()
+    {
+        var manager = new RecordingPip();
+        await CreateLoadersAsync([PackageScope.Machine], [PackageScope.Machine], manager);
+        var request = Request(manager, "User");
+        request.WaitForCompletion = true;
+
+        var result = await IpcPackageApi.UpdatePackageAsync(request);
+
+        Assert.Equal("success", result.Status);
+        Assert.Equal(PackageScope.Machine, result.Package?.ReportedScope);
+        Assert.Equal(PackageScope.User, Assert.Single(manager.Emitted).Scope);
+    }
+
+    [Theory]
+    [InlineData("Global", PackageScope.Machine)]
+    [InlineData("Local", PackageScope.User)]
+    public async Task NpmScopeAliasesSelectTheMatchingRowAndEmitItsParameters(string requested, string reported)
+    {
+        foreach (var operation in new[] { OperationType.Update, OperationType.Uninstall })
+        {
+            var manager = new RecordingNpm();
+            await CreateLoadersAsync([PackageScope.User, PackageScope.Machine], [reported], manager);
+            var request = Request(manager, requested);
+            request.WaitForCompletion = true;
+
+            var result = operation is OperationType.Update
+                ? await IpcPackageApi.UpdatePackageAsync(request)
+                : await IpcPackageApi.UninstallPackageAsync(request);
+
+            Assert.Equal("success", result.Status);
+            Assert.Equal(reported, result.Package?.ReportedScope);
+            var emitted = Assert.Single(manager.Emitted);
+            Assert.Equal(reported, emitted.Scope);
+            Assert.Equal(
+                reported == PackageScope.Machine,
+                emitted.Parameters.Contains("--global")
+            );
+        }
+    }
+
+    [Theory]
+    [InlineData("Global", PackageScope.User)]
+    [InlineData("Local", PackageScope.Machine)]
+    public async Task NpmRejectsASingleRowThatConflictsWithTheRequestedAlias(string requested, string reported)
+    {
+        var manager = new Npm();
+        await CreateLoadersAsync([reported], [reported], manager);
+
+        foreach (var operation in Operations)
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => operation(Request(manager, requested)));
+        }
+    }
+
+    [Theory]
+    [InlineData("Global", true)]
+    [InlineData("Local", false)]
+    public async Task UpdateRunsNpmWithTheCanonicalScopeOfALiteralAliasRequest(string requested, bool expectGlobal)
+    {
+        var manager = new RecordingNpm();
+        await CreateLoadersAsync([null], [null], manager);
+
+        var result = await IpcPackageApi.UpdatePackageAsync(new IpcPackageActionRequest
+        {
+            PackageId = "requests",
+            ManagerName = manager.Id,
+            Scope = requested,
+            WaitForCompletion = true,
+        });
+
+        Assert.Equal("success", result.Status);
+        var emitted = Assert.Single(manager.Emitted);
+        Assert.Equal(expectGlobal, emitted.Parameters.Contains("--global"));
+        Assert.Equal(expectGlobal ? PackageScope.Machine : PackageScope.User, emitted.Scope);
+    }
+
+    // Records the parameters npm's own helper emits and completes without starting a process.
+    private sealed class RecordingNpm : Npm
+    {
+        public List<(string Scope, IReadOnlyList<string> Parameters)> Emitted { get; } = [];
+
+        public RecordingNpm()
+        {
+            OperationHelper = new RecordingHelper(this, OperationHelper, Emitted);
+        }
+
+        // Never initialized, so IsReady() stays false and the post-operation loader refresh
+        // lists nothing instead of running npm; these overrides guard against any other path.
+        public override void Initialize() { }
+
+        public override void AttemptFastRepair() { }
+
+        protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() => [];
+
+        protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe() => [];
+    }
+
+    private sealed class RecordingPip : Pip
+    {
+        public List<(string Scope, IReadOnlyList<string> Parameters)> Emitted { get; } = [];
+
+        public RecordingPip()
+        {
+            OperationHelper = new RecordingHelper(this, OperationHelper, Emitted);
+        }
+
+        public override void Initialize() { }
+
+        public override void AttemptFastRepair() { }
+
+        protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() => [];
+
+        protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe() => [];
+    }
+
+    private sealed class RecordingHelper(
+        IPackageManager manager,
+        IPackageOperationHelper original,
+        List<(string Scope, IReadOnlyList<string> Parameters)> emitted
+    ) : BasePkgOperationHelper(manager), IManagedPackageOperationHelper
+    {
+        public Task<OperationVeredict?> TryPerformAsync(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation,
+            Action<string> log,
+            Action<OperationProgress> progress,
+            CancellationToken cancellationToken
+        )
+        {
+            emitted.Add((options.InstallationScope, original.GetParameters(package, options, operation)));
+            return Task.FromResult<OperationVeredict?>(OperationVeredict.Success);
+        }
+
+        protected override IReadOnlyList<string> _getOperationParameters(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation
+        ) => [];
+
+        protected override OperationVeredict _getOperationResult(
+            IPackage package,
+            OperationType operation,
+            IReadOnlyList<string> processOutput,
+            int returnCode
+        ) => OperationVeredict.Failure;
+    }
+
+    [Fact]
+    public async Task AnUnrecognizedScopeReachesTheOperationAsRequested()
+    {
+        var manager = new RecordingNpm();
+        await CreateLoadersAsync([null], [null], manager);
+        var request = Request(manager, " Custom-Scope ");
+        request.WaitForCompletion = true;
+
+        var result = await IpcPackageApi.UpdatePackageAsync(request);
+
+        Assert.Equal("success", result.Status);
+        Assert.Equal(" Custom-Scope ", Assert.Single(manager.Emitted).Scope);
+    }
+
+    [Fact]
+    public async Task PipRejectsAnExplicitlyUserScopedRowForAMachineRequest()
+    {
+        var manager = new Pip();
+        await CreateLoadersAsync([PackageScope.User], [PackageScope.User], manager);
+
+        foreach (var operation in Operations)
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => operation(Request(manager, "Global")));
+        }
+    }
+
+    [Fact]
+    public async Task AGlobalRequestForAnUnscopedNpmRowStillRunsGlobally()
+    {
+        var manager = new RecordingNpm();
+        await CreateLoadersAsync([null], [], manager);
+        var request = Request(manager, "Global");
+        request.WaitForCompletion = true;
+
+        var result = await IpcPackageApi.UninstallPackageAsync(request);
+
+        Assert.Equal("success", result.Status);
+        Assert.Contains("--global", Assert.Single(manager.Emitted).Parameters);
+    }
+
+    [Fact]
+    public async Task ASingleReliablyScopedInstallationRejectsAConflictingScopeInEveryOperation()
+    {
+        var manager = new PowerShell7();
+        await CreateLoadersAsync([PackageScope.User], [PackageScope.User], manager);
+
+        foreach (var operation in Operations)
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                operation(Request(manager, PackageScope.Global))
+            );
+            Assert.Contains("No installation of \"requests\" in the \"machine\" scope", ex.Message);
+        }
+
+        Assert.Equal(
+            PackageScope.User,
+            IpcPackageApi.ResolveUpdatePackageForMutation(Request(manager, PackageScope.Local)).NormalizedReportedScope
+        );
+    }
+
+    [Fact]
+    public async Task ASingleInstallationWithoutAnUpdateEntryIsStillSelectedForAnotherScope()
+    {
+        var (manager, _, _) = await CreateLoadersAsync([PackageScope.Machine], []);
+
+        var package = IpcPackageApi.ResolveUpdatePackageForMutation(Request(manager, PackageScope.User));
+
+        Assert.False(package.IsUpgradable);
+        Assert.Equal(PackageScope.Machine, package.NormalizedReportedScope);
     }
 
     [Theory]

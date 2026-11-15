@@ -411,11 +411,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// </summary>
         private IPackage? FindScopeTolerant(IPackage package)
         {
-            if (!DistinguishReportedScopes)
+            if (!DistinguishReportedScopes || !package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
                 return null;
 
             var matches = Packages
-                .Where(c => c.GetVersionedHash() == package.GetVersionedHash()
+                .Where(c => c.Manager.Id == package.Manager.Id
+                    && c.Source.Name == package.Source.Name
+                    && c.Id == package.Id
+                    && c.VersionString == package.VersionString
                     && (c.NormalizedReportedScope is null || package.NormalizedReportedScope is null))
                 .Take(2)
                 .ToArray();
@@ -511,10 +514,21 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
                 return null;
 
-            return Packages.FirstOrDefault(candidate =>
+            var matches = Packages.Where(candidate =>
                 PackageIdentity.IsSamePackageFromAnySource(candidate, package)
                 && (!ALLOW_MULTIPLE_PACKAGE_VERSIONS || candidate.VersionString == package.VersionString)
+                && (!DistinguishReportedScopes
+                    || candidate.NormalizedReportedScope is null
+                    || package.NormalizedReportedScope is null
+                    || candidate.NormalizedReportedScope == package.NormalizedReportedScope)
             );
+
+            if (!DistinguishReportedScopes)
+                return matches.FirstOrDefault();
+
+            // Several candidates mean the probe cannot say which installation it refers to.
+            var found = matches.Take(2).ToArray();
+            return found.Length == 1 ? found[0] : null;
         }
 
         /// <summary>

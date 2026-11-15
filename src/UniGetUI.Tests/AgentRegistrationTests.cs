@@ -362,6 +362,41 @@ public class AgentRegistrationTests
     }
 
     [Fact]
+    public async Task WelcomeMayArriveAfterHelloDeadlineButBeforeIdleTimeout()
+    {
+        var h = new Harness(new AgentRegistrationOptions
+        {
+            HelloTimeout = TimeSpan.FromMilliseconds(100),
+            IdleTimeout = TimeSpan.FromSeconds(2),
+        });
+        Assert.Equal("Hello", (await h.ReadAsync())!.Value.GetProperty("kind").GetString());
+        await Task.Delay(300);
+
+        Assert.False(h.Session.IsCompleted);
+        await h.SendAsync("""{"kind":"Welcome","protocolVersion":1}""");
+        Assert.True((await h.RequestAsync(Uuid1, "ListManagers")).GetProperty("ok").GetBoolean());
+        Assert.True(h.Registered);
+    }
+
+    [Fact]
+    public async Task SendsPingWhileWaitingForWelcome()
+    {
+        var h = new Harness(new AgentRegistrationOptions
+        {
+            PingAfter = TimeSpan.FromMilliseconds(100),
+            IdleTimeout = TimeSpan.FromSeconds(2),
+        });
+        Assert.Equal("Hello", (await h.ReadAsync())!.Value.GetProperty("kind").GetString());
+        Assert.Equal(
+            "Ping",
+            (await h.ReadAsync().WaitAsync(TimeSpan.FromSeconds(1)))!.Value.GetProperty("kind").GetString()
+        );
+        Assert.False(h.Registered);
+        h.Agent.Dispose();
+        Assert.False(await h.Session);
+    }
+
+    [Fact]
     public async Task WrongProtocolVersionClosesWithoutRegistering()
     {
         var h = new Harness();
@@ -540,6 +575,24 @@ public class AgentRegistrationTests
     }
 
     [Theory]
+    [InlineData("Update")]
+    [InlineData("Uninstall")]
+    public async Task EmptySourceForUpdatesAndUninstallsIsUnavailableRatherThanInvalid(string operation)
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        JsonElement response = await h.RequestAsync(
+            Uuid1,
+            "ExecutePackageOperation",
+            Op(source: "", op: operation)
+        );
+
+        Assert.True(response.GetProperty("ok").GetBoolean());
+        Assert.Equal("Failed", response.GetProperty("result").GetProperty("status").GetString());
+        Assert.Equal(0, Volatile.Read(ref h.Backend.SourceCalls));
+    }
+
+    [Theory]
     [InlineData("bad grant!", "", "feed", "Install", Uuid1, Uuid2)]
     [InlineData("", "", "feed", "Install", Uuid1, Uuid2)]
     [InlineData("-leading", "", "feed", "Install", Uuid1, Uuid2)]
@@ -562,18 +615,34 @@ public class AgentRegistrationTests
         Assert.DoesNotContain("SECRET", response.GetRawText());
     }
 
-    [Theory]
-    [InlineData("Update")]
-    [InlineData("Uninstall")]
-    [InlineData("Install")]
-    public async Task UnavailableOperationsDoNotInspectUnknownOrigins(string operation)
+    [Fact]
+    public async Task UninstallWithSourceIsRejectedWithoutInspectingSources()
     {
         var h = new Harness();
         await h.WelcomeAsync();
         JsonElement response = await h.RequestAsync(
             Uuid1,
             "ExecutePackageOperation",
-            Op(source: "origin-unknown", op: operation)
+            Op(source: "feed", op: "Uninstall")
+        );
+
+        Assert.False(response.GetProperty("ok").GetBoolean());
+        Assert.Equal("InvalidArguments", ErrorCode(response));
+        Assert.Equal(0, Volatile.Read(ref h.Backend.SourceCalls));
+    }
+
+    [Theory]
+    [InlineData("Update", "origin-unknown")]
+    [InlineData("Uninstall", "")]
+    [InlineData("Install", "origin-unknown")]
+    public async Task UnavailableOperationsDoNotInspectUnknownOrigins(string operation, string source)
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        JsonElement response = await h.RequestAsync(
+            Uuid1,
+            "ExecutePackageOperation",
+            Op(source: source, op: operation)
         );
 
         Assert.Equal("Failed", response.GetProperty("result").GetProperty("status").GetString());

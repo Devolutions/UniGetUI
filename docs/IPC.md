@@ -69,6 +69,16 @@ When the client **does** receive an explicit override:
 - it connects to that transport choice instead of auto-selecting the newest session
 - it waits up to 5 seconds for a matching persisted token to appear
 
+## Devolutions Agent registration
+
+On Windows, an unelevated GUI session separately attempts to register with the local Devolutions Agent service.
+Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
+The Agent currently rejects executables under user-writable directories, including the default per-user installation.
+For the beta, install UniGetUI for all users in an administrator-protected directory.
+This connection is separate from the local IPC API and remains active when that API is disabled.
+The registration endpoint exposes manager metadata, but remote inventory, source and version queries, and package operations are unavailable until their safety requirements are implemented.
+Unavailable remote operations never fall back to local package execution.
+
 ## Authentication
 
 | Endpoint | Auth |

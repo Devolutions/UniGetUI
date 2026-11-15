@@ -116,9 +116,12 @@ public sealed class IpcInstalledScopeTests
             await loader.AddForeign(package);
 
         Assert.Equal(3, loader.Count());
-        Assert.Equal(
-            [null, PackageScope.Machine, PackageScope.User],
-            IpcPackageApi.ListInstalledPackages().Select(p => p.ReportedScope).Order().ToArray());
+        Assert.Collection(
+            IpcPackageApi.ListInstalledPackages().Select(p => p.ReportedScope).Order(),
+            Assert.Null,
+            scope => Assert.Equal(PackageScope.Machine, scope),
+            scope => Assert.Equal(PackageScope.User, scope)
+        );
         Assert.Same(machine, loader.GetEquivalentPackage(Make(PackageScope.Machine)));
 
         loader.Remove(Make(PackageScope.Machine));
@@ -139,6 +142,77 @@ public sealed class IpcInstalledScopeTests
         Assert.Same(installed, loader.GetEquivalentPackage(probe));
         loader.Remove(probe);
         Assert.Equal(0, loader.Count());
+    }
+
+    [Fact]
+    public async Task AnySourceProbeRejectsAmbiguousScopesButKeepsUniqueAndExactMatches()
+    {
+        var manager = new Pip();
+        var capabilities = manager.Capabilities;
+        capabilities.InstalledPackagesKeepTheirSource = false;
+        manager.Capabilities = capabilities;
+        _ = new DiscoverablePackagesLoader([manager]);
+        _ = new UpgradablePackagesLoader([manager]);
+        var loader = new InstalledPackagesLoader([manager]);
+        var feed = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        IPackage Make(string? scope, ManagerSource? source = null) => new Package(
+            "Requests", "requests", "2.0", source ?? manager.DefaultSource, manager, new OverridenInstallationOptions(scope));
+        var user = Make(PackageScope.User);
+        var machine = Make(PackageScope.Machine);
+        await loader.AddForeign(user);
+        await loader.AddForeign(machine);
+
+        Assert.Null(loader.GetEquivalentPackage(Make(null, feed)));
+        loader.Remove(Make(null, feed));
+        Assert.Equal(2, loader.Count());
+
+        Assert.Same(machine, loader.GetEquivalentPackage(Make(PackageScope.Machine, feed)));
+        Assert.Null(loader.GetEquivalentPackage(Make("other", feed)));
+
+        loader.Remove(Make(PackageScope.User, feed));
+        Assert.Equal([machine], loader.Packages);
+        Assert.Same(machine, loader.GetEquivalentPackage(Make(null, feed)));
+    }
+
+    [Fact]
+    public async Task ScopeUnawareProbeDoesNotCrossCanonicalSourcesSharingADisplayName()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        var first = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        var second = new ManagerSource(manager, "registry\\b", new Uri("https://b.example.test/"));
+        Assert.Equal(first.AsString_DisplayName, second.AsString_DisplayName);
+        var installed = new Package(
+            "Requests", "requests", "2.0", first, manager, new OverridenInstallationOptions(PackageScope.User));
+        await loader.AddForeign(installed);
+        var probe = new Package("Requests", "requests", "2.0", second, manager);
+
+        Assert.Null(loader.GetEquivalentPackage(probe));
+        loader.Remove(probe);
+        Assert.Same(installed, Assert.Single(loader.Packages));
+        Assert.Same(installed, loader.GetEquivalentPackage(new Package("Requests", "requests", "2.0", first, manager)));
+    }
+
+    [Fact]
+    public async Task SourceIgnoringManagerProbeDoesNotPickOneScopeWhenAnotherSourceHoldsAnother()
+    {
+        var manager = new Pip();
+        var capabilities = manager.Capabilities;
+        capabilities.InstalledPackagesKeepTheirSource = false;
+        manager.Capabilities = capabilities;
+        _ = new DiscoverablePackagesLoader([manager]);
+        _ = new UpgradablePackagesLoader([manager]);
+        var loader = new InstalledPackagesLoader([manager]);
+        var a = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        var b = new ManagerSource(manager, "registry:b", new Uri("https://b.example.test/"));
+        await loader.AddForeign(new Package(
+            "Requests", "requests", "2.0", a, manager, new OverridenInstallationOptions(PackageScope.User)));
+        await loader.AddForeign(new Package(
+            "Requests", "requests", "2.0", b, manager, new OverridenInstallationOptions(PackageScope.Machine)));
+        var probe = new Package("Requests", "requests", "2.0", a, manager);
+
+        Assert.Null(loader.GetEquivalentPackage(probe));
+        loader.Remove(probe);
+        Assert.Equal(2, loader.Count());
     }
 
     [Fact]

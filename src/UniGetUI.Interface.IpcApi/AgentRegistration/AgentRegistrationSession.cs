@@ -62,9 +62,10 @@ internal sealed class AgentRegistrationSession
             {
                 await SendAsync(BuildHello(), helloCts.Token).ConfigureAwait(false);
             }
+            pinger = Task.Run(() => PingLoopAsync(sessionCts), CancellationToken.None);
 
             JsonElement welcome = AgentFrameCodec.Parse(
-                await ReadAsync(_options.HelloTimeout, token).ConfigureAwait(false)
+                await ReadAsync(_options.IdleTimeout, token).ConfigureAwait(false)
                     ?? throw new AgentProtocolException(),
                 out string welcomeKind
             );
@@ -81,7 +82,6 @@ internal sealed class AgentRegistrationSession
 
             registered = true;
             Registered?.Invoke();
-            pinger = Task.Run(() => PingLoopAsync(sessionCts), CancellationToken.None);
 
             while (true)
             {

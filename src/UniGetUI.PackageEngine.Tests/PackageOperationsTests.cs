@@ -2288,6 +2288,127 @@ public sealed class PackageOperationsTests
         );
     }
 
+    private static async Task<IReadOnlyList<IPackage>> InstallAndListEquivalents(
+        string? requestedScope,
+        string?[] listedScopes,
+        string? installOptionScope = null
+    )
+    {
+        TestPackageManager? manager = null;
+        manager = new PackageManagerBuilder()
+            .WithInstalledPackages(_ => listedScopes
+                .Select(scope => new PackageBuilder()
+                    .WithManager(manager!)
+                    .WithId("dotnetsay")
+                    .WithVersion("2.1.4")
+                    .WithOptions(new OverridenInstallationOptions(scope))
+                    .Build())
+                .ToArray())
+            .Build();
+        var searchResult = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("3.0.3")
+            .WithOptions(new OverridenInstallationOptions(requestedScope))
+            .Build();
+        InitializeLoaders();
+        using var operation = new SimulatedInstallPackageOperation(
+            searchResult,
+            new InstallOptions { Version = "2.1.4", InstallationScope = installOptionScope ?? "" },
+            OperationVeredict.Success
+        );
+
+        await operation.MainThread();
+        await WaitForAsync(() => InstalledPackagesLoader.Instance.GetEquivalentPackages(searchResult).Count > 0);
+        return InstalledPackagesLoader.Instance.GetEquivalentPackages(searchResult);
+    }
+
+    [Fact]
+    public async Task InstallSnapshotDoesNotAdoptACopyFromADifferentCanonicalSource()
+    {
+        TestPackageManager? manager = null;
+        ManagerSource? listedFrom = null;
+        manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SupportsCustomSources = false;
+                capabilities.InstalledPackagesKeepTheirSource = true;
+                return capabilities;
+            })
+            .WithInstalledPackages(_ => [new PackageBuilder()
+                .WithManager(manager!)
+                .WithId("dotnetsay")
+                .WithVersion("2.1.4")
+                .WithSource(listedFrom!)
+                .Build()])
+            .Build();
+        listedFrom = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        var requestedFrom = new ManagerSource(manager, "registry\\b", new Uri("https://b.example.test/"));
+        Assert.Equal(listedFrom.AsString_DisplayName, requestedFrom.AsString_DisplayName);
+        Assert.True(manager.Capabilities.InstalledPackagesKeepTheirSource);
+        var searchResult = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("3.0.3")
+            .WithSource(requestedFrom)
+            .Build();
+        InitializeLoaders();
+        using var operation = new SimulatedInstallPackageOperation(
+            searchResult,
+            new InstallOptions { Version = "2.1.4" },
+            OperationVeredict.Success
+        );
+
+        await operation.MainThread();
+        await WaitForAsync(() => InstalledPackagesLoader.Instance.Count() > 0);
+
+        Assert.Equal("registry\\b", Assert.Single(InstalledPackagesLoader.Instance.Packages).Source.Name);
+    }
+
+    [Fact]
+    public async Task InstallSnapshotChoosesTheTargetedScopeNotAnotherCopy()
+    {
+        var installed = await InstallAndListEquivalents(
+            PackageScope.Machine, [PackageScope.User, PackageScope.Machine]);
+
+        Assert.Equal(PackageScope.Machine, Assert.Single(installed).ReportedScope);
+    }
+
+    [Fact]
+    public async Task InstallSnapshotUsesTheScopeRequestedInTheInstallOptions()
+    {
+        var installed = await InstallAndListEquivalents(
+            null, [PackageScope.User, PackageScope.Machine], installOptionScope: PackageScope.Machine);
+
+        Assert.Equal(PackageScope.Machine, Assert.Single(installed).ReportedScope);
+    }
+
+    [Fact]
+    public async Task InstallSnapshotDoesNotAdoptACopyFromADifferentScope()
+    {
+        var installed = await InstallAndListEquivalents(PackageScope.Machine, [PackageScope.User]);
+
+        var entry = Assert.Single(installed);
+        Assert.Equal(PackageScope.Machine, entry.ReportedScope);
+        Assert.Equal("2.1.4", entry.VersionString);
+    }
+
+    [Fact]
+    public async Task InstallSnapshotWithUnknownTargetScopeDoesNotGuessBetweenScopes()
+    {
+        var installed = await InstallAndListEquivalents(null, [PackageScope.User, PackageScope.Machine]);
+
+        Assert.Null(Assert.Single(installed).ReportedScope);
+    }
+
+    [Fact]
+    public async Task InstallSnapshotWithUnknownTargetScopeKeepsTheUniqueCopy()
+    {
+        var installed = await InstallAndListEquivalents(null, [PackageScope.User]);
+
+        Assert.Equal(PackageScope.User, Assert.Single(installed).ReportedScope);
+    }
+
     [Fact]
     public async Task UpdateOperationSuccessfulRunPrefersAuthoritativeInstalledVersion()
     {

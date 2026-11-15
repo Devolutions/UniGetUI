@@ -105,7 +105,8 @@ internal sealed class AgentRequestDispatcher
             || !TryGetString(args, "sourceName", out string sourceName)
             || !TryGetString(args, "packageId", out string packageId)
             || manager.Length == 0
-            || sourceName.Length == 0
+            || (operation == "Install" && sourceName.Length == 0)
+            || (operation == "Uninstall" && sourceName.Length != 0)
             || packageId.Length == 0
             || !TryGetString(args, "version", out _, required: false)
             || !TryGetString(args, "scope", out string scope, required: false)

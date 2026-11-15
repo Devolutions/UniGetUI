@@ -218,7 +218,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindUpgradablePackageOrInstalledPackage(request);
+        var package = ResolveUpdatePackageForMutation(request);
         if (
             package.IsUpgradable
             && string.IsNullOrWhiteSpace(request.Version)
@@ -335,7 +335,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindInstalledPackage(request);
+        var package = ResolveInstalledPackageForMutation(request);
         return ExecuteOperationAsync(
             "uninstall-package",
             package,
@@ -404,7 +404,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindInstalledPackage(request);
+        var package = ResolveInstalledPackageForMutation(request);
         return ExecuteOperationAsync(
             "reinstall-package",
             package,
@@ -419,7 +419,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindInstalledPackage(request);
+        var package = ResolveInstalledPackageForMutation(request);
         var options = await InstallOptionsFactory.LoadApplicableAsync(package);
         ApplyRequestOptions(options, request);
 
@@ -804,6 +804,118 @@ public static class IpcPackageApi
     {
         return TryFindPackageForStateMutation(request)
             ?? FindSearchResult(request);
+    }
+
+    // Used by destructive operations: the installed copy is chosen by the reported scope, and
+    // several scope copies without a deciding scope fail rather than being guessed.
+    internal static IPackage ResolveInstalledPackageForMutation(IpcPackageActionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var installed = GetInstalledPackagesSnapshot(request.ManagerName)
+            .Where(candidate => MatchesIdentity(candidate, request))
+            .ToArray();
+        if (installed.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"No installed package matching id \"{request.PackageId}\" was found."
+            );
+        }
+
+        return SelectScopedCopy(installed, NormalizeRequestedScope(request), request.PackageId);
+    }
+
+    // The upgradable loader may collapse scopes; do not use ambiguous update metadata.
+    internal static IPackage ResolveUpdatePackageForMutation(IpcPackageActionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        string? requestedScope = NormalizeRequestedScope(request);
+        var installed = GetInstalledPackagesSnapshot(request.ManagerName)
+            .Where(candidate => MatchesIdentity(candidate, request))
+            .ToArray();
+        IPackage? installedCopy = installed.Length > 0
+            ? SelectScopedCopy(installed, requestedScope, request.PackageId)
+            : null;
+
+        var upgradable = GetUpgradablePackagesSnapshot(request.ManagerName)
+            .Where(candidate => MatchesIdentity(candidate, request))
+            .ToArray();
+        if (installed.Length == 0 && upgradable.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"No installed package matching id \"{request.PackageId}\" was found."
+            );
+        }
+
+        string? target = requestedScope ?? installedCopy?.NormalizedReportedScope;
+        bool installedScopesAreUnique =
+            installed.Length > 0
+            && installed.Select(p => p.NormalizedReportedScope).Distinct().Count() == 1;
+
+        var usable = target is null
+            ? upgradable
+            : upgradable
+                .Where(p =>
+                    p.NormalizedReportedScope == target
+                    || (p.NormalizedReportedScope is null && installed.Length > 0 && installedScopesAreUnique)
+                )
+                .ToArray();
+
+        if (usable.Length > 0)
+        {
+            return SelectScopedCopy(usable, target, request.PackageId);
+        }
+
+        if (upgradable.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"An update of \"{request.PackageId}\" is available, but it cannot be tied to the "
+                    + (requestedScope is null ? "installed" : $"\"{requestedScope}\"")
+                    + " scope; specify the scope of an installation that reports the update."
+            );
+        }
+
+        return installedCopy
+            ?? throw new InvalidOperationException(
+                $"No installed package matching id \"{request.PackageId}\" was found."
+            );
+    }
+
+    private static string? NormalizeRequestedScope(IpcPackageActionRequest request) =>
+        string.IsNullOrWhiteSpace(request.Scope) ? null : request.Scope.Trim().ToLowerInvariant();
+
+    private static IPackage SelectScopedCopy(
+        IReadOnlyList<IPackage> candidates,
+        string? scope,
+        string packageId
+    )
+    {
+        if (scope is not null)
+        {
+            var matching = candidates.Where(p => p.NormalizedReportedScope == scope).ToArray();
+            if (matching.Length > 0)
+            {
+                return matching[0];
+            }
+
+            // Only copies of unknown scope are left: they are not proven to be elsewhere.
+            if (candidates.All(p => p.NormalizedReportedScope is null))
+            {
+                return candidates[0];
+            }
+
+            throw new InvalidOperationException(
+                $"No installation of \"{packageId}\" in the \"{scope}\" scope was found."
+            );
+        }
+
+        if (candidates.Select(p => p.NormalizedReportedScope).Distinct().Count() > 1)
+        {
+            throw new InvalidOperationException(
+                $"\"{packageId}\" is installed in more than one scope; specify the scope to use."
+            );
+        }
+
+        return candidates[0];
     }
 
     private static IPackage FindInstalledPackage(IpcPackageActionRequest request)

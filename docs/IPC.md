@@ -399,6 +399,8 @@ them first.
 | `POST` | `/uniget/v1/bundles/remove` | Yes | JSON body: bundle package request body | `bundle remove` |
 | `POST` | `/uniget/v1/bundles/install` | Yes | JSON body: bundle install request body | `bundle install` |
 
+An explicitly requested scope on a bundle entry is used for its installation while other inherited options continue to follow manager defaults.
+
 ### Packages
 
 Every package payload carries `systemRestartPending`: `true` when that package is one of the

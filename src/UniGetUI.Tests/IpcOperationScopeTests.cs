@@ -1,6 +1,9 @@
 using UniGetUI.Core.Data;
 using UniGetUI.Interface;
+using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
+using UniGetUI.PackageEngine.Classes.Packages.Classes;
+using UniGetUI.PackageEngine.Classes.Serializable;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
@@ -196,10 +199,129 @@ public sealed class IpcOperationScopeTests : IDisposable
         Assert.Equal(expectGlobal ? PackageScope.Machine : PackageScope.User, emitted.Scope);
     }
 
+    [Fact]
+    public async Task BundleRoundTripHonorsRequestedScopeWithoutPersistingOverrides()
+    {
+        var manager = new RecordingNpm();
+        await CreateLoadersAsync([], [], manager);
+        string packageId = $"bundle-{Guid.NewGuid():N}";
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new Package("Bundle fixture", packageId, "1.0", manager.DefaultSource, manager)
+        );
+        _ = new PackageBundlesLoader_I([manager]);
+        var previousDefaults = InstallOptionsFactory.LoadForManager(manager);
+        int managerIndex = Array.FindIndex(PEInterface.Managers, candidate => candidate.Id == manager.Id);
+        Assert.True(managerIndex >= 0);
+        var previousManager = PEInterface.Managers[managerIndex];
+        PEInterface.Managers[managerIndex] = manager;
+
+        try
+        {
+            InstallOptionsFactory.SaveForManager(
+                new InstallOptions
+                {
+                    InstallationScope = PackageScope.User,
+                    Architecture = "x64",
+                    PreRelease = true,
+                    PreInstallCommand = "do-not-export-this-command",
+                },
+                manager
+            );
+            await IpcBundleApi.AddPackageAsync(new IpcBundlePackageRequest
+            {
+                PackageId = packageId,
+                ManagerName = manager.Id,
+                Selection = "installed",
+                Scope = "Global",
+                Version = "1.5.0",
+                PreRelease = false,
+            });
+            var exported = await IpcBundleApi.ExportBundleAsync();
+            Assert.DoesNotContain("do-not-export-this-command", exported.Content);
+
+            IpcBundleApi.ResetBundle();
+            await IpcBundleApi.ImportBundleAsync(new IpcBundleImportRequest { Content = exported.Content });
+            InstallOptionsFactory.SaveForManager(
+                new InstallOptions
+                {
+                    InstallationScope = PackageScope.User,
+                    Architecture = "arm64",
+                    PreRelease = true,
+                },
+                manager
+            );
+
+            var result = await IpcBundleApi.InstallBundleAsync(new IpcBundleInstallRequest { IncludeInstalled = true });
+
+            Assert.Equal("success", result.Status);
+            var emitted = Assert.Single(manager.Emitted);
+            Assert.Equal(PackageScope.Machine, emitted.Scope);
+            Assert.Contains("--global", emitted.Parameters);
+            Assert.Equal("", emitted.Version);
+            Assert.Equal("arm64", emitted.Architecture);
+            Assert.True(emitted.PreRelease);
+
+            var subsequentPackage = new Package("Bundle fixture", packageId, "2.0", manager.DefaultSource, manager);
+            var saved = InstallOptionsFactory.LoadForPackage(subsequentPackage);
+            Assert.False(saved.BundleScopeIsExplicit);
+            var subsequentOptions = InstallOptionsFactory.LoadApplicable(subsequentPackage);
+            Assert.Equal(PackageScope.User, subsequentOptions.InstallationScope);
+            Assert.Equal("", subsequentOptions.Version);
+        }
+        finally
+        {
+            PEInterface.Managers[managerIndex] = previousManager;
+            InstallOptionsFactory.SaveForManager(previousDefaults, manager);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, PackageScope.User)]
+    [InlineData(true, PackageScope.Machine)]
+    public async Task LegacyBundleRespectsWhetherPackageOptionsOverrideDefaults(
+        bool overrideDefaults,
+        string expectedScope
+    )
+    {
+        var manager = new RecordingNpm();
+        var previousDefaults = InstallOptionsFactory.LoadForManager(manager);
+        try
+        {
+            InstallOptionsFactory.SaveForManager(
+                new InstallOptions { InstallationScope = PackageScope.User },
+                manager
+            );
+            var imported = new ImportedPackage(
+                new SerializablePackage
+                {
+                    Id = $"legacy-{Guid.NewGuid():N}",
+                    Name = "Legacy bundle fixture",
+                    Version = "1.0",
+                    InstallationOptions = new InstallOptions(new System.Text.Json.Nodes.JsonObject
+                    {
+                        [nameof(InstallOptions.InstallationScope)] = PackageScope.Machine,
+                        [nameof(InstallOptions.OverridesNextLevelOpts)] = overrideDefaults,
+                    }),
+                },
+                manager,
+                manager.DefaultSource
+            );
+            var registered = await imported.RegisterAndGetPackageAsync();
+
+            var options = await imported.LoadOptionsForInstallationAsync(registered);
+
+            Assert.Equal(expectedScope, options.InstallationScope);
+        }
+        finally
+        {
+            InstallOptionsFactory.SaveForManager(previousDefaults, manager);
+        }
+    }
+
     // Records the parameters npm's own helper emits and completes without starting a process.
     private sealed class RecordingNpm : Npm
     {
-        public List<(string Scope, IReadOnlyList<string> Parameters)> Emitted { get; } = [];
+        public List<(string Scope, IReadOnlyList<string> Parameters, string Version, string Architecture, bool PreRelease)> Emitted { get; } = [];
 
         public RecordingNpm()
         {
@@ -219,7 +341,7 @@ public sealed class IpcOperationScopeTests : IDisposable
 
     private sealed class RecordingPip : Pip
     {
-        public List<(string Scope, IReadOnlyList<string> Parameters)> Emitted { get; } = [];
+        public List<(string Scope, IReadOnlyList<string> Parameters, string Version, string Architecture, bool PreRelease)> Emitted { get; } = [];
 
         public RecordingPip()
         {
@@ -238,7 +360,7 @@ public sealed class IpcOperationScopeTests : IDisposable
     private sealed class RecordingHelper(
         IPackageManager manager,
         IPackageOperationHelper original,
-        List<(string Scope, IReadOnlyList<string> Parameters)> emitted
+        List<(string Scope, IReadOnlyList<string> Parameters, string Version, string Architecture, bool PreRelease)> emitted
     ) : BasePkgOperationHelper(manager), IManagedPackageOperationHelper
     {
         public Task<OperationVeredict?> TryPerformAsync(
@@ -250,7 +372,8 @@ public sealed class IpcOperationScopeTests : IDisposable
             CancellationToken cancellationToken
         )
         {
-            emitted.Add((options.InstallationScope, original.GetParameters(package, options, operation)));
+            emitted.Add((options.InstallationScope, original.GetParameters(package, options, operation),
+                options.Version, options.Architecture, options.PreRelease));
             return Task.FromResult<OperationVeredict?>(OperationVeredict.Success);
         }
 

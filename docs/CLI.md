@@ -592,6 +592,8 @@ Windows only. A folder rule names the subfolder of the current user's Start Menu
 | `bundle remove` | `--id <package-id>` | `--manager <id>`, `--source <source>`, `--version <version>`, `--scope <scope>`, `--pre-release`, `--selection <mode>` | Removes matching package entries from the bundle. |
 | `bundle install` | None | `--include-installed true\|false`, `--elevated true\|false`, `--interactive true\|false`, `--skip-hash true\|false` | Installs the bundle through UniGetUI’s shared operation pipeline. |
 
+An explicitly requested scope on a bundle entry is used for its installation while other inherited options continue to follow manager defaults.
+
 ### Packages
 
 | Command | Required options | Optional options | Notes |

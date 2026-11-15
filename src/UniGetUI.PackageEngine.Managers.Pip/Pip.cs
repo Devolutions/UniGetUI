@@ -127,10 +127,19 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 + $"@{proxyUri.AbsoluteUri.Replace($"{proxyUri.Scheme}://", "")}";
         }
 
-        // In-memory cache of all PyPI package names, shared across searches
+        // In-memory cache of all PyPI package names, shared across searches. The index is close
+        // to a million names (tens of MB once loaded), so it is only kept while searches are
+        // being made: it is dropped after MemoryCacheIdleLifetime without one, and read back from
+        // the file cache by the next search.
         private static string[]? _cachedNames;
         private static DateTime _cacheTimestamp = DateTime.MinValue;
         private static readonly object _cacheLock = new();
+        internal static TimeSpan MemoryCacheIdleLifetime { get; set; } = TimeSpan.FromMinutes(2);
+        private static long _cacheUseStamp;
+        internal static bool IsIndexHeldInMemory
+        {
+            get { lock (_cacheLock) return _cachedNames is not null; }
+        }
         private const int CacheMaxAgeHours = 24;
         private const int MaxSearchResults = 20;
 
@@ -187,7 +196,41 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             }
         }
 
+        private static string IndexCacheFile =>
+            Path.Join(CoreData.UniGetUICacheDirectory_Data, "pip_simple_index.cache");
+
+        private static bool IsIndexFileFresh(string cacheFile) =>
+            File.Exists(cacheFile)
+            && (DateTime.Now - File.GetLastWriteTime(cacheFile)).TotalHours < CacheMaxAgeHours;
+
         private static string[] GetOrRefreshIndex(INativeTaskLogger logger)
+        {
+            try
+            {
+                return GetOrRefreshIndexCore(logger);
+            }
+            finally
+            {
+                ScheduleIndexRelease();
+            }
+        }
+
+        // Drops the in-memory index once no search has used it for MemoryCacheIdleLifetime.
+        internal static void ScheduleIndexRelease()
+        {
+            long stamp = Interlocked.Increment(ref _cacheUseStamp);
+            TimeSpan lifetime = MemoryCacheIdleLifetime;
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(lifetime).ConfigureAwait(false);
+                if (stamp != Interlocked.Read(ref _cacheUseStamp))
+                    return;
+
+                lock (_cacheLock) { _cachedNames = null; }
+            });
+        }
+
+        private static string[] GetOrRefreshIndexCore(INativeTaskLogger logger)
         {
             lock (_cacheLock)
             {
@@ -195,10 +238,10 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                     return _cachedNames;
             }
 
-            string cacheFile = Path.Join(CoreData.UniGetUICacheDirectory_Data, "pip_simple_index.cache");
+            string cacheFile = IndexCacheFile;
 
             // Use file cache if fresh enough
-            if (File.Exists(cacheFile) && (DateTime.Now - File.GetLastWriteTime(cacheFile)).TotalHours < CacheMaxAgeHours)
+            if (IsIndexFileFresh(cacheFile))
             {
                 logger.Log($"Loading PyPI index from file cache ({File.GetLastWriteTime(cacheFile):g})");
                 string[] cached = File.ReadAllLines(cacheFile);
@@ -221,7 +264,9 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"PyPI simple index returned {(int)response.StatusCode} {response.ReasonPhrase}");
 
-            string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            // Parsed straight from the response bytes: as a string plus a JSON document tree the
+            // ~38 MB index transiently cost several hundred MB.
+            byte[] json = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
             string[] names = ParseSimpleIndexProjectNames(json);
 
             logger.Log($"Downloaded {names.Length} package names from PyPI");
@@ -242,14 +287,52 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             return names;
         }
 
-        internal static string[] ParseSimpleIndexProjectNames(string json)
+        internal static string[] ParseSimpleIndexProjectNames(string json) =>
+            ParseSimpleIndexProjectNames(Encoding.UTF8.GetBytes(json));
+
+        // Reads {"projects": [{"name": "..."}, ...]} token by token, keeping only the names.
+        internal static string[] ParseSimpleIndexProjectNames(ReadOnlySpan<byte> utf8Json)
         {
-            var projects = (JsonNode.Parse(json) as JsonObject)?["projects"] as JsonArray;
-            string[] names = projects?
-                .Select(p => p?["name"]?.GetValue<string>())
-                .Where(n => !string.IsNullOrEmpty(n))
-                .Select(n => n!)
-                .ToArray() ?? [];
+            List<string> found = [];
+            var reader = new Utf8JsonReader(utf8Json);
+            bool inProjects = false;
+            while (reader.Read())
+            {
+                if (!inProjects)
+                {
+                    if (reader.TokenType is JsonTokenType.PropertyName && reader.CurrentDepth == 1)
+                    {
+                        bool isProjects = reader.ValueTextEquals("projects");
+                        reader.Read();
+                        if (isProjects && reader.TokenType is JsonTokenType.StartArray)
+                            inProjects = true;
+                        else
+                            reader.Skip();
+                    }
+                    continue;
+                }
+
+                if (reader.TokenType is JsonTokenType.EndArray && reader.CurrentDepth == 1)
+                    break;
+
+                if (reader.TokenType is JsonTokenType.PropertyName && reader.CurrentDepth == 3)
+                {
+                    bool isName = reader.ValueTextEquals("name");
+                    reader.Read();
+                    if (isName && reader.TokenType is JsonTokenType.String)
+                    {
+                        string? name = reader.GetString();
+                        if (!string.IsNullOrEmpty(name))
+                            found.Add(name);
+                    }
+                    else
+                    {
+                        reader.Skip();
+                    }
+                }
+            }
+
+            string[] names = found.ToArray();
 
             if (names.Length == 0)
                 throw new InvalidDataException("PyPI simple index returned 0 packages — response may be malformed");
@@ -1324,7 +1407,9 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
                 try
                 {
-                    GetOrRefreshIndex(logger);
+                    // Only the file needs to be ready; a fresh one is not loaded until a search.
+                    if (!IsIndexFileFresh(IndexCacheFile))
+                        GetOrRefreshIndex(logger);
                     logger.Close(0);
                 }
                 catch (Exception e)

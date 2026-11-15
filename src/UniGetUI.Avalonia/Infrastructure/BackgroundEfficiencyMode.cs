@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using Avalonia.Threading;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Interface;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 
@@ -61,6 +62,10 @@ internal static partial class BackgroundEfficiencyMode
         {
             _subscribedToManagersLoaded = true;
             PEInterface.ManagersLoaded += (_, _) => Refresh();
+
+            // Operations started over IPC (the command line) are not in the shell's operation
+            // list, so they are followed where every operation is tracked.
+            IpcOperationApi.ActivityChanged += (_, _) => Refresh();
         }
 
         bool wanted = ShouldBeEnabled(
@@ -69,6 +74,7 @@ internal static partial class BackgroundEfficiencyMode
             PEInterface.AreManagersLoaded,
             AvaloniaOperationRegistry.Operations.Any(operation =>
                 operation.Status is OperationStatus.InQueue or OperationStatus.Running)
+                || IpcOperationApi.HasActiveOperations()
         );
 
         if (wanted == _enabled)

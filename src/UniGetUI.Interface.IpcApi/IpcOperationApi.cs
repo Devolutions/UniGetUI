@@ -119,6 +119,19 @@ public static class IpcOperationApi
     private static readonly ConcurrentDictionary<string, TrackedOperation> Operations = new();
     private const int MaxTrackedOperations = 200;
 
+    /// <summary>
+    /// Raised when an operation starts being tracked or a tracked operation changes status,
+    /// on whichever thread did it. Every operation is tracked here, including the ones started
+    /// over IPC (the command line), which never reach the shell's own operation list.
+    /// </summary>
+    public static event EventHandler? ActivityChanged;
+
+    /// <summary>Whether any tracked operation is queued or running.</summary>
+    public static bool HasActiveOperations()
+    {
+        return Operations.Values.Any(entry => IsActive(entry.Operation.Status));
+    }
+
     public static string Track(AbstractOperation operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
@@ -130,13 +143,18 @@ public static class IpcOperationApi
             {
                 var tracked = new TrackedOperation(operation);
                 operation.LogLineAdded += (_, line) => tracked.AddLine(line.Item1, line.Item2);
-                operation.StatusChanged += (_, _) => tracked.Touch();
+                operation.StatusChanged += (_, _) =>
+                {
+                    tracked.Touch();
+                    ActivityChanged?.Invoke(null, EventArgs.Empty);
+                };
                 operation.OperationFinished += (_, _) => tracked.Touch();
                 return tracked;
             }
         );
 
         PruneCompletedOperations();
+        ActivityChanged?.Invoke(null, EventArgs.Empty);
         return operationId;
     }
 

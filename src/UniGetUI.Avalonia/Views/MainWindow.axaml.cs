@@ -2388,7 +2388,10 @@ public partial class MainWindow : Window
     public void UpdateSystemTrayStatus() => _trayService?.UpdateStatus();
 
     private void UpdateOnScreenState()
-        => _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+    {
+        _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+        BackgroundEfficiencyMode.Refresh();
+    }
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level, string? launchAction = null) =>
         ShowBanner(title, message, level, launchAction);

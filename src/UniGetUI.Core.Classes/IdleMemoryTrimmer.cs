@@ -1,4 +1,5 @@
 using System.Runtime;
+using System.Runtime.InteropServices;
 using UniGetUI.Core.Logging;
 
 namespace UniGetUI.Core.Classes;
@@ -68,10 +69,35 @@ public static class IdleMemoryTrimmer
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
         long after = GC.GetTotalMemory(forceFullCollection: false);
         long committedAfter = GC.GetGCMemoryInfo().TotalCommittedBytes;
+        TrimNativeHeap();
         Interlocked.Increment(ref _trimCount);
         Logger.Debug(
             $"Trimmed memory while idle: managed heap {before / 1048576.0:F1} MB -> {after / 1048576.0:F1} MB"
                 + $" (committed {committedBefore / 1048576.0:F1} MB -> {committedAfter / 1048576.0:F1} MB)"
         );
     }
+
+    // On Linux, memory freed by native code (the runtime itself, TLS, compression, child
+    // process plumbing) goes back to glibc's allocator, which keeps it for reuse rather than
+    // returning it to the system, so the process creeps up over many update checks.
+    // malloc_trim hands those free pages back. Other C libraries (musl) do not have it.
+    private static bool _nativeTrimUnavailable;
+
+    private static void TrimNativeHeap()
+    {
+        if (!OperatingSystem.IsLinux() || _nativeTrimUnavailable)
+            return;
+
+        try
+        {
+            _ = malloc_trim(0);
+        }
+        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException)
+        {
+            _nativeTrimUnavailable = true;
+        }
+    }
+
+    [DllImport("libc")]
+    private static extern int malloc_trim(nuint pad);
 }

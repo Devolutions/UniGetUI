@@ -3,8 +3,6 @@ using UniGetUI.Interface;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
-using UniGetUI.PackageEngine.Managers.BunManager;
-using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -48,35 +46,19 @@ public sealed class IpcInstalledScopeTests
         using var document = JsonDocument.Parse(json);
         Assert.True(document.RootElement[0].TryGetProperty("reportedScope", out var reportedScope));
         Assert.Equal(PackageScope.User, reportedScope.GetString());
+        Assert.False(document.RootElement[0].TryGetProperty("sourceName", out _));
         var parsed = IpcJson.Deserialize<IpcPackageInfo[]>(json);
 
         var entry = Assert.Single(parsed!);
         Assert.Equal(PackageScope.User, entry.ReportedScope);
-        Assert.Equal("", entry.SourceName);
     }
 
-    [Theory]
-    [InlineData("pip")]
-    [InlineData("npm")]
-    [InlineData("bun")]
-    public async Task InstalledInventoryDoesNotReportAnAssignedDefaultSourceAsOrigin(string managerId)
+    [Fact]
+    public void PackageDetailsJsonDoesNotAddCanonicalSourceName()
     {
-        IPackageManager manager = managerId switch
-        {
-            "pip" => new Pip(),
-            "npm" => new Npm(),
-            "bun" => new Bun(),
-            _ => throw new ArgumentOutOfRangeException(nameof(managerId)),
-        };
-        _ = new DiscoverablePackagesLoader([manager]);
-        _ = new UpgradablePackagesLoader([manager]);
-        var loader = new InstalledPackagesLoader([manager]);
-        await loader.AddForeign(new Package("Requests", "requests", "2.0", manager.DefaultSource, manager));
+        using var document = JsonDocument.Parse(IpcJson.Serialize(new IpcPackageDetailsInfo()));
 
-        var entry = Assert.Single(IpcPackageApi.ListInstalledPackages());
-
-        Assert.Equal("", entry.SourceName);
-        Assert.Equal(manager.DefaultSource.AsString_DisplayName, entry.Source);
+        Assert.False(document.RootElement.TryGetProperty("sourceName", out _));
     }
 
     [Fact]
@@ -246,7 +228,7 @@ public sealed class IpcInstalledScopeTests
     }
 
     [Fact]
-    public async Task LocalVersionLookupAcceptsAnAmbiguousDisplaySource()
+    public async Task LocalPackageLookupAcceptsAnAmbiguousDisplaySource()
     {
         var (manager, loader) = CreateInstalledLoader();
         var first = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
@@ -255,18 +237,18 @@ public sealed class IpcInstalledScopeTests
         await loader.AddForeign(new Package("Requests", "requests", "2.0", second, manager));
         await UpgradablePackagesLoader.Instance.AddForeign(new Package("Other", "other", "1.0", first, manager));
 
-        var result = IpcPackageApi.GetPackageVersionsInfo(new IpcPackageActionRequest
+        var result = IpcPackageApi.ResolvePackage(new IpcPackageActionRequest
         {
             PackageId = "requests",
             ManagerName = manager.Id,
             PackageSource = first.AsString_DisplayName,
         });
 
-        Assert.Equal(first.AsString_DisplayName, result.Source);
+        Assert.Equal(first.AsString_DisplayName, result.Source.AsString_DisplayName);
     }
 
     [Fact]
-    public async Task LocalVersionLookupKeepsTheOriginalScopeSelection()
+    public async Task LocalPackageLookupKeepsTheOriginalScopeSelection()
     {
         var manager = new PowerShell7();
         _ = new DiscoverablePackagesLoader([manager]);
@@ -284,14 +266,14 @@ public sealed class IpcInstalledScopeTests
 
         var previouslySelected = loader.Packages.First(package => package.Id == "requests");
         var otherScope = previouslySelected.ReportedScope == PackageScope.User ? PackageScope.Machine : PackageScope.User;
-        var result = IpcPackageApi.GetPackageVersionsInfo(new IpcPackageActionRequest
+        var result = IpcPackageApi.ResolvePackage(new IpcPackageActionRequest
         {
             PackageId = "requests",
             ManagerName = manager.Id,
             Scope = otherScope,
         });
 
-        Assert.Equal(previouslySelected.Source.AsString_DisplayName, result.Source);
+        Assert.Equal(previouslySelected.Source.AsString_DisplayName, result.Source.AsString_DisplayName);
     }
 
     [Fact]
@@ -304,21 +286,4 @@ public sealed class IpcInstalledScopeTests
         Assert.Equal("registry:a", ResolveInstalled(manager, "REGISTRY:A").Source.Name);
     }
 
-    [Fact]
-    public void VersionLookupNamesItsSourceThroughSourceGeneratedJson()
-    {
-        var info = new IpcPackageVersionsInfo
-        {
-            Id = "requests",
-            Manager = "pip",
-            Source = "pip",
-            SourceName = "registry:a",
-            Versions = ["2.0", "1.0"],
-        };
-
-        var parsed = IpcJson.Deserialize<IpcPackageVersionsInfo>(IpcJson.Serialize(info));
-
-        Assert.Equal("registry:a", parsed!.SourceName);
-        Assert.Equal(["2.0", "1.0"], parsed.Versions);
-    }
 }

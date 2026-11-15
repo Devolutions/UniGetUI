@@ -1062,17 +1062,6 @@ public sealed class IpcClient : IDisposable
         ) ?? [];
     }
 
-    public async Task<IpcPackageVersionsInfo?> GetPackageVersionsInfoAsync(
-        IpcPackageActionRequest request
-    )
-    {
-        return await ReadAuthenticatedJsonAsync<IpcPackageVersionsInfo>(
-            HttpMethod.Get,
-            IpcHttpRoutes.Path("/packages/version-info"),
-            BuildPackageQueryParameters(request)
-        );
-    }
-
     public async Task<IReadOnlyList<IpcIgnoredUpdateInfo>> ListIgnoredUpdatesAsync()
     {
         return await ReadAuthenticatedJsonAsync<IReadOnlyList<IpcIgnoredUpdateInfo>>(

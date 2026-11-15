@@ -40,13 +40,11 @@ public sealed class IpcRemoteInventoryTests
         var json = IpcJson.Serialize(projected.ToArray()) + IpcJson.Serialize(sources.ToArray());
 
         Assert.DoesNotContain(Secret, json, StringComparison.Ordinal);
-        Assert.Equal("", projected.Single(package => package.Id == "secret").SourceName);
-        Assert.Equal("", projected.Single(package => package.Id == "safe").SourceName);
-        Assert.All(projected.Where(package => package.Id is "a" or "b"), package => Assert.Equal("", package.SourceName));
+        Assert.DoesNotContain("\"sourceName\":", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void AssignedOriginIsReportedUnknownWithItsDisplayLabelKept()
+    public void SourceResolutionCannotInferInstalledOrigin()
     {
         var manager = new Pip();
         var capabilities = manager.Capabilities;
@@ -58,15 +56,13 @@ public sealed class IpcRemoteInventoryTests
         foreach (var installed in new[] { true, false })
         {
             var info = IpcRemoteInventory.ProjectPackages(packages, installed, new HashSet<string>()).Single();
-            Assert.Equal("", info.SourceName);
             Assert.Equal(feed.AsString_DisplayName, info.Source);
         }
 
         var unverified = new ManagerSource(new Pip(), "nuget.org", feed.Url);
         IPackage[] withoutProvenance = [new Package("Tool", "tool", "1.0", unverified, unverified.Manager)];
-        Assert.Equal(
-            "",
-            IpcRemoteInventory.ProjectPackages(withoutProvenance, installed: true, new HashSet<string>()).Single().SourceName);
+        Assert.Equal(unverified.AsString_DisplayName,
+            IpcRemoteInventory.ProjectPackages(withoutProvenance, installed: true, new HashSet<string>()).Single().Source);
         Assert.True(unverified.Manager.Capabilities.InstalledPackagesKeepTheirSource);
         Assert.Equal(
             RemoteSourceResolution.OriginUnknown,
@@ -105,7 +101,6 @@ public sealed class IpcRemoteInventoryTests
             Assert.Equal("pwsh", package.Manager);
             Assert.Equal("XKCD", package.Id);
             Assert.Equal(PackageScope.User, package.ReportedScope);
-            Assert.Equal("", package.SourceName);
         });
         Assert.Equal(["1.12.6", "1.9.0"], packages.Select(package => package.Version).Order(StringComparer.Ordinal));
     }

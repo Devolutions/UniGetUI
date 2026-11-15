@@ -165,7 +165,7 @@ public static class IpcRemoteInventory
         return distinct
             .Select(package =>
             {
-                var info = IpcPackageApi.ToIpcInstalledPackageInfo(package, pendingRestartKeys);
+                var info = IpcPackageApi.ToIpcPackageInfo(package, pendingRestartKeys);
                 info.Source = SafeText(info.Source);
                 return info;
             })

@@ -290,10 +290,6 @@ namespace UniGetUI.Interface
                 V3_GetPackageVersions
             );
             endpoints.MapGet(
-                IpcHttpRoutes.Path("/packages/version-info"),
-                V3_GetPackageVersionsInfo
-            );
-            endpoints.MapGet(
                 IpcHttpRoutes.Path("/packages/ignored"),
                 V3_ListIgnoredUpdates
             );
@@ -1654,26 +1650,6 @@ namespace UniGetUI.Interface
 
         private async Task V3_GetPackageVersions(HttpContext context)
         {
-            await WritePackageVersionsAsync(
-                context,
-                request => context.Response.WriteAsJsonAsync(IpcPackageApi.GetPackageVersions(request), IpcJson.Options)
-            );
-        }
-
-        // Like /packages/versions, but names the package and canonical source the versions belong to.
-        private async Task V3_GetPackageVersionsInfo(HttpContext context)
-        {
-            await WritePackageVersionsAsync(
-                context,
-                request => context.Response.WriteAsJsonAsync(IpcPackageApi.GetPackageVersionsInfo(request), IpcJson.Options)
-            );
-        }
-
-        private static async Task WritePackageVersionsAsync(
-            HttpContext context,
-            Func<IpcPackageActionRequest, Task> write
-        )
-        {
             if (!AuthenticateToken(context.Request.Query["token"]))
             {
                 context.Response.StatusCode = 401;
@@ -1690,7 +1666,10 @@ namespace UniGetUI.Interface
 
             try
             {
-                await write(BuildPackageActionRequest(context.Request));
+                await context.Response.WriteAsJsonAsync(
+                    IpcPackageApi.GetPackageVersions(BuildPackageActionRequest(context.Request)),
+                    IpcJson.Options
+                );
             }
             catch (InvalidOperationException ex)
             {

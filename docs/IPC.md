@@ -73,10 +73,8 @@ When the client **does** receive an explicit override:
 
 On Windows, an unelevated GUI session separately attempts to register with the local Devolutions Agent service.
 Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
-The Agent currently rejects executables under user-writable directories, including the default per-user installation.
-For the beta, install UniGetUI for all users in an administrator-protected directory.
 This connection is separate from the local IPC API and remains active when that API is disabled.
-The registration endpoint exposes manager metadata, but remote inventory, source and version queries, and package operations are unavailable until their safety requirements are implemented.
+The registration connection answers `ListManagers`, reports installed packages, updates, sources, and version requests as unavailable, and rejects package operations without starting them.
 Unavailable remote operations never fall back to local package execution.
 
 ## Authentication
@@ -408,7 +406,6 @@ packages this machine is waiting on a restart for. See
 [Pending machine restarts](#pending-machine-restarts).
 
 `reportedScope` preserves the scope value assigned when the package was listed, or `null` when no scope was supplied; it does not establish user or machine ownership.
-Installed-package responses leave `sourceName` empty until the installed origin can be verified; the existing `source` display label remains available.
 
 | Method | Path | Auth | Parameters/body | CLI equivalent | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -417,7 +414,6 @@ Installed-package responses leave `sourceName` empty until the installed origin 
 | `GET` | `/uniget/v1/packages/updates` | Yes | Optional query `manager` | `package updates` | Upgradable packages. |
 | `GET` | `/uniget/v1/packages/details` | Yes | Package action query set | `package details` | Details payload. |
 | `GET` | `/uniget/v1/packages/versions` | Yes | Package action query set | `package versions` | Installable versions. |
-| `GET` | `/uniget/v1/packages/version-info` | Yes | Package action query set | None | Installable versions with the resolved package's `source` label and canonical `sourceName`. |
 | `GET` | `/uniget/v1/packages/ignored` | Yes | None | `package ignored list` | Ignored-update rules. |
 | `POST` | `/uniget/v1/packages/ignore` | Yes | Package action query set | `package ignored add` | Adds ignored-update rule. |
 | `POST` | `/uniget/v1/packages/unignore` | Yes | Package action query set | `package ignored remove` | Removes ignored-update rule. |

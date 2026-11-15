@@ -13,8 +13,6 @@ namespace UniGetUI.Interface.AgentRegistration;
 /// </summary>
 internal interface IAgentRegistrationBackend
 {
-    IReadOnlyList<IpcManagerInfo> ListManagers();
-
     /// <summary>The last completed scans, or null when inventory is unavailable.</summary>
     RemoteInventorySnapshot? TryGetInventorySnapshot();
 
@@ -48,8 +46,6 @@ internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
         _submitter = submitter ?? new BrokerRemoteGrantSubmitter();
     }
 
-    public IReadOnlyList<IpcManagerInfo> ListManagers() => IpcRemoteInventory.ListManagers();
-
     public RemoteInventorySnapshot? TryGetInventorySnapshot() =>
         IpcRemoteInventory.TryGetInventorySnapshot();
 
@@ -72,9 +68,20 @@ internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
             return false;
         }
 
+        long loadGeneration = loader.LoadGeneration;
+        var scan = loader.LastCompletedScan;
+        if (scan is null || loader.LastLoadReportedFailures
+            || !scan.SucceededManagers.Any(manager =>
+                IpcManagerSettingsApi.GetPublicManagerId(manager) == managerId))
+        {
+            return false;
+        }
+
         var packages = loader.Packages;
-        // A reload that started while copying clears the list first, so the copy may be partial.
-        if (!loader.IsLoaded || loader.IsLoading)
+        // A reload that finishes while copying also makes the copied list unreliable.
+        if (!loader.IsLoaded || loader.IsLoading || loader.LastLoadReportedFailures
+            || loadGeneration != loader.LoadGeneration
+            || !ReferenceEquals(scan, loader.LastCompletedScan))
         {
             return false;
         }

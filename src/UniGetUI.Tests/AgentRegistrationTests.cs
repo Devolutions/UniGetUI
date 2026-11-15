@@ -85,7 +85,7 @@ public class AgentRegistrationTests
     {
         public ManualResetEventSlim SourcesGate { get; } = new(true);
         public int Calls;
-        public RemoteInventorySnapshot? Snapshot;
+        public RemoteInventorySnapshot? Snapshot = new(DateTime.UtcNow, null, [], [], [], []);
         public bool OperationsEnabled = true;
         public bool UniqueRow = true;
         public RemoteGrantDelivery Delivery = RemoteGrantDelivery.MaybeSent;
@@ -94,16 +94,10 @@ public class AgentRegistrationTests
         public readonly List<(string Manager, string Package, string Scope)> UniqueRowChecks = [];
         public readonly List<(RemoteGrantPlan Plan, string Grant)> Submitted = [];
 
-        public IReadOnlyList<IpcManagerInfo> ListManagers()
-        {
-            Interlocked.Increment(ref Calls);
-            SourcesGate.Wait();
-            return [];
-        }
-
         public RemoteInventorySnapshot? TryGetInventorySnapshot()
         {
             Interlocked.Increment(ref Calls);
+            SourcesGate.Wait();
             return Snapshot;
         }
 
@@ -422,7 +416,7 @@ public class AgentRegistrationTests
         Assert.False(h.Registered);
 
         await h.SendAsync("""{"kind":"Welcome","protocolVersion":1,"extra":[1]}""");
-        JsonElement pong = await h.RequestAsync(Uuid1, "ListManagers");
+        JsonElement pong = await h.RequestAsync(Uuid1, "GetInventorySnapshot");
         Assert.True(pong.GetProperty("ok").GetBoolean());
         Assert.True(h.Registered);
     }
@@ -440,7 +434,7 @@ public class AgentRegistrationTests
 
         Assert.False(h.Session.IsCompleted);
         await h.SendAsync("""{"kind":"Welcome","protocolVersion":1}""");
-        Assert.True((await h.RequestAsync(Uuid1, "ListManagers")).GetProperty("ok").GetBoolean());
+        Assert.True((await h.RequestAsync(Uuid1, "GetInventorySnapshot")).GetProperty("ok").GetBoolean());
         Assert.True(h.Registered);
     }
 
@@ -505,7 +499,7 @@ public class AgentRegistrationTests
         var h = new Harness();
         await h.WelcomeAsync();
         await h.SendAsync(
-            $$"""{"kind":"Request","id":"{{Uuid1}}","command":"ListManagers","arguments":{"x":1},"future":true}"""
+            $$"""{"kind":"Request","id":"{{Uuid1}}","command":"GetInventorySnapshot","arguments":{"x":1},"future":true}"""
         );
         JsonElement ok = (await h.ReadAsync())!.Value;
         Assert.Equal(Uuid1, ok.GetProperty("id").GetString());
@@ -521,7 +515,7 @@ public class AgentRegistrationTests
         var h = new Harness();
         h.Backend.SourcesGate.Reset();
         await h.WelcomeAsync();
-        await h.SendAsync($$"""{"kind":"Request","id":"{{Uuid1}}","command":"ListManagers","arguments":{} }""");
+        await h.SendAsync($$"""{"kind":"Request","id":"{{Uuid1}}","command":"GetInventorySnapshot","arguments":{} }""");
         JsonElement second = await h.RequestAsync(Uuid2, "ListSources");
         Assert.Equal(Uuid2, second.GetProperty("id").GetString());
 
@@ -539,7 +533,7 @@ public class AgentRegistrationTests
         for (int i = 0; i < 8; i++)
         {
             string id = $"00000000-0000-0000-0000-00000000000{i}";
-            await h.SendAsync($$"""{"kind":"Request","id":"{{id}}","command":"ListManagers","arguments":{} }""");
+            await h.SendAsync($$"""{"kind":"Request","id":"{{id}}","command":"GetInventorySnapshot","arguments":{} }""");
         }
 
         JsonElement busy = await h.RequestAsync(Uuid1, "ListSources");
@@ -555,7 +549,9 @@ public class AgentRegistrationTests
     [InlineData("ListInstalledPackages")]
     [InlineData("ListPackageUpdates")]
     [InlineData("ListSources")]
-    public async Task UnisolatedInventoryCommandsFailWithoutInvokingTheBackend(string command)
+    [InlineData("GetPackageVersions")]
+    [InlineData("ListManagers")]
+    public async Task UnlistedCommandsAreUnsupportedWithoutInvokingTheBackend(string command)
     {
         var h = new Harness();
         await h.WelcomeAsync();
@@ -563,7 +559,7 @@ public class AgentRegistrationTests
 
         Assert.False(response.GetProperty("ok").GetBoolean());
         Assert.False(response.TryGetProperty("result", out _));
-        Assert.Equal("Failed", ErrorCode(response));
+        Assert.Equal("UnsupportedCommand", ErrorCode(response));
         Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
     }
 
@@ -605,33 +601,6 @@ public class AgentRegistrationTests
     }
 
     [Theory]
-    [InlineData("""{"manager":"WinGet","sourceName":"","packageId":"p"}""")]
-    [InlineData("""{"manager":"","sourceName":"feed","packageId":"p"}""")]
-    [InlineData("""{"manager":"WinGet","sourceName":"feed"}""")]
-    [InlineData("""{"manager":"WinGet","sourceName":7,"packageId":"p"}""")]
-    public async Task GetPackageVersionsRejectsBadArguments(string args)
-    {
-        var h = new Harness();
-        await h.WelcomeAsync();
-        Assert.Equal("InvalidArguments", ErrorCode(await h.RequestAsync(Uuid1, "GetPackageVersions", args)));
-    }
-
-    [Fact]
-    public async Task GetPackageVersionsFailsClosedWithoutEchoingInput()
-    {
-        var h = new Harness();
-        await h.WelcomeAsync();
-        JsonElement response = await h.RequestAsync(
-            Uuid1,
-            "GetPackageVersions",
-            """{"manager":"WinGet","sourceName":"https://user:pw@feed.example/x","packageId":"Secret.Pkg"}"""
-        );
-        Assert.Equal("Failed", ErrorCode(response));
-        string text = response.GetRawText();
-        Assert.DoesNotContain("feed.example", text);
-        Assert.DoesNotContain("Secret.Pkg", text);
-    }
-    [Theory]
     [InlineData("Install", "User", "feed", null, "bad grant!", Uuid1, Uuid2)]
     [InlineData("Install", "User", "feed", null, "", Uuid1, Uuid2)]
     [InlineData("Install", "User", "feed", null, "-leading", Uuid1, Uuid2)]
@@ -662,6 +631,22 @@ public class AgentRegistrationTests
         Assert.Equal("InvalidArguments", ErrorCode(response));
         Assert.DoesNotContain("SECRET", response.GetRawText());
         Assert.Empty(h.Backend.FoundManagers);
+        Assert.Empty(h.Backend.Submitted);
+    }
+
+    [Theory]
+    [InlineData(""","customParameters":["--unsafe"]}""")]
+    [InlineData(""","unrelatedFutureField":true}""")]
+    [InlineData(""","scope":"Machine"}""")]
+    public async Task ExecutePackageOperationRejectsUnexpectedOrDuplicateArguments(string extra)
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        string args = Op()[..^1] + extra;
+
+        JsonElement response = await h.RequestAsync(Uuid1, "ExecutePackageOperation", args);
+
+        Assert.Equal("InvalidArguments", ErrorCode(response));
         Assert.Empty(h.Backend.Submitted);
     }
 
@@ -821,6 +806,7 @@ public class AgentRegistrationTests
     public async Task UnavailableInventoryFails()
     {
         var h = new Harness();
+        h.Backend.Snapshot = null;
         await h.WelcomeAsync();
         JsonElement response = await h.RequestAsync(Uuid1, "GetInventorySnapshot");
 

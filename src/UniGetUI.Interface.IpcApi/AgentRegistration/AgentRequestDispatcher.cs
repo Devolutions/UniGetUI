@@ -17,12 +17,8 @@ internal sealed class AgentRequestDispatcher
     private const string InvalidMessage = "The request arguments are invalid.";
     private const string BusyMessage = "UniGetUI is busy; try again later.";
     private const string FailedMessage = "The request could not be completed.";
-    private const string ListUnavailableMessage =
-        "Use GetInventorySnapshot for remote package inventory.";
     private const string InventoryUnavailableMessage =
         "No completed package scan covers every enabled package manager.";
-    private const string VersionsUnavailableMessage =
-        "Remote version lookup is not available in this UniGetUI build.";
     private const string OperationsDisabledMessage =
         "Package operations through the Devolutions Agent are disabled; nothing was started.";
     private const string ScopeNotAllowedMessage =
@@ -63,16 +59,7 @@ internal sealed class AgentRequestDispatcher
 
             byte[] response = command switch
             {
-                // The snapshot carries these lists with their scan times; serving them alone
-                // would hide whether they came from a completed scan.
-                "ListInstalledPackages" or "ListPackageUpdates" or "ListSources" => Error(
-                    id,
-                    "Failed",
-                    ListUnavailableMessage
-                ),
-                "ListManagers" => OkRaw(id, IpcJson.Serialize(_backend.ListManagers())),
                 "GetInventorySnapshot" => GetInventorySnapshot(id),
-                "GetPackageVersions" => GetPackageVersions(id, arguments),
                 "ExecutePackageOperation" => await ExecutePackageOperationAsync(
                         id,
                         arguments,
@@ -96,23 +83,6 @@ internal sealed class AgentRequestDispatcher
 
     public static byte[] InvalidArguments(string id) =>
         Error(id, "InvalidArguments", InvalidMessage);
-
-    private static byte[] GetPackageVersions(string id, JsonElement args)
-    {
-        if (
-            !TryGetString(args, "manager", out string manager)
-            || !TryGetString(args, "sourceName", out string sourceName)
-            || !TryGetString(args, "packageId", out string packageId)
-            || manager.Length == 0
-            || sourceName.Length == 0
-            || packageId.Length == 0
-        )
-        {
-            return Error(id, "InvalidArguments", InvalidMessage);
-        }
-
-        return Error(id, "Failed", VersionsUnavailableMessage);
-    }
 
     private byte[] GetInventorySnapshot(string id)
     {
@@ -210,7 +180,8 @@ internal sealed class AgentRequestDispatcher
     )
     {
         if (
-            !TryGetString(args, "operationId", out string operationId)
+            !HasOnlyOperationArguments(args)
+            || !TryGetString(args, "operationId", out string operationId)
             || !IsLowercaseUuid(operationId)
             || !TryGetString(args, "brokerRequestId", out string brokerRequestId)
             || !IsLowercaseUuid(brokerRequestId)
@@ -366,6 +337,24 @@ internal sealed class AgentRequestDispatcher
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    private static bool HasOnlyOperationArguments(JsonElement args)
+    {
+        if (args.ValueKind != JsonValueKind.Object)
+            return false;
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in args.EnumerateObject())
+        {
+            if (property.Name is not (
+                "operationId" or "brokerRequestId" or "operation" or "manager" or "sourceName"
+                or "packageId" or "version" or "scope" or "reportedScope" or "grant")
+                || !seen.Add(property.Name))
+                return false;
         }
 
         return true;

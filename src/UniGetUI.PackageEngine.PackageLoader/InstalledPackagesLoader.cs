@@ -60,6 +60,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
             try
             {
+                AdvanceLoadGeneration();
                 IsLoading = true;
                 InvokeStartedLoadingEvent();
 

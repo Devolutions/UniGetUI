@@ -38,6 +38,10 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public bool LastLoadReportedFailures { get; private set; }
 
+        private long _loadGeneration;
+        public long LoadGeneration => Interlocked.Read(ref _loadGeneration);
+        protected void AdvanceLoadGeneration() => Interlocked.Increment(ref _loadGeneration);
+
         public bool HasPendingInitialLoad => !IsLoaded && !LastLoadReportedFailures;
 
         public DateTime? LastLoadFinishedUtc { get; private set; }
@@ -228,6 +232,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
                 );
                 Volatile.Write(ref _managerLoads, managerLoads);
+                AdvanceLoadGeneration();
                 IsLoading = true;
                 LastLoadReportedFailures = false;
                 StartedLoading?.Invoke(this, EventArgs.Empty);

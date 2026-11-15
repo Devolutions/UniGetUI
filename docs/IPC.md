@@ -74,7 +74,7 @@ When the client **does** receive an explicit override:
 On Windows, an unelevated GUI session separately attempts to register with the local Devolutions Agent service.
 Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
 This connection is separate from the local IPC API and remains active when that API is disabled.
-The registration connection answers `ListManagers` and `GetInventorySnapshot`, runs `ExecutePackageOperation` through the Agent's package broker, and reports `ListInstalledPackages`, `ListPackageUpdates`, `ListSources` and `GetPackageVersions` as unavailable.
+The registration connection answers `GetInventorySnapshot` and runs `ExecutePackageOperation` through the Agent's package broker.
 
 ### Inventory snapshot
 
@@ -84,10 +84,12 @@ It fails unless that scan completed for every enabled and installed manager, so 
 `updateCompletedAt`, `updates` and each row's `newVersion` come from the last completed update scan, and only when it also covers every expected manager; otherwise `updateCompletedAt` is null and `updates` is empty.
 Installations of one package that differ in reported scope are separate rows, and an update reporting a scope applies only to the row with that scope; an update without a scope applies only when exactly one installation matches.
 `sourceName` is always empty, and manager executable paths, arguments and health details are not sent.
+Source entries with unsafe or ambiguous names are omitted, and source URLs are never sent.
 
 ### Remote package operations
 
 `ExecutePackageOperation` installs, updates or uninstalls one package with an Agent-issued grant, sent once to the broker's grant route (`/v1/package-operations/execute-grant`) with the exact request the grant binds.
+It rejects unknown or duplicate operation arguments before submission.
 It runs only when the **Delegate package operations to the Devolutions Agent broker** setting (Settings → Administrator) is on and the manager is one the broker supports; Chocolatey is refused.
 WinGet runs in the requested user or machine scope, every other manager in user scope; a machine-scope request for another manager is refused.
 Update and uninstall act on the installation named by manager, package ID and the row's `reportedScope`; when the manager cannot select a scope from that value, UniGetUI's current installed list must hold exactly one installation with that manager and package ID, checked immediately before submission.

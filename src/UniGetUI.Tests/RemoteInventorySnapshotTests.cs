@@ -45,7 +45,8 @@ public sealed class RemoteInventorySnapshotTests
         public bool CommandLineIsShellInterpreted => false;
         public bool IdentifiersAreQuotedOnCommandLine => true;
         public bool LastUpdatesListingFailed => false;
-        public bool LastInstalledListingFailed => false;
+        public bool LastInstalledListingFailed { get; set; }
+        public IReadOnlyList<IPackage> ListedPackages { get; set; } = [];
         public long InstalledPackagesGeneration => 0;
         public void InvalidateInstalledPackages() { }
         public int? CompareVersions(string versionA, string versionB) => throw new NotSupportedException();
@@ -61,7 +62,7 @@ public sealed class RemoteInventorySnapshotTests
         public bool IsInitializing => false;
         public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() => [];
         public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotSupportedException();
-        public IReadOnlyList<IPackage> GetInstalledPackages() => throw new NotSupportedException();
+        public IReadOnlyList<IPackage> GetInstalledPackages() => ListedPackages;
         public void RefreshPackageIndexes() => throw new NotSupportedException();
         public void AttemptFastRepair() => throw new NotSupportedException();
         public IReadOnlyList<string> FindCandidateExecutableFiles() => [];
@@ -74,6 +75,36 @@ public sealed class RemoteInventorySnapshotTests
 
     private static CompletedPackageScan Scan(DateTime at, IEnumerable<IPackage> packages, params IPackageManager[] succeeded) =>
         new(packages.ToArray(), at, succeeded.ToHashSet());
+
+    private sealed class TestInstalledLoader(IReadOnlyList<IPackageManager> managers) : InstalledPackagesLoader(managers)
+    {
+        protected override bool WillQueryAnyManager() => false;
+        protected override Task WhenAddingPackage(IPackage package) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task CurrentListCannotIdentifyARowAfterAnIncompleteScan()
+    {
+        var old = InstalledPackagesLoader.Instance;
+        var manager = new SnapshotManager("a");
+        manager.ListedPackages = [Row(manager, "p", "user")];
+        var loader = new TestInstalledLoader([manager]);
+        var backend = new IpcRemoteInventoryBackend();
+        try
+        {
+            await loader.ReloadPackages();
+            Assert.True(backend.IsOnlyInstalledRow("a", "p", "user"));
+
+            manager.LastInstalledListingFailed = true;
+            await loader.ReloadPackages();
+            Assert.Single(loader.Packages);
+            Assert.False(backend.IsOnlyInstalledRow("a", "p", "user"));
+        }
+        finally
+        {
+            InstalledPackagesLoader.Instance = old;
+        }
+    }
 
     [Fact]
     public void InventoryIsUnavailableUntilEveryExpectedManagerHasACompletedScan()
@@ -138,9 +169,15 @@ public sealed class RemoteInventorySnapshotTests
             Scan(Installed, [Row(a, "p", "user"), Row(a, "p", "machine")], a),
             Scan(Updated, [Row(a, "p", null, "1.0", "2.0")], a),
             []);
+        var unscopedAndScoped = IpcRemoteInventory.BuildSnapshot(
+            [a],
+            Scan(Installed, [Row(a, "p", null), Row(a, "p", "user")], a),
+            Scan(Updated, [Row(a, "p", null, "1.0", "2.0")], a),
+            []);
 
         Assert.Equal("2.0", Assert.Single(lone!.InstalledPackages).NewVersion);
         Assert.All(two!.InstalledPackages, row => Assert.Equal("", row.NewVersion));
+        Assert.All(unscopedAndScoped!.InstalledPackages, row => Assert.Equal("", row.NewVersion));
     }
 
     [Fact]
@@ -162,7 +199,6 @@ public sealed class RemoteInventorySnapshotTests
 
     private sealed class SnapshotBackend(RemoteInventorySnapshot? snapshot) : IAgentRegistrationBackend
     {
-        public IReadOnlyList<IpcManagerInfo> ListManagers() => throw new NotSupportedException();
         public RemoteInventorySnapshot? TryGetInventorySnapshot() => snapshot;
         public bool RemoteOperationsEnabled => false;
         public string? FindManagerId(ManagerName manager) => throw new NotSupportedException();

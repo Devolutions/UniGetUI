@@ -28,6 +28,8 @@ public sealed class Uv : PackageManager
             SupportsPreRelease = true,
             SerializesOperations = true,
             SupportsCustomPythonInterpreters = true,
+            SupportsProxy = ProxySupport.Yes,
+            SupportsProxyAuth = true,
         };
 
         Properties = new ManagerProperties

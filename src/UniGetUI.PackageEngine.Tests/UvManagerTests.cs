@@ -396,6 +396,8 @@ public class UvManagerTests
         Assert.True(manager.Capabilities.CanUninstall);
         Assert.True(manager.Capabilities.SupportsCustomVersions);
         Assert.True(manager.Capabilities.SupportsPreRelease);
+        Assert.Equal(ProxySupport.Yes, manager.Capabilities.SupportsProxy);
+        Assert.True(manager.Capabilities.SupportsProxyAuth);
     }
 
     [Fact]

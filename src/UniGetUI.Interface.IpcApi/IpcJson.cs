@@ -132,6 +132,7 @@ internal static class IpcHttpResponseJsonExtensions
 [JsonSerializable(typeof(IpcPackageBulkOperationResult))]
 [JsonSerializable(typeof(IpcPackageDependencyInfo))]
 [JsonSerializable(typeof(IpcPackageDetailsInfo))]
+[JsonSerializable(typeof(IpcPackageVersionsInfo))]
 [JsonSerializable(typeof(IpcIgnoredUpdateInfo))]
 [JsonSerializable(typeof(IpcSecureSettingInfo))]
 [JsonSerializable(typeof(IpcSecureSettingRequest))]

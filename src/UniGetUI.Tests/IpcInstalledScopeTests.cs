@@ -1,0 +1,250 @@
+using System.Text.Json;
+using UniGetUI.Interface;
+using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.BunManager;
+using UniGetUI.PackageEngine.Managers.NpmManager;
+using UniGetUI.PackageEngine.Managers.PipManager;
+using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
+using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.Structs;
+
+namespace UniGetUI.Tests;
+
+public sealed class IpcInstalledScopeTests
+{
+    private static (Pip Manager, InstalledPackagesLoader Loader) CreateInstalledLoader()
+    {
+        var manager = new Pip();
+        _ = new DiscoverablePackagesLoader([manager]);
+        _ = new UpgradablePackagesLoader([manager]);
+        return (manager, new InstalledPackagesLoader([manager]));
+    }
+
+    private static IPackage ResolveInstalled(Pip manager, string? source, string? scope = null) =>
+        IpcPackageApi.ResolvePackage(
+            new IpcPackageActionRequest
+            {
+                PackageId = "requests",
+                ManagerName = manager.Id,
+                PackageSource = source,
+                Scope = scope,
+            },
+            IpcPackageLookupMode.Installed
+        );
+
+    [Fact]
+    public async Task InstalledInventoryCarriesReportedScopeThroughJson()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        var source = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        await loader.AddForeign(
+            new Package("Requests", "requests", "2.0", source, manager, new OverridenInstallationOptions(PackageScope.User))
+        );
+
+        string json = IpcJson.Serialize(IpcPackageApi.ListInstalledPackages().ToArray());
+        using var document = JsonDocument.Parse(json);
+        Assert.True(document.RootElement[0].TryGetProperty("reportedScope", out var reportedScope));
+        Assert.Equal(PackageScope.User, reportedScope.GetString());
+        var parsed = IpcJson.Deserialize<IpcPackageInfo[]>(json);
+
+        var entry = Assert.Single(parsed!);
+        Assert.Equal(PackageScope.User, entry.ReportedScope);
+        Assert.Equal("", entry.SourceName);
+    }
+
+    [Theory]
+    [InlineData("pip")]
+    [InlineData("npm")]
+    [InlineData("bun")]
+    public async Task InstalledInventoryDoesNotReportAnAssignedDefaultSourceAsOrigin(string managerId)
+    {
+        IPackageManager manager = managerId switch
+        {
+            "pip" => new Pip(),
+            "npm" => new Npm(),
+            "bun" => new Bun(),
+            _ => throw new ArgumentOutOfRangeException(nameof(managerId)),
+        };
+        _ = new DiscoverablePackagesLoader([manager]);
+        _ = new UpgradablePackagesLoader([manager]);
+        var loader = new InstalledPackagesLoader([manager]);
+        await loader.AddForeign(new Package("Requests", "requests", "2.0", manager.DefaultSource, manager));
+
+        var entry = Assert.Single(IpcPackageApi.ListInstalledPackages());
+
+        Assert.Equal("", entry.SourceName);
+        Assert.Equal(manager.DefaultSource.AsString_DisplayName, entry.Source);
+    }
+
+    [Fact]
+    public void InstalledIdentityDistinguishesScopeAndSourcesSharingADisplayName()
+    {
+        var manager = new Pip();
+        var first = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        var second = new ManagerSource(manager, "registry\\b", new Uri("https://b.example.test/"));
+        Assert.Equal(first.AsString_DisplayName, second.AsString_DisplayName);
+
+        IPackage Make(ManagerSource source, string? scope) =>
+            new Package("Requests", "requests", "2.0", source, manager, new OverridenInstallationOptions(scope));
+
+        long[] hashes =
+        [
+            Make(first, PackageScope.User).GetInstalledIdentityHash(),
+            Make(first, PackageScope.Machine).GetInstalledIdentityHash(),
+            Make(first, null).GetInstalledIdentityHash(),
+            Make(second, PackageScope.User).GetInstalledIdentityHash(),
+        ];
+
+        Assert.Equal(hashes.Length, hashes.Distinct().Count());
+        Assert.Equal(hashes[0], Make(first, PackageScope.User.ToUpperInvariant()).GetInstalledIdentityHash());
+    }
+
+    [Fact]
+    public async Task InstallationsDifferingOnlyByReportedScopeAreAllKept()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        IPackage Make(string? scope) => new Package(
+            "Requests", "requests", "2.0", manager.DefaultSource, manager, new OverridenInstallationOptions(scope));
+        var user = Make(PackageScope.User);
+        var machine = Make(PackageScope.Machine);
+        var unknown = Make(null);
+
+        foreach (var package in new[] { user, machine, unknown, Make(PackageScope.User.ToUpperInvariant()) })
+            await loader.AddForeign(package);
+
+        Assert.Equal(3, loader.Count());
+        Assert.Equal(
+            [null, PackageScope.Machine, PackageScope.User],
+            IpcPackageApi.ListInstalledPackages().Select(p => p.ReportedScope).Order().ToArray());
+        Assert.Same(machine, loader.GetEquivalentPackage(Make(PackageScope.Machine)));
+
+        loader.Remove(Make(PackageScope.Machine));
+        Assert.Equal(2, loader.Count());
+        Assert.Contains(user, loader.Packages);
+        Assert.Contains(unknown, loader.Packages);
+    }
+
+    [Fact]
+    public async Task ScopeUnawareProbeStillFindsTheOnlyInstalledScope()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        var installed = new Package(
+            "Requests", "requests", "2.0", manager.DefaultSource, manager, new OverridenInstallationOptions(PackageScope.User));
+        await loader.AddForeign(installed);
+        var probe = new Package("Requests", "requests", "2.0", manager.DefaultSource, manager);
+
+        Assert.Same(installed, loader.GetEquivalentPackage(probe));
+        loader.Remove(probe);
+        Assert.Equal(0, loader.Count());
+    }
+
+    [Fact]
+    public async Task ScopeUnawareProbeIsNotGuessedWhenSeveralScopesAreInstalled()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        foreach (var scope in new[] { PackageScope.User, PackageScope.Machine })
+            await loader.AddForeign(new Package(
+                "Requests", "requests", "2.0", manager.DefaultSource, manager, new OverridenInstallationOptions(scope)));
+        var probe = new Package("Requests", "requests", "2.0", manager.DefaultSource, manager);
+
+        Assert.Null(loader.GetEquivalentPackage(probe));
+        loader.Remove(probe);
+        Assert.Equal(2, loader.Count());
+    }
+
+    [Fact]
+    public async Task RequestedCanonicalSourceFindsTheMatchingInstalledPackage()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        var first = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        var second = new ManagerSource(manager, "registry\\b", new Uri("https://b.example.test/"));
+        // Different versions keep both rows in the loader, which keys on the display name.
+        await loader.AddForeign(new Package("Requests", "requests", "1.0", first, manager));
+        await loader.AddForeign(new Package("Requests", "requests", "2.0", second, manager));
+
+        Assert.Equal("registry\\b", ResolveInstalled(manager, "registry\\b").Source.Name);
+        Assert.Equal("registry:a", ResolveInstalled(manager, "registry:a").Source.Name);
+
+        Assert.ThrowsAny<InvalidOperationException>(() => ResolveInstalled(manager, "registry:other"));
+    }
+
+    [Fact]
+    public async Task LocalVersionLookupAcceptsAnAmbiguousDisplaySource()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        var first = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        var second = new ManagerSource(manager, "registry\\b", new Uri("https://b.example.test/"));
+        await loader.AddForeign(new Package("Requests", "requests", "1.0", first, manager));
+        await loader.AddForeign(new Package("Requests", "requests", "2.0", second, manager));
+        await UpgradablePackagesLoader.Instance.AddForeign(new Package("Other", "other", "1.0", first, manager));
+
+        var result = IpcPackageApi.GetPackageVersionsInfo(new IpcPackageActionRequest
+        {
+            PackageId = "requests",
+            ManagerName = manager.Id,
+            PackageSource = first.AsString_DisplayName,
+        });
+
+        Assert.Equal(first.AsString_DisplayName, result.Source);
+    }
+
+    [Fact]
+    public async Task LocalVersionLookupKeepsTheOriginalScopeSelection()
+    {
+        var manager = new PowerShell7();
+        _ = new DiscoverablePackagesLoader([manager]);
+        _ = new UpgradablePackagesLoader([manager]);
+        var loader = new InstalledPackagesLoader([manager]);
+        var first = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        var second = new ManagerSource(manager, "registry:b", new Uri("https://b.example.test/"));
+        await loader.AddForeign(
+            new Package("Requests", "requests", "1.0", first, manager, new OverridenInstallationOptions(PackageScope.User))
+        );
+        await loader.AddForeign(
+            new Package("Requests", "requests", "2.0", second, manager, new OverridenInstallationOptions(PackageScope.Machine))
+        );
+        await UpgradablePackagesLoader.Instance.AddForeign(new Package("Other", "other", "1.0", first, manager));
+
+        var previouslySelected = loader.Packages.First(package => package.Id == "requests");
+        var otherScope = previouslySelected.ReportedScope == PackageScope.User ? PackageScope.Machine : PackageScope.User;
+        var result = IpcPackageApi.GetPackageVersionsInfo(new IpcPackageActionRequest
+        {
+            PackageId = "requests",
+            ManagerName = manager.Id,
+            Scope = otherScope,
+        });
+
+        Assert.Equal(previouslySelected.Source.AsString_DisplayName, result.Source);
+    }
+
+    [Fact]
+    public async Task ACaseInsensitiveSourceIsAcceptedOnlyWhenItDesignatesOneSource()
+    {
+        var (manager, loader) = CreateInstalledLoader();
+        var source = new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/"));
+        await loader.AddForeign(new Package("Requests", "requests", "1.0", source, manager));
+
+        Assert.Equal("registry:a", ResolveInstalled(manager, "REGISTRY:A").Source.Name);
+    }
+
+    [Fact]
+    public void VersionLookupNamesItsSourceThroughSourceGeneratedJson()
+    {
+        var info = new IpcPackageVersionsInfo
+        {
+            Id = "requests",
+            Manager = "pip",
+            Source = "pip",
+            SourceName = "registry:a",
+            Versions = ["2.0", "1.0"],
+        };
+
+        var parsed = IpcJson.Deserialize<IpcPackageVersionsInfo>(IpcJson.Serialize(info));
+
+        Assert.Equal("registry:a", parsed!.SourceName);
+        Assert.Equal(["2.0", "1.0"], parsed.Versions);
+    }
+}

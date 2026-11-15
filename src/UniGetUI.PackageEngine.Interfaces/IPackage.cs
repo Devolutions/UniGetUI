@@ -32,6 +32,34 @@ namespace UniGetUI.PackageEngine.Interfaces
         public string NewVersionString { get; }
         public bool IsUpgradable { get; }
         public ref OverridenInstallationOptions OverridenOptions { get; }
+
+        /// <summary>
+        /// The scope the manager reported for this installation, or null when it did not report one.
+        /// Unlike <see cref="OverridenOptions"/>, it never changes after construction. A manager-relative
+        /// label such as <c>Global</c> is kept as reported and does not prove machine-wide ownership.
+        /// </summary>
+        public string? ReportedScope => null;
+
+        /// <summary>
+        /// Like <see cref="GetVersionedHash"/>, but keyed on the canonical source name (the display name omits
+        /// it for managers without custom sources) and also distinguishing installations that differ by <see cref="ReportedScope"/>. Unknown scope has its own identity.
+        /// </summary>
+        public long GetInstalledIdentityHash()
+        {
+            // Length-framed so that no component value, whatever separators it holds, can alias another.
+            static string Frame(string value) => $"{value.Length}:{value}";
+            var scope = NormalizedReportedScope is { } s ? "s" + Frame(s) : "u";
+            return CoreTools.HashStringAsLong(
+                Frame(Manager.Id) + Frame(Source.Name ?? "") + Frame(Id) + Frame(VersionString) + scope
+            );
+        }
+
+        /// <summary>
+        /// <see cref="ReportedScope"/> compared case-insensitively; null when it is null or blank (unknown).
+        /// </summary>
+        public string? NormalizedReportedScope =>
+            string.IsNullOrWhiteSpace(ReportedScope) ? null : ReportedScope.ToLowerInvariant();
+
         public string AutomationName { get; }
 
         /// <summary>

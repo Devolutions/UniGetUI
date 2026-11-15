@@ -20,7 +20,16 @@ public sealed class IpcPackageInfo
     public string Version { get; set; } = "";
     public string NewVersion { get; set; } = "";
     public string Source { get; set; } = "";
+
+    /// <summary>
+    /// The canonical source name, independent of <see cref="Source"/>; empty when an installed
+    /// package's source is not verified.
+    /// </summary>
+    public string SourceName { get; set; } = "";
     public string Manager { get; set; } = "";
+
+    /// <summary>The scope the manager reported for this installation; null when unknown.</summary>
+    public string? ReportedScope { get; set; }
     public bool IsUpgradable { get; set; }
     public bool SystemRestartPending { get; set; }
 }
@@ -82,6 +91,7 @@ public sealed class IpcPackageDetailsInfo
     public string Version { get; set; } = "";
     public string NewVersion { get; set; } = "";
     public string Source { get; set; } = "";
+    public string SourceName { get; set; } = "";
     public string Manager { get; set; } = "";
     public string Description { get; set; } = "";
     public string Publisher { get; set; } = "";
@@ -126,6 +136,18 @@ internal enum IpcPackageLookupMode
     Any,
 }
 
+/// <summary>The versions a lookup found, together with the package and source they belong to.</summary>
+public sealed class IpcPackageVersionsInfo
+{
+    public string Id { get; set; } = "";
+    public string Manager { get; set; } = "";
+    public string Source { get; set; } = "";
+
+    /// <summary>The canonical source name, independent of the display label in <see cref="Source"/>.</summary>
+    public string SourceName { get; set; } = "";
+    public IReadOnlyList<string> Versions { get; set; } = [];
+}
+
 public static class IpcPackageApi
 {
     public static IReadOnlyList<IpcPackageInfo> SearchPackages(
@@ -157,8 +179,8 @@ public static class IpcPackageApi
     {
         var pendingRestartKeys = PendingRebootStore.GetPendingKeys();
         return GetInstalledPackagesSnapshot(managerName)
-            .DistinctBy(GetPackageIdentity)
-            .Select(package => ToIpcPackageInfo(package, pendingRestartKeys))
+            .DistinctBy(GetInstalledPackageIdentity)
+            .Select(package => ToIpcInstalledPackageInfo(package, pendingRestartKeys))
             .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(package => package.Id, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -447,6 +469,7 @@ public static class IpcPackageApi
             Version = package.VersionString,
             NewVersion = package.IsUpgradable ? package.NewVersionString : "",
             Source = package.Source.AsString_DisplayName,
+            SourceName = package.Source.Name,
             Manager = IpcManagerSettingsApi.GetPublicManagerId(package.Manager),
             Description = package.Details.Description ?? "",
             Publisher = package.Details.Publisher ?? "",
@@ -501,10 +524,22 @@ public static class IpcPackageApi
 
     public static IReadOnlyList<string> GetPackageVersions(IpcPackageActionRequest request)
     {
+        return GetPackageVersionsInfo(request).Versions;
+    }
+
+    public static IpcPackageVersionsInfo GetPackageVersionsInfo(IpcPackageActionRequest request)
+    {
         ArgumentNullException.ThrowIfNull(request);
 
         var package = FindAnyPackage(request);
-        return package.Manager.DetailsHelper.GetVersions(package);
+        return new IpcPackageVersionsInfo
+        {
+            Id = package.Id,
+            Manager = IpcManagerSettingsApi.GetPublicManagerId(package.Manager),
+            Source = package.Source.AsString_DisplayName,
+            SourceName = package.Source.Name,
+            Versions = package.Manager.DetailsHelper.GetVersions(package),
+        };
     }
 
     public static IReadOnlyList<IpcIgnoredUpdateInfo> ListIgnoredUpdates()
@@ -949,7 +984,18 @@ public static class IpcPackageApi
             );
     }
 
-    private static string GetPackageIdentity(IPackage package)
+    internal static (string Manager, string Source, string Id, string Version, string NewVersion, string? Scope) GetInstalledPackageIdentity(
+        IPackage package
+    ) => (
+        package.Manager.Id,
+        package.Source.Name,
+        package.Id,
+        package.VersionString,
+        package.NewVersionString,
+        package.NormalizedReportedScope
+    );
+
+    internal static string GetPackageIdentity(IPackage package)
     {
         return $"{package.Manager.Id}|{package.Source.Name}|{package.Id}|{package.VersionString}|{package.NewVersionString}";
     }
@@ -957,7 +1003,18 @@ public static class IpcPackageApi
     private static IpcPackageInfo ToIpcPackageInfo(IPackage package)
         => ToIpcPackageInfo(package, null);
 
-    private static IpcPackageInfo ToIpcPackageInfo(
+    internal static IpcPackageInfo ToIpcInstalledPackageInfo(
+        IPackage package,
+        IReadOnlySet<string>? pendingRestartKeys
+    )
+    {
+        var info = ToIpcPackageInfo(package, pendingRestartKeys);
+        // The package model does not distinguish observed origins from assigned sources.
+        info.SourceName = "";
+        return info;
+    }
+
+    internal static IpcPackageInfo ToIpcPackageInfo(
         IPackage package,
         IReadOnlySet<string>? pendingRestartKeys
     )
@@ -969,7 +1026,9 @@ public static class IpcPackageApi
             Version = package.VersionString,
             NewVersion = package.IsUpgradable ? package.NewVersionString : "",
             Source = package.Source.AsString_DisplayName,
+            SourceName = package.Source.Name,
             Manager = IpcManagerSettingsApi.GetPublicManagerId(package.Manager),
+            ReportedScope = string.IsNullOrWhiteSpace(package.ReportedScope) ? null : package.ReportedScope,
             IsUpgradable = package.IsUpgradable,
             SystemRestartPending = pendingRestartKeys is null
                 ? PendingRebootStore.IsPending(package.Manager.Id, package.Id)

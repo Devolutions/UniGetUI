@@ -71,6 +71,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public string Name { get; }
         public string AutomationName { get; }
         public string Id { get; }
+        public string? ReportedScope { get; }
         public virtual string VersionString { get; }
 
         public virtual bool HasConcreteVersion => true;
@@ -135,6 +136,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                 .Replace("{manager}", Source.AsString_DisplayName);
 
             _overridenOptions = options ?? _overridenOptions;
+            ReportedScope = options?.Scope;
             _hash = CoreTools.HashStringAsLong(
                 $"{Manager.Name}\\{Source.AsString_DisplayName}\\{Id}"
             );

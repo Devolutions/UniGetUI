@@ -394,7 +394,32 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// <returns>A long int containing the hash</returns>
         protected long HashPackage(IPackage package)
         {
-            return ALLOW_MULTIPLE_PACKAGE_VERSIONS ? package.GetVersionedHash() : package.GetHash();
+            if (!ALLOW_MULTIPLE_PACKAGE_VERSIONS)
+                return package.GetHash();
+
+            return DistinguishReportedScopes ? package.GetInstalledIdentityHash() : package.GetVersionedHash();
+        }
+
+        /// <summary>
+        /// When true, installations that differ only by reported scope are separate entries.
+        /// </summary>
+        protected virtual bool DistinguishReportedScopes => false;
+
+        /// <summary>
+        /// Finds the entry a probe refers to when its exact key misses: same versioned identity, and either side
+        /// not reporting a scope. Ambiguity returns null rather than guessing between scopes.
+        /// </summary>
+        private IPackage? FindScopeTolerant(IPackage package)
+        {
+            if (!DistinguishReportedScopes)
+                return null;
+
+            var matches = Packages
+                .Where(c => c.GetVersionedHash() == package.GetVersionedHash()
+                    && (c.NormalizedReportedScope is null || package.NormalizedReportedScope is null))
+                .Take(2)
+                .ToArray();
+            return matches.Length == 1 ? matches[0] : null;
         }
 
         private void RememberSelectionState()
@@ -456,7 +481,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return;
             }
 
-            if (FindFromAnySource(package) is { } stored)
+            if ((FindScopeTolerant(package) ?? FindFromAnySource(package)) is { } stored)
             {
                 PackageReference.Remove(HashPackage(stored), out _);
                 InvokePackagesChangedEvent(true, [], [stored]);
@@ -478,7 +503,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (PackageReference.TryGetValue(HashPackage(package), out IPackage? eq))
                 return eq;
 
-            return FindFromAnySource(package);
+            return FindScopeTolerant(package) ?? FindFromAnySource(package);
         }
 
         private IPackage? FindFromAnySource(IPackage package)

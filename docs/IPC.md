@@ -392,6 +392,9 @@ Every package payload carries `systemRestartPending`: `true` when that package i
 packages this machine is waiting on a restart for. See
 [Pending machine restarts](#pending-machine-restarts).
 
+`reportedScope` preserves the scope value assigned when the package was listed, or `null` when no scope was supplied; it does not establish user or machine ownership.
+Installed-package responses leave `sourceName` empty until the installed origin can be verified; the existing `source` display label remains available.
+
 | Method | Path | Auth | Parameters/body | CLI equivalent | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `GET` | `/uniget/v1/packages/search` | Yes | Query `query`, optional `manager`, optional `maxResults` | `package search` | Search endpoint. |
@@ -399,6 +402,7 @@ packages this machine is waiting on a restart for. See
 | `GET` | `/uniget/v1/packages/updates` | Yes | Optional query `manager` | `package updates` | Upgradable packages. |
 | `GET` | `/uniget/v1/packages/details` | Yes | Package action query set | `package details` | Details payload. |
 | `GET` | `/uniget/v1/packages/versions` | Yes | Package action query set | `package versions` | Installable versions. |
+| `GET` | `/uniget/v1/packages/version-info` | Yes | Package action query set | None | Installable versions with the resolved package's `source` label and canonical `sourceName`. |
 | `GET` | `/uniget/v1/packages/ignored` | Yes | None | `package ignored list` | Ignored-update rules. |
 | `POST` | `/uniget/v1/packages/ignore` | Yes | Package action query set | `package ignored add` | Adds ignored-update rule. |
 | `POST` | `/uniget/v1/packages/unignore` | Yes | Package action query set | `package ignored remove` | Removes ignored-update rule. |

@@ -1,0 +1,179 @@
+using UniGetUI.Interface;
+using UniGetUI.PackageEngine;
+using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.Managers.PipManager;
+using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
+using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.Structs;
+
+namespace UniGetUI.Tests;
+
+public sealed class IpcRemoteInventoryTests
+{
+    private const string Secret = "s3cr3t-token";
+
+    [Fact]
+    public void CredentialBearingAndAmbiguousSourcesAreBlankedNeverSent()
+    {
+        var manager = new Pip();
+        var credentialed = new ManagerSource(
+            manager,
+            $"registry+https://user:{Secret}@private.example.test/index",
+            new Uri($"https://user:{Secret}@private.example.test/index"));
+        var safe = new ManagerSource(manager, "mirror", new Uri("https://mirror.example.test/"));
+        var ambiguousA = new ManagerSource(manager, "corp", new Uri("https://a.example.test/"));
+        var ambiguousB = new ManagerSource(manager, "corp", new Uri("https://b.example.test/"));
+        IPackage[] packages =
+        [
+            new Package("Secret", "secret", "1.0", credentialed, manager),
+            new Package("Safe", "safe", "1.0", safe, manager),
+            new Package("A", "a", "1.0", ambiguousA, manager),
+            new Package("B", "b", "1.0", ambiguousB, manager),
+        ];
+
+        var projected = IpcRemoteInventory.ProjectPackages(packages, installed: true, new HashSet<string>());
+        var sources = IpcRemoteInventory.BuildSources([manager], packages.Select(package => package.Source));
+        var json = IpcJson.Serialize(projected.ToArray()) + IpcJson.Serialize(sources.ToArray());
+
+        Assert.DoesNotContain(Secret, json, StringComparison.Ordinal);
+        Assert.Equal("", projected.Single(package => package.Id == "secret").SourceName);
+        Assert.Equal("", projected.Single(package => package.Id == "safe").SourceName);
+        Assert.All(projected.Where(package => package.Id is "a" or "b"), package => Assert.Equal("", package.SourceName));
+    }
+
+    [Fact]
+    public void AssignedOriginIsReportedUnknownWithItsDisplayLabelKept()
+    {
+        var manager = new Pip();
+        var capabilities = manager.Capabilities;
+        capabilities.InstalledPackagesKeepTheirSource = false;
+        manager.Capabilities = capabilities;
+        var feed = new ManagerSource(manager, "nuget.org", new Uri("https://api.nuget.org/v3/index.json"));
+        IPackage[] packages = [new Package("Tool", "tool", "1.0", feed, manager)];
+
+        foreach (var installed in new[] { true, false })
+        {
+            var info = IpcRemoteInventory.ProjectPackages(packages, installed, new HashSet<string>()).Single();
+            Assert.Equal("", info.SourceName);
+            Assert.Equal(feed.AsString_DisplayName, info.Source);
+        }
+
+        var unverified = new ManagerSource(new Pip(), "nuget.org", feed.Url);
+        IPackage[] withoutProvenance = [new Package("Tool", "tool", "1.0", unverified, unverified.Manager)];
+        Assert.Equal(
+            "",
+            IpcRemoteInventory.ProjectPackages(withoutProvenance, installed: true, new HashSet<string>()).Single().SourceName);
+        Assert.True(unverified.Manager.Capabilities.InstalledPackagesKeepTheirSource);
+        Assert.Equal(
+            RemoteSourceResolution.OriginUnknown,
+            IpcRemoteInventory.ResolveSource(
+                [unverified.Manager], [unverified], unverified.Manager.Id, "nuget.org", requireInstalledOrigin: true));
+
+        IManagerSource[] sources = [feed];
+        Assert.Equal(
+            RemoteSourceResolution.OriginUnknown,
+            IpcRemoteInventory.ResolveSource([manager], sources, manager.Id, "nuget.org", requireInstalledOrigin: true));
+        Assert.Equal(
+            RemoteSourceResolution.Resolved,
+            IpcRemoteInventory.ResolveSource([manager], sources, manager.Id, "nuget.org"));
+    }
+
+    [Fact]
+    public async Task SideBySideVersionsCanShareAnUnknownSourceAndScope()
+    {
+        var manager = new PowerShell7();
+        _ = new DiscoverablePackagesLoader([manager]);
+        _ = new UpgradablePackagesLoader([manager]);
+        var loader = new InstalledPackagesLoader([manager]);
+        var source = manager.SourcesHelper.Factory.GetSourceOrDefault("PSGallery");
+        Assert.True(manager.SourcesHelper.Factory.IsPlaceholder(source));
+
+        await loader.AddForeign(new Package(
+            "XKCD", "XKCD", "1.9.0", source, manager, new OverridenInstallationOptions(PackageScope.User)));
+        await loader.AddForeign(new Package(
+            "XKCD", "XKCD", "1.12.6", source, manager, new OverridenInstallationOptions(PackageScope.User)));
+
+        var packages = IpcRemoteInventory.ProjectPackages(loader.Packages, installed: true, new HashSet<string>());
+
+        Assert.Equal(2, packages.Count);
+        Assert.All(packages, package =>
+        {
+            Assert.Equal("pwsh", package.Manager);
+            Assert.Equal("XKCD", package.Id);
+            Assert.Equal(PackageScope.User, package.ReportedScope);
+            Assert.Equal("", package.SourceName);
+        });
+        Assert.Equal(["1.12.6", "1.9.0"], packages.Select(package => package.Version).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void ManagerInventoryDoesNotPersistManagerHealth()
+    {
+        _ = PEInterface.Managers;
+        var oldOverride = ManagerHealthStore.TestPathOverride;
+        var directory = Path.Combine(Path.GetTempPath(), $"unigetui-health-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var firstPath = Path.Combine(directory, "first.json");
+        var secondPath = Path.Combine(directory, "second.json");
+        try
+        {
+            ManagerHealthStore.ResetForTests();
+            ManagerHealthStore.TestPathOverride = firstPath;
+            _ = ManagerHealthStore.Get("test");
+            ManagerHealthStore.TestPathOverride = secondPath;
+
+            Assert.NotEmpty(IpcRemoteInventory.ListManagers());
+            Assert.False(File.Exists(firstPath));
+        }
+        finally
+        {
+            ManagerHealthStore.ResetForTests();
+            ManagerHealthStore.TestPathOverride = oldOverride;
+            if (File.Exists(firstPath))
+                File.Delete(firstPath);
+            if (File.Exists(secondPath))
+                File.Delete(secondPath);
+            Directory.Delete(directory);
+        }
+    }
+
+    [Theory]
+    [InlineData("mirror", RemoteSourceResolution.Resolved)]
+    [InlineData("Mirror", RemoteSourceResolution.NotFound)]
+    [InlineData("Mirror Display", RemoteSourceResolution.NotFound)]
+    [InlineData("corp", RemoteSourceResolution.Ambiguous)]
+    [InlineData("", RemoteSourceResolution.MissingSourceName)]
+    public void SourceResolvesOnlyByUniqueOrdinalCanonicalName(string sourceName, RemoteSourceResolution expected)
+    {
+        var manager = new Pip();
+        IManagerSource[] observed =
+        [
+            new ManagerSource(manager, "mirror", new Uri("https://mirror.example.test/")),
+            new ManagerSource(manager, "corp", new Uri("https://a.example.test/")),
+            new ManagerSource(manager, "corp", new Uri("https://b.example.test/")),
+        ];
+
+        Assert.Equal(expected, IpcRemoteInventory.ResolveSource([manager], observed, manager.Id, sourceName));
+        Assert.Equal(
+            RemoteSourceResolution.UnknownManager,
+            IpcRemoteInventory.ResolveSource([manager], observed, "not-a-manager", "mirror"));
+    }
+
+    [Fact]
+    public void IncompleteLocalInventoryIsReportedBusyWithoutStartingALoad()
+    {
+        var manager = new Pip();
+        _ = new DiscoverablePackagesLoader([manager]);
+        _ = new UpgradablePackagesLoader([manager]);
+        var loader = new InstalledPackagesLoader([manager]);
+
+        Assert.False(IpcRemoteInventory.TryListInstalledPackages(out var packages));
+        Assert.Empty(packages);
+        Assert.False(loader.IsLoading);
+        Assert.False(loader.IsLoaded);
+    }
+}

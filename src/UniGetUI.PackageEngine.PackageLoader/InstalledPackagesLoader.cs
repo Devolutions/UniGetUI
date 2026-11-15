@@ -21,6 +21,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
             Instance = this;
         }
 
+        protected override bool DistinguishReportedScopes => true;
+
         protected override Task<bool> IsPackageValid(IPackage package)
         {
             return Task.FromResult(true);

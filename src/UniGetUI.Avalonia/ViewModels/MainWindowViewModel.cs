@@ -16,6 +16,7 @@ using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Avalonia.Views.Pages.LogPages;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -964,6 +965,9 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentPageContent = null;
             ReleaseWebViewPage(page);
         }
+
+        // Whatever the window was showing is now garbage worth handing back.
+        IdleMemoryTrimmer.Request();
     }
 
     /// <summary>

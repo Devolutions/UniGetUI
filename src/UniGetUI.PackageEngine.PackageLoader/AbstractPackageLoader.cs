@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
@@ -179,6 +180,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
         protected void InvokeFinishedLoadingEvent()
         {
             FinishedLoading?.Invoke(this, EventArgs.Empty);
+
+            // A load leaves the managers' output and the list it replaced behind as garbage.
+            IdleMemoryTrimmer.Request();
         }
 
         /// <summary>

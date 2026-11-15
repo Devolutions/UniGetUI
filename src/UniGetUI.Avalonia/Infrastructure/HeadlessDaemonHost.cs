@@ -1,3 +1,4 @@
+using UniGetUI.Core.Classes;
 using UniGetUI.Interface;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
@@ -11,6 +12,8 @@ internal static class HeadlessDaemonHost
         return await HeadlessIpcHost.RunAsync(async () =>
         {
             ProcessEnvironmentConfigurator.PrepareForCurrentPlatform();
+            // Nobody is ever looking at a headless session.
+            IdleMemoryTrimmer.IsAppInBackground = static () => true;
             PEInterface.LoadLoaders();
             await Task.WhenAll(
                 Task.Run(ElevatorLoader.LoadAsync),

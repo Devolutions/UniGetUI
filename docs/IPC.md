@@ -74,10 +74,27 @@ When the client **does** receive an explicit override:
 On Windows, an unelevated GUI session separately attempts to register with the local Devolutions Agent service.
 Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
 This connection is separate from the local IPC API and remains active when that API is disabled.
-The registration connection answers `ListManagers`, reports installed packages, updates, sources, and version requests as unavailable, and rejects package operations without starting them.
-Its `ListManagers` items carry only a fixed set of fields, with `executablePath` and `executableArguments` empty and `health` at its unknown default, so a field added to the local manager endpoint is not sent to the Agent.
-After a lost connection it retries with a growing delay, which starts over only when the lost session had stayed registered for at least 30 seconds.
-Unavailable remote operations never fall back to local package execution.
+The registration connection answers `ListManagers` and `GetInventorySnapshot`, runs `ExecutePackageOperation` through the Agent's package broker, and reports `ListInstalledPackages`, `ListPackageUpdates`, `ListSources` and `GetPackageVersions` as unavailable.
+
+### Inventory snapshot
+
+`GetInventorySnapshot` returns a copy of the last completed installed-package scan; it never starts a scan or refresh and never reads the pending-reboot or manager-health stores.
+It fails unless that scan completed for every enabled and installed manager, so a snapshot is never partial.
+`completedAt` is that scan's completion time.
+`updateCompletedAt`, `updates` and each row's `newVersion` come from the last completed update scan, and only when it also covers every expected manager; otherwise `updateCompletedAt` is null and `updates` is empty.
+Installations of one package that differ in reported scope are separate rows, and an update reporting a scope applies only to the row with that scope; an update without a scope applies only when exactly one installation matches.
+`sourceName` is always empty, and manager executable paths, arguments and health details are not sent.
+
+### Remote package operations
+
+`ExecutePackageOperation` installs, updates or uninstalls one package with an Agent-issued grant, sent once to the broker's grant route (`/v1/package-operations/execute-grant`) with the exact request the grant binds.
+It runs only when the **Delegate package operations to the Devolutions Agent broker** setting (Settings → Administrator) is on and the manager is one the broker supports; Chocolatey is refused.
+WinGet runs in the requested user or machine scope, every other manager in user scope; a machine-scope request for another manager is refused.
+Update and uninstall act on the installation named by manager, package ID and the row's `reportedScope`; when the manager cannot select a scope from that value, UniGetUI's current installed list must hold exactly one installation with that manager and package ID, checked immediately before submission.
+Install needs a source; update uses the named source or the manager's default; uninstall uses none.
+Once the grant may have reached the broker, the result is `Unknown`, whatever the broker answered, because a response frame alone does not prove the operation's outcome.
+A request refused before anything is sent is `Failed`.
+UniGetUI never retries a grant, never falls back to local package execution, and never sends a grant to another endpoint.
 
 ## Authentication
 

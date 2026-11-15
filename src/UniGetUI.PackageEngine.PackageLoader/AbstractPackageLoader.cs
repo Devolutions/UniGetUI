@@ -42,6 +42,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public DateTime? LastLoadFinishedUtc { get; private set; }
 
+        private CompletedPackageScan? _lastCompletedScan;
+
+        /// <summary>
+        /// A copy of the packages of the last full load that finished, with the managers whose
+        /// listing succeeded in it. Later incremental changes to <see cref="Packages"/> do not
+        /// alter it, so readers never observe a load in progress.
+        /// </summary>
+        public CompletedPackageScan? LastCompletedScan => Volatile.Read(ref _lastCompletedScan);
+
         private TaskCompletionSource? _loadCompletion;
 
         private IReadOnlyDictionary<IPackageManager, TaskCompletionSource> _managerLoads =
@@ -238,6 +247,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                 List<Task<IReadOnlyList<IPackage>>> tasks = [];
                 Dictionary<Task<IReadOnlyList<IPackage>>, IPackageManager> taskManagers = [];
+                HashSet<IPackageManager> succeededManagers = [];
 
                 foreach (IPackageManager manager in Managers)
                 {
@@ -289,6 +299,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                                 }
 
                                 InvokePackagesChangedEvent(true, toAdd, []);
+                                succeededManagers.Add(taskManagers[task]);
                             }
 
                             managerLoads[taskManagers[task]].TrySetResult();
@@ -301,6 +312,20 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 {
                     if (manager.IsReady() && DidManagerReportFailure(manager))
                         LastLoadReportedFailures = true;
+                    if (DidManagerReportFailure(manager))
+                        succeededManagers.Remove(manager);
+                }
+
+                if (LoadOperationIdentifier == current_identifier)
+                {
+                    Volatile.Write(
+                        ref _lastCompletedScan,
+                        new CompletedPackageScan(
+                            PackageReference.Values.ToArray(),
+                            DateTime.UtcNow,
+                            succeededManagers
+                        )
+                    );
                 }
 
                 IsLoading = false;

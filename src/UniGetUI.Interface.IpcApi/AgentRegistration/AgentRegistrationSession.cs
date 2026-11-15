@@ -169,7 +169,9 @@ internal sealed class AgentRegistrationSession
                     byte[] response =
                         command is null
                             ? AgentRequestDispatcher.InvalidArguments(id)
-                            : _dispatcher.Handle(id, command, arguments);
+                            : await _dispatcher
+                                .HandleAsync(id, command, arguments, token)
+                                .ConfigureAwait(false);
                     await SendAsync(response, token).ConfigureAwait(false);
                 }
                 catch (Exception)

@@ -135,7 +135,12 @@ public class BrokerPolicyTransportTests
         BrokerClientException exception = await WithPipeAsync(wireResponse, (client, token) =>
             Assert.ThrowsAsync<BrokerClientException>(() => client.GetPolicyManagement(token)));
 
-        Assert.Equal(BrokerClientErrorKind.InvalidResponse, exception.Kind);
+        // A GET closed before any response byte is retried by the SDK; this one-shot test pipe is
+        // gone by then, so it ends unreachable or timed out. A started response is incomplete.
+        if (wireResponse.Length == 0)
+            Assert.Contains(exception.Kind, new[] { BrokerClientErrorKind.BrokerUnavailable, BrokerClientErrorKind.Timeout });
+        else
+            Assert.Equal(BrokerClientErrorKind.InvalidResponse, exception.Kind);
         Assert.Null(exception.StatusCode);
         Assert.Null(exception.BrokerError);
     }
@@ -222,7 +227,11 @@ public class BrokerPolicyTransportTests
             ? new BoundedNamedPipeBrokerTransport(
                 BrokerPolicyManagementLimits.MaxResponseBodyBytes,
                 pipeName)
-            : new NamedPipeBrokerTransport(pipeName);
+            : new NamedPipeBrokerTransport(new NamedPipeBrokerTransportOptions
+            {
+                PipeName = pipeName,
+                VerifyServer = false,
+            });
         using var client = new BrokerClient(new BrokerClientOptions
         {
             Transport = transport,

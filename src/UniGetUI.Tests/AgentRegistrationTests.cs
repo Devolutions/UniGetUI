@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
+using Devolutions.Now.Policy.Api;
 using UniGetUI.Interface;
 using UniGetUI.Interface.AgentRegistration;
+using UniGetUI.PackageEngine.AgentBroker;
 
 namespace UniGetUI.Tests;
 
@@ -83,11 +85,66 @@ public class AgentRegistrationTests
     {
         public ManualResetEventSlim SourcesGate { get; } = new(true);
         public int Calls;
+        public RemoteInventorySnapshot? Snapshot;
+        public bool OperationsEnabled = true;
+        public bool UniqueRow = true;
+        public RemoteGrantDelivery Delivery = RemoteGrantDelivery.MaybeSent;
+        public readonly List<ManagerName> FoundManagers = [];
+        public readonly List<string> ResolvedSources = [];
+        public readonly List<(string Manager, string Package, string Scope)> UniqueRowChecks = [];
+        public readonly List<(RemoteGrantPlan Plan, string Grant)> Submitted = [];
 
-        public IReadOnlyList<IpcRemoteManagerInfo> ListManagers()
+        public IReadOnlyList<IpcManagerInfo> ListManagers()
         {
-            Interlocked.Increment(ref Calls); SourcesGate.Wait();
+            Interlocked.Increment(ref Calls);
+            SourcesGate.Wait();
             return [];
+        }
+
+        public RemoteInventorySnapshot? TryGetInventorySnapshot()
+        {
+            Interlocked.Increment(ref Calls);
+            return Snapshot;
+        }
+
+        public bool RemoteOperationsEnabled => OperationsEnabled;
+
+        public string? FindManagerId(ManagerName manager)
+        {
+            lock (FoundManagers)
+                FoundManagers.Add(manager);
+            return manager is ManagerName.Npm ? null : manager.ToString().ToLowerInvariant();
+        }
+
+        // Resolves by name so tests choose the outcome without a real manager.
+        public RemoteSourceResolution ResolveSource(string managerId, string sourceName)
+        {
+            lock (ResolvedSources)
+                ResolvedSources.Add(sourceName);
+            return sourceName switch
+            {
+                "ambiguous" => RemoteSourceResolution.Ambiguous,
+                "missing" => RemoteSourceResolution.NotFound,
+                _ => RemoteSourceResolution.Resolved,
+            };
+        }
+
+        public bool IsOnlyInstalledRow(string managerId, string packageId, string reportedScope)
+        {
+            lock (UniqueRowChecks)
+                UniqueRowChecks.Add((managerId, packageId, reportedScope));
+            return UniqueRow;
+        }
+
+        public Task<RemoteGrantDelivery> SubmitGrantAsync(
+            RemoteGrantPlan plan,
+            string grant,
+            CancellationToken cancellationToken
+        )
+        {
+            lock (Submitted)
+                Submitted.Add((plan, grant));
+            return Task.FromResult(Delivery);
         }
     }
     private sealed class BlockedWriteStream : Stream
@@ -234,9 +291,25 @@ public class AgentRegistrationTests
         }
     }
 
-    private static string Op(string grant = SecretGrant, string scope = "", string source = "feed", string op = "Install",
-        string operationId = Uuid1, string broker = Uuid2) =>
-        $$"""{"operationId":"{{operationId}}","brokerRequestId":"{{broker}}","operation":"{{op}}","manager":"WinGet","sourceName":"{{source}}","packageId":"Some.Pkg","version":"","scope":"{{scope}}","grant":"{{grant}}"}""";
+    // reportedScope: null omits the member, "#" sends a number instead of a string.
+    private static string Op(string op = "Install", string manager = "WinGet", string scope = "User",
+        string source = "feed", string? reportedScope = null, string grant = SecretGrant,
+        string operationId = Uuid1, string broker = Uuid2, string packageId = "Some.Pkg")
+    {
+        string reported = reportedScope switch
+        {
+            null => "",
+            "#" => ""","reportedScope":7""",
+            _ => $$""","reportedScope":"{{reportedScope}}" """.TrimEnd(),
+        };
+        return $$"""{"operationId":"{{operationId}}","brokerRequestId":"{{broker}}","operation":"{{op}}","manager":"{{manager}}","sourceName":"{{source}}","packageId":"{{packageId}}","version":"","scope":"{{scope}}"{{reported}},"grant":"{{grant}}"}""";
+    }
+
+    private static JsonElement Result(JsonElement response)
+    {
+        Assert.True(response.GetProperty("ok").GetBoolean());
+        return response.GetProperty("result");
+    }
 
     private static string ErrorCode(JsonElement response) =>
         response.GetProperty("error").GetProperty("code").GetString()!;
@@ -558,120 +631,243 @@ public class AgentRegistrationTests
         Assert.DoesNotContain("feed.example", text);
         Assert.DoesNotContain("Secret.Pkg", text);
     }
-
-    [Fact]
-    public async Task UnavailableVersionAndExecuteCommandsDoNotInspectSources()
-    {
-        var h = new Harness();
-        await h.WelcomeAsync();
-        await h.RequestAsync(
-            Uuid1,
-            "GetPackageVersions",
-            """{"manager":"WinGet","sourceName":"feed","packageId":"p"}"""
-        );
-        await h.RequestAsync(Uuid2, "ExecutePackageOperation", Op(source: "feed"));
-
-        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
-    }
-
     [Theory]
-    [InlineData("Update")]
-    [InlineData("Uninstall")]
-    public async Task EmptySourceForUpdatesAndUninstallsIsUnavailableRatherThanInvalid(string operation)
-    {
-        var h = new Harness();
-        await h.WelcomeAsync();
-        JsonElement response = await h.RequestAsync(
-            Uuid1,
-            "ExecutePackageOperation",
-            Op(source: "", op: operation)
-        );
-
-        Assert.True(response.GetProperty("ok").GetBoolean());
-        Assert.Equal("Failed", response.GetProperty("result").GetProperty("status").GetString());
-        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
-    }
-
-    [Theory]
-    [InlineData("bad grant!", "", "feed", "Install", Uuid1, Uuid2)]
-    [InlineData("", "", "feed", "Install", Uuid1, Uuid2)]
-    [InlineData("-leading", "", "feed", "Install", Uuid1, Uuid2)]
-    [InlineData(SecretGrant, "Root", "feed", "Install", Uuid1, Uuid2)]
-    [InlineData(SecretGrant, "", "feed", "install", Uuid1, Uuid2)]
-    [InlineData(SecretGrant, "", "feed", "Install", "11111111-2222-3333-4444-55555555555G", Uuid2)]
-    [InlineData(SecretGrant, "", "feed", "Install", "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE", Uuid2)]
-    [InlineData(SecretGrant, "", "feed", "Install", Uuid1, "not-a-uuid")]
+    [InlineData("Install", "User", "feed", null, "bad grant!", Uuid1, Uuid2)]
+    [InlineData("Install", "User", "feed", null, "", Uuid1, Uuid2)]
+    [InlineData("Install", "User", "feed", null, "-leading", Uuid1, Uuid2)]
+    [InlineData("Install", "Root", "feed", null, SecretGrant, Uuid1, Uuid2)]
+    [InlineData("Install", "", "feed", null, SecretGrant, Uuid1, Uuid2)]
+    [InlineData("Install", "user", "feed", null, SecretGrant, Uuid1, Uuid2)]
+    [InlineData("install", "User", "feed", null, SecretGrant, Uuid1, Uuid2)]
+    [InlineData("Install", "User", "feed", null, SecretGrant, "11111111-2222-3333-4444-55555555555G", Uuid2)]
+    [InlineData("Install", "User", "feed", null, SecretGrant, "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE", Uuid2)]
+    [InlineData("Install", "User", "feed", null, SecretGrant, Uuid1, "not-a-uuid")]
+    [InlineData("Install", "User", "", null, SecretGrant, Uuid1, Uuid2)]
+    [InlineData("Install", "User", "feed", "", SecretGrant, Uuid1, Uuid2)]
+    [InlineData("Update", "User", "", null, SecretGrant, Uuid1, Uuid2)]
+    [InlineData("Update", "User", "", "#", SecretGrant, Uuid1, Uuid2)]
+    [InlineData("Uninstall", "User", "feed", "", SecretGrant, Uuid1, Uuid2)]
     public async Task ExecutePackageOperationRejectsInvalidShapes(
-        string grant, string scope, string source, string operation, string operationId, string broker)
+        string operation, string scope, string source, string? reportedScope, string grant,
+        string operationId, string broker)
     {
         var h = new Harness();
         await h.WelcomeAsync();
         JsonElement response = await h.RequestAsync(
             Uuid1,
             "ExecutePackageOperation",
-            Op(grant, scope, source, operation, operationId, broker)
+            Op(operation, "WinGet", scope, source, reportedScope, grant, operationId, broker)
         );
+
         Assert.Equal("InvalidArguments", ErrorCode(response));
         Assert.DoesNotContain("SECRET", response.GetRawText());
+        Assert.Empty(h.Backend.FoundManagers);
+        Assert.Empty(h.Backend.Submitted);
+    }
+
+    [Theory]
+    [InlineData("Chocolatey")]
+    [InlineData(".NET Tool")]
+    [InlineData("Npm")]
+    [InlineData("Nope")]
+    public async Task UnknownRefusedOrAbsentManagersAreInvalid(string manager)
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        JsonElement response = await h.RequestAsync(
+            Uuid1,
+            "ExecutePackageOperation",
+            Op(manager: manager)
+        );
+
+        Assert.Equal("InvalidArguments", ErrorCode(response));
+        Assert.Empty(h.Backend.Submitted);
+    }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("ambiguous")]
+    public async Task UnresolvedSourcesAreInvalidAndNothingIsSubmitted(string source)
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        JsonElement response = await h.RequestAsync(
+            Uuid1,
+            "ExecutePackageOperation",
+            Op(source: source)
+        );
+
+        Assert.Equal("InvalidArguments", ErrorCode(response));
+        Assert.Empty(h.Backend.Submitted);
     }
 
     [Fact]
-    public async Task UninstallWithSourceIsRejectedWithoutInspectingSources()
+    public async Task SubmittedOperationIsUnknownAndNeverEchoesInput()
     {
         var h = new Harness();
         await h.WelcomeAsync();
         JsonElement response = await h.RequestAsync(
             Uuid1,
             "ExecutePackageOperation",
-            Op(source: "feed", op: "Uninstall")
+            Op(scope: "Machine", source: "secret-feed")
         );
 
-        Assert.False(response.GetProperty("ok").GetBoolean());
-        Assert.Equal("InvalidArguments", ErrorCode(response));
-        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
-    }
-
-    [Theory]
-    [InlineData("Update", "origin-unknown")]
-    [InlineData("Uninstall", "")]
-    [InlineData("Install", "origin-unknown")]
-    public async Task UnavailableOperationsDoNotInspectUnknownOrigins(string operation, string source)
-    {
-        var h = new Harness();
-        await h.WelcomeAsync();
-        JsonElement response = await h.RequestAsync(
-            Uuid1,
-            "ExecutePackageOperation",
-            Op(source: source, op: operation)
-        );
-
-        Assert.Equal("Failed", response.GetProperty("result").GetProperty("status").GetString());
-        Assert.DoesNotContain("origin-unknown", response.GetRawText());
-        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("user")]
-    [InlineData("Machine")]
-    public async Task ValidExecutePackageOperationReportsNotStartedAndNeverEchoesGrant(string scope)
-    {
-        var h = new Harness();
-        await h.WelcomeAsync();
-        JsonElement response = await h.RequestAsync(
-            Uuid1,
-            "ExecutePackageOperation",
-            Op(scope: scope, source: "https://secret-feed.example")
-        );
-
-        Assert.True(response.GetProperty("ok").GetBoolean());
-        JsonElement result = response.GetProperty("result");
-        Assert.Equal("Failed", result.GetProperty("status").GetString());
-        Assert.False(string.IsNullOrEmpty(result.GetProperty("error").GetString()));
+        JsonElement result = Result(response);
+        Assert.Equal("Unknown", result.GetProperty("status").GetString());
+        Assert.Equal("", result.GetProperty("error").GetString());
         string text = response.GetRawText();
         Assert.DoesNotContain("SECRET", text);
         Assert.DoesNotContain("secret-feed", text);
         Assert.DoesNotContain("Some.Pkg", text);
-        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
+
+        var (plan, grant) = Assert.Single(h.Backend.Submitted);
+        Assert.Equal(SecretGrant, grant);
+        Assert.Equal(Uuid2, plan.Request.RequestId);
+        Assert.Equal(ManagerName.Winget, plan.Request.Manager);
+        Assert.Equal(Scope.Machine, plan.Request.Options.Scope);
+        Assert.Equal(Elevation.Elevated, plan.Elevation);
+        Assert.Equal(["secret-feed"], h.Backend.ResolvedSources);
+        Assert.Empty(h.Backend.UniqueRowChecks);
+    }
+
+    [Fact]
+    public async Task OperationThatWasNotSentFails()
+    {
+        var h = new Harness();
+        h.Backend.Delivery = RemoteGrantDelivery.NotSent;
+        await h.WelcomeAsync();
+        JsonElement result = Result(
+            await h.RequestAsync(Uuid1, "ExecutePackageOperation", Op())
+        );
+
+        Assert.Equal("Failed", result.GetProperty("status").GetString());
+        Assert.False(string.IsNullOrEmpty(result.GetProperty("error").GetString()));
+        Assert.Single(h.Backend.Submitted);
+    }
+
+    [Theory]
+    [InlineData("Pip", "Install", "feed", null)]
+    [InlineData("Pip", "Update", "", "machine")]
+    [InlineData("pwsh", "Uninstall", "", "machine")]
+    public async Task OtherManagersCannotRunInMachineScope(
+        string manager, string operation, string source, string? reportedScope)
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        JsonElement result = Result(
+            await h.RequestAsync(
+                Uuid1,
+                "ExecutePackageOperation",
+                Op(operation, manager, "Machine", source, reportedScope)
+            )
+        );
+
+        Assert.Equal("Failed", result.GetProperty("status").GetString());
+        Assert.Empty(h.Backend.Submitted);
+        Assert.Empty(h.Backend.UniqueRowChecks);
+    }
+
+    [Fact]
+    public async Task DisabledOperationsSubmitNothing()
+    {
+        var h = new Harness();
+        h.Backend.OperationsEnabled = false;
+        await h.WelcomeAsync();
+        JsonElement result = Result(
+            await h.RequestAsync(Uuid1, "ExecutePackageOperation", Op("Update", "Pip", "User", "", "machine"))
+        );
+
+        Assert.Equal("Failed", result.GetProperty("status").GetString());
+        Assert.Empty(h.Backend.Submitted);
+        Assert.Empty(h.Backend.UniqueRowChecks);
+    }
+
+    [Fact]
+    public async Task UnidentifiedInstallationIsRejectedBeforeSubmitting()
+    {
+        var h = new Harness();
+        h.Backend.UniqueRow = false;
+        await h.WelcomeAsync();
+        JsonElement result = Result(
+            await h.RequestAsync(Uuid1, "ExecutePackageOperation", Op("Update", "Pip", "User", "", "machine"))
+        );
+
+        Assert.Equal("Failed", result.GetProperty("status").GetString());
+        Assert.Equal(("pip", "Some.Pkg", "machine"), Assert.Single(h.Backend.UniqueRowChecks));
+        Assert.Empty(h.Backend.Submitted);
+    }
+
+    [Theory]
+    [InlineData("winps", ManagerName.PowerShell)]
+    [InlineData("pwsh", ManagerName.PowerShell7)]
+    [InlineData("dotnet-tool", ManagerName.Dotnet)]
+    [InlineData("PowerShell7", ManagerName.PowerShell7)]
+    public async Task AgentInventoryAliasesBindTheBrokerManager(string manager, ManagerName expected)
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        JsonElement result = Result(
+            await h.RequestAsync(Uuid1, "ExecutePackageOperation", Op("Update", manager, "User", "", ""))
+        );
+
+        Assert.Equal("Unknown", result.GetProperty("status").GetString());
+        Assert.Equal(expected, Assert.Single(h.Backend.FoundManagers));
+        Assert.Equal(expected, Assert.Single(h.Backend.Submitted).Plan.Request.Manager);
+        Assert.Single(h.Backend.UniqueRowChecks);
+        Assert.Empty(h.Backend.ResolvedSources);
+    }
+
+    [Fact]
+    public async Task UnavailableInventoryFails()
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        JsonElement response = await h.RequestAsync(Uuid1, "GetInventorySnapshot");
+
+        Assert.Equal("Failed", ErrorCode(response));
+        Assert.False(response.TryGetProperty("result", out _));
+    }
+
+    [Fact]
+    public async Task InventorySnapshotCarriesScanTimesAndOmitsUpdatesUntilTheirScanCompletes()
+    {
+        IpcPackageInfo installed = new()
+        {
+            Name = "Some Package",
+            Id = "Some.Pkg",
+            Version = "1.0",
+            Manager = "Winget",
+            ReportedScope = null,
+            SystemRestartPending = true,
+        };
+        IpcPackageInfo update = new()
+        {
+            Name = "Some Package",
+            Id = "Some.Pkg",
+            Version = "1.0",
+            NewVersion = "2.0",
+            Manager = "Winget",
+            ReportedScope = "machine",
+            IsUpgradable = true,
+        };
+        var completed = new DateTime(2026, 11, 15, 12, 30, 45, DateTimeKind.Utc).AddTicks(1234567);
+        var h = new Harness();
+        h.Backend.Snapshot = new RemoteInventorySnapshot(completed, null, [], [], [installed], [update]);
+        await h.WelcomeAsync();
+
+        JsonElement result = Result(await h.RequestAsync(Uuid1, "GetInventorySnapshot"));
+        Assert.Equal("2026-11-15T12:30:45.1234567Z", result.GetProperty("completedAt").GetString());
+        Assert.Equal(JsonValueKind.Null, result.GetProperty("updateCompletedAt").ValueKind);
+        Assert.Equal(0, result.GetProperty("updates").GetArrayLength());
+        JsonElement row = Assert.Single(result.GetProperty("installedPackages").EnumerateArray().ToList());
+        Assert.Equal(JsonValueKind.Null, row.GetProperty("reportedScope").ValueKind);
+        Assert.False(row.TryGetProperty("systemRestartPending", out _));
+
+        h.Backend.Snapshot = h.Backend.Snapshot with { UpdateCompletedUtc = completed.AddMinutes(1) };
+        result = Result(await h.RequestAsync(Uuid2, "GetInventorySnapshot"));
+        Assert.Equal("2026-11-15T12:31:45.1234567Z", result.GetProperty("updateCompletedAt").GetString());
+        JsonElement updateRow = Assert.Single(result.GetProperty("updates").EnumerateArray().ToList());
+        Assert.Equal("2.0", updateRow.GetProperty("newVersion").GetString());
+        Assert.Equal("machine", updateRow.GetProperty("reportedScope").GetString());
     }
 }

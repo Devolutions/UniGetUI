@@ -1,0 +1,488 @@
+[
+  {
+    "agentArguments": {
+      "operation": "Install",
+      "manager": "WinGet",
+      "scope": "Machine",
+      "sourceName": "winget",
+      "packageId": "Some.Pkg",
+      "version": ""
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": false,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Install",
+      "Manager": "Winget",
+      "Source": {
+        "Name": "winget"
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "Machine",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": true
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Elevated",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Install",
+      "manager": "WinGet",
+      "scope": "User",
+      "sourceName": "winget",
+      "packageId": "Some.Pkg",
+      "version": ""
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": false,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Install",
+      "Manager": "Winget",
+      "Source": {
+        "Name": "winget"
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "User",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": true
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Update",
+      "manager": "WinGet",
+      "scope": "Machine",
+      "sourceName": "",
+      "packageId": "Some.Pkg",
+      "version": "",
+      "reportedScope": "machine"
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": false,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Update",
+      "Manager": "Winget",
+      "Source": {
+        "Name": ""
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "Machine",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Elevated",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Uninstall",
+      "manager": "WinGet",
+      "scope": "User",
+      "sourceName": "",
+      "packageId": "Some.Pkg",
+      "version": "",
+      "reportedScope": "user"
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": false,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Uninstall",
+      "Manager": "Winget",
+      "Source": {
+        "Name": ""
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "User",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Update",
+      "manager": "winps",
+      "scope": "User",
+      "sourceName": "",
+      "packageId": "Some.Pkg",
+      "version": "",
+      "reportedScope": ""
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": true,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Update",
+      "Manager": "PowerShell",
+      "Source": {
+        "Name": ""
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Update",
+      "manager": "pwsh",
+      "scope": "User",
+      "sourceName": "",
+      "packageId": "Some.Pkg",
+      "version": "",
+      "reportedScope": "machine"
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": false,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Update",
+      "Manager": "PowerShell7",
+      "Source": {
+        "Name": ""
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "Machine",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Uninstall",
+      "manager": "pwsh",
+      "scope": "User",
+      "sourceName": "",
+      "packageId": "Some.Pkg",
+      "version": "",
+      "reportedScope": "user"
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": false,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Uninstall",
+      "Manager": "PowerShell7",
+      "Source": {
+        "Name": ""
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "User",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Install",
+      "manager": "dotnet-tool",
+      "scope": "User",
+      "sourceName": "nuget.org",
+      "packageId": "Some.Pkg",
+      "version": ""
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": false,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Install",
+      "Manager": "Dotnet",
+      "Source": {
+        "Name": "nuget.org"
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "User",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Update",
+      "manager": "dotnet-tool",
+      "scope": "User",
+      "sourceName": "",
+      "packageId": "Some.Pkg",
+      "version": "",
+      "reportedScope": ""
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": true,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Update",
+      "Manager": "Dotnet",
+      "Source": {
+        "Name": ""
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "User",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  },
+  {
+    "agentArguments": {
+      "operation": "Uninstall",
+      "manager": "Pip",
+      "scope": "User",
+      "sourceName": "",
+      "packageId": "Some.Pkg",
+      "version": "",
+      "reportedScope": "machine"
+    },
+    "method": "POST",
+    "path": "/v1/package-operations/execute-grant",
+    "grantHeader": "X-Devolutions-Package-Grant",
+    "grantHeaderValue": "g-r4nt.secret_value~1:x",
+    "uniGetUiChecksUniqueInstalledRow": true,
+    "body": {
+      "RequestKind": "PackageRequest",
+      "RequestVersion": "1.0",
+      "RequestId": "0b3e6f0e-5d58-4a0e-9d2c-1f4f1c6c8a11",
+      "CreatedAt": "2026-11-15T00:00:00+00:00",
+      "Operation": "Uninstall",
+      "Manager": "Pip",
+      "Source": {
+        "Name": ""
+      },
+      "Package": {
+        "Id": "Some.Pkg"
+      },
+      "Options": {
+        "Scope": "User",
+        "Interactive": false,
+        "SkipHashCheck": false,
+        "PreRelease": false,
+        "CustomParameters": [],
+        "KillBeforeOperation": [],
+        "UninstallPrevious": false,
+        "NoUpgrade": false
+      },
+      "Client": {
+        "Transport": "HttpNamedPipe",
+        "RequestedElevation": "Standard",
+        "EffectiveUser": "CONTOSO\\user",
+        "ClientExecutablePath": "C:\\Program Files\\UniGetUI\\UniGetUI.exe",
+        "ClientVersion": "0.0.0.0"
+      },
+      "IncludeCommandPreview": false,
+      "CaptureOutput": true
+    }
+  }
+]

@@ -205,6 +205,9 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
         private static string[] GetOrRefreshIndex(INativeTaskLogger logger)
         {
+            // A use starts here: a release scheduled by an earlier search must not drop the
+            // index this search is about to read.
+            lock (_cacheLock) { _cacheUseStamp++; }
             try
             {
                 return GetOrRefreshIndexCore(logger);
@@ -216,17 +219,21 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         }
 
         // Drops the in-memory index once no search has used it for MemoryCacheIdleLifetime.
+        // The use stamp is only changed and compared under _cacheLock, so a release that has
+        // been overtaken by a newer use can never clear the index.
         internal static void ScheduleIndexRelease()
         {
-            long stamp = Interlocked.Increment(ref _cacheUseStamp);
+            long stamp;
+            lock (_cacheLock) { stamp = ++_cacheUseStamp; }
             TimeSpan lifetime = MemoryCacheIdleLifetime;
             _ = Task.Run(async () =>
             {
                 await Task.Delay(lifetime).ConfigureAwait(false);
-                if (stamp != Interlocked.Read(ref _cacheUseStamp))
-                    return;
-
-                lock (_cacheLock) { _cachedNames = null; }
+                lock (_cacheLock)
+                {
+                    if (stamp == _cacheUseStamp)
+                        _cachedNames = null;
+                }
             });
         }
 

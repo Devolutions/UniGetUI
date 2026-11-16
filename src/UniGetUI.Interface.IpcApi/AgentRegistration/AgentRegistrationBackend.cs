@@ -1,5 +1,4 @@
 using Devolutions.Now.Policy.Api;
-using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -15,9 +14,6 @@ internal interface IAgentRegistrationBackend
 {
     /// <summary>The last completed scans, or null when inventory is unavailable.</summary>
     RemoteInventorySnapshot? TryGetInventorySnapshot();
-
-    /// <summary>Whether operations may be routed to the Broker at all.</summary>
-    bool RemoteOperationsEnabled { get; }
 
     /// <summary>The public id of the UniGetUI manager the Broker knows by this name, or null.</summary>
     string? FindManagerId(ManagerName manager);
@@ -48,8 +44,6 @@ internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
 
     public RemoteInventorySnapshot? TryGetInventorySnapshot() =>
         IpcRemoteInventory.TryGetInventorySnapshot();
-
-    public bool RemoteOperationsEnabled => Settings.Get(Settings.K.UseAgentBroker);
 
     public string? FindManagerId(ManagerName manager) =>
         PEInterface.Managers

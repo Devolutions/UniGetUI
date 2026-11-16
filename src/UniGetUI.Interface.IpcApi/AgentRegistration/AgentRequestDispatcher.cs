@@ -19,8 +19,6 @@ internal sealed class AgentRequestDispatcher
     private const string FailedMessage = "The request could not be completed.";
     private const string InventoryUnavailableMessage =
         "No completed package scan covers every enabled package manager.";
-    private const string OperationsDisabledMessage =
-        "Package operations through the Devolutions Agent are disabled; nothing was started.";
     private const string ScopeNotAllowedMessage =
         "This manager cannot run the operation in the requested scope; nothing was started.";
     private const string RowNotIdentifiedMessage =
@@ -239,11 +237,6 @@ internal sealed class AgentRequestDispatcher
         if (plan is null)
         {
             return OperationResult(id, "Failed", ScopeNotAllowedMessage);
-        }
-
-        if (!_backend.RemoteOperationsEnabled)
-        {
-            return OperationResult(id, "Failed", OperationsDisabledMessage);
         }
 
         // Checked last, so the list the decision rests on is as fresh as it can be.

@@ -200,7 +200,6 @@ public sealed class RemoteInventorySnapshotTests
     private sealed class SnapshotBackend(RemoteInventorySnapshot? snapshot) : IAgentRegistrationBackend
     {
         public RemoteInventorySnapshot? TryGetInventorySnapshot() => snapshot;
-        public bool RemoteOperationsEnabled => false;
         public string? FindManagerId(ManagerName manager) => throw new NotSupportedException();
         public RemoteSourceResolution ResolveSource(string managerId, string sourceName) =>
             throw new NotSupportedException();

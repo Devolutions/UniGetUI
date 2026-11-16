@@ -90,7 +90,8 @@ Source entries with unsafe or ambiguous names are omitted, and source URLs are n
 
 `ExecutePackageOperation` installs, updates or uninstalls one package with an Agent-issued grant, sent once to the broker's grant route (`/v1/package-operations/execute-grant`) with the exact request the grant binds.
 It rejects unknown or duplicate operation arguments before submission.
-It runs only when the **Delegate package operations to the Devolutions Agent broker** setting (Settings → Administrator) is on and the manager is one the broker supports; Chocolatey is refused.
+It does not depend on the **Delegate package operations to the Devolutions Agent broker** setting (Settings → Administrator), which is the user's opt-in for local self-service through the broker; whether the machine accepts remote operations is the Agent's own configuration.
+It runs only for a manager the broker supports; Chocolatey is refused.
 WinGet runs in the requested user or machine scope, every other manager in user scope; a machine-scope request for another manager is refused.
 Update and uninstall act on the installation named by manager, package ID and the row's `reportedScope`; when the manager cannot select a scope from that value, UniGetUI's current installed list must hold exactly one installation with that manager and package ID, checked immediately before submission.
 Install needs a source; update uses the named source or the manager's default; uninstall uses none.

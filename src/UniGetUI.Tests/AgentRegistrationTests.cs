@@ -86,7 +86,6 @@ public class AgentRegistrationTests
         public ManualResetEventSlim SourcesGate { get; } = new(true);
         public int Calls;
         public RemoteInventorySnapshot? Snapshot = new(DateTime.UtcNow, null, [], [], [], []);
-        public bool OperationsEnabled = true;
         public bool UniqueRow = true;
         public RemoteGrantDelivery Delivery = RemoteGrantDelivery.MaybeSent;
         public readonly List<ManagerName> FoundManagers = [];
@@ -100,8 +99,6 @@ public class AgentRegistrationTests
             SourcesGate.Wait();
             return Snapshot;
         }
-
-        public bool RemoteOperationsEnabled => OperationsEnabled;
 
         public string? FindManagerId(ManagerName manager)
         {
@@ -404,6 +401,110 @@ public class AgentRegistrationTests
             TimeProvider.System,
             _ => { }
         );
+
+    // Fires the registration backoff waits at once and records them; every other timer is real.
+    private sealed class BackoffClock(TimeSpan minBackoff, TimeSpan maxBackoff) : TimeProvider
+    {
+        public readonly List<TimeSpan> Waits = [];
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            if (dueTime < minBackoff / 2 || dueTime > maxBackoff)
+                return TimeProvider.System.CreateTimer(callback, state, dueTime, period);
+            lock (Waits)
+                Waits.Add(dueTime);
+            ThreadPool.QueueUserWorkItem(_ => callback(state));
+            return new FiredTimer();
+        }
+
+        private sealed class FiredTimer : ITimer
+        {
+            public bool Change(TimeSpan dueTime, TimeSpan period) => false;
+
+            public void Dispose() { }
+
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
+    }
+
+    // Each attempt takes the next entry; null means the Agent's pipe is not there.
+    private sealed class ScriptedConnector(params Func<IAgentPipeConnection?>[] attempts) : IAgentPipeConnector
+    {
+        private int _next;
+
+        public Task<IAgentPipeConnection?> ConnectAsync(CancellationToken ct)
+        {
+            int index = Interlocked.Increment(ref _next) - 1;
+            return Task.FromResult(index < attempts.Length ? attempts[index]() : null);
+        }
+    }
+
+    private static IAgentPipeConnection WelcomingAgent(bool closeAfterWelcome)
+    {
+        var toClient = Channel.CreateUnbounded<byte[]>();
+        var toAgent = Channel.CreateUnbounded<byte[]>();
+        var agent = new ChannelStream(toAgent, toClient);
+        _ = Task.Run(async () =>
+        {
+            await AgentFrameCodec.ReadAsync(agent, CancellationToken.None);
+            await AgentFrameCodec.WriteAsync(
+                agent,
+                Encoding.UTF8.GetBytes("""{"kind":"Welcome","protocolVersion":1}"""),
+                CancellationToken.None
+            );
+            if (closeAfterWelcome)
+                agent.Dispose();
+        });
+        return new FakeConnection(new ChannelStream(toClient, toAgent), verified: true);
+    }
+
+    [Fact]
+    public async Task RegistersAgainAfterTheAgentRestartsWithBackoffResetAndCapped()
+    {
+        TimeSpan second = TimeSpan.FromSeconds(1);
+        var clock = new BackoffClock(second, 4 * second);
+        using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        int registrations = 0;
+        var client = new AgentRegistrationClient(
+            new ScriptedConnector(
+                () => null,
+                () => null,
+                () => WelcomingAgent(closeAfterWelcome: true),
+                () => null,
+                () => null,
+                () => null,
+                () => WelcomingAgent(closeAfterWelcome: false)
+            ),
+            new FakeBackend(),
+            new AgentRegistrationOptions
+            {
+                HelloTimeout = TimeSpan.FromHours(1),
+                PingAfter = TimeSpan.FromHours(1),
+                IdleTimeout = TimeSpan.FromHours(1),
+                MinBackoff = second,
+                MaxBackoff = 4 * second,
+            },
+            clock,
+            message =>
+            {
+                if (
+                    message == "Registered with the Devolutions Agent."
+                    && Interlocked.Increment(ref registrations) == 2
+                )
+                    stop.Cancel();
+            }
+        );
+
+        await client.RunAsync(stop.Token);
+
+        Assert.Equal(2, registrations);
+        // Doubling from 1 s while the Agent is away, back to 1 s once it registered, capped at 4 s;
+        // each wait is jittered to between half and all of its base.
+        double[] bases = [1, 2, 1, 2, 4, 4];
+        Assert.Equal(bases.Length, clock.Waits.Count);
+        for (int i = 0; i < bases.Length; i++)
+            Assert.InRange(clock.Waits[i].TotalSeconds, bases[i] / 2, bases[i]);
+    }
 
     [Fact]
     public async Task HelloIsFirstFrameAndWelcomeRegisters()
@@ -745,21 +846,6 @@ public class AgentRegistrationTests
                 "ExecutePackageOperation",
                 Op(operation, manager, "Machine", source, reportedScope)
             )
-        );
-
-        Assert.Equal("Failed", result.GetProperty("status").GetString());
-        Assert.Empty(h.Backend.Submitted);
-        Assert.Empty(h.Backend.UniqueRowChecks);
-    }
-
-    [Fact]
-    public async Task DisabledOperationsSubmitNothing()
-    {
-        var h = new Harness();
-        h.Backend.OperationsEnabled = false;
-        await h.WelcomeAsync();
-        JsonElement result = Result(
-            await h.RequestAsync(Uuid1, "ExecutePackageOperation", Op("Update", "Pip", "User", "", "machine"))
         );
 
         Assert.Equal("Failed", result.GetProperty("status").GetString());

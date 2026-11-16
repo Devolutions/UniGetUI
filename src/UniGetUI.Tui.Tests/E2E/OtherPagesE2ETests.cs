@@ -228,12 +228,13 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
             await ResetAsync(TuiPageIds.Updates);
             await EnterPage();
             await FilterPackagesAsync("Northwind");
-            await WaitForTextAsync("2 of 13 shown");
+            await WaitForTextAsync("3 of 15 shown");
             await Key(K.Enter, RawModifiers.Control);
             await WaitUntilAsync(() => TuiOperationRegistry.Snapshot().Any(o => o.Status is OperationStatus.InQueue), "a queued operation");
             await WaitForOperationsToFinishAsync();
             NAssert.That(InstalledVersion("Winget", "Northwind.Terminal"), Is.EqualTo("1.20.1"));
             NAssert.That(InstalledVersion("Npm", "northwind-lint"), Is.EqualTo("9.14.0"));
+            NAssert.That(InstalledVersion("Uv", "northwind-watch"), Is.EqualTo("1.5.2"));
         }
         finally
         {
@@ -519,7 +520,7 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await WaitForDialogAsync("Bundle security report");
         await WaitForTextAsync("Some packages use non-default install settings");
         await Key(K.Escape);
-        await WaitUntilAsync(() => PackageBundlesLoader.Instance.Packages.Count == 16, "the backup to load into the bundle");
+        await WaitUntilAsync(() => PackageBundlesLoader.Instance.Packages.Count == 18, "the backup to load into the bundle");
         await WaitForTextAsync("Package Bundles", "Woodgrove Vault");
 
         await OnUi(TuiCloudBackup.SignOut);

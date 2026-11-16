@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 
@@ -68,13 +69,11 @@ internal static class UvToolInstallRecords
     {
         try
         {
+            JsonTypeInfo<UvToolInstallRecord[]> typeInfo = UvToolInstallRecordJson.Default.UvToolInstallRecordArray;
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             File.WriteAllBytes(
                 FilePath,
-                JsonSerializer.SerializeToUtf8Bytes(
-                    [.. records],
-                    UvToolInstallRecordJson.Default.UvToolInstallRecordArray
-                )
+                JsonSerializer.SerializeToUtf8Bytes([.. records], typeInfo)
             );
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -87,11 +86,9 @@ internal static class UvToolInstallRecords
     {
         try
         {
+            JsonTypeInfo<UvToolInstallRecord[]> typeInfo = UvToolInstallRecordJson.Default.UvToolInstallRecordArray;
             return File.Exists(FilePath)
-                ? JsonSerializer.Deserialize(
-                    File.ReadAllBytes(FilePath),
-                    UvToolInstallRecordJson.Default.UvToolInstallRecordArray
-                ) ?? []
+                ? JsonSerializer.Deserialize(File.ReadAllBytes(FilePath), typeInfo) ?? []
                 : [];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)

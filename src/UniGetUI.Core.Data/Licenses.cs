@@ -87,6 +87,7 @@ namespace UniGetUI.Core.Data
                     "https://github.com/marticliment/parseable_pip_search/blob/master/LICENSE.md"
                 )
             },
+            { "Uv", new Uri("https://github.com/astral-sh/uv/blob/main/LICENSE-APACHE") },
             { ".NET SDK", new Uri("https://github.com/dotnet/sdk/blob/main/LICENSE.TXT") },
             { "PowerShell Gallery", new Uri("https://www.powershellgallery.com/") },
             { "Cargo", new Uri("https://github.com/rust-lang/cargo/blob/master/LICENSE-MIT") },

@@ -43,13 +43,41 @@ public sealed class PinnedLruKeyTracker<TKey>
     }
 
     /// <summary>Keeps <paramref name="key"/> until <see cref="Clear"/>.</summary>
-    public void Pin(TKey key)
+    public void Pin(TKey key) => Pin(key, null);
+
+    /// <summary>
+    /// Keeps <paramref name="key"/> until <see cref="Clear"/>, and runs <paramref name="store"/>
+    /// (which writes the key's value to the caller's cache) before any other change to the
+    /// tracker can be made. See <see cref="Touch(TKey, Action?, Action{TKey})"/>.
+    /// </summary>
+    public void Pin(TKey key, Action? store)
     {
         lock (_lock)
         {
             if (_evictable.Remove(key, out LinkedListNode<TKey>? node))
                 _order.Remove(node);
             _pinned.Add(key);
+            store?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Records a use of <paramref name="key"/> like <see cref="Touch(TKey)"/>, with the caller's
+    /// cache kept in step: <paramref name="store"/> writes the key's value and
+    /// <paramref name="evict"/> removes each key that fell out, all before any other change to
+    /// the tracker can be made. Without this, a key chosen for eviction could be pinned and
+    /// stored by another thread before its value was removed, leaving it pinned with no value.
+    /// The callbacks run inside the tracker's lock: they must be quick and must not call back
+    /// into the tracker.
+    /// </summary>
+    public void Touch(TKey key, Action? store, Action<TKey> evict)
+    {
+        ArgumentNullException.ThrowIfNull(evict);
+        lock (_lock)
+        {
+            store?.Invoke();
+            foreach (TKey evicted in Touch(key))
+                evict(evicted);
         }
     }
 
@@ -100,13 +128,20 @@ public sealed class PinnedLruKeyTracker<TKey>
         }
     }
 
-    public void Clear()
+    public void Clear() => Clear(null);
+
+    /// <summary>
+    /// Forgets every key, and runs <paramref name="clearStore"/> (which empties the caller's
+    /// cache) before any other change to the tracker can be made.
+    /// </summary>
+    public void Clear(Action? clearStore)
     {
         lock (_lock)
         {
             _pinned.Clear();
             _evictable.Clear();
             _order.Clear();
+            clearStore?.Invoke();
         }
     }
 }

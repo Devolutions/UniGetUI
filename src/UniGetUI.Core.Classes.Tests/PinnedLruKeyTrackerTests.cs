@@ -100,6 +100,51 @@ public class PinnedLruKeyTrackerTests
         Assert.Equal(evicted.Count, evicted.Distinct().Count());
     }
 
+    // A key chosen for eviction by one thread must not be pinned and stored by another before
+    // the first removes its value: it would stay pinned with nothing in the cache.
+    [Fact]
+    public async Task APinnedKeyNeverLosesItsValueToAConcurrentEviction()
+    {
+        var tracker = new PinnedLruKeyTracker<int>(4);
+        var cache = new System.Collections.Concurrent.ConcurrentDictionary<int, string>();
+        const int keys = 2_000;
+
+        Task searching = Task.Run(() =>
+        {
+            for (int round = 0; round < 20; round++)
+            {
+                for (int key = 0; key < keys; key++)
+                    tracker.Touch(key, () => cache[key] = "search", evicted => cache.TryRemove(evicted, out _));
+            }
+        });
+        Task listingInstalled = Task.Run(() =>
+        {
+            for (int key = 0; key < keys; key++)
+                tracker.Pin(key, () => cache[key] = "installed");
+        });
+        await Task.WhenAll(searching, listingInstalled);
+
+        Assert.Equal(keys, tracker.PinnedCount);
+        Assert.Equal(0, tracker.EvictableCount);
+        for (int key = 0; key < keys; key++)
+            Assert.True(cache.ContainsKey(key), $"pinned key {key} lost its value");
+    }
+
+    [Fact]
+    public void ClearEmptiesTheCallersCacheWithTheTracker()
+    {
+        var tracker = new PinnedLruKeyTracker<int>(2);
+        var cache = new Dictionary<int, string>();
+        tracker.Pin(1, () => cache[1] = "installed");
+        tracker.Touch(2, () => cache[2] = "search", evicted => cache.Remove(evicted));
+
+        tracker.Clear(cache.Clear);
+
+        Assert.Empty(cache);
+        Assert.Equal(0, tracker.PinnedCount);
+        Assert.Equal(0, tracker.EvictableCount);
+    }
+
     [Fact]
     public void RejectsANonPositiveCapacity()
     {

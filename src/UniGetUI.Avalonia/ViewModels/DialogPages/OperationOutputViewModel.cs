@@ -5,6 +5,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels.DialogPages;
@@ -19,6 +20,7 @@ public partial class OperationOutputViewModel : ObservableObject
     private IBrush _normalBrush = Brushes.Transparent;
 
     private readonly AbstractOperation _operation;
+    private readonly List<AbstractOperation.LineType> _lineTypes = new();
     private ProgressLineCollapser _collapser = new();
 
     public OperationOutputViewModel(AbstractOperation operation)
@@ -30,6 +32,16 @@ public partial class OperationOutputViewModel : ObservableObject
 
         operation.LogLineAdded += (_, ev) =>
             Dispatcher.UIThread.Post(() => AddOrCollapseLine(ev.Item1, ev.Item2));
+        operation.OperationFinished += (_, _) => Dispatcher.UIThread.Post(RecolorLines);
+    }
+
+    private void RecolorLines()
+    {
+        for (int i = 0; i < OutputLines.Count; i++)
+        {
+            if (_lineTypes[i] is AbstractOperation.LineType.StandardError)
+                OutputLines[i] = MakeLine(OutputLines[i].Text, _lineTypes[i]);
+        }
     }
 
     // Rebuilds every line with brushes for the current theme; called on construction and whenever
@@ -42,6 +54,7 @@ public partial class OperationOutputViewModel : ObservableObject
         _normalBrush = LookupBrush("SystemControlForegroundBaseHighBrush", theme, Brushes.White);
 
         OutputLines.Clear();
+        _lineTypes.Clear();
         _collapser = new();
         foreach (var (text, type) in _operation.GetOutput())
             AddOrCollapseLine(text, type);
@@ -54,9 +67,15 @@ public partial class OperationOutputViewModel : ObservableObject
     {
         LogLineItem item = MakeLine(text, type);
         if (_collapser.Next(type) is ProgressLineCollapser.Fold.ReplaceLast && OutputLines.Count > 0)
+        {
             OutputLines[^1] = item;
+            _lineTypes[^1] = type;
+        }
         else
+        {
             OutputLines.Add(item);
+            _lineTypes.Add(type);
+        }
     }
 
     private static IBrush LookupBrush(string key, ThemeVariant theme, IBrush fallback)
@@ -68,12 +87,9 @@ public partial class OperationOutputViewModel : ObservableObject
 
     private LogLineItem MakeLine(string text, AbstractOperation.LineType type)
     {
-        IBrush brush = type switch
-        {
-            AbstractOperation.LineType.Error => _errorBrush,
-            AbstractOperation.LineType.VerboseDetails => _debugBrush,
-            _ => _normalBrush,
-        };
+        IBrush brush = AbstractOperation.IsErrorLine(type, _operation.Status is OperationStatus.Failed)
+            ? _errorBrush
+            : type is AbstractOperation.LineType.VerboseDetails ? _debugBrush : _normalBrush;
         return new LogLineItem(text, brush);
     }
 }

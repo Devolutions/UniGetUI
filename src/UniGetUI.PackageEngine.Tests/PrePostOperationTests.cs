@@ -3,12 +3,59 @@ using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Tests.Infrastructure;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.PackageEngine.Tests;
 
 [Collection(nameof(OperationOrchestrationTestCollection))]
 public sealed class PrePostOperationTests
 {
+    [WindowsFact]
+    public async Task StandardErrorOfASucceedingCommandIsNotReportedAsAnError()
+    {
+        List<(string Text, AbstractOperation.LineType Type)> lines = [];
+        using var operation = new PrePostOperation("echo progress-on-stderr 1>&2");
+        operation.LogLineAdded += (_, line) => lines.Add(line);
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        var stderrLine = Assert.Single(lines, l => l.Text.Trim() == "progress-on-stderr");
+        Assert.Equal(AbstractOperation.LineType.StandardError, stderrLine.Type);
+        Assert.DoesNotContain(lines, l => AbstractOperation.IsErrorLine(l.Type, operationFailed: false));
+    }
+
+    [WindowsFact]
+    public async Task StandardErrorOfAFailingCommandIsReportedAsAnError()
+    {
+        List<(string Text, AbstractOperation.LineType Type)> lines = [];
+        using var operation = new PrePostOperation("echo broken 1>&2 & exit /b 3");
+        operation.LogLineAdded += (_, line) => lines.Add(line);
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        var stderrLine = Assert.Single(lines, l => l.Text.Trim() == "broken");
+        Assert.Equal(AbstractOperation.LineType.StandardError, stderrLine.Type);
+        Assert.True(AbstractOperation.IsErrorLine(stderrLine.Type, operationFailed: true));
+        Assert.Contains(lines, l => l.Type == AbstractOperation.LineType.Error);
+    }
+
+    [Theory]
+    [InlineData(AbstractOperation.LineType.Error, false, true)]
+    [InlineData(AbstractOperation.LineType.Error, true, true)]
+    [InlineData(AbstractOperation.LineType.StandardError, false, false)]
+    [InlineData(AbstractOperation.LineType.StandardError, true, true)]
+    [InlineData(AbstractOperation.LineType.Information, true, false)]
+    [InlineData(AbstractOperation.LineType.VerboseDetails, true, false)]
+    public void StandardErrorIsAnErrorOnlyWhenTheOperationFailed(
+        AbstractOperation.LineType type,
+        bool failed,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, AbstractOperation.IsErrorLine(type, failed));
+        Assert.Equal(expected, AbstractOperation.IsErrorLine(type.ToString(), failed));
+    }
+
     [WindowsFact]
     public async Task AVariablePersistedByACommandReachesProcessesStartedAfterIt()
     {

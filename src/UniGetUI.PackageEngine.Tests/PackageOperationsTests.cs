@@ -4027,7 +4027,7 @@ public sealed class PackageOperationsTests
 
         Assert.Equal(OperationVeredict.Success, result.Veredict);
         Assert.Contains(("hello from broker", LineType.Information), result.Output);
-        Assert.Contains(("an error line", LineType.Error), result.Output);
+        Assert.Contains(("an error line", LineType.StandardError), result.Output);
         Assert.Contains(("partial", LineType.Information), result.Output);
         Assert.Contains(("done", LineType.Information), result.Output);
         // The superseded "42%" progress text was never promoted to a regular line.
@@ -4148,7 +4148,7 @@ public sealed class PackageOperationsTests
         Assert.Contains("/v1/package-operations/cancel", transport.RequestedPaths);
         Assert.Contains(("streamed-line", LineType.Information), result.Output);
         // Output that arrived while the cancellation was being confirmed is preserved.
-        Assert.Contains(("shutting down", LineType.Error), result.Output);
+        Assert.Contains(("shutting down", LineType.StandardError), result.Output);
     }
 
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(

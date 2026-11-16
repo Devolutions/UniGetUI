@@ -1414,6 +1414,15 @@ namespace UniGetUI.PackageEngine.Operations
                 return;
             }
 
+            if (winget.ReportedUnconfirmedUpgradeLookup(Package))
+            {
+                Metadata.FailureMessage = CoreTools.Translate(
+                    "{package} could not be updated because its package source was busy or unreachable. Try again in a few minutes",
+                    new Dictionary<string, object?> { { "package", Package.Name } }
+                );
+                return;
+            }
+
             Metadata.FailureMessage = CoreTools.Translate(
                 "{package} may already be up to date, or no installer matches this system",
                 new Dictionary<string, object?> { { "package", Package.Name } }

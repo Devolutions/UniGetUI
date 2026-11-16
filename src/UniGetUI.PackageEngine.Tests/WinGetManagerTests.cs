@@ -3105,25 +3105,129 @@ public sealed class WinGetManagerTests : IDisposable
     [Fact]
     public void WinGetUpdateNotApplicableViaPingetWithZeroExitCodeFails()
     {
-        var manager = new WinGet();
-        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
-        var package = new PackageBuilder()
-            .WithManager(manager)
-            .WithId("Contoso.Tool")
-            .WithVersion("1.0.0")
-            .WithNewVersion("2.0.0")
-            .Build();
+        var (manager, package) = BuildPingetUpdatePackage("Contoso.PhantomTool");
 
-        var veredict = manager.OperationHelper.GetResult(
-            package,
-            OperationType.Update,
-            ["No applicable upgrade found."],
-            0
-        );
+        var veredict = RunPingetNoUpgradeResult(manager, package, _ => ListResponseWith([], []));
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
     }
+
+    [Fact]
+    public void WinGetPingetNoUpgradeKeepsTheUpdateWhenASecondLookupStillOffersIt()
+    {
+        var (manager, package) = BuildPingetUpdatePackage("Contoso.OfferedTool");
+        var queries = new List<ListQuery>();
+        ListResponse StillOffered(ListQuery query)
+        {
+            queries.Add(query);
+            return ListResponseWith(
+                [
+                    new ListMatch
+                    {
+                        Name = "Contoso Tool",
+                        Id = "Contoso.OfferedTool",
+                        LocalId = "Contoso.OfferedTool",
+                        InstalledVersion = "1.0.0",
+                        AvailableVersion = "2.0.0",
+                    },
+                ],
+                []
+            );
+        }
+
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            var veredict = RunPingetNoUpgradeResult(manager, package, StillOffered);
+            OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        }
+
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+        Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+        ListQuery query = queries[0];
+        Assert.Equal("Contoso.OfferedTool", query.Id);
+        Assert.True(query.Exact);
+        Assert.True(query.UpgradeOnly);
+        Assert.True(query.IncludeUnknown);
+        Assert.True(query.IncludePinned);
+    }
+
+    [Fact]
+    public void WinGetPingetNoUpgradeKeepsTheUpdateWhenTheSourceCannotBeRead()
+    {
+        var (manager, package) = BuildPingetUpdatePackage("Contoso.UnreadableTool");
+
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            RunPingetNoUpgradeResult(
+                manager,
+                package,
+                _ => ListResponseWith(
+                    [],
+                    [
+                        "Failed when searching source 'winget'; results will not be included: candidate source.msix failed: error sending request for url (https://cdn.winget.microsoft.com/cache/source.msix)",
+                    ]
+                )
+            );
+        }
+
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+        Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+    }
+
+    [Fact]
+    public void WinGetPingetNoUpgradeKeepsTheUpdateWhenTheSecondLookupThrows()
+    {
+        var (manager, package) = BuildPingetUpdatePackage("Contoso.LockedTool");
+
+        var veredict = RunPingetNoUpgradeResult(
+            manager,
+            package,
+            _ => throw new IOException("Failed locking file index.db (os error 33)")
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+    }
+
+    private static (WinGet Manager, IPackage Package) BuildPingetUpdatePackage(string id)
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId(id)
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        return (manager, package);
+    }
+
+    private static OperationVeredict RunPingetNoUpgradeResult(
+        WinGet manager,
+        IPackage package,
+        Func<ListQuery, ListResponse> listUpgrades
+    )
+    {
+        var original = WinGetPkgOperationHelper.ListUpgrades;
+        WinGetPkgOperationHelper.ListUpgrades = listUpgrades;
+        try
+        {
+            return manager.OperationHelper.GetResult(
+                package,
+                OperationType.Update,
+                ["No applicable upgrade found."],
+                0
+            );
+        }
+        finally
+        {
+            WinGetPkgOperationHelper.ListUpgrades = original;
+        }
+    }
+
+    private static ListResponse ListResponseWith(List<ListMatch> matches, List<string> warnings) =>
+        new() { Matches = matches, Warnings = warnings };
 
     [Fact]
     public void WinGetGenericPingetFailureDoesNotRetry()

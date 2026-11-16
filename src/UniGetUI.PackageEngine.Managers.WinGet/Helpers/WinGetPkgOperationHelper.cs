@@ -494,7 +494,15 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             }
 
             if (operation is OperationType.Update && !ReportedDifferentInstallTechnology(processOutput))
-                SuppressPhantomUpgrade(package);
+            {
+                if (
+                    !ReportedNoUpgradeCandidate(processOutput, returnCode)
+                    || RecheckUpgrade(package) is UpgradeRecheck.NotOffered
+                )
+                {
+                    SuppressPhantomUpgrade(package);
+                }
+            }
 
             Logger.Warn(
                 $"Update for {package.Id} is not applicable to this system, even without scope/architecture constraints"
@@ -762,6 +770,82 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 line.Contains("No applicable installer found", StringComparison.OrdinalIgnoreCase)
                 || line.Contains("No applicable upgrade found", StringComparison.OrdinalIgnoreCase)
             );
+    }
+
+    internal static bool ReportedNoUpgradeCandidate(IReadOnlyList<string> processOutput, int returnCode) =>
+        (uint)returnCode is not 0x8A15002B
+        && processOutput.Any(line =>
+            line.Contains("No applicable upgrade found", StringComparison.OrdinalIgnoreCase)
+        );
+
+    internal enum UpgradeRecheck
+    {
+        StillOffered,
+        SourceUnreadable,
+        NotOffered,
+    }
+
+    internal static Func<ListQuery, ListResponse> ListUpgrades { get; set; } = ListUpgradesWithRepository;
+
+    private static ListResponse ListUpgradesWithRepository(ListQuery query)
+    {
+        using Repository repository = Repository.Open(PingetPackageDetailsProvider.CreateRepositoryOptions());
+        return repository.List(query);
+    }
+
+    internal static ListQuery CreateUpgradeRecheckQuery(IPackage package)
+    {
+        PackageQuery selector = PingetPackageDetailsProvider.CreateQuery(package);
+        string? localIdentifier = GetSelectedLocalIdentifier(package);
+        return new ListQuery
+        {
+            Id = localIdentifier ?? selector.Id,
+            Name = localIdentifier is null ? selector.Name : null,
+            Exact = localIdentifier is not null || selector.Exact,
+            Source = selector.Source,
+            InstallScope = GetEffectiveScope(
+                package,
+                InstallOptionsFactory.LoadApplicable(package),
+                OperationType.Update
+            ),
+            UpgradeOnly = true,
+            IncludeUnknown = true,
+            IncludePinned = true,
+        };
+    }
+
+    internal static UpgradeRecheck RecheckUpgrade(IPackage package)
+    {
+        try
+        {
+            ListResponse response = ListUpgrades(CreateUpgradeRecheckQuery(package));
+            if (response.Matches.Any(match => !string.IsNullOrEmpty(match.AvailableVersion)))
+            {
+                Logger.Warn(
+                    $"Pinget found no upgrade for {package.Id}, but a second lookup still offers one; "
+                    + "treating the failure as transient and keeping the update listed (issue #5744)"
+                );
+                return UpgradeRecheck.StillOffered;
+            }
+
+            if (response.Warnings.Count > 0)
+            {
+                Logger.Warn(
+                    $"Pinget found no upgrade for {package.Id} and its sources could not be fully read "
+                    + $"({string.Join("; ", response.Warnings)}); keeping the update listed (issue #5744)"
+                );
+                return UpgradeRecheck.SourceUnreadable;
+            }
+
+            return UpgradeRecheck.NotOffered;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(
+                $"Could not check again whether {package.Id} has an upgrade: {ex.Message}; keeping the update listed (issue #5744)"
+            );
+            return UpgradeRecheck.SourceUnreadable;
+        }
     }
 
     public static void SuppressPhantomUpgrade(IPackage package)

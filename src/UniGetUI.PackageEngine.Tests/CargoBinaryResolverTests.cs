@@ -195,8 +195,104 @@ public sealed class CargoBinaryResolverTests
         Assert.Single(fixture.Requests);
     }
 
+    [Fact]
+    public async Task MinisignPublisherMetadataUsesTheSignatureInsteadOfAChecksum()
+    {
+        using var fixture = new CargoTestHttpFixture();
+        var manifest = Source(fixture, $$"""
+            [package.metadata.binstall]
+            pkg-url = "https://publisher.test/{name}/wrong/fixture.tgz"
+            pkg-fmt = "tgz"
+            [package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+            pkg-url = "https://publisher.test/{name}/{version}/fixture.zip"
+            pkg-fmt = "zip"
+            [package.metadata.binstall.signing]
+            algorithm = "minisign"
+            pubkey = "{{CargoTestData.MinisignPublicKey()}}"
+            """);
+        byte[] binary = CargoTestData.Zip(("tool.exe", CargoTestData.Executable()));
+        fixture.Text(CargoTestData.BinaryUrl + ".sig", CargoTestData.MinisignSignature(binary, "gh=publisher/tool"));
+        using var http = new CargoHttp();
+        var plan = Assert.IsType<CargoBinaryPlan>(await Resolve(http, manifest));
+        Assert.Equal(CargoTestData.BinaryUrl, plan.Url.AbsoluteUri);
+        Assert.Null(plan.Hash);
+        Assert.Equal("gh=publisher/tool", Assert.IsType<CargoMinisignature>(plan.Signature).TrustedComment);
+        Assert.Equal([CargoTestData.SourceUrl, CargoTestData.BinaryUrl + ".sig"],
+            fixture.Requests.Select(u => u.AbsoluteUri));
+        CargoBinaryResolver.VerifyDownload(binary, plan);
+        Assert.Contains("publisher signature", Assert.Throws<InvalidDataException>(() =>
+            CargoBinaryResolver.VerifyDownload([.. binary, 0], plan)).Message);
+    }
+
+    [Fact]
+    public async Task MinisignGitHubReleaseAssetKeepsItsDigestAndRequiresTheSignature()
+    {
+        using var fixture = new CargoTestHttpFixture();
+        var manifest = Source(fixture, $$"""
+            [package.metadata.binstall.signing]
+            algorithm = "minisign"
+            pubkey = "{{CargoTestData.MinisignPublicKey()}}"
+            """);
+        byte[] binary = [10, 20, 30];
+        fixture.Text(ReleaseUrl, $$"""
+            {"tag_name":"v1.2.3","draft":false,"assets":[
+              {"name":"{{AssetName}}","browser_download_url":"{{AssetUrl}}","digest":"{{CargoTestData.Hash(binary)}}"}
+            ]}
+            """);
+        fixture.Text(AssetUrl + ".sig", CargoTestData.MinisignSignature(binary));
+        using var http = new CargoHttp();
+        var plan = Assert.IsType<CargoBinaryPlan>(await Resolve(http, manifest));
+        Assert.Equal(CargoTestData.Hash(binary), plan.Hash);
+        Assert.NotNull(plan.Signature);
+        CargoBinaryResolver.VerifyDownload(binary, plan);
+        Assert.Equal([CargoTestData.SourceUrl, ReleaseUrl, AssetUrl + ".sig"],
+            fixture.Requests.Select(u => u.AbsoluteUri));
+    }
+
+    [Fact]
+    public async Task MissingPublisherSignatureFallsBackWithoutTryingChecksums()
+    {
+        using var fixture = new CargoTestHttpFixture();
+        var manifest = Source(fixture, $$"""
+            [package.metadata.binstall]
+            pkg-url = "https://publisher.test/{name}/{version}/fixture.zip"
+            [package.metadata.binstall.signing]
+            algorithm = "minisign"
+            pubkey = "{{CargoTestData.MinisignPublicKey()}}"
+            """);
+        fixture.Status(CargoTestData.BinaryUrl + ".sig", HttpStatusCode.NotFound);
+        using var http = new CargoHttp();
+        List<string> log = [];
+        Assert.Null(await Resolve(http, manifest, log));
+        Assert.Equal("The publisher binary has no signature. Using Cargo to build from source.", Assert.Single(log));
+        Assert.Equal([CargoTestData.SourceUrl, CargoTestData.BinaryUrl + ".sig"],
+            fixture.Requests.Select(u => u.AbsoluteUri));
+    }
+
+    [Fact]
+    public async Task SignatureFromAnotherKeyIsAnIntegrityFailureNotAFallback()
+    {
+        using var fixture = new CargoTestHttpFixture();
+        var manifest = Source(fixture, $$"""
+            [package.metadata.binstall]
+            pkg-url = "https://publisher.test/{name}/{version}/fixture.zip"
+            [package.metadata.binstall.signing]
+            algorithm = "minisign"
+            pubkey = "{{CargoTestData.MinisignPublicKey()}}"
+            """);
+        fixture.Text(CargoTestData.BinaryUrl + ".sig",
+            CargoTestData.MinisignSignature([1], keyId: [8, 7, 6, 5, 4, 3, 2, 1]));
+        using var http = new CargoHttp();
+        List<string> log = [];
+        Assert.Contains("different key", (await Assert.ThrowsAsync<InvalidDataException>(() =>
+            Resolve(http, manifest, log))).Message);
+        Assert.Empty(log);
+    }
+
     [Theory]
     [InlineData("signing = { algorithm = 'minisign' }")]
+    [InlineData("signing = { algorithm = 'pgp', pubkey = 'key' }")]
+    [InlineData("signing = { algorithm = 'minisign', pubkey = 'key', file = '{ url }.minisig' }")]
     [InlineData("disabled-strategies = ['crate-meta-data']")]
     [InlineData("pkg-url = 'https://publisher.test/latest/tool.zip'")]
     [InlineData("pkg-url = 'https://publisher.test/{version}/{unknown}.zip'")]

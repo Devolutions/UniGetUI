@@ -212,8 +212,10 @@ Local, non-elevated installations first attempt a publisher-provided binary for 
 selected version and Cargo host target. The C# installer supports ZIP, TAR, TAR.GZ/TGZ, and
 explicitly configured raw executables. It reads supported publisher manifest metadata or
 unambiguous version-specific GitHub release assets. It requires a supported SHA-256/SHA-512
-checksum (including GitHub's published asset digest); unsupported signature-only metadata
-uses source compilation. No cargo-quickinstall or other third-party build host is used.
+checksum (including GitHub's published asset digest) or, when the publisher declares a
+minisign key in `[package.metadata.binstall.signing]`, a valid `<binary URL>.sig` minisign
+signature from that key; a declared key with no published signature, or another signing
+scheme, uses source compilation. No cargo-quickinstall or other third-party build host is used.
 Checksums of crates.io source archives are never reused as binary checksums.
 
 When a compatible verified binary is unavailable, the operation log explains the fallback

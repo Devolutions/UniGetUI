@@ -7,7 +7,7 @@ namespace UniGetUI.PackageEngine.Managers.CargoManager;
 
 internal sealed record CargoBinaryPlan(
     string Id, string Version, string Target, string[] Binaries, Uri Url,
-    string Format, string Hash, string? BinaryPath);
+    string Format, string? Hash, string? BinaryPath, CargoMinisignature? Signature = null);
 
 internal sealed record CargoRelease
 {
@@ -65,8 +65,6 @@ internal sealed class CargoBinaryResolver(CargoHttp http)
         TomlTable? binstall = metadata is null ? null : CargoConfiguration.Table(metadata, "binstall");
         if (binstall is not null)
         {
-            if (binstall.ContainsKey("signing"))
-                return Fallback("Publisher signing metadata requires an unsupported signature verifier.", log);
             if (binstall.TryGetValue("disabled-strategies", out object? disabled)
                 && disabled is TomlArray strategies && strategies.OfType<string>().Contains("crate-meta-data"))
                 return Fallback("The publisher disabled release-binary installation.", log);
@@ -83,11 +81,20 @@ internal sealed class CargoBinaryResolver(CargoHttp http)
                         merged[item.Key] = item.Value;
                     binstall = merged;
                 }
-                if (binstall.ContainsKey("signing")
-                    || binstall.Keys.Any(key => key is not ("pkg-url" or "pkg-fmt" or "bin-dir"
-                        or "overrides" or "disabled-strategies")))
+                if (binstall.Keys.Any(key => key is not ("pkg-url" or "pkg-fmt" or "bin-dir"
+                    or "overrides" or "disabled-strategies" or "signing")))
                     return Fallback("The publisher uses unsupported binary installation metadata.", log);
             }
+        }
+
+        TomlTable? signing = null;
+        if (binstall is not null && binstall.ContainsKey("signing"))
+        {
+            signing = CargoConfiguration.Table(binstall, "signing");
+            if (signing is null || CargoConfiguration.String(signing, "algorithm") != "minisign"
+                || CargoConfiguration.String(signing, "pubkey") is null
+                || signing.Keys.Any(key => key is not ("algorithm" or "pubkey")))
+                return Fallback("The publisher uses unsupported signing metadata.", log);
         }
 
         string? template = binstall is null ? null : CargoConfiguration.String(binstall, "pkg-url");
@@ -104,6 +111,12 @@ internal sealed class CargoBinaryResolver(CargoHttp http)
             string? format = configuredFormat ?? CargoArchive.Format(url.AbsolutePath);
             if (!SupportedFormat(format))
                 return Fallback("The publisher binary archive format is unsupported.", log);
+            if (signing is not null)
+            {
+                CargoMinisignature? signature = await ReadSignatureAsync(url, signing, cancellationToken);
+                return signature is null ? Fallback("The publisher binary has no signature.", log)
+                    : new(id, version, target, binaries, url, format!, null, binaryPath, signature);
+            }
             string? hash = await ReadSidecarAsync(url, cancellationToken);
             return hash is null ? Fallback("The publisher binary has no supported checksum.", log)
                 : new(id, version, target, binaries, url, format!, hash, binaryPath);
@@ -129,6 +142,13 @@ internal sealed class CargoBinaryResolver(CargoHttp http)
             var asset = assets[0];
             Uri assetUrl = new(asset.browser_download_url);
             string? hash = ValidHash(asset.digest) ? asset.digest : null;
+            if (signing is not null)
+            {
+                CargoMinisignature? signature = await ReadSignatureAsync(assetUrl, signing, cancellationToken);
+                return signature is null ? Fallback("The publisher binary has no signature.", log)
+                    : new(id, version, target, binaries, assetUrl, CargoArchive.Format(asset.name)!, hash,
+                        binaryPath, signature);
+            }
             if (hash is null)
             {
                 foreach (var checksum in release.assets.Where(a =>
@@ -224,6 +244,25 @@ internal sealed class CargoBinaryResolver(CargoHttp http)
     }
 
     private static bool SupportedFormat(string? format) => format is "zip" or "tgz" or "tar" or "bin";
+
+    private async Task<CargoMinisignature?> ReadSignatureAsync(Uri url, TomlTable signing,
+        CancellationToken cancellationToken)
+    {
+        byte[]? bytes = await http.GetAsync(new Uri(url.AbsoluteUri + ".sig"), CargoHttp.ManifestLimit, true,
+            cancellationToken);
+        return bytes is null ? null
+            : CargoMinisign.Parse(CargoConfiguration.String(signing, "pubkey")!, Encoding.UTF8.GetString(bytes));
+    }
+
+    internal static void VerifyDownload(byte[] bytes, CargoBinaryPlan plan)
+    {
+        if (plan.Hash is null && plan.Signature is null)
+            throw new InvalidDataException("The publisher binary has no integrity metadata.");
+        if (plan.Hash is not null)
+            VerifyHash(bytes, plan.Hash);
+        if (plan.Signature is not null)
+            CargoMinisign.Verify(plan.Signature, bytes);
+    }
 
     private async Task<string?> ReadSidecarAsync(Uri url, CancellationToken cancellationToken)
     {

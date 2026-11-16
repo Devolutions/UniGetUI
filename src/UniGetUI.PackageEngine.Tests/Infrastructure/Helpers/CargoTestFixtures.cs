@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Formats.Tar;
 using System.IO.Compression;
 using System.Net;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using UniGetUI.PackageEngine.Managers.CargoManager;
@@ -102,6 +103,48 @@ internal static class CargoTestData
     internal const string BinaryUrl = "https://publisher.test/fixture-tool/1.2.3/fixture.zip";
 
     internal static string Hash(byte[] bytes) => "sha256:" + Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+    internal static readonly byte[] SigningSeed = Convert.FromHexString(
+        "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60");
+    internal static readonly byte[] SigningKeyId = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    internal static byte[] Ed25519Sign(byte[] seed, byte[] message)
+    {
+        byte[] hash = SHA512.HashData(seed);
+        BigInteger secret = new(Clamp(hash), isUnsigned: true);
+        byte[] publicKey = CargoMinisign.Ed25519.MultiplyBase(secret);
+        BigInteger r = CargoMinisign.Ed25519.Scalar([.. hash.AsSpan(32), .. message]);
+        byte[] encodedR = CargoMinisign.Ed25519.MultiplyBase(r);
+        BigInteger k = CargoMinisign.Ed25519.Scalar([.. encodedR, .. publicKey, .. message]);
+        byte[] s = new byte[32];
+        ((r + k * secret) % CargoMinisign.Ed25519.L).TryWriteBytes(s, out _, isUnsigned: true);
+        return [.. encodedR, .. s];
+    }
+
+    internal static byte[] Ed25519PublicKey(byte[] seed) => CargoMinisign.Ed25519.MultiplyBase(
+        new BigInteger(Clamp(SHA512.HashData(seed)), isUnsigned: true));
+
+    internal static string MinisignPublicKey(byte[]? keyId = null) => Convert.ToBase64String(
+        [(byte)'E', (byte)'d', .. keyId ?? SigningKeyId, .. Ed25519PublicKey(SigningSeed)]);
+
+    internal static string MinisignSignature(byte[] content, string trustedComment = "timestamp:1",
+        byte[]? keyId = null, bool prehashed = true)
+    {
+        byte[] signature = Ed25519Sign(SigningSeed,
+            prehashed ? CargoMinisign.Blake2b512(content) : content);
+        byte[] global = Ed25519Sign(SigningSeed, [.. signature, .. Encoding.UTF8.GetBytes(trustedComment)]);
+        return "untrusted comment: test\n"
+            + Convert.ToBase64String([(byte)'E', (byte)(prehashed ? 'D' : 'd'), .. keyId ?? SigningKeyId, .. signature])
+            + "\ntrusted comment: " + trustedComment + "\n" + Convert.ToBase64String(global) + "\n";
+    }
+
+    private static byte[] Clamp(byte[] hash)
+    {
+        byte[] secret = hash[..32];
+        secret[0] &= 248;
+        secret[31] = (byte)((secret[31] & 127) | 64);
+        return secret;
+    }
 
     internal static CargoBinaryPlan Plan(string version = Version, string target = Target,
         string[]? binaries = null, string format = "zip", string? binaryPath = null) =>

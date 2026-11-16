@@ -71,16 +71,52 @@ namespace UniGetUI.Core.Logging
         /// or move the file at the same time, and logging must go on either way.
         /// </summary>
         /// <returns>Whether the file was rotated.</returns>
-        public static bool RotateLogFileIfTooLarge(string path, long maxBytes)
+        public static bool RotateLogFileIfTooLarge(string path, long maxBytes) =>
+            RotateLogFileIfTooLarge(path, maxBytes, TimeSpan.FromSeconds(1));
+
+        // The lock in AppendToSessionLog only covers this process. Without a lock shared between
+        // processes, two of them could both see the file over the limit; the first would rotate
+        // it and start a new one, and the second would then move that new, nearly empty file
+        // over "session.log.old", losing the history just archived. Under this mutex the second
+        // process looks at the file as it is now, and finds nothing to rotate.
+        public const string RotationMutexName = "UniGetUI.SessionLogRotation";
+
+        /// <param name="wait">
+        /// How long to wait for another process that is rotating. If it takes longer, nothing is
+        /// rotated this time; the next size check tries again.
+        /// </param>
+        public static bool RotateLogFileIfTooLarge(string path, long maxBytes, TimeSpan wait)
         {
             try
             {
-                var file = new FileInfo(path);
-                if (!file.Exists || file.Length < maxBytes)
+                using var mutex = new Mutex(initiallyOwned: false, RotationMutexName);
+                bool owned;
+                try
+                {
+                    owned = mutex.WaitOne(wait);
+                }
+                catch (AbandonedMutexException)
+                {
+                    // The process that held it exited without releasing it; it is ours now.
+                    owned = true;
+                }
+
+                if (!owned)
                     return false;
 
-                File.Move(path, path + ".old", overwrite: true);
-                return true;
+                try
+                {
+                    var file = new FileInfo(path);
+                    if (!file.Exists || file.Length < maxBytes)
+                        return false;
+
+                    File.Move(path, path + ".old", overwrite: true);
+                    return true;
+                }
+                finally
+                {
+                    mutex.ReleaseMutex();
+                }
             }
             catch
             {

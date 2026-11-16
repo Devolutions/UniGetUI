@@ -88,6 +88,54 @@ namespace UniGetUI.Core.Logging.Tests
             }
         }
 
+        // Rotation is serialized between processes: while another one is rotating, this one must
+        // not move the file, and afterwards it must decide from the file as it is then.
+        [Fact]
+        public void RotationWaitsItsTurnBehindAnotherRotation()
+        {
+            string directory = Directory.CreateTempSubdirectory("unigetui-log-rotation-").FullName;
+            try
+            {
+                string path = Path.Join(directory, "session.log");
+                string rotated = path + ".old";
+                File.WriteAllText(rotated, "archived history");
+                File.WriteAllText(path, new string('a', 100));
+
+                using var held = new ManualResetEventSlim();
+                using var release = new ManualResetEventSlim();
+                var other = new Thread(() =>
+                {
+                    using var mutex = new Mutex(initiallyOwned: false, Logger.RotationMutexName);
+                    mutex.WaitOne();
+                    held.Set();
+                    release.Wait();
+                    mutex.ReleaseMutex();
+                });
+                other.Start();
+                held.Wait();
+                try
+                {
+                    Assert.False(Logger.RotateLogFileIfTooLarge(path, 100, TimeSpan.FromMilliseconds(50)));
+                    Assert.Equal("archived history", File.ReadAllText(rotated));
+                    Assert.True(File.Exists(path));
+                }
+                finally
+                {
+                    release.Set();
+                    other.Join();
+                }
+
+                // The other rotation has finished and left a new, small file: nothing to rotate.
+                File.WriteAllText(path, "new");
+                Assert.False(Logger.RotateLogFileIfTooLarge(path, 100));
+                Assert.Equal("archived history", File.ReadAllText(rotated));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
         [Fact]
         public void RotatingALogFileThatCannotBeMovedDoesNotThrow()
         {

@@ -31,6 +31,8 @@ public sealed class PowerShellDriverScriptRunner(Func<DriversElevation> elevatio
     public async Task<ScriptOutput> RunAsync(string script, bool elevated, CancellationToken cancellationToken)
     {
         DriversElevation? context = elevated ? elevation() : null;
+        if (context is { IsProhibited: true })
+            throw new DriversException(DriversErrorKind.ElevationProhibited, "Elevation is prohibited by the settings.");
         bool throughElevator = context is { IsAdministrator: false };
         ProcessStartInfo startInfo = BuildStartInfo(throughElevator ? context : null);
 

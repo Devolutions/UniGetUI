@@ -46,6 +46,18 @@ public class DriverRunnerAndCacheTests : IDisposable
         Assert.Equal(kind, ex.Kind);
     }
 
+    [Fact]
+    public async Task ProhibitedElevationIsRefusedEvenWhenAlreadyAdministrator()
+    {
+        bool prompted = false;
+        var runner = new PowerShellDriverScriptRunner(() => new DriversElevation(true, true, "", [], () => prompted = true));
+
+        var ex = await Assert.ThrowsAsync<DriversException>(() => runner.RunAsync("exit", elevated: true, CancellationToken.None));
+
+        Assert.Equal(DriversErrorKind.ElevationProhibited, ex.Kind);
+        Assert.False(prompted);
+    }
+
     [Theory]
     [InlineData(1223, "", "", true)]
     [InlineData(999, "", "gsudo: The operation was canceled by the user.", true)]

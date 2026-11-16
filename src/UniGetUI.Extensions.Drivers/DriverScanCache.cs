@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using UniGetUI.Core.Logging;
 
 namespace UniGetUI.Extensions.Drivers;
@@ -7,6 +8,8 @@ public sealed record DriverScanSnapshot(IReadOnlyList<DriverUpdate> Updates, Dat
 
 public sealed class DriverScanCache(string path)
 {
+    private static JsonTypeInfo<CachePayload> CacheJsonTypeInfo => DriversJsonContext.Default.CachePayload;
+
     public string Path { get; } = path;
 
     public DriverScanSnapshot? Load()
@@ -14,7 +17,7 @@ public sealed class DriverScanCache(string path)
         try
         {
             if (!File.Exists(Path)) return null;
-            CachePayload? payload = JsonSerializer.Deserialize(File.ReadAllText(Path), DriversJsonContext.Default.CachePayload);
+            CachePayload? payload = JsonSerializer.Deserialize(File.ReadAllText(Path), CacheJsonTypeInfo);
             return payload is null ? null : new DriverScanSnapshot(payload.Updates ?? [], payload.CheckedAt);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -30,9 +33,8 @@ public sealed class DriverScanCache(string path)
         {
             if (System.IO.Path.GetDirectoryName(Path) is { Length: > 0 } directory)
                 Directory.CreateDirectory(directory);
-            File.WriteAllText(Path, JsonSerializer.Serialize(
-                new CachePayload { CheckedAt = snapshot.CheckedAt, Updates = [.. snapshot.Updates] },
-                DriversJsonContext.Default.CachePayload));
+            CachePayload payload = new() { CheckedAt = snapshot.CheckedAt, Updates = [.. snapshot.Updates] };
+            File.WriteAllText(Path, JsonSerializer.Serialize(payload, CacheJsonTypeInfo));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

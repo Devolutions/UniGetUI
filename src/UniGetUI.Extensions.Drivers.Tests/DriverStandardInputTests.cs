@@ -31,6 +31,43 @@ public class DriverStandardInputTests
         Assert.All(DriverScripts.Scan() + install, character => Assert.True(character < 128, $"'{character}' is not ASCII"));
     }
 
+    [Fact]
+    public void DriversThatMustBeInstalledAloneGetTheirOwnInstallation()
+    {
+        string install = DriverScripts.Install([Guid.NewGuid().ToString()]);
+
+        Assert.Contains("[int]$update.InstallationBehavior.Impact -eq 2", install);
+        Assert.Contains("foreach ($batch in $batches)", install);
+    }
+
+    [WindowsTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TheScriptsParseInWindowsPowerShell(bool install)
+    {
+        string script = install ? DriverScripts.Install([Guid.NewGuid().ToString(), Guid.NewGuid().ToString()]) : DriverScripts.Scan();
+        var startInfo = new ProcessStartInfo(PowerShellDriverScriptRunner.PowerShellPath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardInputEncoding = new UTF8Encoding(false),
+        };
+        foreach (string argument in new[] { "-NoProfile", "-NonInteractive", "-Command",
+            "$errors = $null; [void][System.Management.Automation.Language.Parser]::ParseInput([Console]::In.ReadToEnd(), [ref]$null, [ref]$errors); $errors | ForEach-Object { $_.Message }; 'parse-errors:' + @($errors).Count" })
+            startInfo.ArgumentList.Add(argument);
+
+        using Process process = Process.Start(startInfo)!;
+        Task<string> output = process.StandardOutput.ReadToEndAsync();
+        await process.StandardInput.WriteAsync(script);
+        process.StandardInput.Close();
+        await process.WaitForExitAsync();
+
+        Assert.Contains("parse-errors:0", await output);
+    }
+
     [WindowsFact]
     public async Task ALargeScriptRunsThroughCmdLikeAnElevatorRunsIt()
     {

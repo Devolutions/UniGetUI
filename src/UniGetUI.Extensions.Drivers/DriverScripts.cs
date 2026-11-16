@@ -127,14 +127,35 @@ internal static class DriverScripts
                         $results += [ordered]@{ id = [string]$update.Identity.UpdateID; resultCode = 102; hResult = [int]$download.GetUpdateResult($i).HResult; rebootRequired = $false }
                     }
                 }
-                if ($toInstall.Count -gt 0) {
-                    $installer = $session.CreateUpdateInstaller()
-                    $installer.Updates = $toInstall
-                    $install = $installer.Install()
-                    $rebootRequired = [bool]$install.RebootRequired
-                    for ($i = 0; $i -lt $toInstall.Count; $i++) {
-                        $one = $install.GetUpdateResult($i)
-                        $results += [ordered]@{ id = [string]$toInstall.Item($i).Identity.UpdateID; resultCode = [int]$one.ResultCode; hResult = [int]$one.HResult; rebootRequired = [bool]$one.RebootRequired }
+                $shared = New-Object -ComObject Microsoft.Update.UpdateColl
+                $batches = @()
+                for ($i = 0; $i -lt $toInstall.Count; $i++) {
+                    $update = $toInstall.Item($i)
+                    if ([int]$update.InstallationBehavior.Impact -eq 2) {
+                        $alone = New-Object -ComObject Microsoft.Update.UpdateColl
+                        [void]$alone.Add($update)
+                        $batches += ,$alone
+                    } else {
+                        [void]$shared.Add($update)
+                    }
+                }
+                if ($shared.Count -gt 0) { $batches = @(,$shared) + $batches }
+                foreach ($batch in $batches) {
+                    try {
+                        $installer = $session.CreateUpdateInstaller()
+                        $installer.Updates = $batch
+                        $install = $installer.Install()
+                        if ($install.RebootRequired) { $rebootRequired = $true }
+                        for ($i = 0; $i -lt $batch.Count; $i++) {
+                            $one = $install.GetUpdateResult($i)
+                            $results += [ordered]@{ id = [string]$batch.Item($i).Identity.UpdateID; resultCode = [int]$one.ResultCode; hResult = [int]$one.HResult; rebootRequired = [bool]$one.RebootRequired }
+                        }
+                    } catch {
+                        $failure = $_.Exception
+                        while ($failure.InnerException -and -not ($failure -is [System.Runtime.InteropServices.COMException])) { $failure = $failure.InnerException }
+                        for ($i = 0; $i -lt $batch.Count; $i++) {
+                            $results += [ordered]@{ id = [string]$batch.Item($i).Identity.UpdateID; resultCode = 4; hResult = [int]$failure.HResult; rebootRequired = $false }
+                        }
                     }
                 }
             }

@@ -392,6 +392,84 @@ public sealed class DriversExtensionTests : IDisposable
     }, CancellationToken.None);
 
     [WindowsFact]
+    public Task AFailureAfterASuccessfulScanUsesTheShorterRetry() => _session.Dispatch<bool>(async () =>
+    {
+        var now = new DateTimeOffset(2026, 11, 16, 9, 0, 0, TimeSpan.Zero);
+        var runner = new FakeRunner();
+        runner.Respond(Scan(Update(FirstId, "First")));
+        runner.Respond("""{"error":"offline","hResult":-2145107924}""");
+        runner.Respond(Scan());
+        var vm = new DriversViewModel(new DriverUpdateService(runner), NewCache(), () => now);
+        await vm.CheckForUpdatesAsync();
+
+        now += TimeSpan.FromMinutes(5);
+        await vm.ScanCommand.ExecuteAsync(null);
+        Assert.True(vm.HasError);
+
+        now += TimeSpan.FromMinutes(30);
+        await vm.CheckForUpdatesAsync();
+        Assert.Equal(2, runner.Calls.Count);
+
+        now += DriversViewModel.FailedCheckRetryInterval;
+        await vm.CheckForUpdatesAsync();
+        Assert.Equal(3, runner.Calls.Count);
+        Assert.False(vm.HasError);
+        return true;
+    }, CancellationToken.None);
+
+    [WindowsFact]
+    public Task ANewRevisionOfAnInstalledDriverIsOfferedAgain() => _session.Dispatch<bool>(async () =>
+    {
+        var runner = new FakeRunner();
+        runner.Respond(Scan(Update(FirstId, "First")));
+        runner.Respond($$"""{"results":[{"id":"{{FirstId}}","resultCode":2,"hResult":0,"rebootRequired":true}],"rebootRequired":true}""");
+        runner.Respond(Scan(Update(FirstId, "First (revised)").Replace("\"revision\":1", "\"revision\":2")));
+        var vm = new DriversViewModel(new DriverUpdateService(runner), NewCache());
+        await vm.CheckForUpdatesAsync();
+        await vm.InstallOneCommand.ExecuteAsync(vm.Updates[0]);
+        Assert.Equal(DriverItemState.RestartRequired, vm.Updates[0].State);
+
+        await vm.ScanCommand.ExecuteAsync(null);
+
+        DriverUpdateItemViewModel item = Assert.Single(vm.Updates);
+        Assert.Equal(2, item.Update.Revision);
+        Assert.Equal("First (revised)", item.Title);
+        Assert.Equal(DriverItemState.Available, item.State);
+        Assert.True(item.CanInstall);
+        return true;
+    }, CancellationToken.None);
+
+    [WindowsFact]
+    public Task FailuresAndRestartsAreAnnouncedToScreenReaders() => _session.Dispatch<bool>(async () =>
+    {
+        List<AccessibilityAnnouncement> announcements = [];
+        void Collect(object? _, AccessibilityAnnouncement announcement) => announcements.Add(announcement);
+        AccessibilityAnnouncementService.AnnouncementRequested += Collect;
+        try
+        {
+            var runner = new FakeRunner();
+            runner.Respond("""{"error":"blocked","hResult":-2145124306}""");
+            runner.Respond(Scan(Update(FirstId, "First")));
+            runner.Respond($$"""{"results":[{"id":"{{FirstId}}","resultCode":2,"hResult":0,"rebootRequired":true}],"rebootRequired":true}""");
+            var vm = new DriversViewModel(new DriverUpdateService(runner), NewCache());
+
+            await vm.ScanCommand.ExecuteAsync(null);
+            await vm.ScanCommand.ExecuteAsync(null);
+            await vm.InstallOneCommand.ExecuteAsync(vm.Updates[0]);
+            global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+            Assert.Contains(announcements, a => a.LiveSetting == global::Avalonia.Automation.AutomationLiveSetting.Assertive && a.Message.Contains("organization"));
+            Assert.DoesNotContain(announcements, a => a.Message.Length == 0);
+            Assert.Contains(announcements, a => a.Message == vm.RestartNotice.Message && a.LiveSetting == global::Avalonia.Automation.AutomationLiveSetting.Polite);
+        }
+        finally
+        {
+            AccessibilityAnnouncementService.AnnouncementRequested -= Collect;
+        }
+        return true;
+    }, CancellationToken.None);
+
+    [WindowsFact]
     public Task AStoppedSessionStartsNoMoreWork() => _session.Dispatch<bool>(async () =>
     {
         var runner = new FakeRunner();

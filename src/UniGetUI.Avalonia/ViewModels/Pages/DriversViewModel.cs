@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using Avalonia.Automation;
 using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -260,6 +262,7 @@ public partial class DriversViewModel : ViewModelBase
         ErrorNotice.Title = CoreTools.Translate("Windows Update");
         ErrorNotice.Message = value;
         ErrorNotice.IsOpen = value.Length > 0;
+        AccessibilityAnnouncementService.Announce(value, AutomationLiveSetting.Assertive);
     }
 
     [ObservableProperty]
@@ -270,6 +273,7 @@ public partial class DriversViewModel : ViewModelBase
         RestartNotice.Title = CoreTools.Translate("Restart required");
         RestartNotice.Message = CoreTools.Translate("Restart your computer to finish installing the drivers.");
         RestartNotice.IsOpen = value;
+        if (value) AccessibilityAnnouncementService.Announce(RestartNotice.Message);
     }
 
     [ObservableProperty]
@@ -296,7 +300,8 @@ public partial class DriversViewModel : ViewModelBase
             ApplyScan(snapshot.Updates, snapshot.CheckedAt);
             HasScanned = true;
         }
-        if (IsRecent(_lastScan, BackgroundCheckInterval) || IsRecent(_lastFailure, FailedCheckRetryInterval)) return;
+        bool lastCheckFailed = _lastFailure is { } failure && (_lastScan is not { } success || failure > success);
+        if (lastCheckFailed ? IsRecent(_lastFailure, FailedCheckRetryInterval) : IsRecent(_lastScan, BackgroundCheckInterval)) return;
         await ScanAsync();
     }
 
@@ -474,7 +479,9 @@ public partial class DriversViewModel : ViewModelBase
         List<DriverUpdateItemViewModel> items = [];
         foreach (DriverUpdate update in updates)
         {
-            if (previous.TryGetValue(update.Id, out var old) && old.State is not (DriverItemState.Available or DriverItemState.Unknown))
+            if (previous.TryGetValue(update.Id, out var old)
+                && old.Update.Revision == update.Revision
+                && old.State is not (DriverItemState.Available or DriverItemState.Unknown))
                 items.Add(old);
             else
                 items.Add(new DriverUpdateItemViewModel(update) { IsSelected = old?.IsSelected ?? true });

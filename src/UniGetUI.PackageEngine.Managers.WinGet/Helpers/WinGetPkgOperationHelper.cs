@@ -303,24 +303,121 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         }
     }
 
+    internal readonly record struct CustomInstallSelectors(
+        IReadOnlyList<string> Unsupported,
+        string? Version,
+        string? Scope,
+        string? Architecture
+    );
+
+    internal static CustomInstallSelectors ReadCustomInstallSelectors(IReadOnlyList<string> arguments)
+    {
+        List<string> unsupported = [];
+        string? version = null;
+        string? scope = null;
+        string? architecture = null;
+        for (int i = 0; i < arguments.Count; i++)
+        {
+            string argument = arguments[i].Trim();
+            if (!argument.StartsWith('-'))
+                continue;
+
+            int separator = argument.IndexOf('=');
+            string name = (separator > 0 ? argument[..separator] : argument).ToLowerInvariant();
+            string? value = separator > 0 ? argument[(separator + 1)..] : null;
+            switch (name)
+            {
+                case "--version" or "-v":
+                    version = value ?? (i + 1 < arguments.Count ? arguments[++i] : "");
+                    break;
+                case "--scope":
+                    scope = value ?? (i + 1 < arguments.Count ? arguments[++i] : "");
+                    break;
+                case "--architecture" or "-a":
+                    architecture = value ?? (i + 1 < arguments.Count ? arguments[++i] : "");
+                    break;
+                case "--id" or "--name" or "--moniker" or "--query" or "-q" or "--source" or "-s" or "--manifest" or "-m":
+                    unsupported.Add(name);
+                    break;
+            }
+        }
+
+        return new CustomInstallSelectors(unsupported, version, scope, architecture);
+    }
+
+    internal readonly record struct ReinstallTarget(
+        IReadOnlyList<string> Conflicts,
+        string Version,
+        string? Scope,
+        string? Architecture
+    );
+
+    internal static ReinstallTarget ResolveReinstallTarget(
+        InstallOptions options,
+        string? scope,
+        string? architecture
+    )
+    {
+        var custom = ReadCustomInstallSelectors(options.CustomParameters_Install);
+        List<string> conflicts = [.. custom.Unsupported];
+        if (custom.Version is not null && options.Version.Length > 0)
+            conflicts.Add("--version");
+        string? customScope = custom.Scope?.ToLowerInvariant();
+        string? customArchitecture = custom.Architecture?.ToLowerInvariant();
+        if (customScope is not null && (scope is not null || customScope is not (PackageScope.Machine or PackageScope.User)))
+            conflicts.Add("--scope");
+        if (customArchitecture is not null && (architecture is not null || NativePackageHandler.ToProcessorArchitecture(customArchitecture) is null))
+            conflicts.Add("--architecture");
+
+        return new ReinstallTarget(
+            conflicts,
+            custom.Version ?? options.Version,
+            customScope ?? scope,
+            customArchitecture ?? architecture
+        );
+    }
+
     public override string? GetReinstallRefusal(IPackage package, InstallOptions options)
     {
-        bool? installable = NativePackageHandler.CanInstallExactVersion(
-            package,
-            options.Version,
+        if (!NativePackageHandler.CanCheckInstallTargets)
+            return null;
+
+        var target = ResolveReinstallTarget(
+            options,
             GetEffectiveScope(package, options, OperationType.Install),
             GetEffectiveArchitecture(package, options, operation: OperationType.Install)
+        );
+        if (target.Conflicts.Count > 0)
+            return CoreTools.Translate(
+                "{0} was not uninstalled: its custom install parameters ({1}) change which package or installer would be installed again, which UniGetUI cannot check beforehand. Remove them, or uninstall and install it separately.",
+                package.Name,
+                string.Join(", ", target.Conflicts)
+            );
+
+        string version = target.Version;
+        bool? installable = NativePackageHandler.CanInstallExactVersion(
+            package,
+            version,
+            target.Scope,
+            target.Architecture
         );
         if (installable is not false)
             return null;
 
-        return CoreTools.Translate(
-            "{0} was not uninstalled: version {1} of {2} could not be found on {3}, so it could not have been installed again afterwards. Reload the package list.",
-            package.Name,
-            options.Version.Length > 0 ? options.Version : package.NewVersionString,
-            package.Id,
-            package.Source.Name
-        );
+        return version.Length > 0
+            ? CoreTools.Translate(
+                "{0} was not uninstalled: version {1} of {2} could not be found on {3}, so it could not have been installed again afterwards. Reload the package list.",
+                package.Name,
+                version,
+                package.Id,
+                package.Source.Name
+            )
+            : CoreTools.Translate(
+                "{0} was not uninstalled: {1} could not be found on {2}, so it could not have been installed again afterwards. Reload the package list.",
+                package.Name,
+                package.Id,
+                package.Source.Name
+            );
     }
 
     public override void ApplyElevationRequirements(

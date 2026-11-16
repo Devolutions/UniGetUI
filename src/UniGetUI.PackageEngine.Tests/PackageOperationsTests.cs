@@ -1078,6 +1078,127 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task AnUninstallThenInstallIsCheckedEvenWhenTheInstalledListMissesThePackage()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        int asked = 0;
+        var manager = CreateRecordingProcessManager(
+            executed,
+            _ => true,
+            (_, _) =>
+            {
+                Interlocked.Increment(ref asked);
+                return "REFUSED";
+            }
+        );
+        var package = new PackageBuilder().WithManager(manager).WithId("XPDP2QW12DFSFK").WithVersion("174.0.13368").Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder().WithManager(manager).WithId("Unrelated.App").WithVersion("1.0").Build()
+        );
+        var isLoaded = typeof(AbstractPackageLoader).GetProperty(nameof(AbstractPackageLoader.IsLoaded))!;
+        isLoaded.SetValue(InstalledPackagesLoader.Instance, true);
+        try
+        {
+            var uninstall = new UninstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+            using var install = new InstallPackageOperation(
+                package,
+                new InstallOptions(),
+                IgnoreParallelInstalls: true,
+                req: uninstall
+            );
+
+            await install.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+            Assert.Equal(OperationStatus.Failed, install.Status);
+            Assert.Empty(executed);
+            Assert.Equal(1, asked);
+        }
+        finally
+        {
+            isLoaded.SetValue(InstalledPackagesLoader.Instance, false);
+        }
+    }
+
+    [Fact]
+    public async Task ARetriedUninstallThenInstallIsCheckedAgainBeforeItsUninstallRunsAgain()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        string? refusal = null;
+        var manager = CreateRecordingProcessManager(
+            executed,
+            operation => operation is not OperationType.Install,
+            (_, _) => refusal
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+        InitializeLoaders();
+        var uninstall = new UninstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+        using var install = new InstallPackageOperation(
+            package,
+            new InstallOptions(),
+            IgnoreParallelInstalls: true,
+            req: uninstall
+        );
+
+        await install.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+        Assert.Equal(OperationStatus.Failed, install.Status);
+        Assert.Equal(
+            "Contoso Tool was uninstalled so that it could be installed again, but the installation failed, so Contoso Tool is no longer installed. Retry, or install it again.",
+            install.Metadata.FailureMessage
+        );
+
+        refusal = "REFUSED";
+        install.Retry(AbstractOperation.RetryMode.Retry);
+        await WaitForConditionAsync(() => install.Status is OperationStatus.Failed && install.Metadata.FailureMessage == "REFUSED");
+
+        Assert.Equal(["Uninstall|RAN-Uninstall-Contoso.Tool-", "Install|RAN-Install-Contoso.Tool-"], executed);
+    }
+
+    [Fact]
+    public async Task AFailedUpdateThroughUninstallThenInstallSaysThePackageIsNoLongerInstalled()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var manager = CreateRecordingProcessManager(executed, operation => operation is not OperationType.Install);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Notion")
+            .WithId("Notion.Notion")
+            .WithVersion("7.41.1")
+            .WithNewVersion("7.43.2")
+            .Build();
+        InitializeLoaders();
+        var uninstall = new UninstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+        using var install = new InstallPackageOperation(
+            package,
+            new InstallOptions(),
+            IgnoreParallelInstalls: true,
+            req: uninstall
+        );
+
+        await install.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Failed, install.Status);
+        Assert.Equal(
+            "Notion was uninstalled so that version 7.43.2 could be installed, but the installation failed, so Notion is no longer installed. Retry, or install it again.",
+            install.Metadata.FailureMessage
+        );
+    }
+
+    [Fact]
     public async Task ARetriedReinstallStillInstallsOnceTheUninstallHasRun()
     {
         if (!OperatingSystem.IsWindows())

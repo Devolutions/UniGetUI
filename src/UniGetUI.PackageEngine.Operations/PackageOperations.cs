@@ -1391,20 +1391,24 @@ namespace UniGetUI.PackageEngine.Operations
 
         private void ExplainUninstalledByTheReinstall()
         {
-            if (
-                CommandRole is not OperationType.Install
-                || _uninstallBeforeReinstall?.Status is not OperationStatus.Succeeded
-            )
+            UninstallPackageOperation? uninstall = Role is OperationType.Update
+                ? _uninstallBeforeReinstall
+                : _uninstallPrerequisite;
+            if (CommandRole is not OperationType.Install || uninstall?.Status is not OperationStatus.Succeeded)
                 return;
 
-            string uninstalled = CoreTools.Translate(
-                "{package} was uninstalled so that version {version} could be installed, but the installation failed, so {package} is no longer installed. Retry, or install it again.",
-                new Dictionary<string, object?>
-                {
-                    { "package", Package.Name },
-                    { "version", Options.Version.Length > 0 ? Options.Version : Package.NewVersionString },
-                }
-            );
+            string version = Options.Version.Length > 0 ? Options.Version
+                : Package.IsUpgradable ? Package.NewVersionString
+                : "";
+            string uninstalled = version.Length > 0
+                ? CoreTools.Translate(
+                    "{package} was uninstalled so that version {version} could be installed, but the installation failed, so {package} is no longer installed. Retry, or install it again.",
+                    new Dictionary<string, object?> { { "package", Package.Name }, { "version", version } }
+                )
+                : CoreTools.Translate(
+                    "{package} was uninstalled so that it could be installed again, but the installation failed, so {package} is no longer installed. Retry, or install it again.",
+                    new Dictionary<string, object?> { { "package", Package.Name } }
+                );
             Metadata.FailureMessage =
                 Metadata.FailureMessage == _genericFailureMessage
                     ? uninstalled
@@ -1662,13 +1666,11 @@ namespace UniGetUI.PackageEngine.Operations
             if (RefusalBeforeStart() is { } refusal)
                 return refusal;
 
-            UninstallPackageOperation? pendingUninstall =
-                Role is OperationType.Update ? _uninstallBeforeReinstall : _uninstallPrerequisite;
-            if (
-                pendingUninstall is not { Status: not OperationStatus.Succeeded }
-                || IsBrokerEligible(Package)
-                || IsKnownToBeUninstalled(Package)
-            )
+            bool uninstallIsScheduled = Role is OperationType.Update
+                ? _uninstallBeforeReinstall is { Status: not OperationStatus.Succeeded }
+                    && !IsKnownToBeUninstalled(Package)
+                : _uninstallPrerequisite is not null;
+            if (!uninstallIsScheduled || IsBrokerEligible(Package))
                 return null;
 
             string? reinstallRefusal = await Task.Run(() =>

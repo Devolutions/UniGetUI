@@ -162,6 +162,9 @@ public static class NativePackageHandler
         return installerInfo;
     }
 
+    internal static bool CanCheckInstallTargets =>
+        NativeWinGetHelper.ExternalFactory is not null && NativeWinGetHelper.ExternalWinGetManager is not null;
+
     internal static bool? CanInstallExactVersion(
         IPackage package,
         string version,

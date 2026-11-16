@@ -3055,6 +3055,48 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Contains("machine", install);
     }
 
+    [Theory]
+    [InlineData("", "", null, null, "", "", "", "")]
+    [InlineData("--override /S", "", null, null, "", "", "", "")]
+    [InlineData("--version 1.2.0", "", null, null, "", "1.2.0", "", "")]
+    [InlineData("--version=1.2.0", "", null, null, "", "1.2.0", "", "")]
+    [InlineData("-v 1.2.0", "3.0.0", null, null, "--version", "1.2.0", "", "")]
+    [InlineData("--scope Machine", "", null, null, "", "", "machine", "")]
+    [InlineData("--scope machine", "", "user", null, "--scope", "", "machine", "")]
+    [InlineData("--scope everywhere", "", null, null, "--scope", "", "everywhere", "")]
+    [InlineData("-a x64", "", null, null, "", "", "", "x64")]
+    [InlineData("--architecture x64", "", null, "arm64", "--architecture", "", "", "x64")]
+    [InlineData("--architecture neutral", "", null, null, "--architecture", "", "", "neutral")]
+    [InlineData("--id Other.App --source msstore", "", null, null, "--id,--source", "", "", "")]
+    [InlineData("-s winget -m C:\\app.yaml", "", null, null, "-s,-m", "", "", "")]
+    public void AReinstallChecksTheTargetTheCustomInstallParametersSelect(
+        string customInstall,
+        string version,
+        string? scope,
+        string? architecture,
+        string expectedConflicts,
+        string expectedVersion,
+        string expectedScope,
+        string expectedArchitecture
+    )
+    {
+        var options = new InstallOptions
+        {
+            Version = version,
+            CustomParameters_Install = customInstall.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList(),
+            CustomParameters_Uninstall = ["--id", "Uninstall.Only"],
+        };
+
+        var target = WinGetPkgOperationHelper.ResolveReinstallTarget(options, scope, architecture);
+
+        Assert.Equal(expectedConflicts, string.Join(",", target.Conflicts));
+        if (expectedConflicts.Length > 0)
+            return;
+        Assert.Equal(expectedVersion.Length > 0 ? expectedVersion : version, target.Version);
+        Assert.Equal(expectedScope.Length > 0 ? expectedScope : scope, target.Scope);
+        Assert.Equal(expectedArchitecture.Length > 0 ? expectedArchitecture : architecture, target.Architecture);
+    }
+
     [Fact]
     public void AWinGetReinstallIsNotRefusedWhenItCannotBeCheckedWithoutTheComApi()
     {

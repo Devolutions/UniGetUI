@@ -210,6 +210,45 @@
                                IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                 </Grid>
             </ListBoxItem>
+
+            <ListBoxItem x:Name="DriversNavBtn" Tag="Drivers" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Drivers}"
+                         ToolTip.Tip="{t:Translate Drivers}">
+                <Panel>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                        <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/drivers.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{t:Translate Drivers}"
+                                   FontSize="14"
+                                   FontWeight="Normal"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                    </Grid>
+                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="3,1"
+                            MinWidth="16"
+                            Height="16"
+                            IsVisible="{Binding DriversBadgeVisible}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="26,5,-20,0">
+                        <TextBlock Text="{Binding DriversBadgeText}"
+                                   FontSize="9"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <ProgressBar IsIndeterminate="{Binding DriversIsLoading}"
+                                 IsVisible="{Binding DriversIsLoading}"
+                                 Height="2"
+                                 Width="32"
+                                 MinWidth="0"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Bottom"
+                                 Margin="4,0,0,2"/>
+                </Panel>
+            </ListBoxItem>
         </ListBox>
 
         <!-- Footer items -->

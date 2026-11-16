@@ -15,10 +15,10 @@ public class DriverRunnerAndCacheTests : IDisposable
     [Fact]
     public void AnUnelevatedRunStartsTheSystemPowerShellDirectly()
     {
-        var startInfo = PowerShellDriverScriptRunner.BuildStartInfo("exit", elevator: null);
+        var startInfo = PowerShellDriverScriptRunner.BuildStartInfo(elevator: null);
 
         Assert.Equal(PowerShellDriverScriptRunner.PowerShellPath, startInfo.FileName);
-        Assert.Equal(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", DriverScripts.Encode("exit")], startInfo.ArgumentList);
+        Assert.Equal(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", DriverScripts.EncodedStandardInputLoader], startInfo.ArgumentList);
         Assert.False(startInfo.UseShellExecute);
     }
 
@@ -27,11 +27,11 @@ public class DriverRunnerAndCacheTests : IDisposable
     {
         var elevation = new DriversElevation(false, false, @"C:\Tools\elevator.exe", ["-A", "--direct"]);
 
-        var startInfo = PowerShellDriverScriptRunner.BuildStartInfo("exit", elevation);
+        var startInfo = PowerShellDriverScriptRunner.BuildStartInfo(elevation);
 
         Assert.Equal(@"C:\Tools\elevator.exe", startInfo.FileName);
         Assert.Equal(["-A", "--direct", PowerShellDriverScriptRunner.PowerShellPath], startInfo.ArgumentList.Take(3));
-        Assert.Equal(DriverScripts.Encode("exit"), startInfo.ArgumentList[^1]);
+        Assert.Equal(DriverScripts.EncodedStandardInputLoader, startInfo.ArgumentList[^1]);
     }
 
     [Theory]
@@ -41,7 +41,7 @@ public class DriverRunnerAndCacheTests : IDisposable
     {
         var elevation = new DriversElevation(false, prohibited, elevatorPath, []);
 
-        var ex = Assert.Throws<DriversException>(() => PowerShellDriverScriptRunner.BuildStartInfo("exit", elevation));
+        var ex = Assert.Throws<DriversException>(() => PowerShellDriverScriptRunner.BuildStartInfo(elevation));
 
         Assert.Equal(kind, ex.Kind);
     }

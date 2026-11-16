@@ -32,7 +32,7 @@ public sealed class PowerShellDriverScriptRunner(Func<DriversElevation> elevatio
     {
         DriversElevation? context = elevated ? elevation() : null;
         bool throughElevator = context is { IsAdministrator: false };
-        ProcessStartInfo startInfo = BuildStartInfo(script, throughElevator ? context : null);
+        ProcessStartInfo startInfo = BuildStartInfo(throughElevator ? context : null);
 
         if (throughElevator) context!.BeforePrompt?.Invoke();
 
@@ -48,9 +48,17 @@ public sealed class PowerShellDriverScriptRunner(Func<DriversElevation> elevatio
 
         using (process)
         {
-            process.StandardInput.Close();
             Task<string> stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
             Task<string> stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
+            try
+            {
+                await process.StandardInput.WriteAsync(script);
+                process.StandardInput.Close();
+            }
+            catch (IOException ex)
+            {
+                Logger.Warn($"The driver script could not be sent to PowerShell: {ex.Message}");
+            }
             try
             {
                 await process.WaitForExitAsync(throughElevator ? CancellationToken.None : cancellationToken);
@@ -73,7 +81,7 @@ public sealed class PowerShellDriverScriptRunner(Func<DriversElevation> elevatio
         }
     }
 
-    internal static ProcessStartInfo BuildStartInfo(string script, DriversElevation? elevator)
+    internal static ProcessStartInfo BuildStartInfo(DriversElevation? elevator)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -82,6 +90,7 @@ public sealed class PowerShellDriverScriptRunner(Func<DriversElevation> elevatio
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardInputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
         };
@@ -102,7 +111,7 @@ public sealed class PowerShellDriverScriptRunner(Func<DriversElevation> elevatio
             startInfo.ArgumentList.Add(PowerShellPath);
         }
 
-        foreach (string argument in new[] { "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", DriverScripts.Encode(script) })
+        foreach (string argument in new[] { "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", DriverScripts.EncodedStandardInputLoader })
             startInfo.ArgumentList.Add(argument);
         return startInfo;
     }

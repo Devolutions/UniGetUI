@@ -106,15 +106,4 @@ public class DriverUpdateServiceTests
     [InlineData("not-a-guid")]
     public void InstallScriptRefusesIdsThatAreNotGuids(string id)
         => Assert.Throws<FormatException>(() => DriverScripts.Install([id]));
-
-    [Fact]
-    public void EncodedScriptRoundTripsThroughUtf16()
-    {
-        string script = DriverScripts.Scan();
-
-        string decoded = System.Text.Encoding.Unicode.GetString(Convert.FromBase64String(DriverScripts.Encode(script)));
-
-        Assert.Equal(script, decoded);
-        Assert.True(DriverScripts.Encode(DriverScripts.Install([Guid.NewGuid().ToString()])).Length < 30000);
-    }
 }

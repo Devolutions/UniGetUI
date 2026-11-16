@@ -154,5 +154,7 @@ internal static class DriverScripts
         return Prelude + $"$Ids = @({literal})\n" + InstallBody;
     }
 
-    public static string Encode(string script) => Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+    public const string StandardInputLoader = "$script = [Console]::In.ReadToEnd(); & ([scriptblock]::Create($script))";
+
+    public static string EncodedStandardInputLoader { get; } = Convert.ToBase64String(Encoding.Unicode.GetBytes(StandardInputLoader));
 }

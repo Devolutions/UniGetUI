@@ -243,8 +243,14 @@ the opposite way depending on the feed it came from:
 So the comparison is per-manager, not global. `IPackageManager.CompareVersions(a, b)` returns the
 usual negative/zero/positive, or `null` when two versions cannot be meaningfully compared:
 
-- **Default** (`PackageManager.CompareVersions`) - the numeric comparison above. Used by Scoop,
-  WinGet, Apt, Dnf, Homebrew, vcpkg, Snap and Flatpak.
+- **Default** (`PackageManager.CompareVersions`) - the numeric comparison above. Used by WinGet,
+  Apt, Dnf, Homebrew, vcpkg, Snap and Flatpak.
+- **`ScoopVersion`** in the Scoop manager project - a port of Scoop's own `Compare-Version`
+  (`lib/versions.ps1`), which is what `scoop status` uses to call an app outdated. A dash
+  revision stays newer (`7.1.2-35` > `7.1.2`), while a part matching `alpha|beta|rc|pre` ranks
+  below the release and labels compare as text, so `7.7.0-preview.5` < `7.7.0-rc.1` < `7.7.0`.
+  It returns `null` wherever Scoop reaches no verdict, including two `nightly` versions, and
+  never falls back to the default.
 - **`SemanticVersion`** in `UniGetUI.Core.Tools` - SemVer 2.0 with NuGet's fourth numeric segment
   allowed. Used by `BaseNuGet` (so Chocolatey, .NET Tool, Windows PowerShell and PowerShell 7),
   npm, Bun and Cargo.

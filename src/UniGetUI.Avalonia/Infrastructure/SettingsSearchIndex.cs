@@ -154,6 +154,7 @@ public static class SettingsSearchIndex
         new("Search skills.sh", ["skills.sh", "skills discovery", "registry"], typeof(AgentSkillsSettingsControl), "SkillsShDiscoveryToggle"),
         new("Installation targets", ["skills", "agents", "codex", "claude", "copilot"], typeof(AgentSkillsSettingsControl), "TargetModeSelector"),
         new("Notion integration", ["skills", "notion", "sign in"], typeof(AgentSkillsSettingsControl), "NotionExpander"),
+        new("Enable Drivers", ["drivers", "driver updates", "windows update", "hardware", "optional updates"], typeof(DriversSettings), "DriversCard", WindowsOnly: true),
 #if UNIGETUI_XCODE_EXTENSION
         new("Enable Xcode", ["xcode", "xcodes", "apple", "ios", "macos", "developer tools"], typeof(XcodeSettings), "XcodeCard", MacOnly: true),
         new("Check for new Xcode versions automatically", ["xcode check interval", "xcode updates"], typeof(XcodeSettings), "XcodeCheckIntervalCard", MacOnly: true),
@@ -328,6 +329,7 @@ public static class SettingsSearchIndex
         nameof(ExtensionsHomepage) => "Extensions",
         nameof(GitRepositoriesSettings) => "Git Repositories",
         nameof(AgentSkillsSettingsControl) => "Agent Skills",
+        nameof(DriversSettings) => "Drivers",
 #if UNIGETUI_XCODE_EXTENSION
         nameof(XcodeSettings) => "Xcode",
 #endif

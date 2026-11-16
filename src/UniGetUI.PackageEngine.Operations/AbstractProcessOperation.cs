@@ -86,8 +86,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
     /// The elevator's own arguments, as a vector. <see cref="CoreData.ElevatorArgs"/> holds at most
     /// a couple of fixed flags (for example "-A" for sudo with an askpass helper).
     /// </summary>
-    protected static IReadOnlyList<string> ElevatorArgumentPrefix() =>
-        CoreData.ElevatorArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    protected static IReadOnlyList<string> ElevatorArgumentPrefix() => CoreData.ElevatorArgumentVector;
 
     protected void RefreshProcessEnvironment()
     {

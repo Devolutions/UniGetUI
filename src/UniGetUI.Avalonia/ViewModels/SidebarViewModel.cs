@@ -48,21 +48,35 @@ public partial class SidebarViewModel : ViewModelBase
     }
 #endif
 
+    [ObservableProperty]
+    private bool _driversEnabled = AppExtensions.Drivers.IsEnabled;
+
+    partial void OnDriversEnabledChanged(bool value)
+    {
+        NavigationPages = GetNavigationPages(driversEnabled: value);
+        if (value) return;
+        DriversBadgeCount = 0;
+        DriversIsLoading = false;
+    }
+
     private PageType[] GetNavigationPages(
         bool? gitRepositoriesEnabled = null,
         bool? agentSkillsEnabled = null,
-        bool? xcodeEnabled = null) =>
+        bool? xcodeEnabled = null,
+        bool? driversEnabled = null) =>
 #if UNIGETUI_XCODE_EXTENSION
         NavigationPageOrder.Get(
             SoftwareCatalogEnabled,
             gitRepositoriesEnabled ?? GitRepositoriesEnabled,
             agentSkillsEnabled ?? AgentSkillsEnabled,
-            xcodeEnabled ?? XcodeEnabled);
+            xcodeEnabled ?? XcodeEnabled,
+            driversEnabled ?? DriversEnabled);
 #else
         NavigationPageOrder.Get(
             SoftwareCatalogEnabled,
             gitRepositoriesEnabled ?? GitRepositoriesEnabled,
-            agentSkillsEnabled ?? AgentSkillsEnabled);
+            agentSkillsEnabled ?? AgentSkillsEnabled,
+            driversEnabled: driversEnabled ?? DriversEnabled);
 #endif
 
     [ObservableProperty]
@@ -75,6 +89,7 @@ public partial class SidebarViewModel : ViewModelBase
     {
         if (page == PageType.GitRepositories) GitRepositoriesEnabled = enabled;
         if (page == PageType.AgentSkills) AgentSkillsEnabled = enabled;
+        if (page == PageType.Drivers) DriversEnabled = enabled && AppExtensions.Drivers.IsAvailable();
 #if UNIGETUI_XCODE_EXTENSION
         if (page == PageType.Xcode) XcodeEnabled = enabled && XcodePlatform.IsSupported;
 #endif
@@ -120,6 +135,18 @@ public partial class SidebarViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _gitRepositoriesIsLoading;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DriversBadgeText))]
+    [NotifyPropertyChangedFor(nameof(DriversBadgeVisible))]
+    private int _driversBadgeCount;
+
+    public bool DriversBadgeVisible => DriversBadgeCount > 0;
+
+    public string DriversBadgeText => DriversBadgeCount > 99 ? "99+" : DriversBadgeCount.ToString();
+
+    [ObservableProperty]
+    private bool _driversIsLoading;
 
 #if UNIGETUI_XCODE_EXTENSION
     // Whether a newer Xcode than the newest one installed can be installed; one at most.
@@ -277,6 +304,7 @@ public partial class SidebarViewModel : ViewModelBase
             case PageType.Updates: UpdatesIsLoading = isLoading; break;
             case PageType.Installed: InstalledIsLoading = isLoading; break;
             case PageType.GitRepositories: GitRepositoriesIsLoading = isLoading; break;
+            case PageType.Drivers: DriversIsLoading = isLoading; break;
 #if UNIGETUI_XCODE_EXTENSION
             case PageType.Xcode: XcodeIsLoading = isLoading; break;
 #endif

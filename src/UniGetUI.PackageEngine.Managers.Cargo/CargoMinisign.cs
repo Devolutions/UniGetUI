@@ -12,7 +12,13 @@ internal static class CargoMinisign
 {
     internal static CargoMinisignature Parse(string publicKey, string signatureFile)
     {
-        byte[] key = Decode(publicKey.Trim(), 42, "public key");
+        string[] keyLines = publicKey.Replace("\r", "").Split('\n')
+            .Select(line => line.Trim()).Where(line => line.Length > 0).ToArray();
+        if (keyLines.Length == 2 && keyLines[0].StartsWith("untrusted comment:", StringComparison.Ordinal))
+            keyLines = keyLines[1..];
+        if (keyLines.Length != 1)
+            throw new InvalidDataException("The publisher minisign public key is malformed.");
+        byte[] key = Decode(keyLines[0], 42, "public key");
         if (key[0] != 'E' || key[1] != 'd')
             throw new InvalidDataException("The publisher minisign public key uses an unsupported algorithm.");
         string[] lines = signatureFile.Replace("\r", "").Split('\n');
@@ -148,7 +154,8 @@ internal static class CargoMinisign
         internal static bool Verify(ReadOnlySpan<byte> publicKey, ReadOnlySpan<byte> message, ReadOnlySpan<byte> signature)
         {
             if (publicKey.Length != 32 || signature.Length != 64
-                || Decompress(publicKey) is not { } a || Decompress(signature[..32]) is not { } r)
+                || Decompress(publicKey) is not { } a || Decompress(signature[..32]) is not { } r
+                || IsSmallOrder(a) || IsSmallOrder(r))
                 return false;
             BigInteger s = new(signature[32..], isUnsigned: true);
             if (s >= L)
@@ -191,6 +198,12 @@ internal static class CargoMinisign
                 scalar >>= 1;
             }
             return result;
+        }
+
+        private static bool IsSmallOrder(Point point)
+        {
+            Point multiple = Multiply(8, point);
+            return multiple.X.IsZero && Mod(multiple.Y - multiple.Z).IsZero;
         }
 
         private static bool AreEqual(Point p, Point q) =>

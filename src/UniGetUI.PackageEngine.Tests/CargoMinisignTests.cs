@@ -64,6 +64,59 @@ public sealed class CargoMinisignTests
         Assert.False(CargoMinisign.Ed25519.Verify(key, [], signature));
     }
 
+    [Theory]
+    [InlineData("0100000000000000000000000000000000000000000000000000000000000000")]
+    [InlineData("ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f")]
+    [InlineData("0000000000000000000000000000000000000000000000000000000000000080")]
+    [InlineData("26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05")]
+    [InlineData("c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a")]
+    public void Ed25519RejectsSmallOrderPublicKeysAndCommitments(string smallOrder)
+    {
+        byte[] point = Convert.FromHexString(smallOrder);
+        byte[] forged = [.. point, .. new byte[32]];
+        byte[] honest = CargoTestData.Ed25519Sign(CargoTestData.SigningSeed, [1, 2, 3]);
+        Assert.False(CargoMinisign.Ed25519.Verify(point, [1, 2, 3], forged));
+        Assert.False(CargoMinisign.Ed25519.Verify(point, "any message"u8, forged));
+        Assert.False(CargoMinisign.Ed25519.Verify(CargoTestData.Ed25519PublicKey(CargoTestData.SigningSeed),
+            [1, 2, 3], [.. point, .. honest.AsSpan(32)]));
+    }
+
+    [Fact]
+    public void IdentityPublicKeyCannotAuthorizeAnyContent()
+    {
+        string identityKey = Convert.ToBase64String(
+            [(byte)'E', (byte)'d', .. CargoTestData.SigningKeyId, 1, .. new byte[31]]);
+        byte[] forgedSignature = [1, .. new byte[63]];
+        string file = "untrusted comment: forged\n"
+            + Convert.ToBase64String([(byte)'E', (byte)'D', .. CargoTestData.SigningKeyId, .. forgedSignature])
+            + "\ntrusted comment: anything\n" + Convert.ToBase64String(forgedSignature) + "\n";
+        var signature = CargoMinisign.Parse(identityKey, file);
+        Assert.Contains("publisher signature", Assert.Throws<InvalidDataException>(() =>
+            CargoMinisign.Verify(signature, Encoding.UTF8.GetBytes("replacement binary"))).Message);
+    }
+
+    [Theory]
+    [InlineData("untrusted comment: minisign public key 0102030405060708\n{0}")]
+    [InlineData("untrusted comment: minisign public key 0102030405060708\r\n{0}\r\n")]
+    [InlineData("\n  {0}  \n")]
+    public void PublicKeyMayIncludeTheMinisignCommentLine(string format)
+    {
+        byte[] content = [4, 5, 6];
+        var signature = CargoMinisign.Parse(string.Format(format, CargoTestData.MinisignPublicKey()),
+            CargoTestData.MinisignSignature(content));
+        CargoMinisign.Verify(signature, content);
+    }
+
+    [Theory]
+    [InlineData("untrusted comment: only a comment")]
+    [InlineData("untrusted comment: x\n{0}\n{0}")]
+    [InlineData("{0}\nuntrusted comment: x")]
+    [InlineData("trusted comment: x\n{0}")]
+    public void PublicKeyWithAnythingButOneOptionalCommentIsRejected(string format) =>
+        Assert.Contains("public key", Assert.Throws<InvalidDataException>(() =>
+            CargoMinisign.Parse(string.Format(format, CargoTestData.MinisignPublicKey()),
+                CargoTestData.MinisignSignature([1]))).Message);
+
     [Fact]
     public void RealCargoBinstallSignatureParsesAndItsTrustedCommentVerifies()
     {

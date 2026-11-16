@@ -3077,5 +3077,20 @@
   "Find and install driver updates offered by Windows Update": "Find and install driver updates offered by Windows Update",
   "Result unknown": "Result unknown",
   "{0} UniGetUI checked Windows Update again: drivers that are no longer offered were installed.": "{0} UniGetUI checked Windows Update again: drivers that are no longer offered were installed.",
-  "Windows Update did not return a result UniGetUI could read. The UniGetUI log has the details.": "Windows Update did not return a result UniGetUI could read. The UniGetUI log has the details."
+  "Windows Update did not return a result UniGetUI could read. The UniGetUI log has the details.": "Windows Update did not return a result UniGetUI could read. The UniGetUI log has the details.",
+  "Not needed": "Not needed",
+  "Required after installing": "Required after installing",
+  "May be needed after installing": "May be needed after installing",
+  "Device": "Device",
+  "Manufacturer": "Manufacturer",
+  "Driver provider": "Driver provider",
+  "Model": "Model",
+  "Device class": "Device class",
+  "Installed driver": "Installed driver",
+  "Dated {0}": "Dated {0}",
+  "Unknown date": "Unknown date",
+  "Hardware ID": "Hardware ID",
+  "Windows Update ID": "Windows Update ID",
+  "{0} (revision {1})": "{0} (revision {1})",
+  "More information": "More information"
 }

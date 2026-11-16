@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -20,6 +22,11 @@ public enum DriverItemState
     Unknown,
 }
 
+public sealed record DriverDetailRow(string Label, string Value, string? CopyValue = null)
+{
+    public bool CanCopy => CopyValue is not null;
+}
+
 public partial class DriverUpdateItemViewModel : ObservableObject
 {
     public DriverUpdateItemViewModel(DriverUpdate update) => Update = update;
@@ -29,8 +36,6 @@ public partial class DriverUpdateItemViewModel : ObservableObject
     public string Title => Update.Title;
 
     public string DeviceText => FirstNonEmpty(Update.DeviceName, Update.Model, Update.HardwareId);
-
-    public string DetailsText => string.Join(" · ", new[] { Update.DriverClass, Update.Provider }.Where(part => part.Length > 0));
 
     public string InstalledText => Update.InstalledVersion is { Length: > 0 } version
         ? Update.InstalledDate is { Length: > 0 } date
@@ -45,6 +50,82 @@ public partial class DriverUpdateItemViewModel : ObservableObject
     public string SizeText => Update.Size > 0 ? CoreTools.FormatAsSize(Update.Size) : "";
 
     public bool MayRequireRestart => Update.RebootBehavior is not DriverRebootBehavior.NeverReboots;
+
+    public string? ClassGlyph => GlyphFor(Update.DriverClass);
+
+    public bool HasClassGlyph => ClassGlyph is not null;
+
+    internal static string? GlyphFor(string driverClass) => driverClass.Trim().ToUpperInvariant() switch
+    {
+        "DISPLAY" or "MONITOR" => "",
+        "NET" or "NETTRANS" or "NETSERVICE" => "",
+        "BLUETOOTH" => "",
+        "MEDIA" or "AUDIOENDPOINT" or "AUDIOPROCESSINGOBJECT" => "",
+        "CAMERA" or "IMAGE" => "",
+        "USB" or "USBDEVICE" => "",
+        "KEYBOARD" => "",
+        "MOUSE" or "HIDCLASS" => "",
+        "PRINTER" or "PRINTQUEUE" => "",
+        "DISKDRIVE" or "HDC" or "SCSIADAPTER" or "VOLUME" => "",
+        "BATTERY" => "",
+        "BIOMETRIC" => "",
+        _ => null,
+    };
+
+    [ObservableProperty]
+    private bool _isExpanded;
+
+    public string RestartText => Update.RebootBehavior switch
+    {
+        DriverRebootBehavior.NeverReboots => CoreTools.Translate("Not needed"),
+        DriverRebootBehavior.AlwaysRequiresReboot => CoreTools.Translate("Required after installing"),
+        _ => CoreTools.Translate("May be needed after installing"),
+    };
+
+    public string Description => string.IsNullOrWhiteSpace(Update.Description) || Update.Description.Trim() == Update.Title.Trim()
+        ? ""
+        : Update.Description.Trim();
+
+    public bool HasDescription => Description.Length > 0;
+
+    public string? MoreInformationUrl =>
+        Uri.TryCreate(Update.SupportUrl.Trim(), UriKind.Absolute, out Uri? uri) && uri.Scheme is "https" or "http"
+            ? uri.AbsoluteUri
+            : null;
+
+    public bool HasMoreInformation => MoreInformationUrl is not null;
+
+    private IReadOnlyList<DriverDetailRow>? _details;
+
+    public IReadOnlyList<DriverDetailRow> Details => _details ??= BuildDetails();
+
+    private IReadOnlyList<DriverDetailRow> BuildDetails()
+    {
+        List<DriverDetailRow> rows = [];
+        void Add(string label, string? value, string? copyValue = null)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) rows.Add(new DriverDetailRow(label, value.Trim(), copyValue?.Trim()));
+        }
+
+        Add(CoreTools.Translate("Device"), Update.DeviceName);
+        Add(CoreTools.Translate("Manufacturer"), Update.Manufacturer);
+        Add(CoreTools.Translate("Driver provider"), Update.Provider);
+        Add(CoreTools.Translate("Model"), Update.Model);
+        Add(CoreTools.Translate("Device class"), Update.DriverClass);
+        Add(CoreTools.Translate("Installed driver"), Update.InstalledVersion is { Length: > 0 } version
+            ? Update.InstalledDate is { Length: > 0 } date ? $"{version} ({date})" : version
+            : CoreTools.Translate("Unknown"));
+        Add(CoreTools.Translate("New driver"), Update.DriverDate is { Length: > 0 } newDate
+            ? CoreTools.Translate("Dated {0}", newDate)
+            : CoreTools.Translate("Unknown date"));
+        Add(CoreTools.Translate("Download size"), SizeText);
+        Add(CoreTools.Translate("Restart"), RestartText);
+        Add(CoreTools.Translate("Hardware ID"), Update.HardwareId, Update.HardwareId);
+        Add(CoreTools.Translate("Windows Update ID"),
+            Update.Revision > 0 ? CoreTools.Translate("{0} (revision {1})", Update.Id, Update.Revision) : Update.Id,
+            Update.Id);
+        return rows;
+    }
 
     [ObservableProperty]
     private bool _isSelected = true;
@@ -292,6 +373,25 @@ public partial class DriversViewModel : ViewModelBase
 
     [RelayCommand]
     private static void OpenWindowsUpdate() => CoreTools.Launch("ms-settings:windowsupdate-optionalupdates");
+
+    [RelayCommand]
+    private static void ToggleDetails(DriverUpdateItemViewModel? item)
+    {
+        item?.IsExpanded = !item.IsExpanded;
+    }
+
+    [RelayCommand]
+    private static void OpenMoreInformation(DriverUpdateItemViewModel? item)
+    {
+        if (item?.MoreInformationUrl is { } url) CoreTools.Launch(url);
+    }
+
+    [RelayCommand]
+    private static async Task CopyDetailAsync(DriverDetailRow? row)
+    {
+        if (row?.CopyValue is not { } text || MainWindow.Instance?.Clipboard is not { } clipboard) return;
+        await clipboard.SetTextAsync(text);
+    }
 
     private async Task InstallAsync(IReadOnlyList<DriverUpdateItemViewModel> items)
     {

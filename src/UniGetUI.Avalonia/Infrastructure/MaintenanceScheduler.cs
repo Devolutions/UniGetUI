@@ -340,7 +340,7 @@ internal static class MaintenanceScheduler
         if (UpgradablePackagesLoader.Instance is not { } loader)
             return;
 
-        if (loader.IsLoading)
+        if (loader.IsLoading && !loader.LoadIsListingOnly)
             await loader.WaitForCurrentLoadAsync();
         else
             await loader.ReloadPackages();

@@ -224,6 +224,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                 if (IsLoading)
                 {
+                    // A listing-only load skips what a normal load triggers (automatic updates,
+                    // maintenance records), so a normal reload must not settle for it.
+                    if (LoadIsListingOnly && !PackageListingScope.IsListingOnly)
+                    {
+                        await WaitForCurrentLoadAsync();
+                        await ReloadPackages();
+                        return;
+                    }
+
                     Logger.Debug($"[{this.GetType()}] Packages are already being loaded!!!");
                     return;
                 }

@@ -292,7 +292,8 @@ public partial class Cargo : PackageManager
     // Recovery rolls files back, so a listing-only scan fails instead of listing a half-installed state.
     internal List<CargoListEntry> ListInstalledWithoutRecovery()
     {
-        if (CargoInstallTracker.HasPendingTransaction(CargoConfiguration.GetRoot()))
+        if (CargoInstallTracker.HasInterruptedTransactionAsync(CargoConfiguration.GetRoot(), CancellationToken.None)
+            .GetAwaiter().GetResult())
         {
             Logger.Warn(
                 "Remote rescan: Cargo listing refused because an interrupted UniGetUI Cargo installation "

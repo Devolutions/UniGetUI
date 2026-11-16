@@ -51,10 +51,15 @@ internal interface IAgentRegistrationBackend
 internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
 {
     private readonly IRemoteGrantSubmitter _submitter;
+    private readonly Func<CancellationToken, Task> _managersLoaded;
 
-    public IpcRemoteInventoryBackend(IRemoteGrantSubmitter? submitter = null)
+    public IpcRemoteInventoryBackend(
+        IRemoteGrantSubmitter? submitter = null,
+        Func<CancellationToken, Task>? managersLoaded = null
+    )
     {
         _submitter = submitter ?? new BrokerRemoteGrantSubmitter();
+        _managersLoaded = managersLoaded ?? WaitForManagersLoadedAsync;
     }
 
     public RemoteInventorySnapshot? TryGetInventorySnapshot() =>
@@ -106,6 +111,9 @@ internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
 
     public async Task<bool> RescanInventoryAsync(CancellationToken cancellationToken)
     {
+        // Before managers load, unloaded ones would be left out of both the scan and the
+        // completeness check, so a partial inventory would pass as complete.
+        await _managersLoaded(cancellationToken).ConfigureAwait(false);
         if (InstalledPackagesLoader.Instance is not { } installed
             || UpgradablePackagesLoader.Instance is not { } updates)
         {
@@ -120,8 +128,29 @@ internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
     }
 
     public bool RefreshInstalledInventory() =>
-        InstalledPackagesLoader.Instance is { } installed
+        PEInterface.AreManagersLoaded
+        && InstalledPackagesLoader.Instance is { } installed
         && RemoteRescan.Shared.TryStartInstalledReload(installed);
+
+    private static async Task WaitForManagersLoadedAsync(CancellationToken cancellationToken)
+    {
+        var loaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        EventHandler onLoaded = (_, _) => loaded.TrySetResult();
+        PEInterface.ManagersLoaded += onLoaded;
+        try
+        {
+            if (PEInterface.AreManagersLoaded)
+            {
+                return;
+            }
+
+            await loaded.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            PEInterface.ManagersLoaded -= onLoaded;
+        }
+    }
 }
 
 /// <summary>

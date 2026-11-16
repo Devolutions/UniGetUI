@@ -213,6 +213,23 @@ public sealed class CargoInstallTrackerTests
     }
 
     [Fact]
+    public async Task InstallationInProgressIsWaitedOutRatherThanReportedAsInterrupted()
+    {
+        using var sandbox = new CargoTestSandbox();
+        string root = sandbox.PathFor("root");
+        var install = await CargoTrackingLock.AcquireAsync(root, default);
+        Directory.CreateDirectory(sandbox.PathFor(Transaction));
+
+        Task<bool> check = CargoInstallTracker.HasInterruptedTransactionAsync(root, default);
+        await Task.Delay(300);
+        Assert.False(check.IsCompleted);
+
+        Directory.Delete(sandbox.PathFor(Transaction));
+        install.Dispose();
+        Assert.False(await check.WaitAsync(TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
     public async Task MissingJournalAndUnsafeRecoveryNamesFailWithoutTouchingOutsideFiles()
     {
         using var sandbox = new CargoTestSandbox();

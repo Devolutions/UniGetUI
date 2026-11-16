@@ -243,7 +243,7 @@ internal static class TuiMaintenanceScheduler
     private static async Task ReloadUpdatesAsync()
     {
         var loader = UpgradablePackagesLoader.Instance;
-        if (loader.IsLoading) await loader.WaitForCurrentLoadAsync();
+        if (loader.IsLoading && !loader.LoadIsListingOnly) await loader.WaitForCurrentLoadAsync();
         else await loader.ReloadPackages();
         if (loader.LastLoadReportedFailures)
             throw new InvalidOperationException("The update check reported failures, see the log for details");

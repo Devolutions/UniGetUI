@@ -170,4 +170,36 @@ public sealed class RemoteRescanTests
         Assert.Equal([true], installed.ListingOnly);
         Assert.False(PackageListingScope.IsListingOnly);
     }
+
+    [Fact]
+    public async Task NormalReloadWaitsOutAListingOnlyLoadAndThenRunsItsOwn()
+    {
+        var (installed, _) = Loaders();
+        Assert.True(new RemoteRescan().TryStartInstalledReload(installed));
+        await installed.WaitForLoadsAsync(1);
+
+        Task userReload = installed.ReloadPackages();
+        await AssertPendingAsync(userReload);
+        Assert.Equal(1, installed.Loads);
+
+        await installed.ReleaseAsync(0);
+        await installed.ReleaseAsync(1);
+        await userReload.WaitAsync(Timeout);
+        Assert.Equal([true, false], installed.ListingOnly);
+        Assert.False(installed.LoadIsListingOnly);
+    }
+
+    [Fact]
+    public async Task RescanWaitsUntilThePackageManagersHaveLoaded()
+    {
+        var managersLoaded = new TaskCompletionSource();
+        var backend = new IpcRemoteInventoryBackend(managersLoaded: ct => managersLoaded.Task.WaitAsync(ct));
+        using var cts = new CancellationTokenSource();
+
+        Task<bool> answer = backend.RescanInventoryAsync(cts.Token);
+        await AssertPendingAsync(answer);
+
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => answer);
+    }
 }

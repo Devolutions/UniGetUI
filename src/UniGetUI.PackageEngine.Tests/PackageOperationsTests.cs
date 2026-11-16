@@ -1280,7 +1280,9 @@ public sealed class PackageOperationsTests
             Assert.NotSame(first, other);
             release.Set();
             await Task.WhenAll(first, other).WaitAsync(TimeSpan.FromSeconds(30));
-            await WaitForConditionAsync(() => !ReferenceEquals(PackageOperation.GetReinstallCheck(package, options), first));
+            Task<string?> fresh = first;
+            await WaitForConditionAsync(() => !ReferenceEquals(fresh = PackageOperation.GetReinstallCheck(package, options), first));
+            await fresh.WaitAsync(TimeSpan.FromSeconds(30));
             Assert.Equal(3, Volatile.Read(ref started));
         }
         finally

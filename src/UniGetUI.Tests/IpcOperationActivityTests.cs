@@ -39,6 +39,38 @@ public class IpcOperationActivityTests
         }
     }
 
+    // Bundle installs and source changes run to completion inside one IPC call and are never
+    // tracked as operations, so they report their activity through a scope instead.
+    [Fact]
+    public void AnActivityScopeCountsAsActivityUntilItIsDisposed()
+    {
+        int notifications = 0;
+        void OnActivityChanged(object? sender, EventArgs e) => Interlocked.Increment(ref notifications);
+
+        IpcOperationApi.ActivityChanged += OnActivityChanged;
+        try
+        {
+            IDisposable outer = IpcOperationApi.BeginActivity();
+            IDisposable inner = IpcOperationApi.BeginActivity();
+            Assert.True(IpcOperationApi.HasActiveOperations());
+            Assert.True(notifications >= 2);
+
+            int beforeInner = notifications;
+            inner.Dispose();
+            inner.Dispose();
+            Assert.True(IpcOperationApi.HasActiveOperations());
+            Assert.True(notifications > beforeInner);
+
+            int beforeOuter = notifications;
+            outer.Dispose();
+            Assert.True(notifications > beforeOuter);
+        }
+        finally
+        {
+            IpcOperationApi.ActivityChanged -= OnActivityChanged;
+        }
+    }
+
     private sealed class StubOperation : AbstractOperation
     {
         public StubOperation()

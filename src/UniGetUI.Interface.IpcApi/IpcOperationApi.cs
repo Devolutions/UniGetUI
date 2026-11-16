@@ -126,10 +126,41 @@ public static class IpcOperationApi
     /// </summary>
     public static event EventHandler? ActivityChanged;
 
-    /// <summary>Whether any tracked operation is queued or running.</summary>
+    /// <summary>
+    /// Whether any tracked operation is queued or running, or an operation that is run to
+    /// completion inside one IPC call (see <see cref="BeginActivity"/>) is under way.
+    /// </summary>
     public static bool HasActiveOperations()
     {
-        return Operations.Values.Any(entry => IsActive(entry.Operation.Status));
+        return Volatile.Read(ref _untrackedActivities) > 0
+            || Operations.Values.Any(entry => IsActive(entry.Operation.Status));
+    }
+
+    private static int _untrackedActivities;
+
+    /// <summary>
+    /// Marks an operation that runs to completion inside one IPC call and is never listed
+    /// (a bundle install, a source change) as activity, until the returned object is disposed.
+    /// </summary>
+    public static IDisposable BeginActivity()
+    {
+        Interlocked.Increment(ref _untrackedActivities);
+        ActivityChanged?.Invoke(null, EventArgs.Empty);
+        return new ActivityScope();
+    }
+
+    private sealed class ActivityScope : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            Interlocked.Decrement(ref _untrackedActivities);
+            ActivityChanged?.Invoke(null, EventArgs.Empty);
+        }
     }
 
     public static string Track(AbstractOperation operation)

@@ -1307,6 +1307,8 @@
   "{package} was updated successfully": "{package} was updated successfully",
   "Update failed": "Update failed",
   "{package} could not be updated": "{package} could not be updated",
+  "{0} was not uninstalled: version {1} of {2} could not be found on {3}, so it could not have been installed again afterwards. Reload the package list.": "{0} was not uninstalled: version {1} of {2} could not be found on {3}, so it could not have been installed again afterwards. Reload the package list.",
+  "{package} was uninstalled so that version {version} could be installed, but the installation failed, so {package} is no longer installed. Retry, or install it again.": "{package} was uninstalled so that version {version} could be installed, but the installation failed, so {package} is no longer installed. Retry, or install it again.",
   "{package} may already be up to date, or no installer matches this system": "{package} may already be up to date, or no installer matches this system",
   "{package} is currently running. Close it and try again": "{package} is currently running. Close it and try again",
   "{package} Uninstall": "{package} Uninstall",

@@ -484,7 +484,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 {
                     if (
                         Manager.GetLauncherGameSource(nativePackage.InstalledVersion?.Id) is null
-                        && TryGetReinstallOnlyUpdate(nativePackage) is { } newest
+                        && TryGetReinstallOnlyUpdate(nativePackage, logger) is { } newest
                     )
                     {
                         reinstallCandidates.Add((nativePackage, newest));
@@ -685,7 +685,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         return null;
     }
 
-    private PackageVersionInfo? TryGetReinstallOnlyUpdate(CatalogPackage nativePackage)
+    private PackageVersionInfo? TryGetReinstallOnlyUpdate(CatalogPackage nativePackage, INativeTaskLogger logger)
     {
         try
         {
@@ -712,6 +712,15 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             if (newest?.PackageCatalog?.Info is null)
                 return null;
 
+            if (!IsSamePackage(nativePackage.Id, newest.Id))
+            {
+                logger.Log(
+                    $"Not listing {DescribePackage(nativePackage)} as an update that needs a reinstall: its newest version {newest.Version} "
+                        + $"belongs to {newest.Id} on {newest.PackageCatalog.Info.Name}, not to {nativePackage.Id}"
+                );
+                return null;
+            }
+
             return newest.GetApplicableInstaller(Factory.CreateInstallOptions()) is null ? null : newest;
         }
         catch (Exception ex)
@@ -735,6 +744,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         foreach (string familyName in NativeWinGetCollection.Copy(installed.PackageFamilyNames))
             yield return familyName;
     }
+
+    internal static bool IsSamePackage(string? listedId, string? newestId) =>
+        !string.IsNullOrWhiteSpace(listedId)
+        && string.Equals(listedId, newestId, StringComparison.OrdinalIgnoreCase);
 
     internal static bool IsNewerVersion(IPackageManager manager, string? installedVersion, string? newestVersion) =>
         !WinGetPkgOperationHelper.IsUnknownVersion(installedVersion)

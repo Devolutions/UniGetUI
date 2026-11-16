@@ -28,9 +28,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         return $"--id {Selector(package.Id.TrimEnd('…'), "identifier")}";
     }
 
-    private static string GetSelectorPiece(IPackage package)
+    private static string GetSelectorPiece(IPackage package, OperationType operation)
     {
-        if (GetSelectedLocalIdentifier(package) is { } localIdentifier)
+        if (operation is not OperationType.Install && GetSelectedLocalIdentifier(package) is { } localIdentifier)
             return $"--id {Selector(localIdentifier, "local identifier")} --exact";
 
         return GetIdNamePiece(package);
@@ -42,7 +42,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     private static bool DropsArchAndScope(IPackage package, OperationType? operation = null) =>
         package.OverridenOptions.WinGet_DropArchAndScope
         || (package.RequiresReinstallToUpdate && operation is not OperationType.Uninstall)
-        || GetSelectedLocalIdentifier(package) is not null;
+        || (operation is not OperationType.Install && GetSelectedLocalIdentifier(package) is not null);
 
     private static bool OperationIsBrokered(IPackage package) =>
         Settings.Get(Settings.K.UseAgentBroker) && !package.Source.IsVirtualManager;
@@ -102,10 +102,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     internal static string? GetEffectiveArchitecture(
         IPackage package,
         InstallOptions options,
-        bool forUpdate = false
+        bool forUpdate = false,
+        OperationType? operation = null
     )
     {
-        if (DropsArchAndScope(package))
+        if (DropsArchAndScope(package, operation))
             return null;
 
         string architecture =
@@ -149,7 +150,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             },
         ];
 
-        parameters.AddRange(GetSelectorPiece(package).Split(" "));
+        parameters.AddRange(GetSelectorPiece(package, operation).Split(" "));
         if (!package.Source.IsVirtualManager)
         {
             parameters.AddRange(["--source", package.Source.Name]);
@@ -242,7 +243,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             if (options.SkipHashCheck)
                 parameters.Add("--ignore-security-hash");
 
-            if (GetEffectiveArchitecture(package, options) is { } architecture)
+            if (GetEffectiveArchitecture(package, options, operation: operation) is { } architecture)
             {
                 parameters.AddRange(["--architecture", architecture]);
             }
@@ -253,8 +254,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                     package,
                     new PendingInstallerTrust(
                         GetRequestedVersion(package, options, operation),
-                        GetEffectiveScope(package, options),
-                        GetEffectiveArchitecture(package, options)
+                        GetEffectiveScope(package, options, operation),
+                        GetEffectiveArchitecture(package, options, operation: operation)
                     )
                 );
             }
@@ -300,6 +301,26 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         {
             options.Architecture = updateArchitecture;
         }
+    }
+
+    public override string? GetReinstallRefusal(IPackage package, InstallOptions options)
+    {
+        bool? installable = NativePackageHandler.CanInstallExactVersion(
+            package,
+            options.Version,
+            GetEffectiveScope(package, options, OperationType.Install),
+            GetEffectiveArchitecture(package, options, operation: OperationType.Install)
+        );
+        if (installable is not false)
+            return null;
+
+        return CoreTools.Translate(
+            "{0} was not uninstalled: version {1} of {2} could not be found on {3}, so it could not have been installed again afterwards. Reload the package list.",
+            package.Name,
+            options.Version.Length > 0 ? options.Version : package.NewVersionString,
+            package.Id,
+            package.Source.Name
+        );
     }
 
     public override void ApplyElevationRequirements(

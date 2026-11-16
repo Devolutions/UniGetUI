@@ -538,7 +538,7 @@ public abstract partial class AbstractOperation : IDisposable
     {
         OperationVeredict result;
 
-        if (RefusalBeforeStart() is { } refusal)
+        if (await RefusalBeforeStartAsync() is { } refusal)
         {
             Line(refusal, LineType.Error);
             return OperationVeredict.Failure;
@@ -938,7 +938,7 @@ public abstract partial class AbstractOperation : IDisposable
     }
 
     protected virtual IReadOnlyList<InnerOperation> GetAttemptPreOperations() => [];
-    protected virtual string? RefusalBeforeStart() => null;
+    protected virtual Task<string?> RefusalBeforeStartAsync() => Task.FromResult<string?>(null);
     protected abstract Task<OperationVeredict> PerformOperation();
     public abstract Task<Uri> GetOperationIcon();
 

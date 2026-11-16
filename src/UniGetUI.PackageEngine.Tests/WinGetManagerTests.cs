@@ -3024,6 +3024,49 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetInstallKeepsTheCatalogIdentifierAfterAnUninstallUsedTheLocalOne()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Reinstalled");
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+        package.OverridenOptions.WinGet_UseLocalIdentifier = true;
+
+        var uninstall = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Uninstall
+        );
+        var install = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions
+            {
+                Version = "3.0.0",
+                Architecture = Architecture.x64,
+                InstallationScope = PackageScope.Machine,
+            },
+            OperationType.Install
+        );
+
+        Assert.Contains($"\"{NodeJsLocalIdentifier}\"", uninstall);
+        Assert.Contains("\"OpenJS.NodeJS.Reinstalled\"", install);
+        Assert.DoesNotContain($"\"{NodeJsLocalIdentifier}\"", install);
+        Assert.Contains("x64", install);
+        Assert.Contains("machine", install);
+    }
+
+    [Fact]
+    public void AWinGetReinstallIsNotRefusedWhenItCannotBeCheckedWithoutTheComApi()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Unchecked");
+
+        Assert.Null(
+            manager.OperationHelper.GetReinstallRefusal(package, new InstallOptions { Version = "3.0.0" })
+        );
+    }
+
+    [Fact]
     public void WinGetInstallDoesNotRetryWithTheLocalIdentifier()
     {
         var manager = new WinGet();

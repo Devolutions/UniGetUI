@@ -85,6 +85,7 @@ namespace UniGetUI.PackageEngine.Operations
         public readonly InstallOptions Options;
         public readonly OperationType Role;
         private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
+        private readonly UninstallPackageOperation? _uninstallPrerequisite;
         private bool _reinstallsThisAttempt;
         private readonly bool _autoPinned;
         private OperationType CommandRole => _reinstallsThisAttempt ? OperationType.Install : Role;
@@ -136,6 +137,8 @@ namespace UniGetUI.PackageEngine.Operations
         {
             Package = package;
             Role = role;
+            if (role is OperationType.Install)
+                _uninstallPrerequisite = req as UninstallPackageOperation;
             if (role is OperationType.Update)
             {
                 var unpinned = options.WithoutSavedVersion();
@@ -1237,6 +1240,7 @@ namespace UniGetUI.PackageEngine.Operations
                 ExplainInstallerHashMismatch(ReturnCode);
                 ExplainApplicationCurrentlyRunning(Output, ReturnCode);
                 ExplainFileInUse(Output);
+                ExplainUninstalledByTheReinstall();
             }
 
             return Task.FromResult(veredict);
@@ -1383,6 +1387,28 @@ namespace UniGetUI.PackageEngine.Operations
                 new Dictionary<string, object?> { { "package", Package.Name } }
             );
 #endif
+        }
+
+        private void ExplainUninstalledByTheReinstall()
+        {
+            if (
+                CommandRole is not OperationType.Install
+                || _uninstallBeforeReinstall?.Status is not OperationStatus.Succeeded
+            )
+                return;
+
+            string uninstalled = CoreTools.Translate(
+                "{package} was uninstalled so that version {version} could be installed, but the installation failed, so {package} is no longer installed. Retry, or install it again.",
+                new Dictionary<string, object?>
+                {
+                    { "package", Package.Name },
+                    { "version", Options.Version.Length > 0 ? Options.Version : Package.NewVersionString },
+                }
+            );
+            Metadata.FailureMessage =
+                Metadata.FailureMessage == _genericFailureMessage
+                    ? uninstalled
+                    : $"{uninstalled} {Metadata.FailureMessage}";
         }
 
         private void ExplainFileInUse(List<string> output)
@@ -1631,7 +1657,29 @@ namespace UniGetUI.PackageEngine.Operations
             return kept;
         }
 
-        protected override string? RefusalBeforeStart()
+        protected override async Task<string?> RefusalBeforeStartAsync()
+        {
+            if (RefusalBeforeStart() is { } refusal)
+                return refusal;
+
+            UninstallPackageOperation? pendingUninstall =
+                Role is OperationType.Update ? _uninstallBeforeReinstall : _uninstallPrerequisite;
+            if (
+                pendingUninstall is not { Status: not OperationStatus.Succeeded }
+                || IsBrokerEligible(Package)
+                || IsKnownToBeUninstalled(Package)
+            )
+                return null;
+
+            string? reinstallRefusal = await Task.Run(() =>
+                Package.Manager.OperationHelper.GetReinstallRefusal(Package, Options)
+            );
+            if (reinstallRefusal is not null)
+                Metadata.FailureMessage = reinstallRefusal;
+            return reinstallRefusal;
+        }
+
+        private string? RefusalBeforeStart()
         {
             if (Package.Manager.Capabilities.ElevatesItself && Settings.Get(Settings.K.ProhibitElevation))
                 return CoreTools.Translate(

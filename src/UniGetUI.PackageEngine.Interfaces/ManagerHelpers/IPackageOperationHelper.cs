@@ -69,5 +69,7 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
             int returnCode,
             InstallOptions? options = null
         );
+
+        public string? GetReinstallRefusal(IPackage package, InstallOptions options);
     }
 }

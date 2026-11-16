@@ -646,7 +646,8 @@ public sealed class PackageOperationsTests
 
     private static TestPackageManager CreateRecordingProcessManager(
         List<string> executed,
-        Func<OperationType, bool> succeeds
+        Func<OperationType, bool> succeeds,
+        Func<IPackage, InstallOptions, string?>? reinstallRefusal = null
     ) =>
         new PackageManagerBuilder()
             .WithName($"RecordingManager{Guid.NewGuid():N}")
@@ -671,6 +672,8 @@ public sealed class PackageOperationsTests
                         );
                     return succeeds(operation) ? OperationVeredict.Success : OperationVeredict.Failure;
                 };
+                if (reinstallRefusal is not null)
+                    helper.ReinstallRefusalFactory = reinstallRefusal;
             })
             .Build();
 
@@ -941,6 +944,216 @@ public sealed class PackageOperationsTests
             ],
             executed
         );
+    }
+
+    [Fact]
+    public async Task AReinstallWhoseInstallFailsSaysThePackageIsNoLongerInstalled()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var manager = CreateRecordingProcessManager(
+            executed,
+            operation => operation is not OperationType.Install
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await UpgradablePackagesLoader.Instance.AddForeign(package);
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Equal(["Uninstall|RAN-Uninstall-Contoso.Tool-", "Install|RAN-Install-Contoso.Tool-3.0.0"], executed);
+        Assert.Equal(
+            "Contoso Tool was uninstalled so that version 3.0.0 could be installed, but the installation failed, so Contoso Tool is no longer installed. Retry, or install it again.",
+            operation.Metadata.FailureMessage
+        );
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AReinstallWhoseNewVersionCannotBeInstalledUninstallsNothing(bool requiredByTheUpdate)
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var asked = new List<string>();
+        var manager = CreateRecordingProcessManager(
+            executed,
+            _ => true,
+            (package, options) =>
+            {
+                lock (asked)
+                    asked.Add($"{package.Id}-{options.Version}");
+                return "REFUSED";
+            }
+        );
+        var builder = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Visual Studio Code")
+            .WithId("XP9KHM4BK9FZ7Q")
+            .WithVersion("1.145.0")
+            .WithNewVersion("1.146.0");
+        if (requiredByTheUpdate)
+            builder.RequiringReinstallToUpdate();
+        var package = builder.Build();
+        InitializeLoaders();
+        await UpgradablePackagesLoader.Instance.AddForeign(package);
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder().WithManager(manager).WithId("XP9KHM4BK9FZ7Q").WithVersion("1.145.0").Build()
+        );
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = !requiredByTheUpdate },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Empty(executed);
+        Assert.Equal(["XP9KHM4BK9FZ7Q-1.146.0"], asked);
+        Assert.Equal("REFUSED", operation.Metadata.FailureMessage);
+        Assert.True(UpgradablePackagesLoader.Instance.Contains(package));
+        Assert.True(InstalledPackagesLoader.Instance.Contains(package));
+    }
+
+    [Fact]
+    public async Task AnUninstallThenInstallWhoseInstallCannotBeResolvedRunsNeither()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var asked = new List<string>();
+        var manager = CreateRecordingProcessManager(
+            executed,
+            _ => true,
+            (package, options) =>
+            {
+                lock (asked)
+                    asked.Add($"{package.Id}-{options.Version}");
+                return "REFUSED";
+            }
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("XPDBVSS44R0L9H")
+            .WithVersion("7.41.1")
+            .WithNewVersion("7.43.2")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder().WithManager(manager).WithId("XPDBVSS44R0L9H").WithVersion("7.41.1").Build()
+        );
+        var uninstall = new UninstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+        using var install = new InstallPackageOperation(
+            package,
+            new InstallOptions { Version = "7.43.2" },
+            IgnoreParallelInstalls: true,
+            req: uninstall
+        );
+
+        await install.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Failed, install.Status);
+        Assert.Empty(executed);
+        Assert.Equal(["XPDBVSS44R0L9H-7.43.2"], asked);
+        Assert.Equal("REFUSED", install.Metadata.FailureMessage);
+        Assert.True(InstalledPackagesLoader.Instance.Contains(package));
+    }
+
+    [Fact]
+    public async Task ARetriedReinstallStillInstallsOnceTheUninstallHasRun()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        bool installSucceeds = false;
+        string? refusal = null;
+        var manager = CreateRecordingProcessManager(
+            executed,
+            operation => operation is not OperationType.Install || installSucceeds,
+            (_, _) => refusal
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await UpgradablePackagesLoader.Instance.AddForeign(package);
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+
+        refusal = "REFUSED";
+        installSucceeds = true;
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+        await WaitForConditionAsync(() => operation.Status is OperationStatus.Succeeded);
+
+        Assert.Equal(
+            [
+                "Uninstall|RAN-Uninstall-Contoso.Tool-",
+                "Install|RAN-Install-Contoso.Tool-3.0.0",
+                "Install|RAN-Install-Contoso.Tool-3.0.0",
+            ],
+            executed
+        );
+    }
+
+    [Fact]
+    public async Task AFailedUpdateThatUninstalledNothingKeepsTheGenericFailureMessage()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        var manager = CreateRecordingProcessManager(
+            executed,
+            operation => operation is not OperationType.Uninstall
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await UpgradablePackagesLoader.Instance.AddForeign(package);
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true },
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Equal(["Uninstall|RAN-Uninstall-Contoso.Tool-"], executed);
+        Assert.Equal("Contoso Tool could not be updated", operation.Metadata.FailureMessage);
     }
 
     [Fact]

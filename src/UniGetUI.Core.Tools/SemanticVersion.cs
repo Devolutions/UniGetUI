@@ -9,8 +9,9 @@ namespace UniGetUI.Core.Tools
     /// feeds using NuGet semantics must parse with <see cref="SemVerLabels.CaseInsensitive"/>.
     /// Use it only for ecosystems where a dash introduces a pre-release that is OLDER than the
     /// release it precedes (NuGet, npm, crates.io). Ecosystems whose dash, underscore or hash
-    /// introduces a build or port revision that is NEWER than the base version - Debian, Scoop,
-    /// Homebrew, vcpkg - must keep using <see cref="CoreTools.VersionStringToStruct"/> instead.
+    /// introduces a build or port revision that is NEWER than the base version - Debian,
+    /// Homebrew, vcpkg - must keep using <see cref="CoreTools.VersionStringToStruct"/> instead;
+    /// Scoop uses its own port of Scoop's Compare-Version.
     /// </summary>
     public enum SemVerLabels
     {

@@ -1199,6 +1199,103 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task AReinstallCheckThatTakesTooLongUninstallsNothing()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        using var release = new ManualResetEventSlim(false);
+        var manager = CreateRecordingProcessManager(
+            executed,
+            _ => true,
+            (_, _) =>
+            {
+                release.Wait(TimeSpan.FromSeconds(30));
+                return null;
+            }
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Ubisoft Connect")
+            .WithId("Ubisoft.Connect")
+            .WithVersion("174.0.13368")
+            .Build();
+        InitializeLoaders();
+        var previousTimeout = PackageOperation.ReinstallCheckTimeout;
+        PackageOperation.ReinstallCheckTimeout = TimeSpan.FromMilliseconds(200);
+        try
+        {
+            var uninstall = new UninstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+            using var install = new InstallPackageOperation(
+                package,
+                new InstallOptions(),
+                IgnoreParallelInstalls: true,
+                req: uninstall
+            );
+
+            await install.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.Equal(OperationStatus.Failed, install.Status);
+            Assert.Empty(executed);
+            Assert.Equal(
+                "Ubisoft Connect was not uninstalled: checking that it could be installed again afterwards took longer than 1 seconds. Try again later.",
+                install.Metadata.FailureMessage
+            );
+        }
+        finally
+        {
+            PackageOperation.ReinstallCheckTimeout = previousTimeout;
+            release.Set();
+        }
+    }
+
+    [Fact]
+    public async Task CancelingDuringTheReinstallCheckCancelsWithoutUninstalling()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        using var checking = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        var manager = CreateRecordingProcessManager(
+            executed,
+            _ => true,
+            (_, _) =>
+            {
+                checking.Set();
+                release.Wait(TimeSpan.FromSeconds(30));
+                return null;
+            }
+        );
+        var package = new PackageBuilder().WithManager(manager).WithId("Ubisoft.Connect").WithVersion("174.0.13368").Build();
+        InitializeLoaders();
+        try
+        {
+            var uninstall = new UninstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+            using var install = new InstallPackageOperation(
+                package,
+                new InstallOptions(),
+                IgnoreParallelInstalls: true,
+                req: uninstall
+            );
+
+            var run = install.MainThread();
+            Assert.True(checking.Wait(TimeSpan.FromSeconds(30)));
+            install.Cancel();
+            await run.WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Equal(OperationStatus.Canceled, install.Status);
+            Assert.Empty(executed);
+        }
+        finally
+        {
+            release.Set();
+        }
+    }
+
+    [Fact]
     public async Task ARetriedReinstallStillInstallsOnceTheUninstallHasRun()
     {
         if (!OperatingSystem.IsWindows())

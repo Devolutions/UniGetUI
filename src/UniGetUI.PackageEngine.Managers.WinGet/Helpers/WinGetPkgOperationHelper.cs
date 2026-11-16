@@ -310,8 +310,76 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         string? Architecture
     );
 
-    internal static CustomInstallSelectors ReadCustomInstallSelectors(IReadOnlyList<string> arguments)
+    internal static IReadOnlyList<string> SplitWindowsArguments(string commandLine)
     {
+        List<string> arguments = [];
+        var current = new System.Text.StringBuilder();
+        bool inQuotes = false;
+        bool hasArgument = false;
+        for (int i = 0; i < commandLine.Length; i++)
+        {
+            char c = commandLine[i];
+            if (c == '\\')
+            {
+                int backslashes = 0;
+                while (i < commandLine.Length && commandLine[i] == '\\')
+                {
+                    backslashes++;
+                    i++;
+                }
+
+                if (i < commandLine.Length && commandLine[i] == '"')
+                {
+                    current.Append('\\', backslashes / 2);
+                    if (backslashes % 2 == 1)
+                        current.Append('"');
+                    else
+                        inQuotes = !inQuotes;
+                }
+                else
+                {
+                    current.Append('\\', backslashes);
+                    i--;
+                }
+
+                hasArgument = true;
+            }
+            else if (c == '"')
+            {
+                if (inQuotes && i + 1 < commandLine.Length && commandLine[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+
+                hasArgument = true;
+            }
+            else if (char.IsWhiteSpace(c) && !inQuotes)
+            {
+                if (hasArgument)
+                    arguments.Add(current.ToString());
+                current.Clear();
+                hasArgument = false;
+            }
+            else
+            {
+                current.Append(c);
+                hasArgument = true;
+            }
+        }
+
+        if (hasArgument)
+            arguments.Add(current.ToString());
+        return arguments;
+    }
+
+    internal static CustomInstallSelectors ReadCustomInstallSelectors(IReadOnlyList<string> customArguments)
+    {
+        IReadOnlyList<string> arguments = SplitWindowsArguments(string.Join(' ', customArguments));
         List<string> unsupported = [];
         string? version = null;
         string? scope = null;
@@ -336,7 +404,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 case "--architecture" or "-a":
                     architecture = value ?? (i + 1 < arguments.Count ? arguments[++i] : "");
                     break;
-                case "--id" or "--name" or "--moniker" or "--query" or "-q" or "--source" or "-s" or "--manifest" or "-m":
+                case "--id" or "--name" or "--moniker" or "--query" or "-q" or "--source" or "-s" or "--manifest" or "-m"
+                    or "--installer-type" or "--locale":
                     unsupported.Add(name);
                     break;
             }

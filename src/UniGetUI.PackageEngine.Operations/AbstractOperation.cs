@@ -538,7 +538,20 @@ public abstract partial class AbstractOperation : IDisposable
     {
         OperationVeredict result;
 
-        if (await RefusalBeforeStartAsync() is { } refusal)
+        string? refusal;
+        try
+        {
+            refusal = await RefusalBeforeStartAsync();
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            return OperationVeredict.Canceled;
+        }
+
+        if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
+            return OperationVeredict.Canceled;
+
+        if (refusal is not null)
         {
             Line(refusal, LineType.Error);
             return OperationVeredict.Failure;

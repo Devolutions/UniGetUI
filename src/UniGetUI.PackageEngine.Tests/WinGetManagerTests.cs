@@ -3069,6 +3069,11 @@ public sealed class WinGetManagerTests : IDisposable
     [InlineData("--architecture neutral", "", null, null, "--architecture", "", "", "neutral")]
     [InlineData("--id Other.App --source msstore", "", null, null, "--id,--source", "", "", "")]
     [InlineData("-s winget -m C:\\app.yaml", "", null, null, "-s,-m", "", "", "")]
+    [InlineData("--version \"1.2.0\"", "", null, null, "", "1.2.0", "", "")]
+    [InlineData("--scope \"machine\" -a \"x64\"", "", null, null, "", "", "machine", "x64")]
+    [InlineData("--override \"/S --version 9 /D=C:\\Apps\"", "", null, null, "", "", "", "")]
+    [InlineData("--installer-type msi", "", null, null, "--installer-type", "", "", "")]
+    [InlineData("--locale fr-CA", "", null, null, "--locale", "", "", "")]
     public void AReinstallChecksTheTargetTheCustomInstallParametersSelect(
         string customInstall,
         string version,
@@ -3095,6 +3100,21 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal(expectedVersion.Length > 0 ? expectedVersion : version, target.Version);
         Assert.Equal(expectedScope.Length > 0 ? expectedScope : scope, target.Scope);
         Assert.Equal(expectedArchitecture.Length > 0 ? expectedArchitecture : architecture, target.Architecture);
+    }
+
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("--version 1.2.0", "--version|1.2.0")]
+    [InlineData("--version \"1.2.0\"", "--version|1.2.0")]
+    [InlineData("--override \"/S /D=C:\\Program Files\\App\"", "--override|/S /D=C:\\Program Files\\App")]
+    [InlineData("--override \"/S \\\"quoted\\\"\"", "--override|/S \"quoted\"")]
+    [InlineData("--override \"a \"\"b\"\" c\"", "--override|a \"b\" c")]
+    [InlineData("--location C:\\Apps\\ -a x64", "--location|C:\\Apps\\|-a|x64")]
+    [InlineData("--location \"C:\\Apps\\\\\" -a x64", "--location|C:\\Apps\\|-a|x64")]
+    [InlineData("\"\" --silent", "|--silent")]
+    public void CustomInstallArgumentsAreSplitTheWayWindowsPassesThemToWinGet(string commandLine, string expected)
+    {
+        Assert.Equal(expected, string.Join("|", WinGetPkgOperationHelper.SplitWindowsArguments(commandLine)));
     }
 
     [Fact]

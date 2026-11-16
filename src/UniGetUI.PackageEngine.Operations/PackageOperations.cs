@@ -86,6 +86,7 @@ namespace UniGetUI.PackageEngine.Operations
         public readonly OperationType Role;
         private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
         private readonly UninstallPackageOperation? _uninstallPrerequisite;
+        internal static TimeSpan ReinstallCheckTimeout { get; set; } = TimeSpan.FromSeconds(60);
         private bool _reinstallsThisAttempt;
         private readonly bool _autoPinned;
         private OperationType CommandRole => _reinstallsThisAttempt ? OperationType.Install : Role;
@@ -1673,9 +1674,23 @@ namespace UniGetUI.PackageEngine.Operations
             if (!uninstallIsScheduled || IsBrokerEligible(Package))
                 return null;
 
-            string? reinstallRefusal = await Task.Run(() =>
-                Package.Manager.OperationHelper.GetReinstallRefusal(Package, Options)
-            );
+            string? reinstallRefusal;
+            try
+            {
+                reinstallRefusal = await Task.Run(() =>
+                        Package.Manager.OperationHelper.GetReinstallRefusal(Package, Options)
+                    )
+                    .WaitAsync(ReinstallCheckTimeout, CancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                reinstallRefusal = CoreTools.Translate(
+                    "{0} was not uninstalled: checking that it could be installed again afterwards took longer than {1} seconds. Try again later.",
+                    Package.Name,
+                    (int)Math.Ceiling(ReinstallCheckTimeout.TotalSeconds)
+                );
+            }
+
             if (reinstallRefusal is not null)
                 Metadata.FailureMessage = reinstallRefusal;
             return reinstallRefusal;

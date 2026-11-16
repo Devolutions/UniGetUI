@@ -33,7 +33,7 @@ namespace UniGetUI.Core.Logging.Tests
             Assert.True(logs[2].Time > startTime && logs[2].Time < endTime);
             Assert.True(logs[3].Time > startTime && logs[3].Time < endTime);
         }
-    
+
         [Fact]
         public void InMemoryLogIsBoundedButKeepsCountingAndRecentEntries()
         {
@@ -107,5 +107,5 @@ namespace UniGetUI.Core.Logging.Tests
 
             Assert.Equal(4000, Logger.GetLogsSince(marker).Count(e => e.Content.StartsWith("concurrent-log-test ", StringComparison.Ordinal)));
         }
-}
+    }
 }

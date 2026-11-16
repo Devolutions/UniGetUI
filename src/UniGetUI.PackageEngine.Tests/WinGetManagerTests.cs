@@ -3073,6 +3073,8 @@ public sealed class WinGetManagerTests : IDisposable
     [InlineData("--scope \"machine\" -a \"x64\"", "", null, null, "", "", "machine", "x64")]
     [InlineData("--override \"/S --version 9 /D=C:\\Apps\"", "", null, null, "", "", "", "")]
     [InlineData("--installer-type msi", "", null, null, "--installer-type", "", "", "")]
+    [InlineData("--silent --version", "", null, null, "--version", "", "", "")]
+    [InlineData("--version \"\"", "", null, null, "--version", "", "", "")]
     [InlineData("--locale fr-CA", "", null, null, "--locale", "", "", "")]
     public void AReinstallChecksTheTargetTheCustomInstallParametersSelect(
         string customInstall,

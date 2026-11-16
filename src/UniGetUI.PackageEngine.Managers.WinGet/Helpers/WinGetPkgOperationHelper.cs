@@ -429,7 +429,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     {
         var custom = ReadCustomInstallSelectors(options.CustomParameters_Install);
         List<string> conflicts = [.. custom.Unsupported];
-        if (custom.Version is not null && options.Version.Length > 0)
+        if (custom.Version is not null && (options.Version.Length > 0 || string.IsNullOrWhiteSpace(custom.Version)))
             conflicts.Add("--version");
         string? customScope = custom.Scope?.ToLowerInvariant();
         string? customArchitecture = custom.Architecture?.ToLowerInvariant();

@@ -1251,6 +1251,45 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task ARetryReusesTheReinstallCheckStillRunningInsteadOfStartingAnother()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        int started = 0;
+        using var release = new ManualResetEventSlim(false);
+        var manager = CreateRecordingProcessManager(
+            [],
+            _ => true,
+            (_, _) =>
+            {
+                Interlocked.Increment(ref started);
+                release.Wait(TimeSpan.FromSeconds(30));
+                return null;
+            }
+        );
+        var package = new PackageBuilder().WithManager(manager).WithId("Ubisoft.Connect").WithVersion("174.0.13368").Build();
+        var options = new InstallOptions { Version = "175.1.0.13416" };
+        try
+        {
+            var first = PackageOperation.GetReinstallCheck(package, options);
+            var second = PackageOperation.GetReinstallCheck(package, new InstallOptions { Version = "175.1.0.13416" });
+            var other = PackageOperation.GetReinstallCheck(package, new InstallOptions { Version = "175.0.0" });
+
+            Assert.Same(first, second);
+            Assert.NotSame(first, other);
+            release.Set();
+            await Task.WhenAll(first, other).WaitAsync(TimeSpan.FromSeconds(30));
+            await WaitForConditionAsync(() => !ReferenceEquals(PackageOperation.GetReinstallCheck(package, options), first));
+            Assert.Equal(3, Volatile.Read(ref started));
+        }
+        finally
+        {
+            release.Set();
+        }
+    }
+
+    [Fact]
     public async Task CancelingDuringTheReinstallCheckCancelsWithoutUninstalling()
     {
         if (!OperatingSystem.IsWindows())

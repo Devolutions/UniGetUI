@@ -87,6 +87,10 @@ namespace UniGetUI.PackageEngine.Operations
         private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
         private readonly UninstallPackageOperation? _uninstallPrerequisite;
         internal static TimeSpan ReinstallCheckTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<
+            string,
+            Lazy<Task<string?>>
+        > _reinstallChecks = new();
         private bool _reinstallsThisAttempt;
         private readonly bool _autoPinned;
         private OperationType CommandRole => _reinstallsThisAttempt ? OperationType.Install : Role;
@@ -1677,9 +1681,7 @@ namespace UniGetUI.PackageEngine.Operations
             string? reinstallRefusal;
             try
             {
-                reinstallRefusal = await Task.Run(() =>
-                        Package.Manager.OperationHelper.GetReinstallRefusal(Package, Options)
-                    )
+                reinstallRefusal = await GetReinstallCheck(Package, Options)
                     .WaitAsync(ReinstallCheckTimeout, CancellationToken);
             }
             catch (TimeoutException)
@@ -1694,6 +1696,36 @@ namespace UniGetUI.PackageEngine.Operations
             if (reinstallRefusal is not null)
                 Metadata.FailureMessage = reinstallRefusal;
             return reinstallRefusal;
+        }
+
+        internal static Task<string?> GetReinstallCheck(IPackage package, InstallOptions options)
+        {
+            string key = string.Join(
+                '\u001f',
+                package.Manager.Name,
+                package.Source.Name,
+                package.Id,
+                package.RequiresReinstallToUpdate,
+                package.OverridenOptions.Scope ?? "",
+                options.Version,
+                options.InstallationScope,
+                options.Architecture,
+                string.Join(' ', options.CustomParameters_Install)
+            );
+            var check = _reinstallChecks.GetOrAdd(
+                key,
+                _ => new Lazy<Task<string?>>(() =>
+                    Task.Run(() => package.Manager.OperationHelper.GetReinstallRefusal(package, options))
+                )
+            );
+            Task<string?> task = check.Value;
+            _ = task.ContinueWith(
+                _ => _reinstallChecks.TryRemove(new KeyValuePair<string, Lazy<Task<string?>>>(key, check)),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default
+            );
+            return task;
         }
 
         private string? RefusalBeforeStart()

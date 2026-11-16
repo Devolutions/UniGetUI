@@ -933,6 +933,10 @@ public partial class MainWindowViewModel : ViewModelBase
     // has been told to stop its periodic work through OnLeave.
     private bool _suspendedForBackground;
 
+    // A Help address asked for while the Help page was released (window hidden to the tray);
+    // applied when the page is rebuilt.
+    private string? _pendingHelpAttachment;
+
     /// <summary>
     /// Called when the main window goes off screen. Pages only stop their periodic work in
     /// OnLeave, which navigation calls, so without this the page that was open when the window
@@ -940,35 +944,46 @@ public partial class MainWindowViewModel : ViewModelBase
     /// rescans the installed and upgradable lists every two seconds, Manager Health keeps
     /// refreshing, the log pages keep the whole log in memory, and Help / Release Notes keep a
     /// WebView2 process cluster alive.
+    ///
+    /// What is done depends on how far away the window went, so that minimizing never costs the
+    /// user their place:
+    /// - Settings pages are never touched: their OnLeave resets them to the settings home page.
+    /// - Help and Release Notes do no periodic work, and Help's OnEnter goes back to the address
+    ///   it was opened with, discarding any link followed since. They get no OnLeave/OnEnter;
+    ///   they are only dropped when the window is hidden, and rebuilt when it is shown again.
+    /// - The log pages clear the log in OnLeave and reload it in OnEnter, which loses the scroll
+    ///   position. That only happens when the window is hidden, not when it is minimized.
+    /// - Every other page is suspended in both cases.
     /// </summary>
     /// <param name="releaseWebViews">
-    /// True when the window was hidden (not merely minimized): the WebView2 pages are then
-    /// dropped as well, and rebuilt when the window is shown again.
+    /// True when the window was hidden (not merely minimized).
     /// </param>
     public void SuspendForBackground(bool releaseWebViews)
     {
         var page = CurrentPageContent as Control;
+        bool hidden = releaseWebViews;
 
-        // Settings pages do no background work, and their OnLeave resets them to the settings
-        // home page, which would lose the user's place on every minimize.
         if (page is SettingsBasePage) return;
 
-        if (!_suspendedForBackground)
+        if (page is not null && (ReferenceEquals(page, HelpPage) || ReferenceEquals(page, ReleaseNotesPage)))
+        {
+            if (!hidden) return;
+
+            _suspendedForBackground = true;
+            CurrentPageContent = null;
+            ReleaseWebViewPage(page);
+        }
+        else if (!_suspendedForBackground && (hidden || !IsLogPage(page)))
         {
             _suspendedForBackground = true;
             (page as IEnterLeaveListener)?.OnLeave();
         }
 
-        if (releaseWebViews && page is not null
-            && (ReferenceEquals(page, HelpPage) || ReferenceEquals(page, ReleaseNotesPage)))
-        {
-            CurrentPageContent = null;
-            ReleaseWebViewPage(page);
-        }
-
         // Whatever the window was showing is now garbage worth handing back.
         IdleMemoryTrimmer.Request();
     }
+
+    private static bool IsLogPage(Control? page) => page is BaseLogPage or global::UniGetUI.Avalonia.Views.Pages.LogPages.OperationHistoryPage;
 
     /// <summary>
     /// Called when the main window comes back on screen; undoes <see cref="SuspendForBackground"/>.
@@ -979,7 +994,17 @@ public partial class MainWindowViewModel : ViewModelBase
         _suspendedForBackground = false;
 
         if (CurrentPageContent is null && _currentPage is not PageType.Null)
+        {
+            // A released Help or Release Notes page: a new one loads its own start address.
             CurrentPageContent = GetPageForType(_currentPage);
+            if (_pendingHelpAttachment is { } attachment)
+            {
+                _pendingHelpAttachment = null;
+                HelpPage?.NavigateTo(attachment);
+            }
+            return;
+        }
+
         (CurrentPageContent as IEnterLeaveListener)?.OnEnter();
     }
 
@@ -1271,7 +1296,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (!await NavigateToAsync(PageType.Help))
             return;
-        HelpPage?.NavigateTo(uriAttachment);
+
+        // Help is already the current page but was released while the window is hidden: there
+        // is no page to navigate yet, so keep the address for when it is rebuilt.
+        if (HelpPage is null)
+            _pendingHelpAttachment = uriAttachment;
+        else
+            HelpPage.NavigateTo(uriAttachment);
     }
 
     public async Task LoadCloudBundleAsync(string content)

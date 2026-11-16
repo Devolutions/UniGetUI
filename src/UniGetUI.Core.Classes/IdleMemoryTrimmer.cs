@@ -17,7 +17,7 @@ namespace UniGetUI.Core.Classes;
 /// background, one compacting collection runs and the freed memory is released. Nothing happens
 /// while the user is looking at the window, where a blocking collection would only cost a pause.
 /// </summary>
-public static class IdleMemoryTrimmer
+public static partial class IdleMemoryTrimmer
 {
     /// <summary>
     /// Whether nobody is looking at the app right now. The front-end sets it: a window that is
@@ -98,6 +98,6 @@ public static class IdleMemoryTrimmer
         }
     }
 
-    [DllImport("libc")]
-    private static extern int malloc_trim(nuint pad);
+    [LibraryImport("libc")]
+    private static partial int malloc_trim(nuint pad);
 }

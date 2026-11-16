@@ -282,7 +282,7 @@
         <PackageReference Include="Devolutions.AvaloniaTheme.Linux" Version="2026.3.11" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
-        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0" />
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.2" />
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
         <PackageReference Include="Devolutions.UniGetUI.Elevator" Version="2.6.1.3" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
         <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.13.0" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />

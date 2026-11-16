@@ -559,10 +559,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (UpgradablePackagesLoader.Instance is { } upgLoader)
         {
-            upgLoader.FinishedLoading += (_, _) => Dispatcher.UIThread.Post(() =>
+            upgLoader.FinishedLoading += (_, _) =>
             {
-                foreach (var session in _extensions.Values) _ = session.CheckForUpdatesAsync();
-            });
+                // Extension update checks may fetch; a remote rescan only lists.
+                if (upgLoader.LoadIsListingOnly) return;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    foreach (var session in _extensions.Values) _ = session.CheckForUpdatesAsync();
+                });
+            };
             upgLoader.PackagesChanged += (_, _) =>
                 Dispatcher.UIThread.Post(() =>
                 {

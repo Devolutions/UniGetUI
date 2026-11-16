@@ -1,6 +1,8 @@
 using Devolutions.Now.Policy.Api;
+using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.AgentBroker;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Interface.AgentRegistration;
@@ -31,6 +33,19 @@ internal interface IAgentRegistrationBackend
         string grant,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Reloads the installed and available-update lists in a scan that starts after this call,
+    /// waiting out a load already running, and returns whether both published a new completed scan
+    /// without failures. Loads started here only list: see <see cref="PackageListingScope"/>.
+    /// </summary>
+    Task<bool> RescanInventoryAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Starts a listing-only reload of the installed packages, unless a load or a remote rescan is
+    /// already under way; returns whether it started one.
+    /// </summary>
+    bool RefreshInstalledInventory();
 }
 
 internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
@@ -88,4 +103,141 @@ internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
         string grant,
         CancellationToken cancellationToken
     ) => _submitter.SubmitAsync(plan, grant, cancellationToken);
+
+    public async Task<bool> RescanInventoryAsync(CancellationToken cancellationToken)
+    {
+        if (InstalledPackagesLoader.Instance is not { } installed
+            || UpgradablePackagesLoader.Instance is not { } updates)
+        {
+            return false;
+        }
+
+        bool rescanned = await RemoteRescan.Shared
+            .RequestAsync(installed, updates, cancellationToken)
+            .ConfigureAwait(false);
+        // Complete means every expected manager succeeded in both the installed and the update scan.
+        return rescanned && TryGetInventorySnapshot() is { UpdateCompletedUtc: not null };
+    }
+
+    public bool RefreshInstalledInventory() =>
+        InstalledPackagesLoader.Instance is { } installed
+        && RemoteRescan.Shared.TryStartInstalledReload(installed);
+}
+
+/// <summary>
+/// Remote rescans of both inventory lists. The scan that answers a request always starts after the
+/// request arrived: a load already running is waited out, never joined, because it may have begun
+/// before the change the administrator wants to see. Requests that arrive while a scan is queued
+/// share it, so at most one is queued.
+/// </summary>
+internal sealed class RemoteRescan
+{
+    public static RemoteRescan Shared { get; } = new();
+
+    private readonly object _gate = new();
+    private Task<bool>? _queued;
+
+    public Task<bool> RequestAsync(
+        AbstractPackageLoader installed,
+        AbstractPackageLoader updates,
+        CancellationToken cancellationToken
+    )
+    {
+        Task<bool> scan;
+        lock (_gate)
+        {
+            if (_queued is null)
+            {
+                // Read inside the lock so a request sharing this scan arrived before it starts.
+                long installedArrival = installed.LoadGeneration;
+                long updatesArrival = updates.LoadGeneration;
+                _queued = Task.Run(() => RunAsync(installed, updates, installedArrival, updatesArrival));
+            }
+
+            scan = _queued;
+        }
+
+        return scan.WaitAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The periodic installed-list reload while registered. It is skipped while a load is running
+    /// or a rescan is queued, since either already brings the list up to date.
+    /// </summary>
+    public bool TryStartInstalledReload(AbstractPackageLoader installed)
+    {
+        lock (_gate)
+        {
+            if (_queued is not null || installed.IsLoading)
+            {
+                Logger.Debug("Periodic inventory reload skipped: a package load is already running.");
+                return false;
+            }
+
+            using (PackageListingScope.EnterListingOnly())
+            {
+                _ = installed.ReloadPackages();
+            }
+
+            return true;
+        }
+    }
+
+    private async Task<bool> RunAsync(
+        AbstractPackageLoader installed,
+        AbstractPackageLoader updates,
+        long installedArrival,
+        long updatesArrival
+    )
+    {
+        bool dequeued = false;
+        try
+        {
+            while (installed.IsLoading || updates.IsLoading)
+            {
+                await Task.WhenAll(installed.WaitForCurrentLoadAsync(), updates.WaitForCurrentLoadAsync())
+                    .ConfigureAwait(false);
+            }
+
+            Task both;
+            lock (_gate)
+            {
+                // From here a new request queues the next scan, which waits for this one.
+                _queued = null;
+                dequeued = true;
+                using (PackageListingScope.EnterListingOnly())
+                {
+                    // The installed load starts first: the update load waits for each manager's
+                    // installed listing only while that one is running.
+                    both = Task.WhenAll(StartOrJoinAsync(installed), StartOrJoinAsync(updates));
+                }
+            }
+
+            await both.ConfigureAwait(false);
+            return StartedAfter(installed, installedArrival) && StartedAfter(updates, updatesArrival);
+        }
+        finally
+        {
+            // A failure before the scan started must not leave later requests sharing it.
+            if (!dequeued)
+            {
+                lock (_gate)
+                    _queued = null;
+            }
+        }
+    }
+
+    private static async Task StartOrJoinAsync(AbstractPackageLoader loader)
+    {
+        // A load that started after the wait above also started after the request, so joining it is fine.
+        if (!loader.IsLoading)
+        {
+            await loader.ReloadPackages().ConfigureAwait(false);
+        }
+
+        await loader.WaitForCurrentLoadAsync().ConfigureAwait(false);
+    }
+
+    private static bool StartedAfter(AbstractPackageLoader loader, long arrival) =>
+        loader.LastCompletedScan is { } scan && scan.StartGeneration > arrival;
 }

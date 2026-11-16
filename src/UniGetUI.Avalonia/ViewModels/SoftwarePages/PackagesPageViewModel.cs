@@ -586,13 +586,23 @@ public partial class PackagesPageViewModel : ViewModelBase
         if (!Loader.IsLoading) StartRowValuePreload();
     }
 
-    private void Loader_FinishedLoading(object? sender, EventArgs e)
+    /// <summary>
+    /// Whether the load <see cref="PackagesLoaded"/> last reported was a listing-only one (a remote
+    /// rescan), captured when it finished so a load started since cannot change the answer.
+    /// </summary>
+    public bool LastLoadWasListingOnly { get; private set; }
+
+    private void Loader_FinishedLoading(object? sender, EventArgs e) =>
+        OnLoaderFinished(Loader.LoadIsListingOnly);
+
+    private void OnLoaderFinished(bool listingOnly)
     {
         if (!Dispatcher.UIThread.CheckAccess())
         {
-            Dispatcher.UIThread.Post(() => Loader_FinishedLoading(sender, e));
+            Dispatcher.UIThread.Post(() => OnLoaderFinished(listingOnly));
             return;
         }
+        LastLoadWasListingOnly = listingOnly;
         IsLoading = Loader.IsLoading;
         _lastLoadTime = DateTime.Now;
         // Also called from the constructor before any load has run: only a finished load counts

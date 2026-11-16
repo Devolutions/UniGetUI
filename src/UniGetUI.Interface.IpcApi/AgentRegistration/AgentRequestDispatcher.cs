@@ -19,6 +19,8 @@ internal sealed class AgentRequestDispatcher
     private const string FailedMessage = "The request could not be completed.";
     private const string InventoryUnavailableMessage =
         "No completed package scan covers every enabled package manager.";
+    private const string RescanFailedMessage =
+        "The package rescan did not complete for every enabled package manager.";
     private const string ScopeNotAllowedMessage =
         "This manager cannot run the operation in the requested scope; nothing was started.";
     private const string RowNotIdentifiedMessage =
@@ -64,6 +66,8 @@ internal sealed class AgentRequestDispatcher
                         cancellationToken
                     )
                     .ConfigureAwait(false),
+                "RescanInventory" => await RescanInventoryAsync(id, cancellationToken)
+                    .ConfigureAwait(false),
                 _ => Error(id, "UnsupportedCommand", UnsupportedMessage),
             };
 
@@ -81,6 +85,31 @@ internal sealed class AgentRequestDispatcher
 
     public static byte[] InvalidArguments(string id) =>
         Error(id, "InvalidArguments", InvalidMessage);
+
+    /// <summary>Starts a listing-only reload of the installed packages unless a load is already running.</summary>
+    public void RefreshInstalledInventory()
+    {
+        try
+        {
+            _backend.RefreshInstalledInventory();
+        }
+        catch (Exception) { }
+    }
+
+    private async Task<byte[]> RescanInventoryAsync(string id, CancellationToken cancellationToken)
+    {
+        bool rescanned = await _backend.RescanInventoryAsync(cancellationToken).ConfigureAwait(false);
+        return rescanned
+            ? Ok(
+                id,
+                writer =>
+                {
+                    writer.WriteStartObject();
+                    writer.WriteEndObject();
+                }
+            )
+            : Error(id, "Failed", RescanFailedMessage);
+    }
 
     private byte[] GetInventorySnapshot(string id)
     {

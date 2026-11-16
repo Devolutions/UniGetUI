@@ -992,6 +992,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     !SecondAttempt
                     && !WasStoppedSince(outcome.Started)
                     && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                    && !PackageListingScope.IsListingOnly
                 )
                 {
                     Logger.Warn(
@@ -1068,6 +1069,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     !SecondAttempt
                     && !WasStoppedSince(outcome.Started)
                     && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                    && !PackageListingScope.IsListingOnly
                 )
                 {
                     Logger.Warn(
@@ -1147,6 +1149,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     !SecondAttempt
                     && !WasStoppedSince(outcome.Started)
                     && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                    // A listing-only scan reports the failure rather than repairing the manager.
+                    && !PackageListingScope.IsListingOnly
                 )
                 {
                     Logger.Warn(

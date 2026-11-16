@@ -74,7 +74,7 @@ When the client **does** receive an explicit override:
 On Windows, an unelevated GUI session separately attempts to register with the local Devolutions Agent service.
 Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
 This connection is separate from the local IPC API and remains active when that API is disabled.
-The registration connection answers `GetInventorySnapshot` and runs `ExecutePackageOperation` through the Agent's package broker.
+The registration connection answers `GetInventorySnapshot` and `RescanInventory`, and runs `ExecutePackageOperation` through the Agent's package broker.
 
 ### Inventory snapshot
 
@@ -85,6 +85,18 @@ It fails unless that scan completed for every enabled and installed manager, so 
 Installations of one package that differ in reported scope are separate rows, and an update reporting a scope applies only to the row with that scope; an update without a scope applies only when exactly one installation matches.
 `sourceName` is always empty, and manager executable paths, arguments and health details are not sent.
 Source entries with unsafe or ambiguous names are omitted, and source URLs are never sent.
+
+### Inventory rescan
+
+`RescanInventory` takes empty arguments and reloads the installed-package and available-update lists; the Agent sends it after a remote operation finishes, then asks for a snapshot.
+The scan that answers starts after the request arrived: a load already running is waited out rather than joined, and requests that arrive while a scan is queued share it.
+UniGetUI answers `ok:true` with an empty `result` once both scans have completed for every expected manager and been published, and `Failed` otherwise.
+A remote rescan is the user's Reload minus recovery (Cargo), repair (`AttemptFastRepair`), automatic install or update of packages, and extension update checks.
+Package indexes are refreshed exactly as a Reload refreshes them (`winget source update`, `scoop update` and so on), since that changes only the manager's own catalogue, not what is installed.
+When an interrupted UniGetUI Cargo installation still needs recovery, the Cargo listing is refused and the rescan fails; the log then contains `Remote rescan: Cargo listing refused because an interrupted UniGetUI Cargo installation needs recovery`, and reloading packages once in UniGetUI recovers it.
+
+While registered with an Agent, UniGetUI also reloads its installed-package list every 15 minutes in the same listing-only mode, so changes made on the machine by other means reach the inventory unasked.
+A tick is skipped while a load is running or a rescan is queued, and there is no such timer while UniGetUI is not registered.
 
 ### Remote package operations
 

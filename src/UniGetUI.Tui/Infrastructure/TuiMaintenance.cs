@@ -44,7 +44,9 @@ internal static class TuiMaintenanceScheduler
             loader.FinishedLoading += (_, _) =>
             {
                 _updatesWereLoaded = true;
-                RecordUpdateLoad(DateTime.Now);
+                // A remote rescan only lists; it must not claim a check that would make auto-install due.
+                if (!loader.LoadIsListingOnly)
+                    RecordUpdateLoad(DateTime.Now);
             };
         }
 

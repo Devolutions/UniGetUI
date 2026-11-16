@@ -137,6 +137,20 @@ public class AgentRegistrationTests
                 Submitted.Add((plan, grant));
             return Task.FromResult(Delivery);
         }
+
+        public TaskCompletionSource<bool> Rescan { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<bool> RescanInventoryAsync(CancellationToken cancellationToken) =>
+            Rescan.Task.WaitAsync(cancellationToken);
+
+        public int InventoryRefreshes;
+
+        public bool RefreshInstalledInventory()
+        {
+            Interlocked.Increment(ref InventoryRefreshes);
+            return true;
+        }
     }
     private sealed class BlockedWriteStream : Stream
     {
@@ -224,7 +238,7 @@ public class AgentRegistrationTests
         public bool Registered;
         private readonly CancellationTokenSource _cts = new(TimeSpan.FromSeconds(20));
 
-        public Harness(AgentRegistrationOptions? options = null)
+        public Harness(AgentRegistrationOptions? options = null, TimeProvider? time = null)
         {
             var toClient = Channel.CreateUnbounded<byte[]>();
             var toAgent = Channel.CreateUnbounded<byte[]>();
@@ -234,7 +248,7 @@ public class AgentRegistrationTests
                 client,
                 new AgentRequestDispatcher(Backend),
                 options ?? new AgentRegistrationOptions { HelloTimeout = TimeSpan.FromSeconds(5) },
-                TimeProvider.System
+                time ?? TimeProvider.System
             );
             session.Registered += () => Registered = true;
             Session = Task.Run(async () =>
@@ -662,6 +676,137 @@ public class AgentRegistrationTests
         Assert.False(response.TryGetProperty("result", out _));
         Assert.Equal("UnsupportedCommand", ErrorCode(response));
         Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
+    }
+
+    [Fact]
+    public async Task RescanIsAnsweredOnlyOnceTheBackendRescanCompletes()
+    {
+        var h = new Harness();
+        await h.WelcomeAsync();
+        await h.SendAsync($$"""{"kind":"Request","id":"{{Uuid1}}","command":"RescanInventory","arguments":{} }""");
+
+        JsonElement ping = await h.RequestAsync(Uuid2, "GetInventorySnapshot");
+        Assert.Equal(Uuid2, ping.GetProperty("id").GetString());
+
+        h.Backend.Rescan.SetResult(true);
+        JsonElement response = (await h.ReadAsync())!.Value;
+        Assert.Equal(Uuid1, response.GetProperty("id").GetString());
+        Assert.Equal(JsonValueKind.Object, Result(response).ValueKind);
+        Assert.Empty(Result(response).EnumerateObject());
+    }
+
+    [Fact]
+    public async Task FailedRescanIsReportedAsFailed()
+    {
+        var h = new Harness();
+        h.Backend.Rescan.SetResult(false);
+        await h.WelcomeAsync();
+
+        JsonElement response = await h.RequestAsync(Uuid1, "RescanInventory");
+        Assert.False(response.GetProperty("ok").GetBoolean());
+        Assert.Equal("Failed", ErrorCode(response));
+        Assert.Equal(
+            "The package rescan did not complete for every enabled package manager.",
+            response.GetProperty("error").GetProperty("message").GetString()
+        );
+    }
+
+    [Fact]
+    public async Task RegisteredSessionReloadsTheInstalledInventoryEachIntervalUntilItEnds()
+    {
+        var clock = new RefreshClock(TimeSpan.FromMinutes(15));
+        var h = new Harness(time: clock);
+        await h.WelcomeAsync();
+
+        await clock.FireAsync();
+        await WaitUntilAsync(() => Volatile.Read(ref h.Backend.InventoryRefreshes) == 1);
+        await clock.FireAsync();
+        await WaitUntilAsync(() => Volatile.Read(ref h.Backend.InventoryRefreshes) == 2);
+
+        h.Agent.Dispose();
+        Assert.True(await h.Session.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, clock.Pending);
+        Assert.Equal(2, Volatile.Read(ref h.Backend.InventoryRefreshes));
+    }
+
+    [Fact]
+    public async Task UnwelcomedSessionNeverStartsTheInventoryRefreshTimer()
+    {
+        var clock = new RefreshClock(TimeSpan.FromMinutes(15));
+        var h = new Harness(time: clock);
+        Assert.Equal("Hello", (await h.ReadAsync())!.Value.GetProperty("kind").GetString());
+        await h.SendAsync("""{"kind":"Welcome","protocolVersion":2}""");
+
+        Assert.False(await h.Session.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, clock.Created);
+        Assert.Equal(0, Volatile.Read(ref h.Backend.InventoryRefreshes));
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!condition())
+            await Task.Delay(10, cts.Token);
+    }
+
+    // Holds the inventory refresh timers until FireAsync; every other timer is real.
+    private sealed class RefreshClock(TimeSpan interval) : TimeProvider
+    {
+        private readonly List<HeldTimer> _timers = [];
+        public int Created;
+
+        public int Pending
+        {
+            get
+            {
+                lock (_timers)
+                    return _timers.Count(timer => !timer.Disposed);
+            }
+        }
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            if (dueTime != interval)
+                return TimeProvider.System.CreateTimer(callback, state, dueTime, period);
+            var timer = new HeldTimer(() => callback(state));
+            lock (_timers)
+            {
+                Created++;
+                _timers.Add(timer);
+            }
+            return timer;
+        }
+
+        // Waits for the loop to arm its next wait, then fires it.
+        public async Task FireAsync()
+        {
+            await WaitUntilAsync(() => Pending == 1);
+            HeldTimer timer;
+            lock (_timers)
+                timer = _timers.Single(candidate => !candidate.Disposed);
+            timer.Fire();
+        }
+
+        private sealed class HeldTimer(Action fire) : ITimer
+        {
+            public bool Disposed { get; private set; }
+
+            public void Fire()
+            {
+                Disposed = true;
+                fire();
+            }
+
+            public bool Change(TimeSpan dueTime, TimeSpan period) => !Disposed;
+
+            public void Dispose() => Disposed = true;
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+        }
     }
 
     [Fact]

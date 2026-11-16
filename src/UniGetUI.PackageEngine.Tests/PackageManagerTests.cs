@@ -468,6 +468,24 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void ListingOnlyScopeRefreshesIndexesButNeverRepairs()
+    {
+        var manager = CreateReadyManager();
+        manager.SetInstalledPackages(() => throw new InvalidOperationException("installed failed"));
+        manager.SetAvailableUpdates(() => throw new InvalidOperationException("updates failed"));
+
+        using (PackageListingScope.EnterListingOnly())
+        {
+            Assert.Empty(manager.GetInstalledPackages());
+            Assert.Empty(manager.GetAvailableUpdates());
+        }
+
+        Assert.Equal(0, manager.AttemptFastRepairCalls);
+        Assert.Equal(1, manager.RefreshPackageIndexesCalls);
+        Assert.False(PackageListingScope.IsListingOnly);
+    }
+
+    [Fact]
     public void FailedSearchIsReportedAndRecorded()
     {
         var manager = CreateReadyManager();

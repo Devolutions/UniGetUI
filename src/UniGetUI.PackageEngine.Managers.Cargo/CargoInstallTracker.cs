@@ -74,9 +74,12 @@ internal static class CargoInstallTracker
         return arguments;
     }
 
+    internal static bool HasPendingTransaction(string root) =>
+        Directory.Exists(Path.Join(root, TransactionDirectory));
+
     internal static async Task RecoverAsync(string root, CancellationToken cancellationToken)
     {
-        if (!Directory.Exists(Path.Join(root, TransactionDirectory)))
+        if (!HasPendingTransaction(root))
             return;
         using var metadata = await CargoTrackingLock.AcquireAsync(root, cancellationToken);
         Recover(root, metadata);

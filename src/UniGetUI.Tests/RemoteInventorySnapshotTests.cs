@@ -25,7 +25,7 @@ public sealed class RemoteInventorySnapshotTests
     private static readonly DateTime Installed = new(2026, 11, 15, 10, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime Updated = Installed.AddMinutes(5);
 
-    private sealed class SnapshotManager(string id, bool enabled = true, bool found = true, bool ready = true)
+    internal sealed class SnapshotManager(string id, bool enabled = true, bool found = true, bool ready = true)
         : IPackageManager
     {
         public ManagerProperties Properties { get; } = new(IsDummy: true);
@@ -208,6 +208,10 @@ public sealed class RemoteInventorySnapshotTests
         public Task<RemoteGrantDelivery> SubmitGrantAsync(
             RemoteGrantPlan plan, string grant, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+        public Task<bool> RescanInventoryAsync(CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public bool RefreshInstalledInventory() => throw new NotSupportedException();
     }
 
     /// <summary>

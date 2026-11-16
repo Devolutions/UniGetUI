@@ -201,6 +201,18 @@ public sealed class CargoInstallTrackerTests
     }
 
     [Fact]
+    public void ListingOnlyScanRefusesAPendingTransactionWithoutRecoveringIt()
+    {
+        using var sandbox = new CargoTestSandbox();
+        using var environment = sandbox.IsolateEnvironment();
+        sandbox.Write("home/.unigetui-cargo-transaction/staged-binary", [1]);
+
+        Assert.Throws<InvalidOperationException>(() => new Cargo().ListInstalledWithoutRecovery());
+
+        Assert.True(File.Exists(sandbox.PathFor("home/.unigetui-cargo-transaction/staged-binary")));
+    }
+
+    [Fact]
     public async Task MissingJournalAndUnsafeRecoveryNamesFailWithoutTouchingOutsideFiles()
     {
         using var sandbox = new CargoTestSandbox();

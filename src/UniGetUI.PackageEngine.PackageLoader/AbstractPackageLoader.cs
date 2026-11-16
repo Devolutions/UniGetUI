@@ -40,11 +40,18 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         private long _loadGeneration;
         public long LoadGeneration => Interlocked.Read(ref _loadGeneration);
-        protected void AdvanceLoadGeneration() => Interlocked.Increment(ref _loadGeneration);
+        protected long AdvanceLoadGeneration() => Interlocked.Increment(ref _loadGeneration);
 
         public bool HasPendingInitialLoad => !IsLoaded && !LastLoadReportedFailures;
 
         public DateTime? LastLoadFinishedUtc { get; private set; }
+
+        /// <summary>
+        /// Whether the running load, or the last one when none runs, was started inside
+        /// <see cref="PackageListingScope.EnterListingOnly"/>. Handlers that act on a finished
+        /// load, such as installing updates automatically, skip such loads.
+        /// </summary>
+        public bool LoadIsListingOnly { get; private set; }
 
         private CompletedPackageScan? _lastCompletedScan;
 
@@ -232,7 +239,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
                 );
                 Volatile.Write(ref _managerLoads, managerLoads);
-                AdvanceLoadGeneration();
+                long startGeneration = AdvanceLoadGeneration();
+                LoadIsListingOnly = PackageListingScope.IsListingOnly;
                 IsLoading = true;
                 LastLoadReportedFailures = false;
                 StartedLoading?.Invoke(this, EventArgs.Empty);
@@ -328,7 +336,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
                         new CompletedPackageScan(
                             PackageReference.Values.ToArray(),
                             DateTime.UtcNow,
-                            succeededManagers
+                            succeededManagers,
+                            startGeneration
                         )
                     );
                 }

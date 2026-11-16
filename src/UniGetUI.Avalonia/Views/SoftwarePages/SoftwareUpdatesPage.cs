@@ -54,7 +54,11 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         NoMatches_BackgroundText = CoreTools.Translate("No results were found matching the input criteria"),
     })
     {
-        ViewModel.PackagesLoaded += reason => { _ = WhenPackagesLoaded(); };
+        ViewModel.PackagesLoaded += reason =>
+        {
+            // A remote rescan only lists; installing updates is left to the next ordinary check.
+            if (!ViewModel.LastLoadWasListingOnly) _ = WhenPackagesLoaded();
+        };
         if (UpgradablePackagesLoader.Instance is { } upgradableLoader)
         {
             upgradableLoader.PackagesChanged += (_, e) =>

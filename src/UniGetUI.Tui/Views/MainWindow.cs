@@ -218,7 +218,11 @@ internal sealed class MainWindow : Window
             _ = TuiUpdatesPolicy.OnUpdatesLoadedAsync(isFirst);
         });
 
-        UpgradablePackagesLoader.Instance.FinishedLoading += (_, _) => Handle();
+        UpgradablePackagesLoader.Instance.FinishedLoading += (_, _) =>
+        {
+            // A remote rescan only lists; installing updates is left to the next ordinary check.
+            if (!UpgradablePackagesLoader.Instance.LoadIsListingOnly) Handle();
+        };
         if (UpgradablePackagesLoader.Instance.IsLoaded && !UpgradablePackagesLoader.Instance.IsLoading) Handle();
     }
 

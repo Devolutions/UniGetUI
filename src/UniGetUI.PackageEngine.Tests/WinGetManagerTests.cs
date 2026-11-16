@@ -3682,6 +3682,48 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task WinGetPingetNoUpgradeExplainsAnUnreadableSourceToTheUser()
+    {
+        var (_, package) = BuildPingetUpdatePackage("Contoso.BusySourceTool");
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        var original = WinGetPkgOperationHelper.ListUpgrades;
+        WinGetPkgOperationHelper.ListUpgrades = _ => ListResponseWith([], ["Failed when searching source 'winget'"]);
+        try
+        {
+            var veredict = await operation.ProbeProcessVeredict(0, ["No applicable upgrade found."]);
+
+            OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+            Assert.Contains("busy or unreachable", operation.Metadata.FailureMessage);
+            Assert.DoesNotContain("may already be up to date", operation.Metadata.FailureMessage);
+            Assert.False(operation.Metadata.FailureMessage.EndsWith('.'));
+        }
+        finally
+        {
+            WinGetPkgOperationHelper.ListUpgrades = original;
+        }
+    }
+
+    [Fact]
+    public async Task WinGetPingetNoUpgradeConfirmedBySecondLookupKeepsTheUpToDateMessage()
+    {
+        var (_, package) = BuildPingetUpdatePackage("Contoso.ConfirmedTool");
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        var original = WinGetPkgOperationHelper.ListUpgrades;
+        WinGetPkgOperationHelper.ListUpgrades = _ => ListResponseWith([], []);
+        try
+        {
+            var veredict = await operation.ProbeProcessVeredict(0, ["No applicable upgrade found."]);
+
+            OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+            Assert.Contains("may already be up to date", operation.Metadata.FailureMessage);
+        }
+        finally
+        {
+            WinGetPkgOperationHelper.ListUpgrades = original;
+        }
+    }
+
+    [Fact]
     public async Task WinGetInstallerHashMismatchExplainsTheAdminBlock()
     {
         var manager = new WinGet();

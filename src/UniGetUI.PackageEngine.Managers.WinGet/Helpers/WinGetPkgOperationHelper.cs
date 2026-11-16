@@ -439,6 +439,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         uint uintCode = (uint)returnCode;
         _pendingInstallerTrust.TryGetValue(package, out PendingInstallerTrust? pendingTrust);
         _pendingInstallerTrust.Remove(package);
+        _unconfirmedUpgradeLookups.Remove(package);
 
         if (uintCode is 0x8A150109 or 0x8A15010B)
         {
@@ -495,13 +496,12 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
             if (operation is OperationType.Update && !ReportedDifferentInstallTechnology(processOutput))
             {
-                if (
-                    !ReportedNoUpgradeCandidate(processOutput, returnCode)
-                    || RecheckUpgrade(package) is UpgradeRecheck.NotOffered
-                )
-                {
+                if (!ReportedNoUpgradeCandidate(processOutput, returnCode))
                     SuppressPhantomUpgrade(package);
-                }
+                else if (RecheckUpgrade(package) is UpgradeRecheck.NotOffered)
+                    SuppressPhantomUpgrade(package);
+                else
+                    _unconfirmedUpgradeLookups.AddOrUpdate(package, new object());
             }
 
             Logger.Warn(
@@ -786,6 +786,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     }
 
     internal static Func<ListQuery, ListResponse> ListUpgrades { get; set; } = ListUpgradesWithRepository;
+
+    private static readonly ConditionalWeakTable<IPackage, object> _unconfirmedUpgradeLookups = new();
+
+    internal static bool ReportedUnconfirmedUpgradeLookup(IPackage package) =>
+        _unconfirmedUpgradeLookups.TryGetValue(package, out _);
 
     private static ListResponse ListUpgradesWithRepository(ListQuery query)
     {

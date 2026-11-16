@@ -1308,6 +1308,7 @@
   "Update failed": "Update failed",
   "{package} could not be updated": "{package} could not be updated",
   "{package} may already be up to date, or no installer matches this system": "{package} may already be up to date, or no installer matches this system",
+  "{package} could not be updated because its package source was busy or unreachable. Try again in a few minutes": "{package} could not be updated because its package source was busy or unreachable. Try again in a few minutes",
   "{package} is currently running. Close it and try again": "{package} is currently running. Close it and try again",
   "{package} Uninstall": "{package} Uninstall",
   "{0} is being uninstalled": "{0} is being uninstalled",

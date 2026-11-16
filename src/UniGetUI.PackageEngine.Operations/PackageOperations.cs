@@ -85,6 +85,12 @@ namespace UniGetUI.PackageEngine.Operations
         public readonly InstallOptions Options;
         public readonly OperationType Role;
         private readonly UninstallPackageOperation? _uninstallBeforeReinstall;
+        private readonly UninstallPackageOperation? _uninstallPrerequisite;
+        internal static TimeSpan ReinstallCheckTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<
+            string,
+            Lazy<Task<string?>>
+        > _reinstallChecks = new();
         private bool _reinstallsThisAttempt;
         private readonly bool _autoPinned;
         private OperationType CommandRole => _reinstallsThisAttempt ? OperationType.Install : Role;
@@ -136,6 +142,8 @@ namespace UniGetUI.PackageEngine.Operations
         {
             Package = package;
             Role = role;
+            if (role is OperationType.Install)
+                _uninstallPrerequisite = req as UninstallPackageOperation;
             if (role is OperationType.Update)
             {
                 var unpinned = options.WithoutSavedVersion();
@@ -1237,6 +1245,7 @@ namespace UniGetUI.PackageEngine.Operations
                 ExplainInstallerHashMismatch(ReturnCode);
                 ExplainApplicationCurrentlyRunning(Output, ReturnCode);
                 ExplainFileInUse(Output);
+                ExplainUninstalledByTheReinstall();
             }
 
             return Task.FromResult(veredict);
@@ -1383,6 +1392,32 @@ namespace UniGetUI.PackageEngine.Operations
                 new Dictionary<string, object?> { { "package", Package.Name } }
             );
 #endif
+        }
+
+        private void ExplainUninstalledByTheReinstall()
+        {
+            UninstallPackageOperation? uninstall = Role is OperationType.Update
+                ? _uninstallBeforeReinstall
+                : _uninstallPrerequisite;
+            if (CommandRole is not OperationType.Install || uninstall?.Status is not OperationStatus.Succeeded)
+                return;
+
+            string version = Options.Version.Length > 0 ? Options.Version
+                : Package.IsUpgradable ? Package.NewVersionString
+                : "";
+            string uninstalled = version.Length > 0
+                ? CoreTools.Translate(
+                    "{package} was uninstalled so that version {version} could be installed, but the installation failed, so {package} is no longer installed. Retry, or install it again.",
+                    new Dictionary<string, object?> { { "package", Package.Name }, { "version", version } }
+                )
+                : CoreTools.Translate(
+                    "{package} was uninstalled so that it could be installed again, but the installation failed, so {package} is no longer installed. Retry, or install it again.",
+                    new Dictionary<string, object?> { { "package", Package.Name } }
+                );
+            Metadata.FailureMessage =
+                Metadata.FailureMessage == _genericFailureMessage
+                    ? uninstalled
+                    : $"{uninstalled} {Metadata.FailureMessage}";
         }
 
         private void ExplainFileInUse(List<string> output)
@@ -1640,7 +1675,69 @@ namespace UniGetUI.PackageEngine.Operations
             return kept;
         }
 
-        protected override string? RefusalBeforeStart()
+        protected override async Task<string?> RefusalBeforeStartAsync()
+        {
+            if (RefusalBeforeStart() is { } refusal)
+                return refusal;
+
+            bool uninstallIsScheduled = Role is OperationType.Update
+                ? _uninstallBeforeReinstall is { Status: not OperationStatus.Succeeded }
+                    && !IsKnownToBeUninstalled(Package)
+                : _uninstallPrerequisite is not null;
+            if (!uninstallIsScheduled || IsBrokerEligible(Package))
+                return null;
+
+            string? reinstallRefusal;
+            try
+            {
+                reinstallRefusal = await GetReinstallCheck(Package, Options)
+                    .WaitAsync(ReinstallCheckTimeout, CancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                reinstallRefusal = CoreTools.Translate(
+                    "{0} was not uninstalled: checking that it could be installed again afterwards took longer than {1} seconds. Try again later.",
+                    Package.Name,
+                    (int)Math.Ceiling(ReinstallCheckTimeout.TotalSeconds)
+                );
+            }
+
+            if (reinstallRefusal is not null)
+                Metadata.FailureMessage = reinstallRefusal;
+            return reinstallRefusal;
+        }
+
+        internal static Task<string?> GetReinstallCheck(IPackage package, InstallOptions options)
+        {
+            string key = string.Join(
+                '\u001f',
+                package.Manager.Name,
+                package.Source.Name,
+                package.Id,
+                package.RequiresReinstallToUpdate,
+                package.OverridenOptions.Scope ?? "",
+                options.Version,
+                options.InstallationScope,
+                options.Architecture,
+                string.Join(' ', options.CustomParameters_Install)
+            );
+            var check = _reinstallChecks.GetOrAdd(
+                key,
+                _ => new Lazy<Task<string?>>(() =>
+                    Task.Run(() => package.Manager.OperationHelper.GetReinstallRefusal(package, options))
+                )
+            );
+            Task<string?> task = check.Value;
+            _ = task.ContinueWith(
+                _ => _reinstallChecks.TryRemove(new KeyValuePair<string, Lazy<Task<string?>>>(key, check)),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default
+            );
+            return task;
+        }
+
+        private string? RefusalBeforeStart()
         {
             if (Package.Manager.Capabilities.ElevatesItself && Settings.Get(Settings.K.ProhibitElevation))
                 return CoreTools.Translate(

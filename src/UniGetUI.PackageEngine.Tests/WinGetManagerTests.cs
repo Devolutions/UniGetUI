@@ -3024,6 +3024,113 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetInstallKeepsTheCatalogIdentifierAfterAnUninstallUsedTheLocalOne()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Reinstalled");
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+        package.OverridenOptions.WinGet_UseLocalIdentifier = true;
+
+        var uninstall = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Uninstall
+        );
+        var install = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions
+            {
+                Version = "3.0.0",
+                Architecture = Architecture.x64,
+                InstallationScope = PackageScope.Machine,
+            },
+            OperationType.Install
+        );
+
+        Assert.Contains($"\"{NodeJsLocalIdentifier}\"", uninstall);
+        Assert.Contains("\"OpenJS.NodeJS.Reinstalled\"", install);
+        Assert.DoesNotContain($"\"{NodeJsLocalIdentifier}\"", install);
+        Assert.Contains("x64", install);
+        Assert.Contains("machine", install);
+    }
+
+    [Theory]
+    [InlineData("", "", null, null, "", "", "", "")]
+    [InlineData("--override /S", "", null, null, "", "", "", "")]
+    [InlineData("--version 1.2.0", "", null, null, "", "1.2.0", "", "")]
+    [InlineData("--version=1.2.0", "", null, null, "", "1.2.0", "", "")]
+    [InlineData("-v 1.2.0", "3.0.0", null, null, "--version", "1.2.0", "", "")]
+    [InlineData("--scope Machine", "", null, null, "", "", "machine", "")]
+    [InlineData("--scope machine", "", "user", null, "--scope", "", "machine", "")]
+    [InlineData("--scope everywhere", "", null, null, "--scope", "", "everywhere", "")]
+    [InlineData("-a x64", "", null, null, "", "", "", "x64")]
+    [InlineData("--architecture x64", "", null, "arm64", "--architecture", "", "", "x64")]
+    [InlineData("--architecture neutral", "", null, null, "--architecture", "", "", "neutral")]
+    [InlineData("--id Other.App --source msstore", "", null, null, "--id,--source", "", "", "")]
+    [InlineData("-s winget -m C:\\app.yaml", "", null, null, "-s,-m", "", "", "")]
+    [InlineData("--version \"1.2.0\"", "", null, null, "", "1.2.0", "", "")]
+    [InlineData("--scope \"machine\" -a \"x64\"", "", null, null, "", "", "machine", "x64")]
+    [InlineData("--override \"/S --version 9 /D=C:\\Apps\"", "", null, null, "", "", "", "")]
+    [InlineData("--installer-type msi", "", null, null, "--installer-type", "", "", "")]
+    [InlineData("--silent --version", "", null, null, "--version", "", "", "")]
+    [InlineData("--version \"\"", "", null, null, "--version", "", "", "")]
+    [InlineData("--locale fr-CA", "", null, null, "--locale", "", "", "")]
+    public void AReinstallChecksTheTargetTheCustomInstallParametersSelect(
+        string customInstall,
+        string version,
+        string? scope,
+        string? architecture,
+        string expectedConflicts,
+        string expectedVersion,
+        string expectedScope,
+        string expectedArchitecture
+    )
+    {
+        var options = new InstallOptions
+        {
+            Version = version,
+            CustomParameters_Install = customInstall.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList(),
+            CustomParameters_Uninstall = ["--id", "Uninstall.Only"],
+        };
+
+        var target = WinGetPkgOperationHelper.ResolveReinstallTarget(options, scope, architecture);
+
+        Assert.Equal(expectedConflicts, string.Join(",", target.Conflicts));
+        if (expectedConflicts.Length > 0)
+            return;
+        Assert.Equal(expectedVersion.Length > 0 ? expectedVersion : version, target.Version);
+        Assert.Equal(expectedScope.Length > 0 ? expectedScope : scope, target.Scope);
+        Assert.Equal(expectedArchitecture.Length > 0 ? expectedArchitecture : architecture, target.Architecture);
+    }
+
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("--version 1.2.0", "--version|1.2.0")]
+    [InlineData("--version \"1.2.0\"", "--version|1.2.0")]
+    [InlineData("--override \"/S /D=C:\\Program Files\\App\"", "--override|/S /D=C:\\Program Files\\App")]
+    [InlineData("--override \"/S \\\"quoted\\\"\"", "--override|/S \"quoted\"")]
+    [InlineData("--override \"a \"\"b\"\" c\"", "--override|a \"b\" c")]
+    [InlineData("--location C:\\Apps\\ -a x64", "--location|C:\\Apps\\|-a|x64")]
+    [InlineData("--location \"C:\\Apps\\\\\" -a x64", "--location|C:\\Apps\\|-a|x64")]
+    [InlineData("\"\" --silent", "|--silent")]
+    public void CustomInstallArgumentsAreSplitTheWayWindowsPassesThemToWinGet(string commandLine, string expected)
+    {
+        Assert.Equal(expected, string.Join("|", WinGetPkgOperationHelper.SplitWindowsArguments(commandLine)));
+    }
+
+    [Fact]
+    public void AWinGetReinstallIsNotRefusedWhenItCannotBeCheckedWithoutTheComApi()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Unchecked");
+
+        Assert.Null(
+            manager.OperationHelper.GetReinstallRefusal(package, new InstallOptions { Version = "3.0.0" })
+        );
+    }
+
+    [Fact]
     public void WinGetInstallDoesNotRetryWithTheLocalIdentifier()
     {
         var manager = new WinGet();

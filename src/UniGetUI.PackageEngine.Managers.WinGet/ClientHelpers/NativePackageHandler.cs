@@ -162,6 +162,85 @@ public static class NativePackageHandler
         return installerInfo;
     }
 
+    internal static bool CanCheckInstallTargets =>
+        WinGetHelper.Instance is NativeWinGetHelper
+        && NativeWinGetHelper.ExternalFactory is not null
+        && NativeWinGetHelper.ExternalWinGetManager is not null;
+
+    internal static bool? CanInstallExactVersion(
+        IPackage package,
+        string version,
+        string? scope,
+        string? architecture
+    )
+    {
+        if (
+            NativeWinGetHelper.ExternalFactory is not { } factory
+            || NativeWinGetHelper.ExternalWinGetManager is null
+        )
+            return null;
+
+        try
+        {
+            CatalogPackage? fresh = _findPackageOnCatalog(package);
+            if (fresh?.AvailableVersions is not { } versions)
+                return false;
+
+            PackageVersionInfo? target = null;
+            foreach (var available in NativeWinGetCollection.Copy(versions))
+            {
+                if (version.Length == 0 || string.Equals(available.Version, version, StringComparison.Ordinal))
+                {
+                    target = fresh.GetPackageVersionInfo(available);
+                    break;
+                }
+            }
+
+            if (target is null || !IsExactTarget(package.Id, package.Source.Name, target.Id, target.PackageCatalog?.Info?.Name))
+                return false;
+
+            var installOptions = factory.CreateInstallOptions();
+            installOptions.PackageInstallScope = ToInstallScope(scope);
+            if (ToProcessorArchitecture(architecture) is { } allowedArchitecture)
+                installOptions.AllowedArchitectures.Add(allowedArchitecture);
+
+            return target.GetApplicableInstaller(installOptions) is not null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(
+                $"Could not confirm that {package.Id} {version} can be installed from {package.Source.Name}: {ex.GetType().Name}: {ex.Message}"
+            );
+            return false;
+        }
+    }
+
+    internal static bool IsExactTarget(
+        string listedId,
+        string sourceName,
+        string? targetId,
+        string? targetCatalogName
+    ) =>
+        NativeWinGetHelper.IsSamePackage(listedId, targetId)
+        && string.Equals(targetCatalogName, sourceName, StringComparison.OrdinalIgnoreCase);
+
+    internal static PackageInstallScope ToInstallScope(string? scope) =>
+        scope switch
+        {
+            PackageScope.Machine => PackageInstallScope.System,
+            PackageScope.User => PackageInstallScope.User,
+            _ => PackageInstallScope.Any,
+        };
+
+    internal static global::Windows.System.ProcessorArchitecture? ToProcessorArchitecture(string? architecture) =>
+        architecture switch
+        {
+            UniGetUI.PackageEngine.Enums.Architecture.x86 => global::Windows.System.ProcessorArchitecture.X86,
+            UniGetUI.PackageEngine.Enums.Architecture.x64 => global::Windows.System.ProcessorArchitecture.X64,
+            UniGetUI.PackageEngine.Enums.Architecture.arm64 => global::Windows.System.ProcessorArchitecture.Arm64,
+            _ => null,
+        };
+
     public static void Clear()
     {
         __nativePackages.Clear();
@@ -198,14 +277,8 @@ public static class NativePackageHandler
             return installerInfo;
         }
 
-        if (unigetuiOptions.InstallationScope is PackageScope.Machine)
-        {
-            wingetOptions.PackageInstallScope = PackageInstallScope.System;
-        }
-        else if (unigetuiOptions.InstallationScope is PackageScope.User)
-        {
-            wingetOptions.PackageInstallScope = PackageInstallScope.User;
-        }
+        if (ToInstallScope(unigetuiOptions.InstallationScope) is not PackageInstallScope.Any and var scope)
+            wingetOptions.PackageInstallScope = scope;
 
         installerInfo = catalogPackage?.GetApplicableInstaller(wingetOptions);
         installerInfo ??= catalogPackage?.GetApplicableInstaller(wingetDefaultOptions);

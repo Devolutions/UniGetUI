@@ -178,4 +178,6 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         int returnCode,
         InstallOptions? options = null
     ) => null;
+
+    public virtual string? GetReinstallRefusal(IPackage package, InstallOptions options) => null;
 }

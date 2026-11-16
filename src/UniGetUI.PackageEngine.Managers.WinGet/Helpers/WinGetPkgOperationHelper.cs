@@ -28,9 +28,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         return $"--id {Selector(package.Id.TrimEnd('…'), "identifier")}";
     }
 
-    private static string GetSelectorPiece(IPackage package)
+    private static string GetSelectorPiece(IPackage package, OperationType operation)
     {
-        if (GetSelectedLocalIdentifier(package) is { } localIdentifier)
+        if (operation is not OperationType.Install && GetSelectedLocalIdentifier(package) is { } localIdentifier)
             return $"--id {Selector(localIdentifier, "local identifier")} --exact";
 
         return GetIdNamePiece(package);
@@ -42,7 +42,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     private static bool DropsArchAndScope(IPackage package, OperationType? operation = null) =>
         package.OverridenOptions.WinGet_DropArchAndScope
         || (package.RequiresReinstallToUpdate && operation is not OperationType.Uninstall)
-        || GetSelectedLocalIdentifier(package) is not null;
+        || (operation is not OperationType.Install && GetSelectedLocalIdentifier(package) is not null);
 
     private static bool OperationIsBrokered(IPackage package) =>
         Settings.Get(Settings.K.UseAgentBroker) && !package.Source.IsVirtualManager;
@@ -102,10 +102,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     internal static string? GetEffectiveArchitecture(
         IPackage package,
         InstallOptions options,
-        bool forUpdate = false
+        bool forUpdate = false,
+        OperationType? operation = null
     )
     {
-        if (DropsArchAndScope(package))
+        if (DropsArchAndScope(package, operation))
             return null;
 
         string architecture =
@@ -149,7 +150,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             },
         ];
 
-        parameters.AddRange(GetSelectorPiece(package).Split(" "));
+        parameters.AddRange(GetSelectorPiece(package, operation).Split(" "));
         if (!package.Source.IsVirtualManager)
         {
             parameters.AddRange(["--source", package.Source.Name]);
@@ -242,7 +243,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             if (options.SkipHashCheck)
                 parameters.Add("--ignore-security-hash");
 
-            if (GetEffectiveArchitecture(package, options) is { } architecture)
+            if (GetEffectiveArchitecture(package, options, operation: operation) is { } architecture)
             {
                 parameters.AddRange(["--architecture", architecture]);
             }
@@ -253,8 +254,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                     package,
                     new PendingInstallerTrust(
                         GetRequestedVersion(package, options, operation),
-                        GetEffectiveScope(package, options),
-                        GetEffectiveArchitecture(package, options)
+                        GetEffectiveScope(package, options, operation),
+                        GetEffectiveArchitecture(package, options, operation: operation)
                     )
                 );
             }
@@ -300,6 +301,192 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         {
             options.Architecture = updateArchitecture;
         }
+    }
+
+    internal readonly record struct CustomInstallSelectors(
+        IReadOnlyList<string> Unsupported,
+        string? Version,
+        string? Scope,
+        string? Architecture
+    );
+
+    internal static IReadOnlyList<string> SplitWindowsArguments(string commandLine)
+    {
+        List<string> arguments = [];
+        var current = new System.Text.StringBuilder();
+        bool inQuotes = false;
+        bool hasArgument = false;
+        for (int i = 0; i < commandLine.Length; i++)
+        {
+            char c = commandLine[i];
+            if (c == '\\')
+            {
+                int backslashes = 0;
+                while (i < commandLine.Length && commandLine[i] == '\\')
+                {
+                    backslashes++;
+                    i++;
+                }
+
+                if (i < commandLine.Length && commandLine[i] == '"')
+                {
+                    current.Append('\\', backslashes / 2);
+                    if (backslashes % 2 == 1)
+                        current.Append('"');
+                    else
+                        inQuotes = !inQuotes;
+                }
+                else
+                {
+                    current.Append('\\', backslashes);
+                    i--;
+                }
+
+                hasArgument = true;
+            }
+            else if (c == '"')
+            {
+                if (inQuotes && i + 1 < commandLine.Length && commandLine[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+
+                hasArgument = true;
+            }
+            else if (char.IsWhiteSpace(c) && !inQuotes)
+            {
+                if (hasArgument)
+                    arguments.Add(current.ToString());
+                current.Clear();
+                hasArgument = false;
+            }
+            else
+            {
+                current.Append(c);
+                hasArgument = true;
+            }
+        }
+
+        if (hasArgument)
+            arguments.Add(current.ToString());
+        return arguments;
+    }
+
+    internal static CustomInstallSelectors ReadCustomInstallSelectors(IReadOnlyList<string> customArguments)
+    {
+        IReadOnlyList<string> arguments = SplitWindowsArguments(string.Join(' ', customArguments));
+        List<string> unsupported = [];
+        string? version = null;
+        string? scope = null;
+        string? architecture = null;
+        for (int i = 0; i < arguments.Count; i++)
+        {
+            string argument = arguments[i].Trim();
+            if (!argument.StartsWith('-'))
+                continue;
+
+            int separator = argument.IndexOf('=');
+            string name = (separator > 0 ? argument[..separator] : argument).ToLowerInvariant();
+            string? value = separator > 0 ? argument[(separator + 1)..] : null;
+            switch (name)
+            {
+                case "--version" or "-v":
+                    version = value ?? (i + 1 < arguments.Count ? arguments[++i] : "");
+                    break;
+                case "--scope":
+                    scope = value ?? (i + 1 < arguments.Count ? arguments[++i] : "");
+                    break;
+                case "--architecture" or "-a":
+                    architecture = value ?? (i + 1 < arguments.Count ? arguments[++i] : "");
+                    break;
+                case "--id" or "--name" or "--moniker" or "--query" or "-q" or "--source" or "-s" or "--manifest" or "-m"
+                    or "--installer-type" or "--locale":
+                    unsupported.Add(name);
+                    break;
+            }
+        }
+
+        return new CustomInstallSelectors(unsupported, version, scope, architecture);
+    }
+
+    internal readonly record struct ReinstallTarget(
+        IReadOnlyList<string> Conflicts,
+        string Version,
+        string? Scope,
+        string? Architecture
+    );
+
+    internal static ReinstallTarget ResolveReinstallTarget(
+        InstallOptions options,
+        string? scope,
+        string? architecture
+    )
+    {
+        var custom = ReadCustomInstallSelectors(options.CustomParameters_Install);
+        List<string> conflicts = [.. custom.Unsupported];
+        if (custom.Version is not null && (options.Version.Length > 0 || string.IsNullOrWhiteSpace(custom.Version)))
+            conflicts.Add("--version");
+        string? customScope = custom.Scope?.ToLowerInvariant();
+        string? customArchitecture = custom.Architecture?.ToLowerInvariant();
+        if (customScope is not null && (scope is not null || customScope is not (PackageScope.Machine or PackageScope.User)))
+            conflicts.Add("--scope");
+        if (customArchitecture is not null && (architecture is not null || NativePackageHandler.ToProcessorArchitecture(customArchitecture) is null))
+            conflicts.Add("--architecture");
+
+        return new ReinstallTarget(
+            conflicts,
+            custom.Version ?? options.Version,
+            customScope ?? scope,
+            customArchitecture ?? architecture
+        );
+    }
+
+    public override string? GetReinstallRefusal(IPackage package, InstallOptions options)
+    {
+        if (!NativePackageHandler.CanCheckInstallTargets)
+            return null;
+
+        var target = ResolveReinstallTarget(
+            options,
+            GetEffectiveScope(package, options, OperationType.Install),
+            GetEffectiveArchitecture(package, options, operation: OperationType.Install)
+        );
+        if (target.Conflicts.Count > 0)
+            return CoreTools.Translate(
+                "{0} was not uninstalled: its custom install parameters ({1}) change which package or installer would be installed again, which UniGetUI cannot check beforehand. Remove them, or uninstall and install it separately.",
+                package.Name,
+                string.Join(", ", target.Conflicts)
+            );
+
+        string version = target.Version;
+        bool? installable = NativePackageHandler.CanInstallExactVersion(
+            package,
+            version,
+            target.Scope,
+            target.Architecture
+        );
+        if (installable is not false)
+            return null;
+
+        return version.Length > 0
+            ? CoreTools.Translate(
+                "{0} was not uninstalled: version {1} of {2} could not be found on {3}, so it could not have been installed again afterwards. Reload the package list.",
+                package.Name,
+                version,
+                package.Id,
+                package.Source.Name
+            )
+            : CoreTools.Translate(
+                "{0} was not uninstalled: {1} could not be found on {2}, so it could not have been installed again afterwards. Reload the package list.",
+                package.Name,
+                package.Id,
+                package.Source.Name
+            );
     }
 
     public override void ApplyElevationRequirements(

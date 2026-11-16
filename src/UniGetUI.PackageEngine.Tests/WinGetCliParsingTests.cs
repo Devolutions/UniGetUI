@@ -169,6 +169,67 @@ public sealed class WinGetCliParsingTests : IDisposable
         Assert.Equal(expected, NativeWinGetHelper.IsNewerVersion(new WinGet(), installed, newest));
     }
 
+    [Theory]
+    [InlineData("Audacity.Audacity", "Audacity.Audacity", true)]
+    [InlineData("SlackTechnologies.Slack", "slacktechnologies.slack", true)]
+    [InlineData("XP9KHM4BK9FZ7Q", "Microsoft.VisualStudioCode", false)]
+    [InlineData("XPDBVSS44R0L9H", "Notion.Notion", false)]
+    [InlineData("XP9KHM4BK9FZ7Q", null, false)]
+    [InlineData("", "", false)]
+    public void AnUpdateThatNeedsAReinstallIsOnlyListedWhenItsNewestVersionIsOfTheListedPackage(
+        string listedId,
+        string? newestId,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, NativeWinGetHelper.IsSamePackage(listedId, newestId));
+    }
+
+    [Theory]
+    [InlineData("Ubisoft.Connect", "winget", "Ubisoft.Connect", "winget", true)]
+    [InlineData("Ubisoft.Connect", "winget", "ubisoft.connect", "WinGet", true)]
+    [InlineData("XPDP2QW12DFSFK", "winget", "Ubisoft.Connect", "winget", false)]
+    [InlineData("Ubisoft.Connect", "winget", "Ubisoft.Connect", "msstore", false)]
+    [InlineData("Ubisoft.Connect", "winget", null, "winget", false)]
+    [InlineData("Ubisoft.Connect", "winget", "Ubisoft.Connect", null, false)]
+    public void AReinstallTargetMustBeTheListedPackageOnItsOwnSource(
+        string listedId,
+        string sourceName,
+        string? targetId,
+        string? targetCatalog,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, NativePackageHandler.IsExactTarget(listedId, sourceName, targetId, targetCatalog));
+    }
+
+    [Theory]
+    [InlineData("machine", Microsoft.Management.Deployment.PackageInstallScope.System)]
+    [InlineData("user", Microsoft.Management.Deployment.PackageInstallScope.User)]
+    [InlineData("", Microsoft.Management.Deployment.PackageInstallScope.Any)]
+    [InlineData(null, Microsoft.Management.Deployment.PackageInstallScope.Any)]
+    public void ReinstallChecksMapTheScopeTheInstallCommandUses(
+        string? scope,
+        Microsoft.Management.Deployment.PackageInstallScope expected
+    )
+    {
+        Assert.Equal(expected, NativePackageHandler.ToInstallScope(scope));
+    }
+
+    [Theory]
+    [InlineData("x86", Windows.System.ProcessorArchitecture.X86)]
+    [InlineData("x64", Windows.System.ProcessorArchitecture.X64)]
+    [InlineData("arm64", Windows.System.ProcessorArchitecture.Arm64)]
+    [InlineData(null, null)]
+    [InlineData("neutral", null)]
+    public void ReinstallChecksMapTheArchitectureTheInstallCommandUses(
+        string? architecture,
+        Windows.System.ProcessorArchitecture? expected
+    )
+    {
+        Assert.Equal(expected, NativePackageHandler.ToProcessorArchitecture(architecture));
+    }
+
     private const string ViberPublisher = "2010-2026 Viber Media S.a.r.l";
 
     [Theory]

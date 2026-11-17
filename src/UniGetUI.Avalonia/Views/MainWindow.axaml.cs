@@ -1205,9 +1205,9 @@ public partial class MainWindow : Window
             _unsavedPlacement = null;
             if (maximized && _normalPlacement is { } normal)
                 Settings.SetValue(Settings.K.WindowNormalGeometry,
-                    $"{normal.Position.X},{normal.Position.Y},{(int)normal.Width},{(int)normal.Height}");
+                    $"{normal.Position.X},{normal.Position.Y},{(int)Math.Round(normal.Width)},{(int)Math.Round(normal.Height)}");
             Settings.SetValue(Settings.K.WindowGeometry,
-                $"v2,{Position.X},{Position.Y},{(int)Width},{(int)Height},{(maximized ? 1 : 0)}");
+                $"v2,{Position.X},{Position.Y},{(int)Math.Round(Width)},{(int)Math.Round(Height)},{(maximized ? 1 : 0)}");
         }
         catch (Exception ex)
         {

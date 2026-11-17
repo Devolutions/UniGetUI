@@ -441,5 +441,63 @@ public sealed class PowerShellOperationLauncherTests
 
         Assert.Contains("AdminPrivilegesAreRequired", result.StdOut + result.StdErr);
     }
+
+    private static Result WriteToFile(string powerShellPath, bool readOnly)
+    {
+        string target = Path.Combine(Path.GetTempPath(), $"unigetui_denied_{Guid.NewGuid():N}.txt");
+        File.WriteAllText(target, "x");
+        FileStream? lockHandle = null;
+        try
+        {
+            if (readOnly)
+                File.SetAttributes(target, FileAttributes.ReadOnly);
+            else
+                lockHandle = new FileStream(target, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+            return RunWith(powerShellPath, "plain", "Set-Content", "-Path", target, "-Value", "y");
+        }
+        finally
+        {
+            lockHandle?.Dispose();
+            File.SetAttributes(target, FileAttributes.Normal);
+            File.Delete(target);
+        }
+    }
+
+    public static TheoryData<bool> PowerShellHosts => new() { false, true };
+
+    [Theory]
+    [MemberData(nameof(PowerShellHosts))]
+    public void ADeniedWriteReportsTheAccessDeniedMarker(bool powerShell7)
+    {
+        string? host = powerShell7 ? PowerShell7Path() : PowerShellPath();
+        if (host is null)
+            return;
+
+        var result = WriteToFile(host, readOnly: true);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains(
+            PackageEngine.Managers.PowerShell7Manager.PowerShell7PkgOperationHelper.AccessDeniedMarker,
+            result.StdOut + result.StdErr
+        );
+    }
+
+    [Theory]
+    [MemberData(nameof(PowerShellHosts))]
+    public void ALockedFileDoesNotReportTheAccessDeniedMarker(bool powerShell7)
+    {
+        string? host = powerShell7 ? PowerShell7Path() : PowerShellPath();
+        if (host is null)
+            return;
+
+        var result = WriteToFile(host, readOnly: false);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.DoesNotContain(
+            PackageEngine.Managers.PowerShell7Manager.PowerShell7PkgOperationHelper.AccessDeniedMarker,
+            result.StdOut + result.StdErr
+        );
+    }
 }
 #endif

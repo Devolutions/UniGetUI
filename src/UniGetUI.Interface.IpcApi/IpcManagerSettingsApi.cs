@@ -186,7 +186,8 @@ public static class IpcManagerSettingsApi
         var source = ResolveSourceForAdd(manager, request);
 
         using var operation = new AddSourceOperation(source);
-        await operation.MainThread();
+        using (IpcOperationApi.BeginActivity())
+            await operation.MainThread();
 
         return ToSourceOperationResult("add-source", operation, source);
     }
@@ -199,7 +200,8 @@ public static class IpcManagerSettingsApi
         var source = ResolveSourceForRemove(manager, request);
 
         using var operation = new RemoveSourceOperation(source);
-        await operation.MainThread();
+        using (IpcOperationApi.BeginActivity())
+            await operation.MainThread();
 
         return ToSourceOperationResult("remove-source", operation, source);
     }

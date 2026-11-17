@@ -450,7 +450,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 Manager,
                 new OverridenInstallationOptions()
             );
-            NativePackageHandler.AddPackage(UniGetUIPackage, match.Package);
+            NativePackageHandler.AddSearchResult(UniGetUIPackage, match.Package);
             packages.Add(UniGetUIPackage);
         }
 

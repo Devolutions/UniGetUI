@@ -127,7 +127,7 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode
-    ) =>_getOperationResult(package, operation, processOutput, returnCode, null);
+    ) => _getOperationResult(package, operation, processOutput, returnCode, null);
 
     protected override OperationVeredict _getOperationResult(
         IPackage package,

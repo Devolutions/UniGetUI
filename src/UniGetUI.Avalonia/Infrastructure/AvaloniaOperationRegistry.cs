@@ -54,6 +54,9 @@ public static class AvaloniaOperationRegistry
                 Operations.Add(op);
                 OperationViewModels.Add(vm);
             }
+
+            // A queued operation must not start in efficiency mode.
+            BackgroundEfficiencyMode.Refresh();
         });
 
         op.OperationStarting += (_, _) =>
@@ -198,6 +201,9 @@ public static class AvaloniaOperationRegistry
 
     private static void UpdateTrayStatus()
     {
+        // Runs whenever an operation is added, removed or changes status.
+        BackgroundEfficiencyMode.Refresh();
+
         if (Application.Current?.ApplicationLifetime
                 is IClassicDesktopStyleApplicationLifetime { MainWindow: UniGetUI.Avalonia.Views.MainWindow mw })
             mw.UpdateSystemTrayStatus();

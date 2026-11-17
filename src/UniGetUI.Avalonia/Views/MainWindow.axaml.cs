@@ -2411,7 +2411,10 @@ public partial class MainWindow : Window
     }
 
     private void UpdateOnScreenState()
-        => _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+    {
+        _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+        BackgroundEfficiencyMode.Refresh();
+    }
 
     private void SyncShowWindowState(WindowState state)
     {

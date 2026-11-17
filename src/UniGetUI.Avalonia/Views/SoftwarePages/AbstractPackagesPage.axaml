@@ -1234,7 +1234,7 @@
             <GridSplitter x:Name="DetailsSplitter"
                           Classes="winui-vertical-splitter"
                           Grid.Column="3"
-                          Margin="2,0,0,0"
+                          Margin="2,0,2,0"
                           IsVisible="False"
                           HorizontalAlignment="Stretch"
                           ResizeDirection="Columns"/>

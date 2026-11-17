@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
@@ -64,20 +65,42 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
             _ => options.CustomParameters_Install,
         };
 
-        // Uninstall targets the scope the copy was detected in; otherwise the scope chosen in the
-        // options dialog wins, falling back to the auto-detected install scope
-        string? scope = operation is OperationType.Uninstall
+        if (!customParameters.Any(IsScopeParameter))
+            parameters.AddRange(["-Scope", ResolveScope(package, options, operation) == PackageScope.Global ? "AllUsers" : "CurrentUser"]);
+
+        parameters.AddRange(customParameters);
+
+        return parameters;
+    }
+
+    // Uninstall targets the scope the copy was detected in; otherwise the scope chosen in the
+    // options dialog wins, falling back to the auto-detected install scope
+    private static string? ResolveScope(IPackage package, InstallOptions options, OperationType operation) =>
+        operation is OperationType.Uninstall
             ? package.OverridenOptions.Scope
             : options.InstallationScope.Length > 0
                 ? options.InstallationScope
                 : package.OverridenOptions.Scope;
 
-        if (!customParameters.Any(IsScopeParameter))
-            parameters.AddRange(["-Scope", scope == PackageScope.Global ? "AllUsers" : "CurrentUser"]);
+    private static bool TargetsAllUsers(IPackage package, InstallOptions? options, OperationType operation)
+    {
+        options ??= new InstallOptions();
+        List<string> customParameters = operation switch
+        {
+            OperationType.Update => options.CustomParameters_Update,
+            OperationType.Uninstall => options.CustomParameters_Uninstall,
+            _ => options.CustomParameters_Install,
+        };
 
-        parameters.AddRange(customParameters);
+        int scopeIndex = customParameters.FindLastIndex(IsScopeParameter);
+        if (scopeIndex < 0)
+            return ResolveScope(package, options, operation) == PackageScope.Global;
 
-        return parameters;
+        string argument = customParameters[scopeIndex];
+        string value = argument.Contains(':')
+            ? argument.Split(':', 2)[1]
+            : scopeIndex + 1 < customParameters.Count ? customParameters[scopeIndex + 1] : "";
+        return value.Equals("AllUsers", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsScopeParameter(string argument)
@@ -89,11 +112,29 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
         return name.Length >= 2 && "Scope".StartsWith(name, StringComparison.OrdinalIgnoreCase);
     }
 
+    internal const string AccessDeniedMarker = "UniGetUI: the operation was denied access to a path.";
+
+    internal static Func<bool> ProcessIsElevated { get; set; } = CoreTools.IsAdministrator;
+
+    private static bool AttemptRanElevated(IPackage package, InstallOptions? options) =>
+        package.OverridenOptions.RunAsAdministrator is true
+        || options?.RunAsAdministrator is true
+        || Settings.Get(Settings.K.ProhibitElevation)
+        || ProcessIsElevated();
+
     protected override OperationVeredict _getOperationResult(
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode
+    ) => _getOperationResult(package, operation, processOutput, returnCode, null);
+
+    protected override OperationVeredict _getOperationResult(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options
     )
     {
         string output_string = string.Join("\n", processOutput);
@@ -101,6 +142,11 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
         bool needsElevation =
             output_string.Contains("AdminPrivilegesAreRequired")
             || output_string.Contains("AdminPrivilegeRequired");
+
+        if (operation is not OperationType.Uninstall && returnCode != 0)
+            needsElevation |=
+                output_string.Contains(AccessDeniedMarker)
+                && TargetsAllUsers(package, options, operation);
 
         if (operation is OperationType.Uninstall && returnCode != 0)
         {
@@ -116,7 +162,7 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
                 failures.Length > 0 && package.OverridenOptions.Scope == PackageScope.Global;
         }
 
-        if (package.OverridenOptions.RunAsAdministrator is not true && needsElevation)
+        if (needsElevation && !AttemptRanElevated(package, options))
         {
             package.OverridenOptions.RunAsAdministrator = true;
             return OperationVeredict.AutoRetry;

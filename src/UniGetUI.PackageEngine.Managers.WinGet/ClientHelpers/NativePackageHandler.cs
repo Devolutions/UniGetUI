@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Management.Deployment;
+using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -18,6 +19,18 @@ public static class NativePackageHandler
         new();
     private static readonly ConcurrentDictionary<long, string> __localIdentifiers = new();
 
+    // The caches above hold WinGet COM objects, which also keep memory alive in WinGet's own
+    // out-of-process server. They used to keep an entry for every package ever listed, so each
+    // Discover search added its results for the rest of the session. Installed and upgradable
+    // packages are pinned: the machine bounds them, and a locally installed package cannot be
+    // found again on a catalog by name. Everything else (search results, imported packages) is
+    // kept only while it is among the most recently used, and found again on its catalog by
+    // GetPackage if it is needed after being dropped. Typed searches have no result limit, so
+    // the cap leaves room for a broad search to be cached whole; past it, a result simply costs
+    // one catalog lookup the next time it is used.
+    internal const int MAX_UNPINNED_PACKAGES = 2_500;
+    private static readonly PinnedLruKeyTracker<long> __retention = new(MAX_UNPINNED_PACKAGES);
+
     /// <summary>
     /// Get (cache or load) the native package for the given package, if any;
     /// </summary>
@@ -32,23 +45,53 @@ public static class NativePackageHandler
 
         __nativePackages.TryGetValue(package.GetHash(), out CatalogPackage? catalogPackage);
         if (catalogPackage is not null)
+        {
+            __retention.Refresh(package.GetHash());
             return catalogPackage;
+        }
 
         // Rarely a package will not be available in cache (native WinGet helper should always call AddPackage)
         // so it makes no sense to add TaskRecycler.RunOrAttach() here. (Only imported packages may arrive at this point)
         catalogPackage = _findPackageOnCatalog(package);
         if (catalogPackage is not null)
-            AddPackage(package, (CatalogPackage)catalogPackage);
+            AddSearchResult(package, (CatalogPackage)catalogPackage);
 
         return catalogPackage;
     }
 
     /// <summary>
-    /// Adds an external CatalogPackage to the internal database
+    /// Adds the CatalogPackage of an installed or upgradable package to the internal database.
+    /// It is kept until <see cref="Clear"/>.
     /// </summary>
     public static void AddPackage(IPackage package, CatalogPackage catalogPackage)
     {
-        __nativePackages[package.GetHash()] = catalogPackage;
+        long hash = package.GetHash();
+        __retention.Pin(hash, () => __nativePackages[hash] = catalogPackage);
+    }
+
+    /// <summary>
+    /// Adds the CatalogPackage of a search result to the internal database. Only the most
+    /// recently used ones are kept, unless the package is also installed or upgradable.
+    /// </summary>
+    public static void AddSearchResult(IPackage package, CatalogPackage catalogPackage)
+    {
+        long hash = package.GetHash();
+        Track(hash, () => __nativePackages[hash] = catalogPackage);
+    }
+
+    // Caches a value for a hash (store), records the use, and drops every cached object of the
+    // packages that fall out of retention as a result. The tracker runs all of it as one step,
+    // so an installed listing cannot pin and store a package between its being chosen for
+    // eviction and its objects being removed.
+    private static void Track(long hash, Action store) => __retention.Touch(hash, store, Evict);
+
+    private static void Evict(long evicted)
+    {
+        __nativePackages.TryRemove(evicted, out _);
+        __nativeDetails.TryRemove(evicted, out _);
+        __nativeInstallers_Install.TryRemove(evicted, out _);
+        __nativeInstallers_Uninstall.TryRemove(evicted, out _);
+        __localIdentifiers.TryRemove(evicted, out _);
     }
 
     internal static void AddLocalIdentifier(IPackage package, string? localIdentifier)
@@ -59,13 +102,17 @@ public static class NativePackageHandler
             return;
         }
 
-        __localIdentifiers[package.GetHash()] = localIdentifier;
+        long hash = package.GetHash();
+        Track(hash, () => __localIdentifiers[hash] = localIdentifier);
     }
 
     internal static string? GetLocalIdentifier(IPackage package)
     {
         if (__localIdentifiers.TryGetValue(package.GetHash(), out string? cached))
+        {
+            __retention.Refresh(package.GetHash());
             return cached;
+        }
 
         string? localIdentifier;
         try
@@ -100,7 +147,10 @@ public static class NativePackageHandler
             if (
                 __nativeDetails.TryGetValue(package.GetHash(), out CatalogPackageMetadata? metadata)
             )
+            {
+                __retention.Refresh(package.GetHash());
                 return metadata;
+            }
 
             CatalogPackage? catalogPackage = GetPackage(package);
             if (catalogPackage is null)
@@ -118,7 +168,11 @@ public static class NativePackageHandler
             }
 
             if (metadata is not null)
-                __nativeDetails[package.GetHash()] = metadata;
+            {
+                long hash = package.GetHash();
+                CatalogPackageMetadata found = metadata;
+                Track(hash, () => __nativeDetails[hash] = found);
+            }
 
             return metadata;
         }
@@ -243,11 +297,14 @@ public static class NativePackageHandler
 
     public static void Clear()
     {
-        __nativePackages.Clear();
-        __localIdentifiers.Clear();
-        __nativeDetails.Clear();
-        __nativeInstallers_Install.Clear();
-        __nativeInstallers_Uninstall.Clear();
+        __retention.Clear(() =>
+        {
+            __nativePackages.Clear();
+            __localIdentifiers.Clear();
+            __nativeDetails.Clear();
+            __nativeInstallers_Install.Clear();
+            __nativeInstallers_Uninstall.Clear();
+        });
     }
 
     private static PackageInstallerInfo? _getInstallationOptionsOnDict(
@@ -258,7 +315,10 @@ public static class NativePackageHandler
     )
     {
         if (source.TryGetValue(package.GetHash(), out PackageInstallerInfo? installerInfo))
+        {
+            __retention.Refresh(package.GetHash());
             return installerInfo;
+        }
 
         PackageVersionInfo? catalogPackage;
         if (installed)
@@ -284,7 +344,12 @@ public static class NativePackageHandler
         installerInfo ??= catalogPackage?.GetApplicableInstaller(wingetDefaultOptions);
 
         if (installerInfo is not null)
-            source[package.GetHash()] = installerInfo;
+        {
+            long hash = package.GetHash();
+            PackageInstallerInfo found = installerInfo;
+            ConcurrentDictionary<long, PackageInstallerInfo> cache = source;
+            Track(hash, () => cache[hash] = found);
+        }
 
         return installerInfo;
     }

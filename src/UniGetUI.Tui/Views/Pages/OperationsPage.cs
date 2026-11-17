@@ -30,7 +30,7 @@ internal sealed class OperationsPage : UserControl, ITuiPage
         public override string ToString() => Title;
     }
 
-    private sealed record LogRow(string Text, AbstractOperation.LineType Type)
+    private sealed record LogRow(string Text, AbstractOperation.LineType Type, bool IsError)
     {
         public override string ToString() => Text;
     }
@@ -72,7 +72,7 @@ internal sealed class OperationsPage : UserControl, ITuiPage
             {
                 Text = row?.Text ?? string.Empty,
                 TextWrapping = TextWrapping.Wrap,
-                Foreground = row?.Type == AbstractOperation.LineType.Error
+                Foreground = row?.IsError == true
                     ? TuiPalette.Error
                     : row?.Type == AbstractOperation.LineType.VerboseDetails
                         ? TuiPalette.TextDim
@@ -267,12 +267,19 @@ internal sealed class OperationsPage : UserControl, ITuiPage
     {
         if (ReferenceEquals(op, _selected)) return;
         _selected?.LogLineAdded -= OnSelectedLogLineAdded;
+        _selected?.OutputRetyped -= OnSelectedOutputRetyped;
         _selected = op;
         _selected?.LogLineAdded += OnSelectedLogLineAdded;
+        _selected?.OutputRetyped += OnSelectedOutputRetyped;
         RenderLog();
     }
 
-    private void OnSelectedLogLineAdded(object? sender, (string, AbstractOperation.LineType) line)
+    private void OnSelectedOutputRetyped(object? sender, EventArgs e) => ScheduleRenderLog();
+
+    private void OnSelectedLogLineAdded(object? sender, (string, AbstractOperation.LineType) line) =>
+        ScheduleRenderLog();
+
+    private void ScheduleRenderLog()
     {
         if (_logDirty) return;
         _logDirty = true;
@@ -293,9 +300,10 @@ internal sealed class OperationsPage : UserControl, ITuiPage
         }
 
         _logHeader.Text = _selected.Metadata.Title.Length > 0 ? _selected.Metadata.Title : CoreTools.Translate("Output");
+        bool failed = _selected.Status is OperationStatus.Failed;
         var rows = SnapshotOutput(_selected)
             .Where(l => l.Item2 is not AbstractOperation.LineType.ProgressIndicator)
-            .Select(l => new LogRow(l.Item1, l.Item2))
+            .Select(l => new LogRow(l.Item1, l.Item2, AbstractOperation.IsErrorLine(l.Item2, failed)))
             .ToList();
         _log.ItemsSource = rows;
         if (rows.Count > 0)

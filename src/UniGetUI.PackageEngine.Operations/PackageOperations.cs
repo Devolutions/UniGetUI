@@ -777,7 +777,7 @@ namespace UniGetUI.PackageEngine.Operations
             var capturedOutput = new List<string>();
             _brokerStreamedOutput = capturedOutput;
             var stdout = new StreamedOutputLineBuffer(this, LineType.Information, capturedOutput);
-            var stderr = new StreamedOutputLineBuffer(this, LineType.Error, capturedOutput);
+            var stderr = new StreamedOutputLineBuffer(this, LineType.StandardError, capturedOutput);
 
             await using (channel.ConfigureAwait(false))
             {

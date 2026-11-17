@@ -11,6 +11,7 @@ using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Operations.History;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -26,9 +27,10 @@ internal static class OperationHistoryLogDialog
         IBrush defaultBrush = LookupBrush("TextFillColorPrimaryBrush", theme, Brushes.White);
         IBrush errorBrush = LookupBrush("StatusErrorForeground", theme, Brushes.Red);
 
+        bool failed = record.Status == OperationHistoryRecord.StatusFailed;
         var lines = record.Output
             .Select(l => new LogLineItem(l.Text.Replace("\r", "").Replace("\n", ""),
-                l.Type == "Error" ? errorBrush : defaultBrush))
+                AbstractOperation.IsErrorLine(l.Type, failed) ? errorBrush : defaultBrush))
             .ToList();
         if (lines.Count == 0)
             lines.Add(new LogLineItem(CoreTools.Translate("No output was recorded for this operation."), defaultBrush));

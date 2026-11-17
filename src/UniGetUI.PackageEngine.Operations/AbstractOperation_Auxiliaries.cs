@@ -89,7 +89,15 @@ public abstract partial class AbstractOperation
         ProgressIndicator,
         Information,
         Error,
+        StandardError,
     }
+
+    public static bool IsErrorLine(LineType type, bool operationFailed) =>
+        type is LineType.Error || (type is LineType.StandardError && operationFailed);
+
+    public static bool IsErrorLine(string storedType, bool operationFailed) =>
+        storedType == nameof(LineType.Error)
+        || (storedType == nameof(LineType.StandardError) && operationFailed);
 
     public struct InnerOperation
     {

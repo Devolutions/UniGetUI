@@ -493,7 +493,7 @@ public static class IpcOperationApi
             AbstractOperation.LineType.VerboseDetails => "verbose",
             AbstractOperation.LineType.ProgressIndicator => "progress",
             AbstractOperation.LineType.Information => "information",
-            AbstractOperation.LineType.Error => "error",
+            AbstractOperation.LineType.Error or AbstractOperation.LineType.StandardError => "error",
             _ => type.ToString().ToLowerInvariant(),
         };
     }

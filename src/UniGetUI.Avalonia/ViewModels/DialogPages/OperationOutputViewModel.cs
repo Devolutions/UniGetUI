@@ -5,6 +5,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels.DialogPages;
@@ -20,6 +21,11 @@ public partial class OperationOutputViewModel : ObservableObject
 
     private readonly AbstractOperation _operation;
     private ProgressLineCollapser _collapser = new();
+    private int _renderedCount;
+
+    private readonly object _pendingLock = new();
+    private readonly List<(int Position, string Text)> _pendingProgress = new();
+    private bool _syncPosted;
 
     public OperationOutputViewModel(AbstractOperation operation)
     {
@@ -28,8 +34,44 @@ public partial class OperationOutputViewModel : ObservableObject
 
         Rebuild();
 
-        operation.LogLineAdded += (_, ev) =>
-            Dispatcher.UIThread.Post(() => AddOrCollapseLine(ev.Item1, ev.Item2));
+        operation.LogLineAdded += (_, ev) => QueueSync(ev.Item1, ev.Item2);
+        operation.OperationFinished += (_, _) => Dispatcher.UIThread.Post(RebuildIfStandardError);
+        operation.OutputRetyped += (_, _) => Dispatcher.UIThread.Post(Rebuild);
+    }
+
+    private void QueueSync(string text, AbstractOperation.LineType type)
+    {
+        lock (_pendingLock)
+        {
+            if (type is AbstractOperation.LineType.ProgressIndicator)
+                _pendingProgress.Add((_operation.OutputLineCount(), text));
+            if (_syncPosted)
+                return;
+            _syncPosted = true;
+        }
+        Dispatcher.UIThread.Post(Sync);
+    }
+
+    private void RebuildIfStandardError()
+    {
+        if (_operation.GetOutput().Any(l => l.Item2 is AbstractOperation.LineType.StandardError))
+            Rebuild();
+    }
+
+    private void Sync()
+    {
+        List<(int Position, string Text)> progress;
+        lock (_pendingLock)
+        {
+            progress = [.. _pendingProgress];
+            _pendingProgress.Clear();
+            _syncPosted = false;
+        }
+
+        var tail = _operation.GetOutput(_renderedCount);
+        foreach (var (text, type) in LiveOutputOrder.Merge(_renderedCount, tail, progress))
+            AddOrCollapseLine(text, type);
+        _renderedCount += tail.Count;
     }
 
     // Rebuilds every line with brushes for the current theme; called on construction and whenever
@@ -43,8 +85,10 @@ public partial class OperationOutputViewModel : ObservableObject
 
         OutputLines.Clear();
         _collapser = new();
-        foreach (var (text, type) in _operation.GetOutput())
+        var snapshot = _operation.GetOutput(0);
+        foreach (var (text, type) in snapshot)
             AddOrCollapseLine(text, type);
+        _renderedCount = snapshot.Count;
     }
 
     // Progress indicators (carriage-return redraws like installer spinners) overwrite the previous
@@ -68,12 +112,9 @@ public partial class OperationOutputViewModel : ObservableObject
 
     private LogLineItem MakeLine(string text, AbstractOperation.LineType type)
     {
-        IBrush brush = type switch
-        {
-            AbstractOperation.LineType.Error => _errorBrush,
-            AbstractOperation.LineType.VerboseDetails => _debugBrush,
-            _ => _normalBrush,
-        };
+        IBrush brush = AbstractOperation.IsErrorLine(type, _operation.Status is OperationStatus.Failed)
+            ? _errorBrush
+            : type is AbstractOperation.LineType.VerboseDetails ? _debugBrush : _normalBrush;
         return new LogLineItem(text, brush);
     }
 }

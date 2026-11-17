@@ -259,7 +259,7 @@ public partial class MainWindow : Window
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
         Activated += (_, _) => SetFocusedCaretVisible(true);
         Deactivated += (_, _) => SetFocusedCaretVisible(false);
-        this.GetObservable(WindowStateProperty).SubscribeValue(state => { UpdateOnScreenState(); _ = SaveGeometryAsync(); });
+        this.GetObservable(WindowStateProperty).SubscribeValue(state => { SyncShowWindowState(state); UpdateOnScreenState(); _ = SaveGeometryAsync(); });
         this.GetObservable(IsVisibleProperty).SubscribeValue(_ => UpdateOnScreenState());
 
         _trayService = new TrayService(this);
@@ -2412,6 +2412,12 @@ public partial class MainWindow : Window
 
     private void UpdateOnScreenState()
         => _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+
+    private void SyncShowWindowState(WindowState state)
+    {
+        if (OperatingSystem.IsWindows() && state is WindowState.Normal or WindowState.Maximized)
+            WindowState = state;
+    }
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level, string? launchAction = null) =>
         ShowBanner(title, message, level, launchAction);

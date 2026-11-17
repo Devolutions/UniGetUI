@@ -14,8 +14,20 @@ using UniGetUI.PackageEngine.Structs;
 
 namespace UniGetUI.PackageEngine.Tests;
 
-public sealed class PowerShell7ManagerTests
+public sealed class PowerShell7ManagerTests : IDisposable
 {
+    private readonly Func<bool> _processIsElevated = PowerShell7PkgOperationHelper.ProcessIsElevated;
+
+    public PowerShell7ManagerTests()
+    {
+        PowerShell7PkgOperationHelper.ProcessIsElevated = static () => false;
+    }
+
+    public void Dispose()
+    {
+        PowerShell7PkgOperationHelper.ProcessIsElevated = _processIsElevated;
+    }
+
     [Fact]
     public void ParseSources_KeepsRepositoriesThatAreNotHttpUrls()
     {
@@ -347,7 +359,7 @@ public sealed class PowerShell7ManagerTests
         Assert.Equal(OperationVeredict.Failure, result);
     }
 
-    private static readonly string[] AllUsersUpdateDeniedOutput =
+    private static readonly string[] ReporterUpdateOutput =
     [
         "\u001b[31;1mUpdate-PSResource: \u001b[0mC:\\Users\\Admin\\AppData\\Local\\Programs\\WingetUI\\Assets\\Utilities\\unigetui_ps_operation.ps1:112\u001b[0m",
         "\u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[31;1m\u001b[31;1m\u001b[36;1m     | \u001b[31;1mUnable to successfully install package 'PowerShellGet': 'Access to the path 'C:\\Program\u001b[0m",
@@ -355,23 +367,38 @@ public sealed class PowerShell7ManagerTests
         "\u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[31;1m\u001b[31;1m\u001b[36;1m     | \u001b[31;1mPackage(s) 'ExchangeOnlineManagement' could not be installed from repository 'PSGallery'.\u001b[0m",
     ];
 
+    private static readonly string[] AllUsersUpdateDeniedOutput =
+        [.. ReporterUpdateOutput, PowerShell7PkgOperationHelper.AccessDeniedMarker];
+
     private static readonly string[] AllUsersInstallDeniedOutput =
     [
-        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:112",
+        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:131",
         "Line |",
-        " 112 |      & $command @named @rest",
+        " 131 |      & $command @named @rest",
         "     |      ~~~~~~~~~~~~~~~~~~~~~~~",
-        "     | Unable to successfully install package 'ExchangeOnlineManagement': 'Access to the path 'C:\\Program",
-        "     | Files\\PowerShell\\Modules\\ExchangeOnlineManagement' is denied.'",
-        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:112",
+        "     | Unable to successfully install package 'PackageManagement': 'Access to the path 'C:\\Program",
+        "     | Files\\PowerShell\\Modules\\PackageManagement' is denied.'",
+        "",
+        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:131",
         "Line |",
-        " 112 |      & $command @named @rest",
+        " 131 |      & $command @named @rest",
         "     |      ~~~~~~~~~~~~~~~~~~~~~~~",
         "     | Operation is not valid due to the current state of the object.",
-        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:112",
+        "",
+        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:131",
         "Line |",
-        " 112 |      & $command @named @rest",
+        " 131 |      & $command @named @rest",
         "     |      ~~~~~~~~~~~~~~~~~~~~~~~",
+        "     | Package(s) 'ExchangeOnlineManagement' could not be installed from repository 'PSGallery'.",
+        "",
+        "UniGetUI: the operation was denied access to a path.",
+    ];
+
+    private static readonly string[] AllUsersInstallLockedOutput =
+    [
+        "Install-PSResource: C:\\App\\Assets\\Utilities\\unigetui_ps_operation.ps1:131",
+        "     | Unable to successfully install package 'ExchangeOnlineManagement': 'The process cannot access the file",
+        "     | 'C:\\Program Files\\PowerShell\\Modules\\ExchangeOnlineManagement\\3.11.1\\Microsoft.Exchange.Management.dll' because it is being used by another process.'",
         "     | Package(s) 'ExchangeOnlineManagement' could not be installed from repository 'PSGallery'.",
     ];
 
@@ -381,6 +408,55 @@ public sealed class PowerShell7ManagerTests
             { AllUsersUpdateDeniedOutput, OperationType.Update },
             { AllUsersInstallDeniedOutput, OperationType.Install },
         };
+
+    public static TheoryData<string[]> NonPermissionAllUsersFailures =>
+        new()
+        {
+            ReporterUpdateOutput,
+            AllUsersInstallLockedOutput,
+        };
+
+    [Theory]
+    [MemberData(nameof(NonPermissionAllUsersFailures))]
+    public void GetResult_InstallFailureWithoutAccessDeniedMarkerDoesNotElevate(string[] output)
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(package, OperationType.Update, output, 1, new InstallOptions());
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void GetResult_AllUsersUpdateDeniedWithRunAsAdministratorOptionDoesNotRetry()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(
+            package, OperationType.Update, AllUsersUpdateDeniedOutput, 1, new InstallOptions { RunAsAdministrator = true });
+
+        Assert.Equal(OperationVeredict.Failure, result);
+    }
+
+    [Fact]
+    public void GetResult_AllUsersUpdateDeniedInElevatedProcessDoesNotRetry()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+        PowerShell7PkgOperationHelper.ProcessIsElevated = static () => true;
+
+        var result = manager.OperationHelper.GetResult(
+            package, OperationType.Update, AllUsersUpdateDeniedOutput, 1, new InstallOptions());
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
 
     [Theory]
     [MemberData(nameof(DeniedAllUsersOutputs))]

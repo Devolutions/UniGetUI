@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
@@ -111,12 +112,22 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
         return name.Length >= 2 && "Scope".StartsWith(name, StringComparison.OrdinalIgnoreCase);
     }
 
+    internal const string AccessDeniedMarker = "UniGetUI: the operation was denied access to a path.";
+
+    internal static Func<bool> ProcessIsElevated { get; set; } = CoreTools.IsAdministrator;
+
+    private static bool AttemptRanElevated(IPackage package, InstallOptions? options) =>
+        package.OverridenOptions.RunAsAdministrator is true
+        || options?.RunAsAdministrator is true
+        || Settings.Get(Settings.K.ProhibitElevation)
+        || ProcessIsElevated();
+
     protected override OperationVeredict _getOperationResult(
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode
-    ) => _getOperationResult(package, operation, processOutput, returnCode, null);
+    ) =>_getOperationResult(package, operation, processOutput, returnCode, null);
 
     protected override OperationVeredict _getOperationResult(
         IPackage package,
@@ -134,7 +145,7 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
 
         if (operation is not OperationType.Uninstall && returnCode != 0)
             needsElevation |=
-                output_string.Contains("Unable to successfully install package")
+                output_string.Contains(AccessDeniedMarker)
                 && TargetsAllUsers(package, options, operation);
 
         if (operation is OperationType.Uninstall && returnCode != 0)
@@ -151,7 +162,7 @@ internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHe
                 failures.Length > 0 && package.OverridenOptions.Scope == PackageScope.Global;
         }
 
-        if (package.OverridenOptions.RunAsAdministrator is not true && needsElevation)
+        if (needsElevation && !AttemptRanElevated(package, options))
         {
             package.OverridenOptions.RunAsAdministrator = true;
             return OperationVeredict.AutoRetry;

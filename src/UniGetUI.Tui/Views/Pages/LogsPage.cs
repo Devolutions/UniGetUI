@@ -41,7 +41,7 @@ internal sealed class LogsPage : UserControl, ITuiPage
 #else
     private int _level = 4;
 #endif
-    private int _lastCount = -1;
+    private long _lastCount = -1;
     private List<LogRow> _rows = [];
 
     public LogsPage()
@@ -235,7 +235,7 @@ internal sealed class LogsPage : UserControl, ITuiPage
 
     private void Render(bool force)
     {
-        int count = _sources[_source].Manager is null ? Logger.GetLogs().Length : -2;
+        long count = _sources[_source].Manager is null ? Logger.TotalLogged : -2;
         if (!force && count == _lastCount) return;
         _lastCount = count;
 

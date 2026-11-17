@@ -1031,36 +1031,32 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             logger.Log("OtherTask: GetWinGetLocalPackages");
             InvalidateInstalledIndexCache(logger);
             var availableCatalogs = GetReachableLocalCatalogReferences(logger);
-            PackageCatalogReference installedSearchCatalogRef = CreateLocalCompositeCatalog(
-                availableCatalogs,
-                logger
-            );
+            FindPackagesResult TaskResult = FindInstalledPackages(availableCatalogs, logger);
 
-            var ConnectResult = installedSearchCatalogRef.Connect();
-            if (ConnectResult.Status != ConnectResultStatus.Ok)
+            if (TaskResult.Status != FindPackagesResultStatus.Ok)
             {
-                logger.Error("Failed to connect to installedSearchCatalogRef. Aborting.");
-                logger.Close(1);
-                throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.");
-            }
+                PackageCatalogReference[] offlineCatalogs =
+                [
+                    .. availableCatalogs.Where(catalog => !IsOnlineOnlyCatalog(catalog)),
+                ];
+                string message =
+                    $"WinGet could not search its catalogs for installed packages ({DescribeFailure(TaskResult)}); "
+                    + "listing them again without its online-only catalogs";
+                logger.Error(message);
+                Logger.Warn(message);
 
-            FindPackagesOptions findPackagesOptions = Factory.CreateFindPackagesOptions();
-            PackageMatchFilter filter = Factory.CreatePackageMatchFilter();
-            filter.Field = PackageMatchField.Id;
-            filter.Option = PackageFieldMatchOption.StartsWithCaseInsensitive;
-            filter.Value = "";
-            findPackagesOptions.Filters.Add(filter);
+                if (offlineCatalogs.Length < availableCatalogs.Count)
+                    TaskResult = FindInstalledPackages(offlineCatalogs, logger);
 
-            FindPackagesResult TaskResult;
-            try
-            {
-                TaskResult = ConnectResult.PackageCatalog.FindPackages(findPackagesOptions);
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"FindPackages native call failed: {ex.GetType().Name}: {ex.Message}");
-                logger.Close(1);
-                throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.", ex);
+                if (TaskResult.Status != FindPackagesResultStatus.Ok)
+                {
+                    logger.Error($"WinGet could not list installed packages: {DescribeFailure(TaskResult)}");
+                    logger.Close(1);
+                    throw new InvalidOperationException(
+                        $"WinGet could not list installed packages: {DescribeFailure(TaskResult)}",
+                        TaskResult.ExtendedErrorCode
+                    );
+                }
             }
 
             List<CatalogPackage> foundPackages = [];
@@ -1077,6 +1073,63 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             Interlocked.Decrement(ref _activeLocalPackageQueries);
         }
     }
+
+    private FindPackagesResult FindInstalledPackages(
+        IReadOnlyList<PackageCatalogReference> catalogs,
+        INativeTaskLogger logger
+    )
+    {
+        PackageCatalogReference installedSearchCatalogRef =
+            catalogs.Count > 0
+                ? CreateLocalCompositeCatalog(catalogs, logger)
+                : WinGetManager.GetLocalPackageCatalog(LocalPackageCatalog.InstalledPackages);
+
+        var ConnectResult = installedSearchCatalogRef.Connect();
+        if (ConnectResult.Status != ConnectResultStatus.Ok)
+        {
+            logger.Error("Failed to connect to installedSearchCatalogRef. Aborting.");
+            logger.Close(1);
+            throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.");
+        }
+
+        FindPackagesOptions findPackagesOptions = Factory.CreateFindPackagesOptions();
+        PackageMatchFilter filter = Factory.CreatePackageMatchFilter();
+        filter.Field = PackageMatchField.Id;
+        filter.Option = PackageFieldMatchOption.StartsWithCaseInsensitive;
+        filter.Value = "";
+        findPackagesOptions.Filters.Add(filter);
+
+        try
+        {
+            return ConnectResult.PackageCatalog.FindPackages(findPackagesOptions);
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"FindPackages native call failed: {ex.GetType().Name}: {ex.Message}");
+            logger.Close(1);
+            throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.", ex);
+        }
+    }
+
+    internal static bool IsOnlineOnlyCatalog(PackageCatalogReference catalog)
+    {
+        try
+        {
+            return IsOnlineOnlyCatalogType(catalog.Info.Type);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    internal static bool IsOnlineOnlyCatalogType(string? type) =>
+        string.Equals(type, "Microsoft.Rest", StringComparison.OrdinalIgnoreCase);
+
+    private static string DescribeFailure(FindPackagesResult result) =>
+        result.ExtendedErrorCode is { } error
+            ? $"{result.Status}, 0x{error.HResult:X8}"
+            : result.Status.ToString();
 
     private static void InvalidateInstalledIndexCache(INativeTaskLogger logger)
     {
@@ -1170,6 +1223,23 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         return false;
     }
 
+    private static void DisableBackgroundUpdate(
+        PackageCatalogReference catalogRef,
+        INativeTaskLogger logger
+    )
+    {
+        try
+        {
+            catalogRef.PackageCatalogBackgroundUpdateInterval = TimeSpan.Zero;
+        }
+        catch (Exception ex)
+        {
+            logger.Log(
+                $"Catalog {catalogRef.Info.Name} keeps WinGet's background update: {ex.GetType().Name}: {ex.Message}"
+            );
+        }
+    }
+
     private PackageCatalogReference CreateLocalCompositeCatalog(
         IEnumerable<PackageCatalogReference> catalogs,
         INativeTaskLogger logger
@@ -1180,6 +1250,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         foreach (var catalogRef in catalogs)
         {
             catalogRef.AcceptSourceAgreements = true;
+            DisableBackgroundUpdate(catalogRef, logger);
             logger.Log($"Adding catalog {catalogRef.Info.Name} to composite catalog");
             createCompositePackageCatalogOptions.Catalogs.Add(catalogRef);
         }

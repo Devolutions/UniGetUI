@@ -1454,6 +1454,17 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal("WinGet: Failed to connect to composite catalog.", exception.Message);
     }
 
+    [Theory]
+    [InlineData("Microsoft.Rest", true)]
+    [InlineData("microsoft.rest", true)]
+    [InlineData("Microsoft.PreIndexed.Package", false)]
+    [InlineData("Microsoft.Test.Configurable", false)]
+    [InlineData(null, false)]
+    public void NativeWinGetHelperTreatsOnlyRestCatalogsAsOnlineOnly(string? type, bool onlineOnly)
+    {
+        Assert.Equal(onlineOnly, NativeWinGetHelper.IsOnlineOnlyCatalogType(type));
+    }
+
     [Fact]
     public void AttemptFastRepairKeepsNativeHelperWhileLocalPackageEnumerationIsStillRunning()
     {

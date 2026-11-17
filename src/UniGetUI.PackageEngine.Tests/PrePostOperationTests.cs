@@ -44,10 +44,17 @@ public sealed class PrePostOperationTests
         private readonly bool _succeed;
 
         public ParentOperation(string? preCommand, string? postCommand, bool succeed)
+            : this(
+                preCommand is null ? null : new PrePostOperation(preCommand),
+                postCommand is null ? null : new PrePostOperation(postCommand),
+                succeed
+            ) { }
+
+        public ParentOperation(AbstractOperation? pre, AbstractOperation? post, bool succeed)
             : base(
                 false,
-                preCommand is null ? null : [new InnerOperation(new PrePostOperation(preCommand), false)],
-                postCommand is null ? null : [new InnerOperation(new PrePostOperation(postCommand), false)]
+                pre is null ? null : [new InnerOperation(pre, false)],
+                post is null ? null : [new InnerOperation(post, false)]
             )
         {
             _succeed = succeed;
@@ -81,6 +88,20 @@ public sealed class PrePostOperationTests
         Assert.Equal(AbstractOperation.LineType.Error, line.Item2);
         Assert.True(AbstractOperation.IsErrorLine(line.Item2, operationFailed: false));
         Assert.Equal(1, retyped);
+    }
+
+    [WindowsFact]
+    public async Task ANestedFailingPostCommandStaysAnErrorUnderSucceedingAncestors()
+    {
+        var child = new ParentOperation(null, "echo nested-broken 1>&2 & exit /b 3", succeed: true);
+        using var parent = new ParentOperation(null, child, succeed: true);
+        await parent.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Succeeded, child.Status);
+        Assert.Equal(OperationStatus.Succeeded, parent.Status);
+        var line = Assert.Single(parent.GetOutput(), l => l.Item1.Trim() == "nested-broken");
+        Assert.Equal(AbstractOperation.LineType.Error, line.Item2);
+        child.Dispose();
     }
 
     [WindowsFact]

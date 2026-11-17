@@ -23,6 +23,10 @@ public partial class OperationOutputViewModel : ObservableObject
     private ProgressLineCollapser _collapser = new();
     private int _renderedCount;
 
+    private readonly object _pendingLock = new();
+    private readonly List<(int Position, string Text)> _pendingProgress = new();
+    private bool _syncPosted;
+
     public OperationOutputViewModel(AbstractOperation operation)
     {
         _operation = operation;
@@ -30,11 +34,22 @@ public partial class OperationOutputViewModel : ObservableObject
 
         Rebuild();
 
-        operation.LogLineAdded += (_, ev) =>
-            Dispatcher.UIThread.Post(() =>
-                Sync(ev.Item2 is AbstractOperation.LineType.ProgressIndicator ? ev.Item1 : null));
+        operation.LogLineAdded += (_, ev) => QueueSync(ev.Item1, ev.Item2);
         operation.OperationFinished += (_, _) => Dispatcher.UIThread.Post(RebuildIfStandardError);
         operation.OutputRetyped += (_, _) => Dispatcher.UIThread.Post(Rebuild);
+    }
+
+    private void QueueSync(string text, AbstractOperation.LineType type)
+    {
+        lock (_pendingLock)
+        {
+            if (type is AbstractOperation.LineType.ProgressIndicator)
+                _pendingProgress.Add((_operation.OutputLineCount(), text));
+            if (_syncPosted)
+                return;
+            _syncPosted = true;
+        }
+        Dispatcher.UIThread.Post(Sync);
     }
 
     private void RebuildIfStandardError()
@@ -43,13 +58,20 @@ public partial class OperationOutputViewModel : ObservableObject
             Rebuild();
     }
 
-    private void Sync(string? progress)
+    private void Sync()
     {
-        var snapshot = _operation.GetOutput();
-        for (; _renderedCount < snapshot.Count; _renderedCount++)
-            AddOrCollapseLine(snapshot[_renderedCount].Item1, snapshot[_renderedCount].Item2);
-        if (progress is not null)
-            AddOrCollapseLine(progress, AbstractOperation.LineType.ProgressIndicator);
+        List<(int Position, string Text)> progress;
+        lock (_pendingLock)
+        {
+            progress = [.. _pendingProgress];
+            _pendingProgress.Clear();
+            _syncPosted = false;
+        }
+
+        var tail = _operation.GetOutput(_renderedCount);
+        foreach (var (text, type) in LiveOutputOrder.Merge(_renderedCount, tail, progress))
+            AddOrCollapseLine(text, type);
+        _renderedCount += tail.Count;
     }
 
     // Rebuilds every line with brushes for the current theme; called on construction and whenever
@@ -63,8 +85,10 @@ public partial class OperationOutputViewModel : ObservableObject
 
         OutputLines.Clear();
         _collapser = new();
-        _renderedCount = 0;
-        Sync(null);
+        var snapshot = _operation.GetOutput(0);
+        foreach (var (text, type) in snapshot)
+            AddOrCollapseLine(text, type);
+        _renderedCount = snapshot.Count;
     }
 
     // Progress indicators (carriage-return redraws like installer spinners) overwrite the previous

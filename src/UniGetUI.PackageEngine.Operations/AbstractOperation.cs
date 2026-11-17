@@ -250,22 +250,30 @@ public abstract partial class AbstractOperation : IDisposable
         LogLineAdded?.Invoke(this, (Logger.Redact(line), type));
     }
 
-    private int OutputLineCount()
+    public int OutputLineCount()
     {
         lock (LogListLock)
             return LogList.Count;
     }
 
-    private void ResolveStandardError(int firstLine, bool failed)
+    private void ResolveStandardError(int firstLine, AbstractOperation child)
     {
+        LineType childOutcome = child.Status is OperationStatus.Failed ? LineType.Error : LineType.Information;
+        var childLines = child.GetOutput();
         bool changed = false;
         lock (LogListLock)
         {
+            int offset = childLines.Count - (LogList.Count - firstLine);
             for (int i = firstLine; i < LogList.Count; i++)
             {
                 if (LogList[i].Item2 is not LineType.StandardError)
                     continue;
-                LogList[i] = (LogList[i].Item1, failed ? LineType.Error : LineType.Information);
+                int c = offset + i - firstLine;
+                bool resolvedByDescendant =
+                    c >= 0
+                    && childLines[c].Item1 == LogList[i].Item1
+                    && childLines[c].Item2 is LineType.Error or LineType.Information;
+                LogList[i] = (LogList[i].Item1, resolvedByDescendant ? childLines[c].Item2 : childOutcome);
                 changed = true;
             }
         }
@@ -277,6 +285,18 @@ public abstract partial class AbstractOperation : IDisposable
     {
         lock (LogListLock)
             return LogList.ToArray();
+    }
+
+    public IReadOnlyList<(string, LineType)> GetOutput(int firstLine)
+    {
+        lock (LogListLock)
+        {
+            int start = Math.Clamp(firstLine, 0, LogList.Count);
+            var tail = LogList.GetRange(start, LogList.Count - start);
+            if (!Logger.RedactUsername)
+                return tail;
+            return tail.Select(l => (Logger.Redact(l.Item1), l.Item2)).ToArray();
+        }
     }
 
     public IReadOnlyList<(string, LineType)> GetOutput()
@@ -608,7 +628,7 @@ public abstract partial class AbstractOperation : IDisposable
             finally
             {
                 ClearActiveInnerOperation(preReq.Operation);
-                ResolveStandardError(preFirstLine, preReq.Operation.Status is OperationStatus.Failed);
+                ResolveStandardError(preFirstLine, preReq.Operation);
             }
             if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
                 return OperationVeredict.Canceled;
@@ -716,7 +736,7 @@ public abstract partial class AbstractOperation : IDisposable
             finally
             {
                 ClearActiveInnerOperation(postReq.Operation);
-                ResolveStandardError(postFirstLine, postReq.Operation.Status is OperationStatus.Failed);
+                ResolveStandardError(postFirstLine, postReq.Operation);
             }
             if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
                 return OperationVeredict.Canceled;

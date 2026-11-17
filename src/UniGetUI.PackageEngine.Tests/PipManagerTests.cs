@@ -372,6 +372,37 @@ public sealed class PipManagerTests : IDisposable
     }
 
     [Fact]
+    public void SimpleIndexParserReadsOnlyProjectNamesWhateverSurroundsThem()
+    {
+        byte[] json = System.Text.Encoding.UTF8.GetBytes("""
+            {
+              "meta": { "_last-serial": 123, "api-version": "1.4", "name": "not-a-project" },
+              "name": "not-a-project-either",
+              "projects": [
+                { "_last-serial": 1, "name": "requests" },
+                { "name": "caf\u00e9", "extra": { "name": "nested" }, "tags": ["name"] },
+                { "name": 7 },
+                { "name": "" },
+                { "other": "x" },
+                { "name": "pytest" }
+              ],
+              "trailing": [{ "name": "after-the-list" }]
+            }
+            """);
+
+        Assert.Equal(["requests", "café", "pytest"], Pip.ParseSimpleIndexProjectNames(json));
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"projects\": []}")]
+    [InlineData("{\"projects\": {\"name\": \"x\"}}")]
+    public void SimpleIndexParserRejectsAnIndexWithoutProjects(string json)
+    {
+        Assert.Throws<InvalidDataException>(() => Pip.ParseSimpleIndexProjectNames(json));
+    }
+
+    [Fact]
     public void SearchHelpersParseSimpleIndexAndRankPrefixMatchesFirst()
     {
         var names = Pip.ParseSimpleIndexProjectNames(

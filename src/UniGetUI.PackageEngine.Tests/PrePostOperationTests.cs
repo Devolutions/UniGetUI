@@ -48,7 +48,8 @@ public sealed class PrePostOperationTests
                 preCommand is null ? null : new PrePostOperation(preCommand),
                 postCommand is null ? null : new PrePostOperation(postCommand),
                 succeed
-            ) { }
+            )
+        { }
 
         public ParentOperation(AbstractOperation? pre, AbstractOperation? post, bool succeed)
             : base(
@@ -101,6 +102,21 @@ public sealed class PrePostOperationTests
         Assert.Equal(OperationStatus.Succeeded, parent.Status);
         var line = Assert.Single(parent.GetOutput(), l => l.Item1.Trim() == "nested-broken");
         Assert.Equal(AbstractOperation.LineType.Error, line.Item2);
+        child.Dispose();
+    }
+
+    [WindowsFact]
+    public async Task ARerunForwardsEachNestedLineOnceAndKeepsItsResolvedType()
+    {
+        var child = new ParentOperation(null, "echo rerun-broken 1>&2 & exit /b 3", succeed: true);
+        using var parent = new ParentOperation(null, child, succeed: true);
+        await parent.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+        await parent.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Succeeded, parent.Status);
+        var lines = parent.GetOutput().Where(l => l.Item1.Trim() == "rerun-broken").ToList();
+        Assert.Equal(2, lines.Count);
+        Assert.All(lines, l => Assert.Equal(AbstractOperation.LineType.Error, l.Item2));
         child.Dispose();
     }
 

@@ -617,9 +617,10 @@ public abstract partial class AbstractOperation : IDisposable
                     CoreTools.Translate("Running PreOperation ({0}/{1})...", i, count),
                 LineType.Information
             );
-            preReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
             if (!TrySetActiveInnerOperation(preReq.Operation))
                 return OperationVeredict.Canceled;
+            EventHandler<(string, LineType)> forwardPreLine = (_, line) => Line(line.Item1, line.Item2);
+            preReq.Operation.LogLineAdded += forwardPreLine;
             int preFirstLine = OutputLineCount();
             try
             {
@@ -627,6 +628,7 @@ public abstract partial class AbstractOperation : IDisposable
             }
             finally
             {
+                preReq.Operation.LogLineAdded -= forwardPreLine;
                 ClearActiveInnerOperation(preReq.Operation);
                 ResolveStandardError(preFirstLine, preReq.Operation);
             }
@@ -725,9 +727,10 @@ public abstract partial class AbstractOperation : IDisposable
             if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
                 return OperationVeredict.Canceled;
 
-            postReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
             if (!TrySetActiveInnerOperation(postReq.Operation))
                 return OperationVeredict.Canceled;
+            EventHandler<(string, LineType)> forwardPostLine = (_, line) => Line(line.Item1, line.Item2);
+            postReq.Operation.LogLineAdded += forwardPostLine;
             int postFirstLine = OutputLineCount();
             try
             {
@@ -735,6 +738,7 @@ public abstract partial class AbstractOperation : IDisposable
             }
             finally
             {
+                postReq.Operation.LogLineAdded -= forwardPostLine;
                 ClearActiveInnerOperation(postReq.Operation);
                 ResolveStandardError(postFirstLine, postReq.Operation);
             }

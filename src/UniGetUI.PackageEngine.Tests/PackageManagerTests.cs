@@ -666,6 +666,36 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void ARecordWithoutAStreakStartKeepsItsEarlierFailure()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        manager.SetInstalledPackages(() => throw new TimeoutException("slow"));
+        DateTime start = DateTime.UtcNow - TimeSpan.FromHours(3);
+
+        using (ManagerHealthStore.UseClock(() => start))
+            manager.GetInstalledPackages();
+        ManagerHealthStore.Flush();
+
+        string path = ManagerHealthStore.TestPathOverride!;
+        var root = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!;
+        root[manager.Name]!["Installed"]!.AsObject().Remove("FailureStreakStartUtc");
+        File.WriteAllText(path, root.ToJsonString());
+        ManagerHealthStore.ResetForTests();
+        Assert.Null(manager.GetHealthRecord().Installed.FailureStreakStartUtc);
+
+        using (ManagerHealthStore.UseClock(() => start + TimeSpan.FromHours(1)))
+            manager.GetAvailableUpdates();
+        using (ManagerHealthStore.UseClock(() => start + TimeSpan.FromHours(2)))
+            manager.GetInstalledPackages();
+
+        var installed = manager.GetHealthRecord().Installed;
+        Assert.Equal(2, installed.ConsecutiveFailures);
+        Assert.Equal(start, installed.FailureStreakStartUtc);
+        Assert.False(ManagerHealthEvaluator.Evaluate(manager).NeedsAttention);
+    }
+
+    [Fact]
     public void ASuccessClearsTheFailureStreakStart()
     {
         var manager = CreateReadyManager();

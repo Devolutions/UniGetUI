@@ -1031,32 +1031,29 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             logger.Log("OtherTask: GetWinGetLocalPackages");
             InvalidateInstalledIndexCache(logger);
             var availableCatalogs = GetReachableLocalCatalogReferences(logger);
-            FindPackagesResult TaskResult = FindInstalledPackages(availableCatalogs, logger);
+            FindPackagesResult TaskResult = FindWithFallbacks(
+                availableCatalogs,
+                IsOnlineOnlyCatalog,
+                catalogs => FindInstalledPackages(catalogs, logger),
+                static result => result.Status == FindPackagesResultStatus.Ok,
+                (failed, nextAttempt) =>
+                {
+                    string message =
+                        $"WinGet could not search its catalogs for installed packages ({DescribeFailure(failed)}); "
+                        + $"listing them again {nextAttempt}";
+                    logger.Error(message);
+                    Logger.Warn(message);
+                }
+            );
 
             if (TaskResult.Status != FindPackagesResultStatus.Ok)
             {
-                PackageCatalogReference[] offlineCatalogs =
-                [
-                    .. availableCatalogs.Where(catalog => !IsOnlineOnlyCatalog(catalog)),
-                ];
-                string message =
-                    $"WinGet could not search its catalogs for installed packages ({DescribeFailure(TaskResult)}); "
-                    + "listing them again without its online-only catalogs";
-                logger.Error(message);
-                Logger.Warn(message);
-
-                if (offlineCatalogs.Length < availableCatalogs.Count)
-                    TaskResult = FindInstalledPackages(offlineCatalogs, logger);
-
-                if (TaskResult.Status != FindPackagesResultStatus.Ok)
-                {
-                    logger.Error($"WinGet could not list installed packages: {DescribeFailure(TaskResult)}");
-                    logger.Close(1);
-                    throw new InvalidOperationException(
-                        $"WinGet could not list installed packages: {DescribeFailure(TaskResult)}",
-                        TaskResult.ExtendedErrorCode
-                    );
-                }
+                logger.Error($"WinGet could not list installed packages: {DescribeFailure(TaskResult)}");
+                logger.Close(1);
+                throw new InvalidOperationException(
+                    $"WinGet could not list installed packages: {DescribeFailure(TaskResult)}",
+                    TaskResult.ExtendedErrorCode
+                );
             }
 
             List<CatalogPackage> foundPackages = [];
@@ -1109,6 +1106,41 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             logger.Close(1);
             throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.", ex);
         }
+    }
+
+    internal static TResult FindWithFallbacks<TCatalog, TResult>(
+        IReadOnlyList<TCatalog> catalogs,
+        Func<TCatalog, bool> isOnlineOnly,
+        Func<IReadOnlyList<TCatalog>, TResult> find,
+        Func<TResult, bool> succeeded,
+        Action<TResult, string>? onRetry = null
+    )
+    {
+        TResult result = find(catalogs);
+        if (succeeded(result))
+            return result;
+
+        TCatalog[] offlineCatalogs = [.. catalogs.Where(catalog => !isOnlineOnly(catalog))];
+        if (offlineCatalogs.Length < catalogs.Count)
+        {
+            onRetry?.Invoke(
+                result,
+                offlineCatalogs.Length > 0
+                    ? "without its online-only catalogs"
+                    : "from the installed-packages catalog alone"
+            );
+            result = find(offlineCatalogs);
+            if (succeeded(result))
+                return result;
+        }
+
+        if (offlineCatalogs.Length > 0)
+        {
+            onRetry?.Invoke(result, "from the installed-packages catalog alone");
+            result = find([]);
+        }
+
+        return result;
     }
 
     internal static bool IsOnlineOnlyCatalog(PackageCatalogReference catalog)

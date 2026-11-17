@@ -95,6 +95,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 {
                     if (listing.ConsecutiveFailures == 0)
                         listing.FailureStreakStartUtc = now;
+                    else
+                        listing.FailureStreakStartUtc ??= listing.LastFailureUtc;
                     listing.LastFailureUtc = now;
                     listing.LastFailureReason = Describe(failure);
                     listing.LastFailureWasTimeout =

@@ -20,8 +20,8 @@ public partial class OperationOutputViewModel : ObservableObject
     private IBrush _normalBrush = Brushes.Transparent;
 
     private readonly AbstractOperation _operation;
-    private readonly List<AbstractOperation.LineType> _lineTypes = new();
     private ProgressLineCollapser _collapser = new();
+    private int _renderedCount;
 
     public OperationOutputViewModel(AbstractOperation operation)
     {
@@ -31,17 +31,25 @@ public partial class OperationOutputViewModel : ObservableObject
         Rebuild();
 
         operation.LogLineAdded += (_, ev) =>
-            Dispatcher.UIThread.Post(() => AddOrCollapseLine(ev.Item1, ev.Item2));
-        operation.OperationFinished += (_, _) => Dispatcher.UIThread.Post(RecolorLines);
+            Dispatcher.UIThread.Post(() =>
+                Sync(ev.Item2 is AbstractOperation.LineType.ProgressIndicator ? ev.Item1 : null));
+        operation.OperationFinished += (_, _) => Dispatcher.UIThread.Post(RebuildIfStandardError);
+        operation.OutputRetyped += (_, _) => Dispatcher.UIThread.Post(Rebuild);
     }
 
-    private void RecolorLines()
+    private void RebuildIfStandardError()
     {
-        for (int i = 0; i < OutputLines.Count; i++)
-        {
-            if (_lineTypes[i] is AbstractOperation.LineType.StandardError)
-                OutputLines[i] = MakeLine(OutputLines[i].Text, _lineTypes[i]);
-        }
+        if (_operation.GetOutput().Any(l => l.Item2 is AbstractOperation.LineType.StandardError))
+            Rebuild();
+    }
+
+    private void Sync(string? progress)
+    {
+        var snapshot = _operation.GetOutput();
+        for (; _renderedCount < snapshot.Count; _renderedCount++)
+            AddOrCollapseLine(snapshot[_renderedCount].Item1, snapshot[_renderedCount].Item2);
+        if (progress is not null)
+            AddOrCollapseLine(progress, AbstractOperation.LineType.ProgressIndicator);
     }
 
     // Rebuilds every line with brushes for the current theme; called on construction and whenever
@@ -54,10 +62,9 @@ public partial class OperationOutputViewModel : ObservableObject
         _normalBrush = LookupBrush("SystemControlForegroundBaseHighBrush", theme, Brushes.White);
 
         OutputLines.Clear();
-        _lineTypes.Clear();
         _collapser = new();
-        foreach (var (text, type) in _operation.GetOutput())
-            AddOrCollapseLine(text, type);
+        _renderedCount = 0;
+        Sync(null);
     }
 
     // Progress indicators (carriage-return redraws like installer spinners) overwrite the previous
@@ -67,15 +74,9 @@ public partial class OperationOutputViewModel : ObservableObject
     {
         LogLineItem item = MakeLine(text, type);
         if (_collapser.Next(type) is ProgressLineCollapser.Fold.ReplaceLast && OutputLines.Count > 0)
-        {
             OutputLines[^1] = item;
-            _lineTypes[^1] = type;
-        }
         else
-        {
             OutputLines.Add(item);
-            _lineTypes.Add(type);
-        }
     }
 
     private static IBrush LookupBrush(string key, ThemeVariant theme, IBrush fallback)

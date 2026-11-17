@@ -267,12 +267,19 @@ internal sealed class OperationsPage : UserControl, ITuiPage
     {
         if (ReferenceEquals(op, _selected)) return;
         _selected?.LogLineAdded -= OnSelectedLogLineAdded;
+        _selected?.OutputRetyped -= OnSelectedOutputRetyped;
         _selected = op;
         _selected?.LogLineAdded += OnSelectedLogLineAdded;
+        _selected?.OutputRetyped += OnSelectedOutputRetyped;
         RenderLog();
     }
 
-    private void OnSelectedLogLineAdded(object? sender, (string, AbstractOperation.LineType) line)
+    private void OnSelectedOutputRetyped(object? sender, EventArgs e) => ScheduleRenderLog();
+
+    private void OnSelectedLogLineAdded(object? sender, (string, AbstractOperation.LineType) line) =>
+        ScheduleRenderLog();
+
+    private void ScheduleRenderLog()
     {
         if (_logDirty) return;
         _logDirty = true;

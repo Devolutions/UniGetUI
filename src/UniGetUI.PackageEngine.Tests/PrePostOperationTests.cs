@@ -39,6 +39,62 @@ public sealed class PrePostOperationTests
         Assert.Contains(lines, l => l.Type == AbstractOperation.LineType.Error);
     }
 
+    private sealed class ParentOperation : AbstractOperation
+    {
+        private readonly bool _succeed;
+
+        public ParentOperation(string? preCommand, string? postCommand, bool succeed)
+            : base(
+                false,
+                preCommand is null ? null : [new InnerOperation(new PrePostOperation(preCommand), false)],
+                postCommand is null ? null : [new InnerOperation(new PrePostOperation(postCommand), false)]
+            )
+        {
+            _succeed = succeed;
+            Metadata.Status = "parent";
+            Metadata.Title = "parent";
+            Metadata.OperationInformation = " ";
+            Metadata.SuccessTitle = "parent succeeded";
+            Metadata.SuccessMessage = "parent succeeded";
+            Metadata.FailureTitle = "parent failed";
+            Metadata.FailureMessage = "parent failed";
+        }
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        protected override Task<OperationVeredict> PerformOperation() =>
+            Task.FromResult(_succeed ? OperationVeredict.Success : OperationVeredict.Failure);
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
+    }
+
+    [WindowsFact]
+    public async Task AFailingPostCommandKeepsItsStandardErrorAsAnErrorUnderASucceedingParent()
+    {
+        using var parent = new ParentOperation(null, "echo post-broken 1>&2 & exit /b 3", succeed: true);
+        int retyped = 0;
+        parent.OutputRetyped += (_, _) => retyped++;
+        await parent.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Succeeded, parent.Status);
+        var line = Assert.Single(parent.GetOutput(), l => l.Item1.Trim() == "post-broken");
+        Assert.Equal(AbstractOperation.LineType.Error, line.Item2);
+        Assert.True(AbstractOperation.IsErrorLine(line.Item2, operationFailed: false));
+        Assert.Equal(1, retyped);
+    }
+
+    [WindowsFact]
+    public async Task ASucceedingPreCommandIsNotShownAsAnErrorUnderAFailingParent()
+    {
+        using var parent = new ParentOperation("echo pre-progress 1>&2", null, succeed: false);
+        await parent.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Failed, parent.Status);
+        var line = Assert.Single(parent.GetOutput(), l => l.Item1.Trim() == "pre-progress");
+        Assert.Equal(AbstractOperation.LineType.Information, line.Item2);
+        Assert.False(AbstractOperation.IsErrorLine(line.Item2, operationFailed: true));
+    }
+
     [Theory]
     [InlineData(AbstractOperation.LineType.Error, false, true)]
     [InlineData(AbstractOperation.LineType.Error, true, true)]

@@ -31,11 +31,11 @@ public partial class GeneralViewModel : ViewModelBase
     private async Task ImportSettings(Visual? visual)
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
-        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType(CoreTools.Translate("Settings JSON")) { Patterns = ["*.json"] }],
-        });
+        }));
         if (files is not [{ } file]) return;
         var path = file.TryGetLocalPath();
         if (path is null) return;
@@ -64,11 +64,11 @@ public partial class GeneralViewModel : ViewModelBase
     private static async Task ExportSettings(Visual? visual)
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
-        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await NativePickerTracker.Track(topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = CoreTools.Translate("UniGetUI Settings") + ".json",
             FileTypeChoices = [new FilePickerFileType(CoreTools.Translate("Settings JSON")) { Patterns = ["*.json"] }],
-        });
+        }));
         if (file is null) return;
         var path = file.TryGetLocalPath();
         if (path is null) return;

@@ -122,7 +122,7 @@ public static class AutomaticQuitMonitor
             IsAlreadyQuitting: isAlreadyQuitting,
             IsWindowVisible: isWindowVisible && !quitEvenWhenWindowIsOpen,
             HasUnsavedWork: hasUnsavedWork,
-            IsDialogOpen: isWindowVisible && hasOpenDialog);
+            IsDialogOpen: isWindowVisible && quitEvenWhenWindowIsOpen && hasOpenDialog);
 
     public static AutomaticQuitDecision Evaluate(AutomaticQuitSnapshot snapshot, ref int idleChecks, ref int dialogChecks)
     {

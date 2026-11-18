@@ -41,12 +41,12 @@ public partial class OperationsViewModel : ViewModelBase
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
 
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             AllowMultiple = false,
             SuggestedStartLocation =
                 await AvaloniaPackageOperationHelper.GetDefaultDownloadFolderAsync(topLevel),
-        });
+        }));
 
         if (folders is not [{ } folder]) return;
         var path = folder.TryGetLocalPath();

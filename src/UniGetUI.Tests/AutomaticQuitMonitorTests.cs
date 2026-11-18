@@ -105,7 +105,7 @@ public class AutomaticQuitMonitorTests
     [InlineData(false, true, true, false, false)]
     [InlineData(true, false, false, true, false)]
     [InlineData(true, false, true, false, false)]
-    [InlineData(true, true, false, true, true)]
+    [InlineData(true, true, false, true, false)]
     [InlineData(true, true, true, false, true)]
     public void CaptureMapsTheWindowStateAndTheOverride(
         bool isWindowVisible,

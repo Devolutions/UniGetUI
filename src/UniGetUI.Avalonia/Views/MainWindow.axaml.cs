@@ -2537,7 +2537,7 @@ public partial class MainWindow : Window
 
     internal bool HasUnsavedWork => ViewModel.HasUnsavedWork;
 
-    internal bool HasOpenDialog => _modalStack.Count > 0;
+    internal bool HasOpenDialog => _modalStack.Count > 0 || NativePickerTracker.IsOpen;
 
     internal bool CanQuitWithoutAsking => ViewModel.CanShutdownWithoutAsking;
 

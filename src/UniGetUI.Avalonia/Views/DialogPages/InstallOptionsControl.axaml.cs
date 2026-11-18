@@ -119,8 +119,8 @@ public partial class InstallOptionsControl : UserControl
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel is null) return;
-        var results = await topLevel.StorageProvider.OpenFolderPickerAsync(
-            new FolderPickerOpenOptions { AllowMultiple = false });
+        var results = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions { AllowMultiple = false }));
         if (results is [{ } folder])
             ViewModel.LocationText = folder.TryGetLocalPath() ?? folder.Name;
     }

@@ -108,7 +108,7 @@ internal static class QuitAfterAutomaticUpdates
     private static void Quit()
     {
         if (MainWindow.Instance is { IsVisible: true, HasOpenDialog: true })
-            Logger.Warn("A dialog has stayed open for five minutes after automatic updates finished, closing it to quit UniGetUI");
+            Logger.Warn("A dialog has stayed open for five minutes after automatic updates finished, quitting UniGetUI without waiting for it");
         Logger.ImportantInfo("Automatic updates have finished, quitting UniGetUI as configured");
         MainWindow.Instance?.QuitApplication();
     }

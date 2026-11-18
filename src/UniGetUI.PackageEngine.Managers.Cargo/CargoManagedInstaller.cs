@@ -122,7 +122,9 @@ internal static class CargoManagedInstaller
             log($"The selected publisher binary is no longer available; building {package.Id} {version} with Cargo.");
             return null;
         }
-        CargoBinaryResolver.VerifyHash(archive, plan.Hash);
+        CargoBinaryResolver.VerifyDownload(archive, plan);
+        if (plan.Signature is not null)
+            log($"Verified the publisher signature of {plan.Id} {plan.Version}: {plan.Signature.TrustedComment}");
         var binaries = ExtractBinaries(archive, plan, cancellationToken);
         progress(OperationProgress.ForStage(operation == OperationType.Update
             ? OperationProgressStage.Updating : OperationProgressStage.Installing));

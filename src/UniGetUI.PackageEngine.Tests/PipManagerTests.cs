@@ -372,6 +372,37 @@ public sealed class PipManagerTests : IDisposable
     }
 
     [Fact]
+    public void SimpleIndexParserReadsOnlyProjectNamesWhateverSurroundsThem()
+    {
+        byte[] json = System.Text.Encoding.UTF8.GetBytes("""
+            {
+              "meta": { "_last-serial": 123, "api-version": "1.4", "name": "not-a-project" },
+              "name": "not-a-project-either",
+              "projects": [
+                { "_last-serial": 1, "name": "requests" },
+                { "name": "caf\u00e9", "extra": { "name": "nested" }, "tags": ["name"] },
+                { "name": 7 },
+                { "name": "" },
+                { "other": "x" },
+                { "name": "pytest" }
+              ],
+              "trailing": [{ "name": "after-the-list" }]
+            }
+            """);
+
+        Assert.Equal(["requests", "café", "pytest"], Pip.ParseSimpleIndexProjectNames(json));
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"projects\": []}")]
+    [InlineData("{\"projects\": {\"name\": \"x\"}}")]
+    public void SimpleIndexParserRejectsAnIndexWithoutProjects(string json)
+    {
+        Assert.Throws<InvalidDataException>(() => Pip.ParseSimpleIndexProjectNames(json));
+    }
+
+    [Fact]
     public void SearchHelpersParseSimpleIndexAndRankPrefixMatchesFirst()
     {
         var names = Pip.ParseSimpleIndexProjectNames(
@@ -784,6 +815,7 @@ public sealed class PipManagerTests : IDisposable
 
         Assert.True(resolution.Failed);
         Assert.Null(resolution.Version);
+        Assert.Contains("ran out of time", resolution.Error);
     }
 
     [Fact]
@@ -803,6 +835,103 @@ public sealed class PipManagerTests : IDisposable
                 .WaitAsync(TimeSpan.FromSeconds(10));
 
             Assert.True(resolution.Failed);
+        }
+    }
+
+    [Fact]
+    public async Task ResolveLatestVersionReportsWhyALookupFailed()
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+
+        using HttpClient client = new(new StalledHandler())
+        {
+            Timeout = TimeSpan.FromMilliseconds(200),
+        };
+
+        Pip.VersionResolution resolution = await Pip
+            .ResolveLatestVersionAsync(client, "pip-5787-timeout", interpreter, CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.True(resolution.Failed);
+        Assert.Contains("HttpClient.Timeout", resolution.Error);
+        Assert.Contains("TimeoutException", resolution.Error);
+    }
+
+    [Fact]
+    public void DescribeFailureIncludesEveryInnerException()
+    {
+        var failure = new HttpRequestException(
+            "The SSL connection could not be established, see inner exception.",
+            new InvalidOperationException("RemoteCertificateNameMismatch")
+        );
+
+        Assert.Equal(
+            "HttpRequestException: The SSL connection could not be established, see inner exception."
+                + " ---> InvalidOperationException: RemoteCertificateNameMismatch",
+            Pip.DescribeFailure(failure)
+        );
+    }
+
+    [Fact]
+    public async Task ResolveLatestVersionKeepsTheReasonWhenItFallsBackToACachedVersion()
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+        const string packageId = "pip-5791-cached";
+
+        using HttpClient client = new(new CachedThenFailingHandler());
+
+        Pip.VersionResolution first = await Pip.ResolveLatestVersionAsync(
+            client,
+            packageId,
+            interpreter,
+            CancellationToken.None
+        );
+        Pip.VersionResolution second = await Pip.ResolveLatestVersionAsync(
+            client,
+            packageId,
+            interpreter,
+            CancellationToken.None
+        );
+
+        Assert.Equal("1.0.0", first.Version);
+        Assert.Null(first.Error);
+        Assert.False(second.Failed);
+        Assert.Equal("1.0.0", second.Version);
+        Assert.Contains("connection reset", second.Error);
+    }
+
+    private sealed class CachedThenFailingHandler : HttpMessageHandler
+    {
+        private int _calls;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            if (Interlocked.Increment(ref _calls) > 1)
+                throw new HttpRequestException("connection reset");
+
+            var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"versions":["1.0.0"],"files":[{"filename":"pip_5791_cached-1.0.0-py3-none-any.whl"}]}"""
+                ),
+            };
+            response.Headers.ETag = new System.Net.Http.Headers.EntityTagHeaderValue("\"v1\"");
+            return Task.FromResult(response);
+        }
+    }
+
+    private sealed class StalledHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException();
         }
     }
 }

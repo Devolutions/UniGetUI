@@ -234,11 +234,11 @@ public partial class GitRepositoriesViewModel : ViewModelBase
     private async Task AddRepository(Visual? visual)
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = CoreTools.Translate("Choose git clones, or folders that contain them"),
             AllowMultiple = true,
-        });
+        }));
         string[] paths = [.. folders.Select(folder => folder.TryGetLocalPath()).OfType<string>()];
         if (paths.Length > 0)
             await AddPathsAsync(paths);

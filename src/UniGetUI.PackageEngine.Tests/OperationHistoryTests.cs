@@ -405,6 +405,14 @@ public sealed class OperationHistoryTests : IDisposable
     }
 
     [Fact]
+    public void FailureSummary_PrefersLastStandardErrorLine()
+    {
+        var output = Lines(("installing...", "Information"), ("fatal: it broke", "StandardError"), ("trailing", "Information"));
+        Assert.Equal("fatal: it broke",
+            OperationHistoryRecord.DeriveFailureSummary(output, OperationHistoryRecord.StatusFailed));
+    }
+
+    [Fact]
     public void FailureSummary_FallsBackToLastInformationWhenNoErrorLine()
     {
         // Managers commonly print failures to stdout (Information), not stderr (Error).

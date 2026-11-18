@@ -61,12 +61,9 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
         var lines = new List<LogLineItem>();
         foreach (var (text, type) in _operation.GetOutput())
         {
-            IBrush brush = type switch
-            {
-                AbstractOperation.LineType.Error => errorBrush,
-                AbstractOperation.LineType.VerboseDetails => debugBrush,
-                _ => normalBrush,
-            };
+            IBrush brush = AbstractOperation.IsErrorLine(type, operationFailed: true)
+                ? errorBrush
+                : type is AbstractOperation.LineType.VerboseDetails ? debugBrush : normalBrush;
             lines.Add(new LogLineItem(text, brush));
         }
         OutputText.SetLines(lines);

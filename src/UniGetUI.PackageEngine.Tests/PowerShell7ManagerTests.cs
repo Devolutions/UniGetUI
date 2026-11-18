@@ -1,15 +1,33 @@
 #if WINDOWS
+using System.Diagnostics;
+using UniGetUI.Core.Data;
+using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 
 namespace UniGetUI.PackageEngine.Tests;
 
-public sealed class PowerShell7ManagerTests
+public sealed class PowerShell7ManagerTests : IDisposable
 {
+    private readonly Func<bool> _processIsElevated = PowerShell7PkgOperationHelper.ProcessIsElevated;
+
+    public PowerShell7ManagerTests()
+    {
+        PowerShell7PkgOperationHelper.ProcessIsElevated = static () => false;
+    }
+
+    public void Dispose()
+    {
+        PowerShell7PkgOperationHelper.ProcessIsElevated = _processIsElevated;
+    }
+
     [Fact]
     public void ParseSources_KeepsRepositoriesThatAreNotHttpUrls()
     {
@@ -339,6 +357,237 @@ public sealed class PowerShell7ManagerTests
             1);
 
         Assert.Equal(OperationVeredict.Failure, result);
+    }
+
+    private static readonly string[] ReporterUpdateOutput =
+    [
+        "\u001b[31;1mUpdate-PSResource: \u001b[0mC:\\Users\\Admin\\AppData\\Local\\Programs\\WingetUI\\Assets\\Utilities\\unigetui_ps_operation.ps1:112\u001b[0m",
+        "\u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[31;1m\u001b[31;1m\u001b[36;1m     | \u001b[31;1mUnable to successfully install package 'PowerShellGet': 'Access to the path 'C:\\Program\u001b[0m",
+        "\u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[31;1m\u001b[31;1m\u001b[36;1m\u001b[31;1m\u001b[36;1m     | \u001b[31;1mFiles\\PowerShell\\Modules\\PowerShellGet\\3.0.23' is denied.'\u001b[0m",
+        "\u001b[31;1m\u001b[0m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[31;1m\u001b[31;1m\u001b[36;1m     | \u001b[31;1mPackage(s) 'ExchangeOnlineManagement' could not be installed from repository 'PSGallery'.\u001b[0m",
+    ];
+
+    private static readonly string[] AllUsersUpdateDeniedOutput =
+        [.. ReporterUpdateOutput, PowerShell7PkgOperationHelper.AccessDeniedMarker];
+
+    private static readonly string[] AllUsersInstallDeniedOutput =
+    [
+        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:131",
+        "Line |",
+        " 131 |      & $command @named @rest",
+        "     |      ~~~~~~~~~~~~~~~~~~~~~~~",
+        "     | Unable to successfully install package 'PackageManagement': 'Access to the path 'C:\\Program",
+        "     | Files\\PowerShell\\Modules\\PackageManagement' is denied.'",
+        "",
+        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:131",
+        "Line |",
+        " 131 |      & $command @named @rest",
+        "     |      ~~~~~~~~~~~~~~~~~~~~~~~",
+        "     | Operation is not valid due to the current state of the object.",
+        "",
+        "Install-PSResource: C:\\Users\\me\\AppData\\LocalLow\\ugtest5755\\unigetui_ps_operation.ps1:131",
+        "Line |",
+        " 131 |      & $command @named @rest",
+        "     |      ~~~~~~~~~~~~~~~~~~~~~~~",
+        "     | Package(s) 'ExchangeOnlineManagement' could not be installed from repository 'PSGallery'.",
+        "",
+        "UniGetUI: the operation was denied access to a path.",
+    ];
+
+    private static readonly string[] AllUsersInstallLockedOutput =
+    [
+        "Install-PSResource: C:\\App\\Assets\\Utilities\\unigetui_ps_operation.ps1:131",
+        "     | Unable to successfully install package 'ExchangeOnlineManagement': 'The process cannot access the file",
+        "     | 'C:\\Program Files\\PowerShell\\Modules\\ExchangeOnlineManagement\\3.11.1\\Microsoft.Exchange.Management.dll' because it is being used by another process.'",
+        "     | Package(s) 'ExchangeOnlineManagement' could not be installed from repository 'PSGallery'.",
+    ];
+
+    public static TheoryData<string[], OperationType> DeniedAllUsersOutputs =>
+        new()
+        {
+            { AllUsersUpdateDeniedOutput, OperationType.Update },
+            { AllUsersInstallDeniedOutput, OperationType.Install },
+        };
+
+    public static TheoryData<string[]> NonPermissionAllUsersFailures =>
+        new()
+        {
+            ReporterUpdateOutput,
+            AllUsersInstallLockedOutput,
+        };
+
+    [Theory]
+    [MemberData(nameof(NonPermissionAllUsersFailures))]
+    public void GetResult_InstallFailureWithoutAccessDeniedMarkerDoesNotElevate(string[] output)
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(package, OperationType.Update, output, 1, new InstallOptions());
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void GetResult_AllUsersUpdateDeniedWithRunAsAdministratorOptionDoesNotRetry()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(
+            package, OperationType.Update, AllUsersUpdateDeniedOutput, 1, new InstallOptions { RunAsAdministrator = true });
+
+        Assert.Equal(OperationVeredict.Failure, result);
+    }
+
+    [Fact]
+    public void GetResult_AllUsersUpdateDeniedInElevatedProcessDoesNotRetry()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+        PowerShell7PkgOperationHelper.ProcessIsElevated = static () => true;
+
+        var result = manager.OperationHelper.GetResult(
+            package, OperationType.Update, AllUsersUpdateDeniedOutput, 1, new InstallOptions());
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Theory]
+    [MemberData(nameof(DeniedAllUsersOutputs))]
+    public void GetResult_AllUsersWriteDeniedRetriesAsAdministrator(string[] output, OperationType operation)
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(package, operation, output, 1, new InstallOptions());
+
+        Assert.Equal(OperationVeredict.AutoRetry, result);
+        Assert.True(package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void AllUsersUpdateDenied_RetryIsLaunchedThroughTheElevator()
+    {
+        if (CoreTools.IsAdministrator())
+            return;
+
+        string previousElevator = CoreData.ElevatorPath;
+        string previousElevatorArgs = CoreData.ElevatorArgs;
+        CoreData.ElevatorPath = @"C:\App\Assets\Utilities\UniGetUI Elevator.exe";
+        CoreData.ElevatorArgs = "";
+
+        try
+        {
+            var manager = new PowerShell7
+            {
+                Status = new ManagerStatus
+                {
+                    Found = true,
+                    ExecutablePath = @"C:\Program Files\PowerShell\7\pwsh.exe",
+                    ExecutableCallArgs = "",
+                    OperationCallArgs =
+                    [
+                        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                        @"C:\App\Assets\Utilities\unigetui_ps_operation.ps1", "plain",
+                    ],
+                },
+            };
+            var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+                ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+            using var operation = new InspectableUpdate(package, new InstallOptions());
+
+            var firstAttempt = operation.PrepareProcessStartInfoForTests();
+            Assert.Equal(@"C:\Program Files\PowerShell\7\pwsh.exe", firstAttempt.FileName);
+            Assert.Contains("AllUsers", firstAttempt.ArgumentList);
+
+            var result = manager.OperationHelper.GetResult(
+                package, OperationType.Update, AllUsersUpdateDeniedOutput, 1, operation.Options);
+            Assert.Equal(OperationVeredict.AutoRetry, result);
+
+            var retry = operation.PrepareProcessStartInfoForTests();
+            Assert.Equal(CoreData.ElevatorPath, retry.FileName);
+            Assert.Equal(@"C:\Program Files\PowerShell\7\pwsh.exe", retry.ArgumentList[0]);
+            Assert.Contains("Update-PSResource", retry.ArgumentList);
+            Assert.Contains("AllUsers", retry.ArgumentList);
+        }
+        finally
+        {
+            CoreData.ElevatorPath = previousElevator;
+            CoreData.ElevatorArgs = previousElevatorArgs;
+        }
+    }
+
+    private sealed class InspectableUpdate : UpdatePackageOperation
+    {
+        public InspectableUpdate(IPackage package, InstallOptions options)
+            : base(package, options, true) { }
+
+        public ProcessStartInfo PrepareProcessStartInfoForTests()
+        {
+            process.StartInfo.FileName = "unset";
+            process.StartInfo.Arguments = "unset";
+            process.StartInfo.ArgumentList.Clear();
+            PrepareProcessStartInfo();
+            return process.StartInfo;
+        }
+    }
+
+    [Fact]
+    public void GetResult_InstallFailureForCurrentUserDoesNotElevate()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:CurrentUser##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(
+            package, OperationType.Update, AllUsersUpdateDeniedOutput, 1, new InstallOptions());
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void GetResult_AllUsersUpdateDeniedAlreadyElevatedFails()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "ExchangeOnlineManagement\t3.10.1\tPSGallery"], manager));
+        package.OverridenOptions.RunAsAdministrator = true;
+
+        var result = manager.OperationHelper.GetResult(
+            package, OperationType.Update, AllUsersUpdateDeniedOutput, 1, new InstallOptions());
+
+        Assert.Equal(OperationVeredict.Failure, result);
+    }
+
+    [Theory]
+    [InlineData(new[] { "-Scope", "AllUsers" }, true)]
+    [InlineData(new[] { "-Scope:AllUsers" }, true)]
+    [InlineData(new[] { "-sc", "allusers" }, true)]
+    [InlineData(new[] { "-Scope", "CurrentUser" }, false)]
+    public void GetResult_CustomScopeArgumentDecidesElevationOnInstall(string[] custom, bool elevates)
+    {
+        var manager = new PowerShell7();
+        var package = new Package(
+            "ExchangeOnlineManagement", "ExchangeOnlineManagement", "3.11.1",
+            manager.DefaultSource, manager);
+        var options = new InstallOptions
+        {
+            InstallationScope = elevates ? PackageScope.Local : PackageScope.Global,
+            CustomParameters_Install = [.. custom],
+        };
+
+        var result = manager.OperationHelper.GetResult(
+            package, OperationType.Install, AllUsersUpdateDeniedOutput, 1, options);
+
+        Assert.Equal(elevates ? OperationVeredict.AutoRetry : OperationVeredict.Failure, result);
     }
 
     // Regression for https://github.com/Devolutions/UniGetUI/issues/5163:

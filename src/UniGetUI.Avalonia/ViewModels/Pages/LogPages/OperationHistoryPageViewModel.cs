@@ -1,6 +1,7 @@
 using Avalonia.Media;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Operations.History;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 
@@ -35,10 +36,11 @@ public class OperationHistoryPageViewModel : BaseLogPageViewModel
             LogLines.Add(new LogLineItem(SeparatorBar, defaultBrush));
             LogLines.Add(new LogLineItem(BuildHeader(record), defaultBrush));
 
+            bool failed = record.Status == OperationHistoryRecord.StatusFailed;
             foreach (var line in record.Output)
             {
                 string text = line.Text.Replace("\r", "").Replace("\n", "");
-                LogLines.Add(new LogLineItem(text, line.Type == "Error" ? errorBrush : defaultBrush));
+                LogLines.Add(new LogLineItem(text, AbstractOperation.IsErrorLine(line.Type, failed) ? errorBrush : defaultBrush));
             }
         }
 

@@ -610,6 +610,258 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void ASingleInstalledListingFailureNeedsAttentionWhenTheManagerExpectsPackages()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        manager.SetInstalledPackages(() => throw new InvalidOperationException("broken"));
+
+        manager.GetInstalledPackages();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Failing, report.State);
+        Assert.True(report.NeedsAttention);
+    }
+
+    [Fact]
+    public void ASingleInstalledListingTimeoutDoesNotNeedAttention()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        manager.SetInstalledPackages(() => throw new TimeoutException("slow"));
+
+        manager.GetInstalledPackages();
+        var once = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Failing, once.State);
+        Assert.True(manager.GetHealthRecord().Installed.LastFailureWasTimeout);
+        Assert.False(once.NeedsAttention);
+
+        manager.GetInstalledPackages();
+        var twice = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.True(twice.NeedsAttention);
+        Assert.Equal(2, twice.ConsecutiveFailures);
+    }
+
+    [Fact]
+    public void ATimeoutStreakIsExcusedOnceAnotherListingSucceeds()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        manager.SetInstalledPackages(() => throw new TimeoutException("slow"));
+        DateTime start = DateTime.UtcNow - TimeSpan.FromHours(3);
+
+        using (ManagerHealthStore.UseClock(() => start))
+            manager.GetInstalledPackages();
+        using (ManagerHealthStore.UseClock(() => start + TimeSpan.FromHours(1)))
+            manager.GetAvailableUpdates();
+        using (ManagerHealthStore.UseClock(() => start + TimeSpan.FromHours(2)))
+            manager.GetInstalledPackages();
+
+        var installed = manager.GetHealthRecord().Installed;
+        Assert.Equal(2, installed.ConsecutiveFailures);
+        Assert.Equal(start, installed.FailureStreakStartUtc);
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Failing, report.State);
+        Assert.False(report.NeedsAttention);
+    }
+
+    [Fact]
+    public void ARecordWithoutAStreakStartKeepsItsEarlierFailure()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        manager.SetInstalledPackages(() => throw new TimeoutException("slow"));
+        DateTime start = DateTime.UtcNow - TimeSpan.FromHours(3);
+
+        using (ManagerHealthStore.UseClock(() => start))
+            manager.GetInstalledPackages();
+        ManagerHealthStore.Flush();
+
+        string path = ManagerHealthStore.TestPathOverride!;
+        var root = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!;
+        root[manager.Name]!["Installed"]!.AsObject().Remove("FailureStreakStartUtc");
+        File.WriteAllText(path, root.ToJsonString());
+        ManagerHealthStore.ResetForTests();
+        Assert.Null(manager.GetHealthRecord().Installed.FailureStreakStartUtc);
+
+        using (ManagerHealthStore.UseClock(() => start + TimeSpan.FromHours(1)))
+            manager.GetAvailableUpdates();
+        using (ManagerHealthStore.UseClock(() => start + TimeSpan.FromHours(2)))
+            manager.GetInstalledPackages();
+
+        var installed = manager.GetHealthRecord().Installed;
+        Assert.Equal(2, installed.ConsecutiveFailures);
+        Assert.Equal(start, installed.FailureStreakStartUtc);
+        Assert.False(ManagerHealthEvaluator.Evaluate(manager).NeedsAttention);
+    }
+
+    [Fact]
+    public void ASuccessClearsTheFailureStreakStart()
+    {
+        var manager = CreateReadyManager();
+        bool fail = true;
+        manager.SetInstalledPackages(() => fail ? throw new TimeoutException("slow") : []);
+
+        manager.GetInstalledPackages();
+        Assert.NotNull(manager.GetHealthRecord().Installed.FailureStreakStartUtc);
+
+        fail = false;
+        manager.GetInstalledPackages();
+        Assert.Null(manager.GetHealthRecord().Installed.FailureStreakStartUtc);
+    }
+
+    [Fact]
+    public void AHardFailureAfterATimeoutNeedsAttention()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        Exception next = new TimeoutException("slow");
+        manager.SetInstalledPackages(() => throw next);
+
+        manager.GetInstalledPackages();
+        next = new InvalidOperationException("broken");
+        manager.GetInstalledPackages();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.False(manager.GetHealthRecord().Installed.LastFailureWasTimeout);
+        Assert.True(report.NeedsAttention);
+    }
+
+    [Fact]
+    public void ATimeoutAfterAHardFailureStillNeedsAttention()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        Exception next = new InvalidOperationException("broken");
+        manager.SetInstalledPackages(() => throw next);
+
+        manager.GetInstalledPackages();
+        next = new TimeoutException("slow");
+        manager.GetInstalledPackages();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.True(manager.GetHealthRecord().Installed.LastFailureWasTimeout);
+        Assert.Equal(2, report.ConsecutiveFailures);
+        Assert.True(report.NeedsAttention);
+    }
+
+    [Fact]
+    public void ARetryThatFailsAfterATimeoutCountsAsATimeout()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        int attempts = 0;
+        manager.SetInstalledPackages(() =>
+            ++attempts == 1
+                ? throw new TimeoutException("slow")
+                : throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.")
+        );
+
+        manager.GetInstalledPackages();
+
+        var installed = manager.GetHealthRecord().Installed;
+        Assert.Equal(2, attempts);
+        Assert.Contains("composite catalog", installed.LastFailureReason);
+        Assert.True(installed.LastFailureWasTimeout);
+        Assert.False(ManagerHealthEvaluator.Evaluate(manager).NeedsAttention);
+    }
+
+    [Fact]
+    public void OldTimeoutStreaksDoNotNeedAttention()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        manager.SetInstalledPackages(() => throw new TimeoutException("slow"));
+        using (ManagerHealthStore.UseClock(() => DateTime.UtcNow - TimeSpan.FromDays(3)))
+        {
+            manager.GetInstalledPackages();
+            manager.GetInstalledPackages();
+        }
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(2, report.ConsecutiveFailures);
+        Assert.False(report.NeedsAttention);
+    }
+
+    [Fact]
+    public void ATimeoutDoesNotNeedAttentionWithTheWinGetDetectorDisabled()
+    {
+        var winget = new PackageManagerBuilder().WithName("WinGet").Build(initialize: false);
+        winget.ExecutablePath = CreateExecutable("winget-test.exe");
+        winget.Initialize();
+        winget.ExpectsInstalled = true;
+        winget.SetInstalledPackages(() => throw new TimeoutException("slow"));
+        Settings.Set(Settings.K.DisableWinGetMalfunctionDetector, true);
+        try
+        {
+            winget.GetInstalledPackages();
+            Assert.False(ManagerHealthEvaluator.Evaluate(winget).NeedsAttention);
+
+            winget.GetInstalledPackages();
+            Assert.True(ManagerHealthEvaluator.Evaluate(winget).NeedsAttention);
+        }
+        finally
+        {
+            Settings.Set(Settings.K.DisableWinGetMalfunctionDetector, false);
+        }
+    }
+
+    public static TheoryData<string, bool> TimeoutFailures =>
+        new()
+        {
+            { "timeout", true },
+            { "http-timeout", true },
+            { "rpc-timeout", true },
+            { "win32-timeout", true },
+            { "wait-timeout", true },
+            { "winhttp-timeout", true },
+            { "socket-timeout", true },
+            { "win32-exception-timeout", true },
+            { "wrapped-winrt-timeout", true },
+            { "stopped", false },
+            { "com-failure", false },
+            { "socket-refused", false },
+            { "invalid", false },
+        };
+
+    [Theory]
+    [MemberData(nameof(TimeoutFailures))]
+    public void TimeoutsAreRecognisedWhateverTheirExceptionType(string kind, bool isTimeout)
+    {
+        Exception failure = kind switch
+        {
+            "timeout" => new TimeoutException("slow"),
+            "http-timeout" => new TaskCanceledException("request", new TimeoutException("slow")),
+            "rpc-timeout" => new System.Runtime.InteropServices.COMException("rpc", unchecked((int)0x8001011F)),
+            "win32-timeout" => new System.Runtime.InteropServices.COMException("timeout", unchecked((int)0x800705B4)),
+            "wait-timeout" => new System.Runtime.InteropServices.COMException("wait", unchecked((int)0x80070102)),
+            "winhttp-timeout" => new System.Runtime.InteropServices.COMException("winhttp", unchecked((int)0x80072EE2)),
+            "socket-timeout" => new HttpRequestException(
+                "connect",
+                new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.TimedOut)
+            ),
+            "win32-exception-timeout" => new Win32Exception(1460),
+            "wrapped-winrt-timeout" => new InvalidOperationException(
+                "WinGet could not list installed packages: InternalError, 0x80072EE2",
+                new Exception("winrt") { HResult = unchecked((int)0x80072EE2) }
+            ),
+            "stopped" => new OperationCanceledException("stopped"),
+            "com-failure" => new System.Runtime.InteropServices.COMException("failure", unchecked((int)0x80004005)),
+            "socket-refused" => new HttpRequestException(
+                "connect",
+                new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.ConnectionRefused)
+            ),
+            _ => new InvalidOperationException("broken"),
+        };
+        var manager = CreateReadyManager();
+        manager.SetInstalledPackages(() => throw failure);
+
+        manager.GetInstalledPackages();
+
+        Assert.Equal(isTimeout, manager.GetHealthRecord().Installed.LastFailureWasTimeout);
+    }
+
+    [Fact]
     public void WinGetMalfunctionDetectorSettingStillSilencesWinGet()
     {
         var winget = new PackageManagerBuilder().WithName("WinGet").Build(initialize: false);

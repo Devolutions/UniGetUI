@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
@@ -290,8 +291,8 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     private async Task SelectLocation(Visual? visual)
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(
-            new FolderPickerOpenOptions { AllowMultiple = false });
+        var folders = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions { AllowMultiple = false }));
         if (folders is not [{ } folder]) return;
         var path = folder.TryGetLocalPath();
         if (string.IsNullOrEmpty(path)) return;

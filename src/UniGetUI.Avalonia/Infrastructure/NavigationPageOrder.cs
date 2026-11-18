@@ -11,7 +11,8 @@ internal static class NavigationPageOrder
         bool catalogEnabled,
         bool gitRepositoriesEnabled = false,
         bool agentSkillsEnabled = false,
-        bool xcodeEnabled = false) =>
+        bool xcodeEnabled = false,
+        bool driversEnabled = false) =>
     [
         .. catalogEnabled ? [PageType.Catalog] : Array.Empty<PageType>(),
         PageType.Discover,
@@ -22,6 +23,7 @@ internal static class NavigationPageOrder
         {
             PageType.GitRepositories => gitRepositoriesEnabled,
             PageType.AgentSkills => agentSkillsEnabled,
+            PageType.Drivers => driversEnabled,
 #if UNIGETUI_XCODE_EXTENSION
             PageType.Xcode => xcodeEnabled,
 #endif
@@ -33,25 +35,28 @@ internal static class NavigationPageOrder
         catalogEnabled: true,
         gitRepositoriesEnabled: true,
         agentSkillsEnabled: true,
-        xcodeEnabled: true);
+        xcodeEnabled: true,
+        driversEnabled: true);
 
     public static PageType[] Get(
         bool catalogEnabled,
         bool gitRepositoriesEnabled = false,
         bool agentSkillsEnabled = false,
-        bool xcodeEnabled = false)
+        bool xcodeEnabled = false,
+        bool driversEnabled = false)
         => Resolve(
             Settings.GetValue(Settings.K.NavigationPageOrder),
             catalogEnabled,
             gitRepositoriesEnabled,
             agentSkillsEnabled,
-            xcodeEnabled);
+            xcodeEnabled,
+            driversEnabled);
 
     public static void Save(IReadOnlyList<PageType> visiblePages)
         => Settings.SetValue(
             Settings.K.NavigationPageOrder,
             Serialize(Merge(
-                Get(catalogEnabled: true, gitRepositoriesEnabled: true, agentSkillsEnabled: true, xcodeEnabled: true),
+                Get(catalogEnabled: true, gitRepositoriesEnabled: true, agentSkillsEnabled: true, xcodeEnabled: true, driversEnabled: true),
                 visiblePages)));
 
     public static void Reset() => Settings.SetValue(Settings.K.NavigationPageOrder, "");
@@ -61,9 +66,10 @@ internal static class NavigationPageOrder
         bool catalogEnabled,
         bool gitRepositoriesEnabled = false,
         bool agentSkillsEnabled = false,
-        bool xcodeEnabled = false)
+        bool xcodeEnabled = false,
+        bool driversEnabled = false)
     {
-        PageType[] defaults = DefaultPages(catalogEnabled, gitRepositoriesEnabled, agentSkillsEnabled, xcodeEnabled);
+        PageType[] defaults = DefaultPages(catalogEnabled, gitRepositoriesEnabled, agentSkillsEnabled, xcodeEnabled, driversEnabled);
         PageType[] ordered = stored
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Select(name => Enum.TryParse(name, out PageType page) ? page : PageType.Null)

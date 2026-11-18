@@ -42,7 +42,7 @@ internal sealed class TuiPackageActionsTests : TuiE2ETestBase
             });
             var before = await OnUi(TuiOperationRegistry.Snapshot);
             var queue = AbstractOperation.OperationQueue.ToArray();
-            int logs = Logger.GetLogs().Length;
+            long logs = Logger.TotalLogged;
             bool accepted = intended == OperationType.Install
                 ? await TuiPackageActions.UninstallThenInstallAsync(pkg)
                 : await TuiPackageActions.UninstallThenInstallAsync(pkg, intended);
@@ -51,7 +51,7 @@ internal sealed class TuiPackageActionsTests : TuiE2ETestBase
             NAssert.That(await OnUi(TuiOperationRegistry.Snapshot), Is.EqualTo(before));
             NAssert.That(AbstractOperation.OperationQueue, Is.EqualTo(queue));
             NAssert.That(existing.Started, Is.False);
-            NAssert.That(Logger.GetLogs().Skip(logs).Select(log => log.Content).Where(line => line.StartsWith("Skipping ")),
+            NAssert.That(Logger.GetLogsSince(logs).Select(log => log.Content).Where(line => line.StartsWith("Skipping ")),
                 Is.EqualTo(new[] { $"Skipping {intended} of Contoso.Notes because an operation for this package is already queued or running" }));
             NAssert.That(State.OperationJournal, Is.Empty);
         }
@@ -79,10 +79,10 @@ internal sealed class TuiPackageActionsTests : TuiE2ETestBase
             var queue = AbstractOperation.OperationQueue.ToArray();
             var action = await OnUi(() => page.Actions.Single(a => a.Label == label));
             NAssert.That(action.IsEnabled, Is.True);
-            int logs = Logger.GetLogs().Length;
+            long logs = Logger.TotalLogged;
             // Await the real menu command itself (rather than a timing poll after a fire-and-forget keystroke).
             await (await OnUi(action.Run));
-            NAssert.That(Logger.GetLogs().Skip(logs).Select(log => log.Content).Where(line => line.StartsWith("Skipping ")),
+            NAssert.That(Logger.GetLogsSince(logs).Select(log => log.Content).Where(line => line.StartsWith("Skipping ")),
                 Is.EqualTo(new[] { $"Skipping {intended} of Northwind.Terminal because an operation for this package is already queued or running" }));
             NAssert.That(await OnUi(TuiOperationRegistry.Snapshot), Is.EqualTo(before));
             NAssert.That(AbstractOperation.OperationQueue, Is.EqualTo(queue));

@@ -91,7 +91,18 @@ try
     CargoBinaryPlan plan = await new CargoBinaryResolver(http).ResolveAsync(
         "unigetui-smoke", "1.0.0", target, manifest, Console.WriteLine, CancellationToken.None)
         ?? throw new InvalidOperationException("Published binary resolution unexpectedly selected fallback.");
-    CargoBinaryResolver.VerifyHash(binaryArchive, plan.Hash);
+    CargoBinaryResolver.VerifyDownload(binaryArchive, plan);
+    CargoMinisignature binstall = CargoMinisign.Parse("RWQVYzYOmS4CWLZCzyO32DYwvS5lkcOZfoWGvrk/82/3tGcjJTcJzZQK", """
+        untrusted comment: signature from rsign secret key
+        RUQVYzYOmS4CWAtu4Qkk+pNL3xZe23uehyG/oHAA7XBXKQu5vjjcIB1vLw2WbmYpTKY8eHeqp+mWQhiM32k0s3JhuJqM30t1ZwY=
+        trusted comment: gh=cargo-bins/cargo-binstall git=5885714d0a40a14b2535c6ffc051fd8e49aa9665 ts=2026-11-11T09:50:25.024Z run=42996742987
+        qhBQgMhC2ShkVJ6N6bE2A0qt48aZY7HIl/MzkA/9i3uPqh6PL8MANRZTY8wsjZrb46XYv9eDBgV6FVPsZzNuDw==
+        """);
+    if (!CargoMinisign.Ed25519.Verify(binstall.PublicKey,
+            [.. binstall.Signature, .. System.Text.Encoding.UTF8.GetBytes(binstall.TrustedComment)],
+            binstall.GlobalSignature)
+        || Convert.ToHexString(CargoMinisign.Blake2b512("abc"u8))[..16] != "BA80A53F981C4D0D")
+        throw new InvalidOperationException("Native minisign verification failed.");
     var binaries = CargoManagedInstaller.ExtractBinaries(binaryArchive, plan, CancellationToken.None);
     await CargoInstallTracker.InstallAsync(root, plan, binaries, CancellationToken.None);
     string listing = await Cargo("install", "--list", "--root", root);

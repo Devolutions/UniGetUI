@@ -287,7 +287,8 @@ public static class IpcBundleApi
             );
 
             using var operation = new InstallPackageOperation(registeredPackage, options);
-            await operation.MainThread();
+            using (IpcOperationApi.BeginActivity())
+                await operation.MainThread();
             if (operation.Status == OperationStatus.Succeeded)
             {
                 imported.SetTag(PackageTag.AlreadyInstalled);

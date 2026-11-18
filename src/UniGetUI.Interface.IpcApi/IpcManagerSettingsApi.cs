@@ -45,6 +45,7 @@ public sealed class IpcManagerListingHealthInfo
     public string? LastFailureReason { get; set; }
     public bool LastFailureWasTimeout { get; set; }
     public int ConsecutiveFailures { get; set; }
+    public DateTime? FailureStreakStartUtc { get; set; }
     public int? LastPackageCount { get; set; }
     public DateTime? LastFastRepairUtc { get; set; }
     public string? LastFastRepairReason { get; set; }
@@ -58,6 +59,7 @@ public sealed class IpcManagerListingHealthInfo
             LastFailureReason = listing.LastFailureReason,
             LastFailureWasTimeout = listing.LastFailureWasTimeout,
             ConsecutiveFailures = listing.ConsecutiveFailures,
+            FailureStreakStartUtc = listing.FailureStreakStartUtc,
             LastPackageCount = listing.LastPackageCount,
             LastFastRepairUtc = listing.LastFastRepairUtc,
             LastFastRepairReason = listing.LastFastRepairReason,
@@ -184,7 +186,8 @@ public static class IpcManagerSettingsApi
         var source = ResolveSourceForAdd(manager, request);
 
         using var operation = new AddSourceOperation(source);
-        await operation.MainThread();
+        using (IpcOperationApi.BeginActivity())
+            await operation.MainThread();
 
         return ToSourceOperationResult("add-source", operation, source);
     }
@@ -197,7 +200,8 @@ public static class IpcManagerSettingsApi
         var source = ResolveSourceForRemove(manager, request);
 
         using var operation = new RemoveSourceOperation(source);
-        await operation.MainThread();
+        using (IpcOperationApi.BeginActivity())
+            await operation.MainThread();
 
         return ToSourceOperationResult("remove-source", operation, source);
     }

@@ -268,12 +268,7 @@ public static class ShortcutFileRemover
                 RedirectStandardError = true,
             };
 
-            foreach (
-                string argument in CoreData.ElevatorArgs.Split(
-                    ' ',
-                    StringSplitOptions.RemoveEmptyEntries
-                )
-            )
+            foreach (string argument in CoreData.ElevatorArgumentVector)
                 process.StartInfo.ArgumentList.Add(argument);
 
             process.StartInfo.ArgumentList.Add(CoreData.UniGetUIExecutableFile);

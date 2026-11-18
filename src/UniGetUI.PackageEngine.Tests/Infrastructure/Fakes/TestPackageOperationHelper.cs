@@ -47,6 +47,12 @@ public sealed class TestPackageOperationHelper(TestPackageManager manager)
         InstallOptions? options = null
     ) => FailureExplanationFactory(package, operation, processOutput, returnCode);
 
+    public Func<IPackage, InstallOptions, string?> ReinstallRefusalFactory { get; set; } =
+        static (_, _) => null;
+
+    public override string? GetReinstallRefusal(IPackage package, InstallOptions options) =>
+        ReinstallRefusalFactory(package, options);
+
     protected override IReadOnlyList<string> _getOperationParameters(
         IPackage package,
         InstallOptions options,

@@ -90,13 +90,13 @@ public sealed class ClaudePluginsRunnerTests
     [Fact]
     public async Task SuccessfulProcess_LogsStderrWarningWithoutTurningSuccessIntoFailure()
     {
-        int previous = Logger.GetLogs().Length;
+        long previous = Logger.TotalLogged;
         using var fixture = new ProcessFixture("""
             [Console]::Out.Write('  fixture success  ')
             [Console]::Error.Write('  fixture warning code 117  ')
             """);
         Assert.Equal("fixture success", await fixture.Runner.RunAsync(fixture.Arguments(), CancellationToken.None));
-        Assert.Contains(Logger.GetLogs().Skip(previous), entry =>
+        Assert.Contains(Logger.GetLogsSince(previous), entry =>
             entry.Severity == LogEntry.SeverityLevel.Warning && entry.Content == "fixture warning code 117");
     }
 

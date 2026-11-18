@@ -836,4 +836,50 @@ public sealed class PipManagerTests : IDisposable
             Assert.True(resolution.Failed);
         }
     }
+
+    [Fact]
+    public async Task ResolveLatestVersionReportsWhyALookupFailed()
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+
+        using HttpClient client = new(new StalledHandler())
+        {
+            Timeout = TimeSpan.FromMilliseconds(200),
+        };
+
+        Pip.VersionResolution resolution = await Pip
+            .ResolveLatestVersionAsync(client, "pip-5787-timeout", interpreter, CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.True(resolution.Failed);
+        Assert.Contains("HttpClient.Timeout", resolution.Error);
+        Assert.Contains("TimeoutException", resolution.Error);
+    }
+
+    [Fact]
+    public void DescribeFailureIncludesEveryInnerException()
+    {
+        var failure = new HttpRequestException(
+            "The SSL connection could not be established, see inner exception.",
+            new InvalidOperationException("RemoteCertificateNameMismatch")
+        );
+
+        Assert.Equal(
+            "HttpRequestException: The SSL connection could not be established, see inner exception."
+                + " ---> InvalidOperationException: RemoteCertificateNameMismatch",
+            Pip.DescribeFailure(failure)
+        );
+    }
+
+    private sealed class StalledHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException();
+        }
+    }
 }

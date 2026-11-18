@@ -91,12 +91,37 @@ installed version during an update check; the `.nupkg` URL comes from the regist
 and metadata comes from the version's page entry when the leaf carries no `catalogEntry`.
 None of this runs for a feed that has a flat container.
 
-On V2, Artifactory answers `GetUpdates()` with nothing unless `includeAllVersions` is true, and
-then truncates the list at 100 without a next link. So when every `GetUpdates()` batch of a
-source comes back empty, one `includeAllVersions=true` request tells "nothing is newer" (still
-empty: stop there) from "this server ignores the request", in which case each installed package
-is looked up with `FindPackagesById()?$filter=IsLatestVersion` (`IsAbsoluteLatestVersion` with
-pre-releases). V2 version lists follow `next` links, up to 50 pages.
+On V2, Artifactory's `GetUpdates()` cannot be trusted: it answers a batch of more than one id
+with nothing, even with `includeAllVersions=true`, and a single id only for some packages. A
+source whose responses carry `X-Artifactory-Id` or `X-JFrog-Version`, or the
+`http://jfrog.com/xmlns/nuget/` namespace in their body (which survives a proxy that strips
+headers), therefore skips `GetUpdates()` after its first answer, and on later checks for an hour,
+and each installed package is looked up by id instead.
+On other servers, when every `GetUpdates()` batch comes back empty, one `includeAllVersions=true`
+request tells "nothing is newer" (still empty: stop there) from "this server ignores the
+request", which leads to the same lookup by id.
+
+That lookup runs for several packages at once (`NuGetV3Client.MaxConcurrentRequests`); a failure
+looking up one package is logged against that package alone, and once the feed cannot be reached
+the remaining packages are skipped with one error instead of one each. It asks
+`FindPackagesById()?$filter=IsLatestVersion` (`IsAbsoluteLatestVersion` with
+pre-releases) without `semVerLevel`, because Artifactory ignores `IsLatestVersion` when
+`semVerLevel=2.0.0` is present. Every response is read as a version listing: the newest listed,
+eligible version above the installed one wins, and `next` links are followed, so a server that
+ignores the filter costs pages, not a wrong answer. Paging stops at a link already fetched or a
+page that adds no version, since some servers answer a paged link with the first page again.
+When the filtered request lists nothing for the id, the full
+`FindPackagesById()?semVerLevel=2.0.0` listing is read instead. Versions published in 1900 are
+unlisted and skipped. Packages no version of which is listed are named in one log line per
+source with whether credentials were sent; a response whose entries cannot be read is logged with
+its beginning. V2 version lists follow `next` links, up to 50 pages.
+
+V2 entries, in search and update results alike, are read without assuming one server's
+serialization: an `<entry>` may carry attributes, the data-service properties may use any
+namespace prefix, and an `Id` or `Version` missing from one place is taken from the other. Update
+results prefer the `Id`/`Version` elements; search prefers the `Packages(Id='…',Version='…')` link,
+as it always has, because galleries put the normalized version there and the original one in the
+element.
 
 ### Fallback behaviour
 

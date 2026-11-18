@@ -815,6 +815,7 @@ public sealed class PipManagerTests : IDisposable
 
         Assert.True(resolution.Failed);
         Assert.Null(resolution.Version);
+        Assert.Contains("ran out of time", resolution.Error);
     }
 
     [Fact]
@@ -869,6 +870,57 @@ public sealed class PipManagerTests : IDisposable
                 + " ---> InvalidOperationException: RemoteCertificateNameMismatch",
             Pip.DescribeFailure(failure)
         );
+    }
+
+    [Fact]
+    public async Task ResolveLatestVersionKeepsTheReasonWhenItFallsBackToACachedVersion()
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+        const string packageId = "pip-5791-cached";
+
+        using HttpClient client = new(new CachedThenFailingHandler());
+
+        Pip.VersionResolution first = await Pip.ResolveLatestVersionAsync(
+            client,
+            packageId,
+            interpreter,
+            CancellationToken.None
+        );
+        Pip.VersionResolution second = await Pip.ResolveLatestVersionAsync(
+            client,
+            packageId,
+            interpreter,
+            CancellationToken.None
+        );
+
+        Assert.Equal("1.0.0", first.Version);
+        Assert.Null(first.Error);
+        Assert.False(second.Failed);
+        Assert.Equal("1.0.0", second.Version);
+        Assert.Contains("connection reset", second.Error);
+    }
+
+    private sealed class CachedThenFailingHandler : HttpMessageHandler
+    {
+        private int _calls;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            if (Interlocked.Increment(ref _calls) > 1)
+                throw new HttpRequestException("connection reset");
+
+            var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"versions":["1.0.0"],"files":[{"filename":"pip_5791_cached-1.0.0-py3-none-any.whl"}]}"""
+                ),
+            };
+            response.Headers.ETag = new System.Net.Http.Headers.EntityTagHeaderValue("\"v1\"");
+            return Task.FromResult(response);
+        }
     }
 
     private sealed class StalledHandler : HttpMessageHandler

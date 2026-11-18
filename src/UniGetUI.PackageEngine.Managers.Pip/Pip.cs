@@ -683,15 +683,19 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                     $"Pip: the latest version of {packageId} could not be resolved: {e.Message}"
                 );
 
+                string reason = token.IsCancellationRequested
+                    ? $"the update check ran out of time before this lookup finished: {DescribeFailure(e)}"
+                    : DescribeFailure(e);
+
                 if (
                     _latestVersionCache.TryGetValue(
                         (interpreter.Original, packageId),
                         out CachedResolution known
                     )
                 )
-                    return new VersionResolution(known.Version, false);
+                    return new VersionResolution(known.Version, false, reason);
 
-                return new VersionResolution(null, true, DescribeFailure(e));
+                return new VersionResolution(null, true, reason);
             }
             finally
             {
@@ -910,6 +914,12 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                         );
                         continue;
                     }
+
+                    if (resolution.Error is not null)
+                        logger.Log(
+                            $"The latest version of {installed[i].Id} could not be refreshed, "
+                                + $"keeping the last known one: {resolution.Error}"
+                        );
 
                     if (resolution.Version is null)
                         continue;

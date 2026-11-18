@@ -2537,6 +2537,8 @@ public partial class MainWindow : Window
 
     internal bool HasUnsavedWork => ViewModel.HasUnsavedWork;
 
+    internal bool HasOpenDialog => _modalStack.Count > 0;
+
     internal bool CanQuitWithoutAsking => ViewModel.CanShutdownWithoutAsking;
 
     public void QuitApplication() => _ = RequestQuitApplicationAsync();

@@ -13,6 +13,8 @@ internal static class QuitAfterAutomaticUpdates
 
     private static readonly AutomaticQuitRequest Request = new();
 
+    private static bool _loggedDialogWait;
+
     public static void QuitWhenOperationsFinish(Task? launching = null, bool nothingToInstall = false)
     {
         if (!IsEnabled(nothingToInstall))
@@ -41,6 +43,7 @@ internal static class QuitAfterAutomaticUpdates
     private static async Task WaitAndQuitAsync(Task? launching)
     {
         AutomaticQuitDecision decision = AutomaticQuitDecision.Cancelled;
+        _loggedDialogWait = false;
         try
         {
             decision = await AutomaticQuitMonitor.RunAsync(
@@ -77,12 +80,22 @@ internal static class QuitAfterAutomaticUpdates
         if (MainWindow.Instance is not { } window)
             return null;
 
-        return new AutomaticQuitSnapshot(
-            IsBusy: IsBusy(),
-            IsEnabled: IsEnabled(Request.NothingToInstall),
-            IsAlreadyQuitting: window.IsQuitting,
-            IsWindowVisible: window.IsVisible,
-            HasUnsavedWork: window.HasUnsavedWork);
+        AutomaticQuitSnapshot snapshot = AutomaticQuitMonitor.Capture(
+            isBusy: IsBusy(),
+            isEnabled: IsEnabled(Request.NothingToInstall),
+            isAlreadyQuitting: window.IsQuitting,
+            isWindowVisible: window.IsVisible,
+            hasUnsavedWork: window.HasUnsavedWork,
+            hasOpenDialog: window.HasOpenDialog,
+            quitEvenWhenWindowIsOpen: Settings.Get(Settings.K.QuitEvenWhenWindowIsOpen));
+
+        if (snapshot.IsDialogOpen && !snapshot.IsBusy && !_loggedDialogWait)
+        {
+            _loggedDialogWait = true;
+            Logger.Info("Automatic updates have finished, UniGetUI will quit once its open dialog is closed, or after five minutes");
+        }
+
+        return snapshot;
     }
 
     internal static bool IsBusy()
@@ -94,6 +107,8 @@ internal static class QuitAfterAutomaticUpdates
 
     private static void Quit()
     {
+        if (MainWindow.Instance is { IsVisible: true, HasOpenDialog: true })
+            Logger.Warn("A dialog has stayed open for five minutes after automatic updates finished, quitting UniGetUI without waiting for it");
         Logger.ImportantInfo("Automatic updates have finished, quitting UniGetUI as configured");
         MainWindow.Instance?.QuitApplication();
     }

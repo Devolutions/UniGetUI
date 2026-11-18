@@ -299,13 +299,13 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         browseExecutableButton.Click += async (_, _) =>
         {
             if (TopLevel.GetTopLevel(this) is not { } topLevel) return;
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(
+            var files = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFilePickerAsync(
                 new FilePickerOpenOptions
                 {
                     AllowMultiple = false,
                     Title = CoreTools.Translate("Select executable"),
                     FileTypeFilter = GetExecutableFileTypeFilter(),
-                });
+                }));
             if (files is not [{ } file]) return;
 
             string? path = file.TryGetLocalPath();

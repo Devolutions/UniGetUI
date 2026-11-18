@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -190,11 +191,11 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             || GetMainWindow() is not { } window) return;
         var editor = new PkgFeedEditorViewModel(catalog.PkgFeed, catalog.AllowUnsignedPackages is true, async () =>
         {
-            var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            var folders = await NativePickerTracker.Track(window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = CoreTools.Translate("Choose the folder of the package feed"),
                 AllowMultiple = false,
-            });
+            }));
             return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
         });
         var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Package feed of {0}", catalog.Name),
@@ -464,7 +465,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         {
             var storage = MainWindow.Instance!.StorageProvider;
             string deployedFolder = Path.GetDirectoryName(SoftwareCatalog.FilePath)!;
-            var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+            var files = await NativePickerTracker.Track(storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = CoreTools.Translate("Open catalog file"),
                 AllowMultiple = false,
@@ -473,7 +474,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
                 SuggestedStartLocation = Directory.Exists(deployedFolder)
                     ? await storage.TryGetFolderFromPathAsync(deployedFolder)
                     : null,
-            });
+            }));
             if (files.Count > 0)
                 await _document.LoadAsync(files[0].TryGetLocalPath()
                     ?? throw new IOException(CoreTools.Translate("Select a local catalog file.")));
@@ -494,7 +495,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
             {
                 var storage = MainWindow.Instance!.StorageProvider;
                 string deployedFolder = Path.GetDirectoryName(SoftwareCatalog.FilePath)!;
-                var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+                var file = await NativePickerTracker.Track(storage.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
                     Title = CoreTools.Translate("Save catalog as"),
                     // An untitled catalog starts where it would be deployed.
@@ -505,7 +506,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
                     DefaultExtension = "json",
                     ShowOverwritePrompt = true,
                     FileTypeChoices = [new FilePickerFileType("JSON") { Patterns = ["*.json"] }],
-                });
+                }));
                 if (file is null) return;
                 path = file.TryGetLocalPath()
                     ?? throw new IOException(CoreTools.Translate("Select a local catalog file."));

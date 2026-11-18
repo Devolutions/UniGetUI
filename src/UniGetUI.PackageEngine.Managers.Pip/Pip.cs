@@ -391,7 +391,20 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
         private readonly record struct CachedResolution(string ETag, string? Version);
 
-        internal readonly record struct VersionResolution(string? Version, bool Failed);
+        internal readonly record struct VersionResolution(
+            string? Version,
+            bool Failed,
+            string? Error = null
+        );
+
+        internal static string DescribeFailure(Exception e)
+        {
+            List<string> parts = [];
+            for (Exception? current = e; current is not null; current = current.InnerException)
+                parts.Add($"{current.GetType().Name}: {current.Message}");
+
+            return string.Join(" ---> ", parts);
+        }
 
         private readonly object _indexUpdateCheckLock = new();
         private bool _indexUpdateCheckProbed;
@@ -670,15 +683,19 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                     $"Pip: the latest version of {packageId} could not be resolved: {e.Message}"
                 );
 
+                string reason = token.IsCancellationRequested
+                    ? $"the update check ran out of time before this lookup finished: {DescribeFailure(e)}"
+                    : DescribeFailure(e);
+
                 if (
                     _latestVersionCache.TryGetValue(
                         (interpreter.Original, packageId),
                         out CachedResolution known
                     )
                 )
-                    return new VersionResolution(known.Version, false);
+                    return new VersionResolution(known.Version, false, reason);
 
-                return new VersionResolution(null, true);
+                return new VersionResolution(null, true, reason);
             }
             finally
             {
@@ -882,6 +899,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 Task.WhenAll(resolutions).GetAwaiter().GetResult();
 
                 int failures = 0;
+                string? firstFailure = null;
                 List<Package> packages = [];
                 for (int i = 0; i < installed.Count; i++)
                 {
@@ -889,8 +907,19 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                     if (resolution.Failed)
                     {
                         failures++;
+                        firstFailure ??= $"{installed[i].Id}: {resolution.Error}";
+                        logger.Error(
+                            $"The latest version of {installed[i].Id} could not be resolved: "
+                                + resolution.Error
+                        );
                         continue;
                     }
+
+                    if (resolution.Error is not null)
+                        logger.Log(
+                            $"The latest version of {installed[i].Id} could not be refreshed, "
+                                + $"keeping the last known one: {resolution.Error}"
+                        );
 
                     if (resolution.Version is null)
                         continue;
@@ -914,7 +943,8 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 if (failures > installed.Count / 4)
                     throw new HttpRequestException(
                         $"{failures} of {installed.Count} version lookups against "
-                            + $"{DefaultSource.Url} failed, the update list would be incomplete"
+                            + $"{DefaultSource.Url} failed, the update list would be incomplete. "
+                            + $"First failure: {firstFailure}"
                     );
 
                 logger.Log($"Found {packages.Count} updates, {failures} lookups failed");

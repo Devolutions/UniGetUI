@@ -31,7 +31,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             if (failures.Length > 0)
             {
                 var urgent = failures
-                    .Where(entry => FailureNeedsAttention(manager, entry.Kind, entry.Listing))
+                    .Where(entry => FailureNeedsAttention(manager, record, entry.Kind, entry.Listing))
                     .OrderByDescending(entry => entry.Listing.ConsecutiveFailures)
                     .ThenByDescending(entry => entry.Listing.LastFailureUtc)
                     .FirstOrDefault();
@@ -121,16 +121,29 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
 
         private static bool FailureNeedsAttention(
             IPackageManager manager,
+            ManagerHealthRecord record,
             ManagerListingKind kind,
             ManagerListingHealth listing
         ) =>
-            listing.ConsecutiveFailures
-                >= (
-                    kind is ManagerListingKind.Installed && DetectsMalfunctions(manager)
-                        ? 1
-                        : AttentionFailureThreshold
-                )
-            && listing.LastFailureUtc >= ManagerHealthStore.Now - AttentionWindow;
+            listing.LastFailureUtc >= ManagerHealthStore.Now - AttentionWindow
+            && (
+                listing.LastFailureWasTimeout
+                    ? listing.ConsecutiveFailures >= AttentionFailureThreshold
+                        && !AnyListingSucceededSince(
+                            record,
+                            listing.FailureStreakStartUtc ?? listing.LastFailureUtc
+                        )
+                    : listing.ConsecutiveFailures
+                        >= (
+                            kind is ManagerListingKind.Installed && DetectsMalfunctions(manager)
+                                ? 1
+                                : AttentionFailureThreshold
+                        )
+            );
+
+        private static bool AnyListingSucceededSince(ManagerHealthRecord record, DateTime? since) =>
+            Enum.GetValues<ManagerListingKind>()
+                .Any(kind => record[kind].LastSuccessUtc > since);
 
         private static bool IsMalfunctioning(IPackageManager manager, ManagerHealthRecord record) =>
             DetectsMalfunctions(manager)

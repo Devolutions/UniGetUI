@@ -1454,6 +1454,52 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal("WinGet: Failed to connect to composite catalog.", exception.Message);
     }
 
+    [Theory]
+    [InlineData("msstore,winget", "", "msstore+winget|winget|(installed)")]
+    [InlineData("winget", "", "winget|(installed)")]
+    [InlineData("msstore", "", "msstore|(installed)")]
+    [InlineData("msstore,winget", "winget", "msstore+winget|winget")]
+    [InlineData("msstore,winget", "msstore+winget", "msstore+winget")]
+    [InlineData("msstore,winget", "none", "msstore+winget|winget|(installed)")]
+    public void NativeWinGetHelperFallsBackToTheInstalledCatalogAlone(
+        string catalogList,
+        string succeedsWith,
+        string expectedAttempts
+    )
+    {
+        List<string> attempts = [];
+        List<string> retries = [];
+        string[] catalogs = catalogList.Split(',');
+
+        string result = NativeWinGetHelper.FindWithFallbacks(
+            catalogs,
+            static catalog => catalog == "msstore",
+            selected =>
+            {
+                string attempt = selected.Count == 0 ? "(installed)" : string.Join("+", selected);
+                attempts.Add(attempt);
+                return attempt;
+            },
+            attempt => attempt == succeedsWith || (succeedsWith == "" && attempt == "(installed)"),
+            (_, next) => retries.Add(next)
+        );
+
+        Assert.Equal(expectedAttempts, string.Join("|", attempts));
+        Assert.Equal(attempts[^1], result);
+        Assert.Equal(attempts.Count - 1, retries.Count);
+    }
+
+    [Theory]
+    [InlineData("Microsoft.Rest", true)]
+    [InlineData("microsoft.rest", true)]
+    [InlineData("Microsoft.PreIndexed.Package", false)]
+    [InlineData("Microsoft.Test.Configurable", false)]
+    [InlineData(null, false)]
+    public void NativeWinGetHelperTreatsOnlyRestCatalogsAsOnlineOnly(string? type, bool onlineOnly)
+    {
+        Assert.Equal(onlineOnly, NativeWinGetHelper.IsOnlineOnlyCatalogType(type));
+    }
+
     [Fact]
     public void AttemptFastRepairKeepsNativeHelperWhileLocalPackageEnumerationIsStillRunning()
     {

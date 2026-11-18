@@ -493,10 +493,10 @@ for each manager across restarts, in `ManagerHealth.json` in its data folder:
 | Field | Meaning |
 | --- | --- |
 | `state` | `loading` (still starting), `unknown` (nothing listed yet), `healthy`, `failing`, `malfunctioning`, `not-found` or `disabled`. |
-| `needsAttention` | `true` when the app shows its health banner: a malfunction, or a listing that failed at least twice in a row with its last failure in the past 24 hours. For WinGet, Apt, Dnf and Pacman a single failed installed listing is enough. |
+| `needsAttention` | `true` when the app shows its health banner: a malfunction, or a listing that failed at least twice in a row with its last failure in the past 24 hours. For WinGet, Apt, Dnf and Pacman a single failed installed listing is enough, unless it timed out. A listing that keeps timing out needs attention only if no listing of that manager has succeeded since its failures began, so a manager that is only slow while the network comes up is not reported. |
 | `failingListing` | `search`, `installed` or `updates`: the listing that failed most recently, or `installed` for a malfunction. |
 | `reason`, `consecutiveFailures` | The failing listing's last error and how many times in a row it failed. |
-| `search`, `installed`, `updates` | Per listing: `lastSuccessUtc`, `lastFailureUtc`, `lastFailureReason`, `lastFailureWasTimeout`, `consecutiveFailures`, `lastPackageCount`, `lastFastRepairUtc`, `lastFastRepairReason` (a first attempt that failed and was retried) and `recentDurationsMs` (the last ten). |
+| `search`, `installed`, `updates` | Per listing: `lastSuccessUtc`, `lastFailureUtc`, `lastFailureReason`, `lastFailureWasTimeout` (the failure, or the first attempt it retried, timed out), `consecutiveFailures`, `failureStreakStartUtc` (when the current run of failures began), `lastPackageCount`, `lastFastRepairUtc`, `lastFastRepairReason` (a first attempt that failed and was retried) and `recentDurationsMs` (the last ten). |
 
 A manager is `malfunctioning` when it is ready, its installed listing succeeded and returned no package
 at all, and a working installation of it always lists something (WinGet, Apt, Dnf and Pacman). The

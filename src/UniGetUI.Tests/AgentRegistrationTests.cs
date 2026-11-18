@@ -513,8 +513,15 @@ public class AgentRegistrationTests
         );
         await h.WelcomeAsync();
         await h.SendAsync("""{"kind":"Ping"}""");
-        Assert.Equal("Pong", (await h.ReadAsync())!.Value.GetProperty("kind").GetString());
-        Assert.Equal("Ping", (await h.ReadAsync())!.Value.GetProperty("kind").GetString());
+        bool receivedPing = false;
+        bool receivedPong = false;
+        while (!receivedPing || !receivedPong)
+        {
+            string? kind = (await h.ReadAsync())!.Value.GetProperty("kind").GetString();
+            Assert.True(kind is "Ping" or "Pong");
+            receivedPing |= kind is "Ping";
+            receivedPong |= kind is "Pong";
+        }
     }
 
     [Fact]

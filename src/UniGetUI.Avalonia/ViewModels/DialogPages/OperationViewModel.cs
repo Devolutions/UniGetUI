@@ -19,6 +19,7 @@ using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels;
@@ -293,6 +294,10 @@ public sealed partial class OperationViewModel : ViewModelBase
         }
         else
         {
+            if (Operation is PackageOperation ignorableOp && PackageOperation.CanIgnoreUpdatesAfterFailure(ignorableOp))
+                OpMenu.Items.Add(Item("Ignore updates for this package", "pin.svg", true,
+                    () => _ = UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(ignorableOp.Package)));
+
             OpMenu.Items.Add(Item("Retry", "reload.svg", true,
                 () => Operation.Retry(AbstractOperation.RetryMode.Retry)));
 

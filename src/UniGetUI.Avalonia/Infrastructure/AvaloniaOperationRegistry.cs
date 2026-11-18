@@ -13,6 +13,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageOperations;
 
@@ -118,7 +119,8 @@ public static class AvaloniaOperationRegistry
     public static void RetryFailed()
     {
         var failed = OperationViewModels
-            .Where(vm => vm.Operation.Status is OperationStatus.Failed)
+            .Where(vm => vm.Operation.Status is OperationStatus.Failed
+                && PackageOperation.IsWorthRetryingInBulk(vm.Operation))
             .ToList();
         foreach (var vm in failed)
             vm.Operation.Retry(AbstractOperation.RetryMode.Retry);

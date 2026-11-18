@@ -1318,6 +1318,7 @@
   "{package} may already be up to date, or no installer matches this system": "{package} may already be up to date, or no installer matches this system",
   "{package} could not be updated because its package source was busy or unreachable. Try again in a few minutes": "{package} could not be updated because its package source was busy or unreachable. Try again in a few minutes",
   "{package} is currently running. Close it and try again": "{package} is currently running. Close it and try again",
+  "WinGet cannot update {package}. Its publisher requires updating it another way, for example from within the app itself": "WinGet cannot update {package}. Its publisher requires updating it another way, for example from within the app itself",
   "{package} Uninstall": "{package} Uninstall",
   "{0} is being uninstalled": "{0} is being uninstalled",
   "Uninstall succeeded": "Uninstall succeeded",

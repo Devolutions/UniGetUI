@@ -3,6 +3,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageOperations;
 
@@ -119,7 +120,7 @@ internal static class TuiOperationRegistry
 
     public static void RetryFailed()
     {
-        foreach (var op in Snapshot().Where(o => o.Status is OperationStatus.Failed))
+        foreach (var op in Snapshot().Where(o => o.Status is OperationStatus.Failed && PackageOperation.IsWorthRetryingInBulk(o)))
             op.Retry(AbstractOperation.RetryMode.Retry);
     }
 

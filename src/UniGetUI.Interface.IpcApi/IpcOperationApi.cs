@@ -27,6 +27,7 @@ public class IpcOperationInfo
     public bool CanForget { get; set; }
     public IReadOnlyList<string> AvailableQueueActions { get; set; } = [];
     public IReadOnlyList<string> AvailableRetryModes { get; set; } = [];
+    public bool UpdateRefusedByPublisher { get; set; }
     public IpcPackageInfo? Package { get; set; }
     public string ManagerName { get; set; } = "";
     public string SourceName { get; set; } = "";
@@ -217,6 +218,7 @@ public static class IpcOperationApi
             CanForget = info.CanForget,
             AvailableQueueActions = info.AvailableQueueActions,
             AvailableRetryModes = info.AvailableRetryModes,
+            UpdateRefusedByPublisher = info.UpdateRefusedByPublisher,
             Package = info.Package,
             ManagerName = info.ManagerName,
             SourceName = info.SourceName,
@@ -359,6 +361,9 @@ public static class IpcOperationApi
                 ? ["run-now", "run-next", "run-last"]
                 : [],
             AvailableRetryModes = !IsActive(operation.Status) ? GetRetryModes(operation) : [],
+            UpdateRefusedByPublisher =
+                operation is PackageOperation packageOperation
+                && PackageOperation.CanIgnoreUpdatesAfterFailure(packageOperation),
             Package = GetOperationPackage(operation),
             ManagerName = GetManagerName(operation),
             SourceName = GetSourceName(operation),

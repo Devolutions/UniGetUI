@@ -104,6 +104,7 @@ namespace UniGetUI.PackageEngine.Operations
         }
         internal bool IsReinstallStep { get; init; }
         public bool FailedBecauseApplicationRunning { get; private set; }
+        public bool FailedBecauseUpdateNotSupported { get; private set; }
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
         private readonly List<string> _brokerKillBeforeOperationAdded = [];
@@ -1225,6 +1226,7 @@ namespace UniGetUI.PackageEngine.Operations
             );
 
             FailedBecauseApplicationRunning = false;
+            FailedBecauseUpdateNotSupported = false;
             Metadata.FailureTitle = _genericFailureTitle;
             Metadata.FailureMessage = _genericFailureMessage;
             if (veredict is OperationVeredict.Failure)
@@ -1241,7 +1243,11 @@ namespace UniGetUI.PackageEngine.Operations
                 )
                     Metadata.FailureMessage = explanation;
                 if (CommandRole is OperationType.Update)
+                {
                     ExplainNotApplicableUpdate(Output, ReturnCode);
+                    FailedBecauseUpdateNotSupported =
+                        Package.Manager.OperationHelper.UpdateWasRefusedByPublisher(Output, ReturnCode);
+                }
                 ExplainInstallerHashMismatch(ReturnCode);
                 ExplainApplicationCurrentlyRunning(Output, ReturnCode);
                 ExplainFileInUse(Output);
@@ -1464,6 +1470,12 @@ namespace UniGetUI.PackageEngine.Operations
             );
 #endif
         }
+
+        public static bool CanIgnoreUpdatesAfterFailure(PackageOperation operation) =>
+            operation.FailedBecauseUpdateNotSupported;
+
+        public static bool IsWorthRetryingInBulk(AbstractOperation operation) =>
+            operation is not PackageOperation { FailedBecauseUpdateNotSupported: true };
 
         private void ExplainInstallerHashMismatch(int returnCode)
         {

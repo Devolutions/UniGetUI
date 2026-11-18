@@ -62,12 +62,12 @@ internal static class OperationHistoryLogDialog
         var exportButton = CreateDialogButton(CoreTools.Translate("Export to a file"));
         exportButton.Click += async (_, _) =>
         {
-            var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var file = await NativePickerTracker.Track(owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = CoreTools.Translate("Export log"),
                 SuggestedFileName = CoreTools.Translate("UniGetUI Log"),
                 FileTypeChoices = [new FilePickerFileType(CoreTools.Translate("Text")) { Patterns = ["*.txt"] }],
-            });
+            }));
             if (file is not null)
                 await File.WriteAllTextAsync(file.Path.LocalPath, plainText);
         };

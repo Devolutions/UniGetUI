@@ -1012,14 +1012,14 @@ public abstract partial class AbstractPackagesPage : UserControl,
             return;
         }
 
-        var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await NativePickerTracker.Track(win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = CoreTools.MakeValidFileName(vm.PageTitle) + ".csv",
             FileTypeChoices =
             [
                 new FilePickerFileType(CoreTools.Translate("CSV file")) { Patterns = ["*.csv"] },
             ],
-        });
+        }));
 
         var path = file?.TryGetLocalPath();
         if (path is null) return;

@@ -389,6 +389,12 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 
                 if (elements.Length <= 2)
                 {
+                    if (line.Contains('|'))
+                    {
+                        var failure = new InvalidDataException("A Chocolatey update row is missing columns.");
+                        Logger.Warn(failure.Message);
+                        PackageListingScope.ReportIncomplete(failure);
+                    }
                     continue;
                 }
 
@@ -509,9 +515,11 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             string details = string.IsNullOrWhiteSpace(error)
                 ? string.Join(' ', output.Where(l => !string.IsNullOrWhiteSpace(l)).TakeLast(3))
                 : error;
-            throw new InvalidOperationException(
+            var failure = new InvalidOperationException(
                 $"{Name} exited with code {exitCode} while listing packages: {details.Trim()}"
             );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
         }
 
         protected override IReadOnlyList<Package> _getInstalledPackages_UnSafe()

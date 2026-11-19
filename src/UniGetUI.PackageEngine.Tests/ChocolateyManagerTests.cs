@@ -977,13 +977,28 @@ public sealed class ChocolateyManagerTests : IDisposable
         public IReadOnlyList<Package> ListUpdates() => GetAvailableUpdates_UnSafe();
     }
 
-    private ListingChocolatey ChocolateyRunning(int exitCode, string stderr) =>
+    [Fact]
+    public void MalformedUpdateRowsKeepOtherRowsNormallyButFailListingOnly()
+    {
+        var manager = new Chocolatey();
+        string[] output = ["first|1.0|2.0|false", "broken|1.0", "last|1.0|2.0|false"];
+        List<Exception> failures = [];
+
+        using (PackageListingScope.TrackFailures(failures.Add))
+            Assert.Equal(["first", "last"], manager.ParseAvailableUpdates(output).Select(package => package.Id));
+        Assert.IsType<InvalidDataException>(Assert.Single(failures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidDataException>(() => manager.ParseAvailableUpdates(output));
+    }
+
+    private ListingChocolatey ChocolateyRunning(int exitCode, string stderr, params string[] stdout) =>
         new()
         {
             Status = new ManagerStatus
             {
                 Found = true,
-                ExecutablePath = FailingCommandScript.Create(_testRoot, exitCode, stderr),
+                ExecutablePath = FailingCommandScript.Create(_testRoot, exitCode, stderr, stdout),
                 ExecutableCallArgs = "",
             },
         };
@@ -991,8 +1006,11 @@ public sealed class ChocolateyManagerTests : IDisposable
     [Fact]
     public void AFailingChocoListingIsAFailedListingRatherThanAnEmptyOne()
     {
-        var choco = ChocolateyRunning(1, "choco is broken");
+        var choco = ChocolateyRunning(1, "choco is broken", "git 2.45.0", "git|2.45.0|2.46.0|false");
 
+        Assert.Equal("git", Assert.Single(choco.ListInstalled()).Id);
+        Assert.Equal("git", Assert.Single(choco.ListUpdates()).Id);
+        using var scope = PackageListingScope.EnterListingOnly();
         Assert.Contains("choco is broken", Assert.Throws<InvalidOperationException>(choco.ListInstalled).Message);
         Assert.Throws<InvalidOperationException>(choco.ListUpdates);
     }

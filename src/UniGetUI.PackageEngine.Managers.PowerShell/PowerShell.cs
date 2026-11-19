@@ -124,9 +124,13 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             p.WaitForExit();
             logger.Close(p.ExitCode);
             if (p.ExitCode != 0)
-                throw new InvalidOperationException(
+            {
+                var failure = new InvalidOperationException(
                     $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
                 );
+                Logger.Warn(failure.Message);
+                UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(failure);
+            }
 
             return ParseInstalledPackages(outputLines, this);
         }

@@ -327,9 +327,13 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
         private void ThrowIfListingFailed(int exitCode, string error)
         {
             if (exitCode != 0)
-                throw new InvalidOperationException(
+            {
+                var failure = new InvalidOperationException(
                     $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
                 );
+                Logger.Warn(failure.Message);
+                UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(failure);
+            }
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()

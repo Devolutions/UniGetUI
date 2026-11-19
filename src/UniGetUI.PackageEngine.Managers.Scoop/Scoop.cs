@@ -646,9 +646,13 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
             IReadOnlyList<string> lines = ScoopProcess.ReadLines(p, logger, out string error);
             if (p.ExitCode != 0)
-                throw new InvalidOperationException(
+            {
+                var failure = new InvalidOperationException(
                     $"{Name} exited with code {p.ExitCode} while listing available updates: {error.Trim()}"
                 );
+                Logger.Warn(failure.Message);
+                PackageListingScope.ReportIncomplete(failure);
+            }
 
             return ParseAvailableUpdates(
                 lines,
@@ -689,9 +693,13 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             IReadOnlyList<string> lines = ScoopProcess.ReadLines(p, logger, out string error);
             IReadOnlyList<Package> packages = ParseInstalledPackages(lines);
             if (IsInstalledListingFailure(p.ExitCode, [.. lines, error], packages.Count))
-                throw new InvalidOperationException(
+            {
+                var failure = new InvalidOperationException(
                     $"{Name} exited with code {p.ExitCode} while listing installed packages: {error.Trim()}"
                 );
+                Logger.Warn(failure.Message);
+                PackageListingScope.ReportIncomplete(failure);
+            }
             return packages;
         }
 

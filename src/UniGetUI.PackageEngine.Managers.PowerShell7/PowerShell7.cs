@@ -8,6 +8,7 @@ using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.Chocolatey;
@@ -95,16 +96,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    // An empty scope makes Get-InstalledPSResource report InstalledPackageNotFound,
-                    // which is not a failure; anything else must fail the listing.
-                    Arguments =
-                        Status.ExecutableCallArgs
-                        + " \"$ErrorActionPreference = 'Stop';"
-                        + " foreach ($scope in 'AllUsers', 'CurrentUser') {"
-                        + " Write-Output ('##SCOPE:' + $scope + '##');"
-                        + " try { Get-InstalledPSResource -Scope $scope | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository } }"
-                        + " catch { if ($_.FullyQualifiedErrorId -notlike 'InstalledPackageNotFound,*') { throw } } };"
-                        + " exit 0\"",
+                    Arguments = Status.ExecutableCallArgs + " \"" + InstalledListingCommand + "\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
@@ -133,12 +125,27 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
             p.WaitForExit();
             logger.Close(p.ExitCode);
             if (p.ExitCode != 0)
-                throw new InvalidOperationException(
+            {
+                var failure = new InvalidOperationException(
                     $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
                 );
+                Logger.Warn(failure.Message);
+                PackageListingScope.ReportIncomplete(failure);
+            }
 
             return ParseInstalledPackages(outputLines, this);
         }
+
+        internal static string InstalledListingCommand =>
+            (PackageListingScope.IsListingOnly ? "$ErrorActionPreference = 'Stop';" : "")
+            + " $Error.Clear();"
+            + " foreach ($scope in 'AllUsers', 'CurrentUser') {"
+            + " Write-Output ('##SCOPE:' + $scope + '##');"
+            + " try { Get-InstalledPSResource -Scope $scope | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository } }"
+            + " catch { if ($_.FullyQualifiedErrorId -notlike 'InstalledPackageNotFound,*') { Write-Error $_ } } };"
+            // Empty scopes are expected. Other non-terminating errors still invalidate the snapshot.
+            + " if ($Error | Where-Object { $_.FullyQualifiedErrorId -notlike 'InstalledPackageNotFound,*' }) { exit 1 };"
+            + " exit 0";
 
         internal static IReadOnlyList<Package> ParseInstalledPackages(
             IEnumerable<string> outputLines,
@@ -158,7 +165,15 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
 
                 string[] elements = line.Split('\t');
                 if (elements.Length < 3)
+                {
+                    if (line.Contains('\t') && !string.IsNullOrWhiteSpace(line))
+                    {
+                        var failure = new InvalidDataException("A PowerShell 7 package row is missing columns.");
+                        Logger.Warn(failure.Message);
+                        PackageListingScope.ReportIncomplete(failure);
+                    }
                     continue;
+                }
 
                 for (int i = 0; i < elements.Length; i++)
                     elements[i] = elements[i].Trim();

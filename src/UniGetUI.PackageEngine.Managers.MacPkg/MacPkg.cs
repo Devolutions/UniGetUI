@@ -95,7 +95,7 @@ public sealed class MacPkg : PackageManager
     // ── Listing ────────────────────────────────────────────────────────────
 
     /// <summary>The newest package of each identifier in every feed. An unreachable feed is skipped.</summary>
-    internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item)> ListLatest(bool throwOnFeedFailure = false)
+    internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item)> ListLatest()
     {
         var result = new List<(IManagerSource, PkgFeedItem)>();
         foreach (var source in SourcesHelper.GetSources())
@@ -105,9 +105,10 @@ public sealed class MacPkg : PackageManager
                 foreach (var item in PkgFeed.Latest(PkgFeed.List(source.Url), CompareVersions, RuntimeInformation.OSArchitecture))
                     result.Add((source, item));
             }
-            catch (Exception ex) when (!throwOnFeedFailure)
+            catch (Exception ex)
             {
                 Logger.Warn($"Could not list the package feed {source.Name} at {source.Url}: {ex.Message}");
+                UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(ex);
             }
         }
         return result;
@@ -167,19 +168,20 @@ public sealed class MacPkg : PackageManager
     // feed's own version stays on Item, for finding the package to install.
     // A strict listing fails on an unreadable feed or receipt store instead of reporting what they
     // would have shown as not installed.
-    internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item, string Installed, string Offered, bool HasUpdate)> ListInstalled(bool strict = false)
+    internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item, string Installed, string Offered, bool HasUpdate)> ListInstalled()
     {
-        var latest = ListLatest(strict);
+        var latest = ListLatest();
         IReadOnlyDictionary<string, string> receipts;
         try
         {
             receipts = PkgReceipts.GetInstalledVersions(
                 latest.Where(p => !p.Item.CopiesAnApp).Select(p => p.Item.Id), TaskLogger);
         }
-        catch (Exception ex) when (!strict && ex is InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
         {
             // Without receipts, packages are still recognized by their apps, as disk images always are.
             Logger.Warn($"Could not read the installer package receipts ({ex.Message}); recognizing installed apps by their bundles only.");
+            UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(ex);
             receipts = new Dictionary<string, string>();
         }
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -205,12 +207,12 @@ public sealed class MacPkg : PackageManager
     }
 
     protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
-        ListInstalled(strict: true)
+        ListInstalled()
             .Select(p => new Package(p.Item.Name, p.Item.Id, p.Installed, p.Source, this))
             .ToArray();
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe() =>
-        ListInstalled(strict: true)
+        ListInstalled()
             .Where(p => p.HasUpdate)
             .Select(p => new Package(p.Item.Name, p.Item.Id, p.Installed, p.Offered, p.Source, this))
             .ToArray();

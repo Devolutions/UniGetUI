@@ -15,8 +15,8 @@ internal static class FailingCommandScript
             File.WriteAllLines(path,
             [
                 "@echo off",
-                .. stdout.Select(line => $"echo {line}"),
-                $"echo {stderr} 1>&2",
+                .. stdout.Select(line => $"echo({EscapeBatch(line)}"),
+                $"echo({EscapeBatch(stderr)} 1>&2",
                 $"exit /b {exitCode}",
             ]);
             return path;
@@ -35,4 +35,8 @@ internal static class FailingCommandScript
             return path;
         }
     }
+
+    private static string EscapeBatch(string value) =>
+        value.Replace("^", "^^").Replace("%", "%%").Replace("&", "^&")
+            .Replace("|", "^|").Replace("<", "^<").Replace(">", "^>");
 }

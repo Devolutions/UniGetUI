@@ -1128,11 +1128,40 @@ public sealed class WinGetCliParsingTests : IDisposable
     {
         var helper = new WinGetCliHelper(
             new WinGet(),
-            FailingCommandScript.Create(_testRoot, unchecked((int)0x8A15000F), "data required by the source is missing")
+            FailingCommandScript.Create(
+                _testRoot, unchecked((int)0x8A15000F), "data required by the source is missing",
+                "Name Id      Version Available Source",
+                "-------------------------------------",
+                "Git  Git.Git 2.45.0  2.46.0    winget")
         );
 
+        Assert.Equal("Git.Git", Assert.Single(helper.GetInstalledPackages_UnSafe()).Id);
+        Assert.Equal("Git.Git", Assert.Single(helper.GetAvailableUpdates_UnSafe()).Id);
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
         Assert.Throws<InvalidOperationException>(helper.GetInstalledPackages_UnSafe);
         Assert.Throws<InvalidOperationException>(helper.GetAvailableUpdates_UnSafe);
+    }
+
+    [Fact]
+    public void ARecordThatFailsToParseKeepsOtherRowsNormallyButFailsListingOnly()
+    {
+        var manager = new WinGet();
+        string[] output =
+        [
+            "Name Id      Version",
+            "-------------------------",
+            "Git  Git.Git 2.45.0",
+            "Bad          1.0",
+            "Tool Tool.Id 2.0",
+        ];
+        List<Exception> failures = [];
+
+        using (UniGetUI.PackageEngine.Interfaces.PackageListingScope.TrackFailures(failures.Add))
+            Assert.Equal(["Git.Git", "Tool.Id"], WinGetCliHelper.ParseInstalledPackages(manager, output).Select(package => package.Id));
+        Assert.IsType<IndexOutOfRangeException>(Assert.Single(failures));
+
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
+        Assert.Throws<IndexOutOfRangeException>(() => WinGetCliHelper.ParseInstalledPackages(manager, output));
     }
 }
 #endif

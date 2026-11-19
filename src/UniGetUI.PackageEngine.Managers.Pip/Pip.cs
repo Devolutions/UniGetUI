@@ -684,6 +684,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 Logger.Debug(
                     $"Pip: the latest version of {packageId} could not be resolved: {e.Message}"
                 );
+                PackageListingScope.ReportIncomplete(e);
 
                 string reason = token.IsCancellationRequested
                     ? $"the update check ran out of time before this lookup finished: {DescribeFailure(e)}"
@@ -942,12 +943,12 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                     );
                 }
 
-                if (failures > installed.Count / 4)
-                    throw new HttpRequestException(
+                if (failures > 0)
+                    PackageListingScope.ReportIncomplete(new HttpRequestException(
                         $"{failures} of {installed.Count} version lookups against "
                             + $"{DefaultSource.Url} failed, the update list would be incomplete. "
                             + $"First failure: {firstFailure}"
-                    );
+                    ));
 
                 logger.Log($"Found {packages.Count} updates, {failures} lookups failed");
                 logger.Close(0);
@@ -1005,9 +1006,13 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             logger.Close(p.ExitCode);
 
             if (p.ExitCode != 0)
-                throw new InvalidOperationException(
+            {
+                var failure = new InvalidOperationException(
                     $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
                 );
+                Logger.Warn(failure.Message);
+                PackageListingScope.ReportIncomplete(failure);
+            }
 
             return outputLines;
         }

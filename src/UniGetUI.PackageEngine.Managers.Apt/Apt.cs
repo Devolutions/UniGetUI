@@ -219,9 +219,13 @@ public class Apt : PackageManager
     private void ThrowIfListingFailed(int exitCode, string error)
     {
         if (exitCode != 0)
-            throw new InvalidOperationException(
+        {
+            var failure = new InvalidOperationException(
                 $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
             );
+            UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()

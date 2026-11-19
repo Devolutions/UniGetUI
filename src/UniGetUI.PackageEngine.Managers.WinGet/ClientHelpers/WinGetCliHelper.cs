@@ -96,9 +96,13 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
     private void ThrowIfListingFailed(int exitCode, string error)
     {
         if (IsListingFailure(exitCode))
-            throw new InvalidOperationException(
+        {
+            var failure = new InvalidOperationException(
                 $"{Manager.Name} exited with code 0x{exitCode:X8} while listing packages: {error.Trim()}"
             );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     private static IEnumerable<string> ReadOutputLines(Process p, IProcessTaskLogger logger)
@@ -283,6 +287,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
                 catch (Exception e)
                 {
                     Logger.Error(e);
+                    PackageListingScope.ReportIncomplete(e);
                 }
             }
         }

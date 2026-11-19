@@ -771,6 +771,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             public bool Skipped;
             public Exception? FastRepairCause;
             public Exception? Failure;
+            public Exception? Incomplete;
         }
 
         private IReadOnlyList<IPackage> TrackListing(
@@ -780,6 +781,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         )
         {
             ListingOutcome outcome = new() { Started = Stopwatch.GetTimestamp() };
+            using var tracking = PackageListingScope.TrackFailures(error =>
+                Interlocked.CompareExchange(ref outcome.Incomplete, error, null)
+            );
             long start = Stopwatch.GetTimestamp();
             IReadOnlyList<IPackage> packages = listing(outcome);
             if (!outcome.Skipped && outcome.Failure is null && WasStoppedSince(outcome.Started))
@@ -793,10 +797,19 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 else if (kind is ManagerListingKind.Updates)
                     LastUpdatesListingFailed = true;
             }
+            if (outcome.Incomplete is { } incomplete)
+            {
+                Logger.Warn($"Manager {Name} returned an incomplete {kind} listing: {incomplete.Message}");
+                outcome.Failure ??= incomplete;
+            }
             // A skipped inventory listing did not list anything, so it cannot count as listed.
             failed =
                 outcome.Failure is not null
                 || (outcome.Skipped && kind is ManagerListingKind.Installed or ManagerListingKind.Updates);
+            if (kind is ManagerListingKind.Installed)
+                LastInstalledListingFailed = failed;
+            else if (kind is ManagerListingKind.Updates)
+                LastUpdatesListingFailed = failed;
 
             if (!outcome.Skipped)
             {

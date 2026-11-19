@@ -160,9 +160,13 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
         private void ThrowIfListingFailed(int exitCode, string output, string error)
         {
             if (IsListingFailure(exitCode, output))
-                throw new InvalidOperationException(
+            {
+                var failure = new InvalidOperationException(
                     $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
                 );
+                Logger.Warn(failure.Message);
+                PackageListingScope.ReportIncomplete(failure);
+            }
         }
 
         // `npm outdated` exits 1 when updates exist, and `npm list` exits 1 with an ELSPROBLEMS
@@ -598,24 +602,30 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             if (!output.Any())
                 return packages;
 
-            JsonObject? contents = JsonNode.Parse(output) as JsonObject;
-            foreach (var (packageId, packageData) in contents?.ToDictionary() ?? [])
+            foreach (var (packageId, packageData) in ParseListingEntries(output))
             {
-                string? version = packageData?["current"]?.ToString();
-                string? newVersion = packageData?["latest"]?.ToString();
-                if (version is not null && newVersion is not null)
+                try
                 {
-                    packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(packageId),
-                            packageId,
-                            version,
-                            newVersion,
-                            source,
-                            manager,
-                            options
-                        )
-                    );
+                    string? version = packageData?["current"]?.ToString();
+                    string? newVersion = packageData?["latest"]?.ToString();
+                    if (version is not null && newVersion is not null)
+                    {
+                        packages.Add(
+                            new Package(
+                                CoreTools.FormatAsName(packageId),
+                                packageId,
+                                version,
+                                newVersion,
+                                source,
+                                manager,
+                                options
+                            )
+                        );
+                    }
+                }
+                catch (Exception error) when (error is InvalidOperationException or ArgumentException)
+                {
+                    ReportListingParseFailure(error);
                 }
             }
 
@@ -633,26 +643,61 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             if (!output.Any())
                 return packages;
 
-            JsonObject? contents = (JsonNode.Parse(output) as JsonObject)?["dependencies"] as JsonObject;
-            foreach (var (packageId, packageData) in contents?.ToDictionary() ?? [])
+            foreach (var (packageId, packageData) in ParseListingEntries(output, installed: true))
             {
-                string? version = packageData?["version"]?.ToString();
-                if (version is not null)
+                try
                 {
-                    packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(packageId),
-                            packageId,
-                            version,
-                            source,
-                            manager,
-                            options
-                        )
-                    );
+                    string? version = packageData?["version"]?.ToString();
+                    if (version is not null)
+                    {
+                        packages.Add(
+                            new Package(
+                                CoreTools.FormatAsName(packageId),
+                                packageId,
+                                version,
+                                source,
+                                manager,
+                                options
+                            )
+                        );
+                    }
+                }
+                catch (Exception error) when (error is InvalidOperationException or ArgumentException)
+                {
+                    ReportListingParseFailure(error);
                 }
             }
 
             return packages;
+        }
+
+        private static IReadOnlyDictionary<string, JsonNode?> ParseListingEntries(string output, bool installed = false)
+        {
+            try
+            {
+                if (JsonNode.Parse(output) is not JsonObject contents)
+                    throw new System.Text.Json.JsonException("npm listing must be a JSON object.");
+                if (!installed)
+                    return contents.ToDictionary();
+
+                return contents["dependencies"] switch
+                {
+                    null => new Dictionary<string, JsonNode?>(),
+                    JsonObject dependencies => dependencies.ToDictionary(),
+                    _ => throw new System.Text.Json.JsonException("npm dependencies must be a JSON object."),
+                };
+            }
+            catch (Exception error) when (error is System.Text.Json.JsonException or ArgumentException)
+            {
+                ReportListingParseFailure(error);
+                return new Dictionary<string, JsonNode?>();
+            }
+        }
+
+        private static void ReportListingParseFailure(Exception error)
+        {
+            Logger.Warn($"Could not parse an npm package listing: {error.Message}");
+            PackageListingScope.ReportIncomplete(error);
         }
     }
 }

@@ -5,6 +5,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Tests;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
@@ -299,11 +300,16 @@ public sealed class PipManagerTests : IDisposable
             Status = new ManagerStatus
             {
                 Found = true,
-                ExecutablePath = FailingCommandScript.Create(_testRoot, 17, "broken environment"),
+                ExecutablePath = FailingCommandScript.Create(
+                    _testRoot, 17, "broken environment",
+                    "Package Version Latest Type", "------- ------- ------ -----", "pip 24.0 25.0 wheel"),
                 ExecutableCallArgs = "",
             },
         };
 
+        Assert.Equal("pip", Assert.Single(pip.ListInstalled()).Id);
+        Assert.Equal("pip", Assert.Single(pip.ListUpdates()).Id);
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
         var installed = Assert.Throws<InvalidOperationException>(pip.ListInstalled);
         Assert.Contains("17", installed.Message);
         Assert.Contains("broken environment", installed.Message);
@@ -926,6 +932,42 @@ public sealed class PipManagerTests : IDisposable
         Assert.False(second.Failed);
         Assert.Equal("1.0.0", second.Version);
         Assert.Contains("connection reset", second.Error);
+    }
+
+    [Theory]
+    [InlineData("{")]
+    [InlineData("""{"files":[]}""")]
+    public async Task MalformedIndexJsonReportsIncompleteNormallyAndFailsListingOnly(string json)
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+        using HttpClient client = new(new IndexJsonHandler(json));
+        List<Exception> failures = [];
+
+        using (PackageListingScope.TrackFailures(failures.Add))
+        {
+            var resolution = await Pip.ResolveLatestVersionAsync(
+                client, "pip-5764-malformed-index", interpreter, CancellationToken.None);
+            Assert.True(resolution.Failed);
+            Assert.Null(resolution.Version);
+        }
+        Exception failure = Assert.Single(failures);
+        Assert.True(failure is System.Text.Json.JsonException or InvalidDataException);
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        var strictFailure = await Assert.ThrowsAnyAsync<Exception>(() =>
+            Pip.ResolveLatestVersionAsync(client, "pip-5764-malformed-index", interpreter, CancellationToken.None));
+        Assert.Equal(failure.GetType(), strictFailure.GetType());
+    }
+
+    private sealed class IndexJsonHandler(string json) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        ) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent(json),
+        });
     }
 
     private sealed class CachedThenFailingHandler : HttpMessageHandler

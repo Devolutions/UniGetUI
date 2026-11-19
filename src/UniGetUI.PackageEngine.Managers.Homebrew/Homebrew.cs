@@ -257,9 +257,13 @@ public partial class Homebrew : PackageManager
     private void ThrowIfListingFailed(int exitCode, string error)
     {
         if (exitCode != 0)
-            throw new InvalidOperationException(
+        {
+            var failure = new InvalidOperationException(
                 $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
             );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     // "brew outdated --verbose" prints a different comparison operator per package type:
@@ -274,9 +278,13 @@ public partial class Homebrew : PackageManager
         // Sources (formula or cask) come from the installed list, so it must have succeeded.
         IReadOnlyList<IPackage> installed = GetInstalledPackages(out bool installedFailed);
         if (installedFailed)
-            throw new InvalidOperationException(
+        {
+            var failure = new InvalidOperationException(
                 $"{Name} could not list its installed packages, so its updates cannot be checked."
             );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
 
         using var p = new Process { StartInfo = MakeBrewStartInfo("outdated --verbose") };
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);

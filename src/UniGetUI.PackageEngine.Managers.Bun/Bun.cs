@@ -165,9 +165,11 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             if (exitCode == 0 || !HasGlobalLockfile(globalDir))
                 return;
 
-            throw new InvalidOperationException(
+            var failure = new InvalidOperationException(
                 $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
             );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
         }
 
         internal static bool HasGlobalLockfile(string globalDir) =>

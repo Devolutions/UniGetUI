@@ -140,7 +140,7 @@ internal sealed class AgentRequestDispatcher
                 JsonSerializer.Serialize(
                     writer,
                     snapshot.Managers,
-                    IpcJson.GetTypeInfo<IReadOnlyList<IpcManagerInfo>>()
+                    IpcJson.GetTypeInfo<IReadOnlyList<IpcRemoteManagerInfo>>()
                 );
                 writer.WritePropertyName("sources");
                 JsonSerializer.Serialize(

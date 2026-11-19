@@ -1,5 +1,7 @@
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.NpmManager;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -10,6 +12,49 @@ namespace UniGetUI.PackageEngine.Tests;
 
 public sealed class NpmManagerTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MalformedListingRecordsKeepOtherRowsNormallyButFailListingOnly(bool updates)
+    {
+        var manager = new Npm();
+        string output = updates
+            ? """{"first":{"current":"1.0","latest":"2.0"},"bad":17,"last":{"current":"1.0","latest":"2.0"}}"""
+            : """{"dependencies":{"first":{"version":"1.0"},"bad":17,"last":{"version":"1.0"}}}""";
+        IReadOnlyList<Package> Parse() => updates
+            ? Npm.ParseAvailableUpdatesOutput(output, manager.DefaultSource, manager, new(PackageScope.Global))
+            : Npm.ParseInstalledPackagesOutput(output, manager.DefaultSource, manager, new(PackageScope.Global));
+        List<Exception> failures = [];
+
+        using (PackageListingScope.TrackFailures(failures.Add))
+            Assert.Equal(["first", "last"], Parse().Select(package => package.Id));
+        Assert.IsAssignableFrom<InvalidOperationException>(Assert.Single(failures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidOperationException>(Parse);
+    }
+
+    [Theory]
+    [InlineData(false, "{")]
+    [InlineData(true, "{")]
+    [InlineData(false, "[]")]
+    [InlineData(true, "[]")]
+    public void InvalidListingJsonIsReportedWithoutThrowingNormally(bool updates, string output)
+    {
+        var manager = new Npm();
+        IReadOnlyList<Package> Parse() => updates
+            ? Npm.ParseAvailableUpdatesOutput(output, manager.DefaultSource, manager, new(PackageScope.Global))
+            : Npm.ParseInstalledPackagesOutput(output, manager.DefaultSource, manager, new(PackageScope.Global));
+        List<Exception> failures = [];
+
+        using (PackageListingScope.TrackFailures(failures.Add))
+            Assert.Empty(Parse());
+        Assert.IsAssignableFrom<System.Text.Json.JsonException>(Assert.Single(failures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.ThrowsAny<System.Text.Json.JsonException>(Parse);
+    }
+
     [Fact]
     public void ParseSearchOutputParsesJsonArrayAfterWarningPrefix()
     {

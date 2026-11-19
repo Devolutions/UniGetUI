@@ -406,6 +406,9 @@ public sealed class SnapManagerTests : IDisposable
             },
         };
 
+        Assert.Empty(snap.ListInstalled());
+        Assert.Empty(snap.ListUpdates());
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
         Assert.Throws<InvalidOperationException>(snap.ListInstalled);
         Assert.Throws<InvalidOperationException>(snap.ListUpdates);
     }

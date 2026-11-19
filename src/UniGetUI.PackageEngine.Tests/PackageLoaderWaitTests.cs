@@ -1,4 +1,5 @@
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
@@ -8,6 +9,12 @@ namespace UniGetUI.PackageEngine.Tests;
 public sealed class PackageLoaderWaitTests
 {
     private static readonly TimeSpan WaitBudget = TimeSpan.FromSeconds(10);
+
+    private sealed class InventoryLoader(IReadOnlyList<IPackageManager> managers) : InstalledPackagesLoader(managers)
+    {
+        protected override bool WillQueryAnyManager() => false;
+        protected override Task WhenAddingPackage(IPackage package) => Task.CompletedTask;
+    }
 
     [Fact]
     public async Task WaitForCurrentLoadAsync_CompletesWhenNoLoadIsRunning()
@@ -70,6 +77,41 @@ public sealed class PackageLoaderWaitTests
 
         await AssertCompletesAsync(silent);
         Assert.Equal(2, listings);
+    }
+
+    [Fact]
+    public async Task NormalReloadKeepsPartialRowsButDoesNotPublishThemAsACompleteScan()
+    {
+        Settings.Set(Settings.K.DisableWaitForInternetConnection, true);
+        int calls = 0;
+        var manager = new PackageManagerBuilder()
+            .WithName($"PartialListing-{Guid.NewGuid():N}")
+            .WithInstalledPackages(m =>
+            {
+                calls++;
+                PackageListingScope.ReportIncomplete(new InvalidOperationException("one source failed"));
+                return [new PackageBuilder().WithManager(m).WithId("partial").Build()];
+            })
+            .Build();
+        Assert.True(manager.IsReady(), manager.Status.Version);
+        var previousLoader = InstalledPackagesLoader.Instance;
+        try
+        {
+            var loader = new InventoryLoader([manager]);
+
+            await AssertCompletesAsync(loader.ReloadPackages());
+
+            Assert.Equal("partial", Assert.Single(loader.Packages).Id);
+            Assert.Equal("partial", Assert.Single(loader.LastCompletedScan!.Packages).Id);
+            Assert.DoesNotContain(manager, loader.LastCompletedScan.SucceededManagers);
+            Assert.True(loader.LastLoadReportedFailures);
+            Assert.Equal(1, calls);
+            Assert.Equal(0, manager.AttemptFastRepairCalls);
+        }
+        finally
+        {
+            InstalledPackagesLoader.Instance = previousLoader;
+        }
     }
 
     [Fact]

@@ -218,6 +218,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
         protected void InvokeFinishedLoadingEvent(bool listingOnly = false)
         {
             FinishedLoading?.Invoke(this, PackageLoadFinishedEventArgs.For(listingOnly));
+
+            // A load leaves the managers' output and the list it replaced behind as garbage.
+            IdleMemoryTrimmer.Request();
         }
 
         /// <summary>

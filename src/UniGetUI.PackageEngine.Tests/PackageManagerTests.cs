@@ -503,6 +503,60 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void NormalListingsKeepPartialRowsWithoutRepairButReportTheirOwnFailure()
+    {
+        var manager = CreateReadyManager();
+        int calls = 0;
+        var row = CreatePackage(manager, "Contoso.Partial", "Contoso Partial");
+        IReadOnlyList<Package> ListPartial()
+        {
+            calls++;
+            PackageListingScope.ReportIncomplete(new InvalidOperationException("one source failed"));
+            return [row];
+        }
+        manager.SetInstalledPackages(ListPartial);
+        manager.SetAvailableUpdates(ListPartial);
+        manager.SetFindPackages(_ => ListPartial());
+
+        Assert.Same(row, Assert.Single(manager.GetInstalledPackages(out bool installedFailed)));
+        Assert.Same(row, Assert.Single(manager.GetAvailableUpdates(out bool updatesFailed)));
+        Assert.Same(row, Assert.Single(manager.FindPackages("partial", out bool searchFailed)));
+
+        Assert.True(installedFailed);
+        Assert.True(updatesFailed);
+        Assert.True(searchFailed);
+        Assert.True(manager.LastInstalledListingFailed);
+        Assert.True(manager.LastUpdatesListingFailed);
+        Assert.Equal(3, calls);
+        Assert.Equal(0, manager.AttemptFastRepairCalls);
+
+        manager.SetInstalledPackages(() => [row]);
+        Assert.Single(manager.GetInstalledPackages(out bool completeFailed));
+        Assert.False(completeFailed);
+    }
+
+    [Fact]
+    public void ListingOnlyRejectsPartialRowsWithoutRepair()
+    {
+        var manager = CreateReadyManager();
+        int calls = 0;
+        manager.SetInstalledPackages(() =>
+        {
+            calls++;
+            PackageListingScope.ReportIncomplete(new InvalidOperationException("one source failed"));
+            return [CreatePackage(manager, "Contoso.Partial", "Contoso Partial")];
+        });
+
+        using (PackageListingScope.EnterListingOnly())
+        {
+            Assert.Empty(manager.GetInstalledPackages(out bool failed));
+            Assert.True(failed);
+        }
+        Assert.Equal(1, calls);
+        Assert.Equal(0, manager.AttemptFastRepairCalls);
+    }
+
+    [Fact]
     public void EachListingCallReportsItsOwnFailure()
     {
         var manager = CreateReadyManager();

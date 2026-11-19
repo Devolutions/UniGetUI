@@ -168,9 +168,13 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                 p.WaitForExit();
                 logger.Close(p.ExitCode);
                 if (p.ExitCode != 0)
-                    throw new InvalidOperationException(
+                {
+                    var failure = new InvalidOperationException(
                         $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
                     );
+                    UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+                    PackageListingScope.ReportIncomplete(failure);
+                }
 
                 Packages.AddRange(ParseInstalledPackages(outputLines, installedSource, this, options));
             }

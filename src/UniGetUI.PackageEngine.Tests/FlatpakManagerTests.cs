@@ -403,6 +403,9 @@ public sealed class FlatpakManagerTests : IDisposable
             },
         };
 
+        Assert.Empty(flatpak.ListInstalled());
+        Assert.Empty(flatpak.ListUpdates());
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
         Assert.Throws<InvalidOperationException>(flatpak.ListInstalled);
         Assert.Throws<InvalidOperationException>(flatpak.ListUpdates);
     }

@@ -13,8 +13,32 @@ namespace UniGetUI.PackageEngine.Interfaces;
 public static class PackageListingScope
 {
     private static readonly AsyncLocal<bool> ListingOnly = new();
+    private static readonly AsyncLocal<Action<Exception>?> ReportFailure = new();
 
     public static bool IsListingOnly => ListingOnly.Value;
+
+    /// <summary>
+    /// Marks this call incomplete without discarding local UI rows or triggering fast repair.
+    /// A listing-only call instead stops here, because it cannot supply partial inventory.
+    /// </summary>
+    public static void ReportIncomplete(Exception error)
+    {
+        ReportFailure.Value?.Invoke(error);
+        if (IsListingOnly)
+            throw error;
+    }
+
+    public static IDisposable TrackFailures(Action<Exception> reportFailure)
+    {
+        var previous = ReportFailure.Value;
+        ReportFailure.Value = reportFailure;
+        return new RestoreTracking(previous);
+    }
+
+    private sealed class RestoreTracking(Action<Exception>? previous) : IDisposable
+    {
+        public void Dispose() => ReportFailure.Value = previous;
+    }
 
     public static IDisposable EnterListingOnly()
     {

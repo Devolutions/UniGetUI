@@ -501,6 +501,8 @@ public class AgentRegistrationTests
                 IdleTimeout = TimeSpan.FromHours(1),
                 MinBackoff = second,
                 MaxBackoff = 4 * second,
+                // The fake clock does not advance while registered; the 30 s rule has its own test.
+                StableSessionTime = TimeSpan.Zero,
             },
             clock,
             message =>

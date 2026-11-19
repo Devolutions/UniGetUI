@@ -1,0 +1,10 @@
+{
+  "cfg_block": { "license": "Apache-2.0" },
+  "either": { "copyright": "Copyright (c) 2015 The either developers" },
+  "equivalent": { "copyright": "Copyright (c) 2016--2023 The equivalent developers" },
+  "indexmap": { "copyright": "Copyright (c) 2016--2017 The indexmap developers" },
+  "lzma-rust2": { "copyright": "Copyright (c) Nils Hasenbanck and the lzma-rust contributors" },
+  "pack1": { "copyright": "Copyright (c) Lokathor" },
+  "pin-project-lite": { "copyright": "Copyright (c) Taiki Endo" },
+  "ppmd-rust": { "copyright": "Copyright 2026 The ppmd-rust authors" }
+}

@@ -1,0 +1,22 @@
+{
+  "components": [
+    {
+      "name": "Inter",
+      "version": "3.019",
+      "license": "OFL-1.1",
+      "source": "https://github.com/rsms/inter",
+      "website": "https://rsms.me/inter/",
+      "copyright": "Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)",
+      "repositoryCommit": "v3.19"
+    },
+    {
+      "name": "Icons8 icons",
+      "version": "unversioned",
+      "license": "LicenseRef-Icons8",
+      "source": "https://icons8.com",
+      "website": "https://icons8.com/license",
+      "copyright": "Copyright (c) Icons8",
+      "licenseTextPath": "texts/icons8.txt"
+    }
+  ]
+}

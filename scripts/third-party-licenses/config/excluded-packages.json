@@ -1,0 +1,8 @@
+{
+  "packages": {
+    "Devolutions.*": { "reason": "Internal Devolutions packages" },
+    "@devolutions/*": { "reason": "Internal Devolutions npm packages" },
+    "libDevolutions*": { "reason": "Internal Devolutions native libraries" },
+    "getfilesiginforedist.dll": { "reason": "Native file of Microsoft.Security.Extensions, copied into Devolutions.UniGetUI.Elevator without file properties; declared in config/manual-components.windows.json" }
+  }
+}

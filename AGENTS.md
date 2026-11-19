@@ -322,6 +322,20 @@ version (as an explicit `Version`, which WinGet passes as `--version`).
   update is launched or after its options are saved, and every update is checked again by
   `RefusalBeforeStart` before any pre-operation runs.
 
+## Third-party notices
+
+Every release ships `THIRD-PARTY-NOTICES.txt` and `.json` next to the binaries, generated from the
+build by `scripts/generate-third-party-notices.ps1` (a copy of RDM's license tool lives in
+`scripts/third-party-licenses/`, see its README). The About page and the TUI About dialog read the
+JSON through `ThirdPartyNotices` in `UniGetUI.Core.Data`; there is no hand-maintained license list.
+
+- A new NuGet package is picked up on its own; content no build output describes (a font, an icon
+  set, a file copied without metadata) goes in `config/manual-components*.json`.
+- Bumping `Devolutions.Pinget.Cli.Rust` requires running `Update-PingetCrates.ps1`, or the release
+  fails: pinget's Rust crates are listed from a file generated for its exact version.
+- Never commit a notices file generated locally to `src/UniGetUI.Avalonia/ThirdPartyNotices/`; a
+  release opens the pull request that updates it.
+
 ## Build & Test
 
 ```shell

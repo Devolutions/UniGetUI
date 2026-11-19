@@ -722,4 +722,55 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await Key(K.Escape);
         await WaitUntilAsync(() => !TuiModal.IsOpen, "the details dialog to close");
     }
+
+    [Test]
+    public async Task About_ListsThirdPartyComponents_AndOpensTheNoticesFile()
+    {
+        string textPath = UniGetUI.Core.Data.ThirdPartyNotices.TextFilePath;
+        string jsonPath = UniGetUI.Core.Data.ThirdPartyNotices.JsonFilePath;
+        bool createdText = !File.Exists(textPath);
+        bool createdJson = !File.Exists(jsonPath);
+        string? previousJson = createdJson ? null : await File.ReadAllTextAsync(jsonPath);
+        if (createdText) await File.WriteAllTextAsync(textPath, "Third-party notices for UniGetUI");
+        await File.WriteAllTextAsync(jsonPath, """
+            {
+              "format": "devolutions-third-party-notices/1",
+              "appName": "UniGetUI",
+              "appVersion": "1.0.0",
+              "components": [
+                { "name": "Contoso.Widgets", "version": "4.5.6", "license": "MIT", "source": "https://example.com/contoso" }
+              ]
+            }
+            """);
+
+        var opened = new List<string>();
+        void Capture(TuiNotification n) { lock (opened) opened.Add(n.Message); }
+        TuiNotifications.NotificationRaised += Capture;
+        try
+        {
+            await ResetAsync(TuiPageIds.Discover);
+            await Key(K.H, RawModifiers.Alt);
+            await RunMenuItemAsync("About");
+            await WaitForDialogAsync("About UniGetUI TUI");
+
+            await WaitUntilAsync(() => Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(Window)
+                    .OfType<Avalonia.Controls.TextBlock>()
+                    .Any(t => t.Text?.StartsWith("Contoso.Widgets 4.5.6: MIT", StringComparison.Ordinal) == true),
+                "the component in the About dialog");
+            await FocusFieldAsync("Open the full notices file", K.Tab, 60);
+            await Key(K.Enter);
+            await WaitUntilAsync(() => { lock (opened) return opened.Any(m => m.Contains(textPath, StringComparison.Ordinal)); },
+                "the notices file to be opened");
+
+            await Key(K.Escape);
+            await WaitForNoDialogAsync();
+        }
+        finally
+        {
+            TuiNotifications.NotificationRaised -= Capture;
+            if (createdText) File.Delete(textPath);
+            if (createdJson) File.Delete(jsonPath);
+            else await File.WriteAllTextAsync(jsonPath, previousJson);
+        }
+    }
 }

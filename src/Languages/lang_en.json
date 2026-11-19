@@ -3104,5 +3104,11 @@
   "{0} (revision {1})": "{0} (revision {1})",
   "More information": "More information",
   "Graphical interface for your package managers": "Graphical interface for your package managers",
-  "Show UniGetUI in the applications menu": "Show UniGetUI in the applications menu"
+  "Show UniGetUI in the applications menu": "Show UniGetUI in the applications menu",
+  "Hide license": "Hide license",
+  "Show license": "Show license",
+  "Open the full notices file": "Open the full notices file",
+  "{0} third-party components": "{0} third-party components",
+  "The third-party notices are not included in this build of UniGetUI.": "The third-party notices are not included in this build of UniGetUI.",
+  "The license text of this component is in the third-party notices file.": "The license text of this component is in the third-party notices file."
 }

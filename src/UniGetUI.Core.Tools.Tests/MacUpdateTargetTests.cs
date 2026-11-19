@@ -204,7 +204,7 @@ public class MacUpdateTargetTests
         Assert.Equal(0, box.Run(Environment.ProcessId));
 
         Assert.Equal("new", box.InstalledVersion());
-        Assert.Equal("old", File.ReadAllText(Path.Join(box.Target + ".old", "version")));
+        Assert.Equal("old", SwapSandbox.VersionOf(box.Target + ".old"));
     }
 
     [MacOSFact]
@@ -243,6 +243,50 @@ public class MacUpdateTargetTests
         Assert.False(Directory.Exists(Path.Join(box.Target, "UniGetUI.app.old")));
     }
 
+    [MacOSFact]
+    public void ElevatedSwapScript_RefusesABundleThatDoesNotMeetTheRequirement()
+    {
+        using SwapSandbox box = new();
+
+        Assert.NotEqual(0, box.Run(ExitedProcessId(), requirement: "identifier \"com.example.other\""));
+
+        Assert.Equal("old", box.InstalledVersion());
+    }
+
+    [MacOSFact]
+    public void ElevatedSwapScript_RefusesABundleChangedAfterItWasSigned()
+    {
+        using SwapSandbox box = new();
+        box.ReplaceArchive("new", tamper: true);
+
+        Assert.NotEqual(0, box.Run(ExitedProcessId()));
+
+        Assert.Equal("old", box.InstalledVersion());
+    }
+
+    [MacOSFact]
+    public void ElevatedSwapScript_RefusesAnArchiveWhoseBundleIsNotAtItsTop()
+    {
+        using SwapSandbox box = new();
+        box.ReplaceArchive("new", folder: "nested");
+
+        Assert.NotEqual(0, box.Run(ExitedProcessId()));
+
+        Assert.Equal("old", box.InstalledVersion());
+    }
+
+    [MacOSFact]
+    public void ElevatedSwapScript_RefusesAnArchiveThatDroppedTheExtendedAttributes()
+    {
+        // The signatures of non-code files in Contents/MacOS live in extended attributes.
+        using SwapSandbox box = new();
+        box.ReplaceArchive("new", keepAttributes: false);
+
+        Assert.NotEqual(0, box.Run(ExitedProcessId()));
+
+        Assert.Equal("old", box.InstalledVersion());
+    }
+
     private static int ExitedProcessId()
     {
         using Process process = Process.Start("/usr/bin/true");
@@ -257,30 +301,69 @@ public class MacUpdateTargetTests
         public string Archive => Path.Join(Root, "UniGetUI Updater.tar.gz");
         public string Hash => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Archive))).ToLowerInvariant();
 
+        public const string Requirement = $"identifier \"{Identifier}\"";
+        private const string Identifier = "com.devolutions.unigetui.swaptest";
+
         public SwapSandbox()
         {
-            Directory.CreateDirectory(Target);
-            File.WriteAllText(Path.Join(Target, "version"), "old");
+            Directory.CreateDirectory(Path.Join(Target, "Contents", "Resources"));
+            File.WriteAllText(Path.Join(Target, "Contents", "Resources", "version"), "old");
             ReplaceArchive("new");
         }
 
-        public void ReplaceArchive(string version)
+        // An ad-hoc signed bundle, with a data file in Contents/MacOS signed on its own like the release's.
+        public void ReplaceArchive(string version, string folder = "", bool tamper = false, bool keepAttributes = true)
         {
-            string source = Path.Join(Root, "source-" + version);
-            Directory.CreateDirectory(Path.Join(source, "UniGetUI.app"));
-            File.WriteAllText(Path.Join(source, "UniGetUI.app", "version"), version);
+            string source = Path.Join(Root, "source-" + Guid.NewGuid().ToString("N"));
+            string app = Path.Join(source, folder, "UniGetUI.app");
+            string macOs = Path.Join(app, "Contents", "MacOS");
+            Directory.CreateDirectory(macOs);
+            Directory.CreateDirectory(Path.Join(app, "Contents", "Resources"));
+            File.WriteAllText(
+                Path.Join(app, "Contents", "Info.plist"),
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict>"
+                + $"<key>CFBundleIdentifier</key><string>{Identifier}</string>"
+                + "<key>CFBundleExecutable</key><string>UniGetUI</string></dict></plist>");
+            File.WriteAllText(Path.Join(macOs, "UniGetUI"), "#!/bin/sh\n");
+            File.SetUnixFileMode(Path.Join(macOs, "UniGetUI"), UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            File.WriteAllText(Path.Join(macOs, "data.json"), "{}");
+            File.WriteAllText(Path.Join(app, "Contents", "Resources", "version"), version);
+            RunTool("/usr/bin/codesign", ["--force", "--sign", "-", Path.Join(macOs, "data.json")]);
+            RunTool("/usr/bin/codesign", ["--force", "--sign", "-", app]);
+            if (tamper)
+            {
+                File.WriteAllText(Path.Join(macOs, "data.json"), "{\"tampered\": true}");
+            }
+
             File.Delete(Archive);
-            using Process tar = Process.Start("/usr/bin/tar", ["-czf", Archive, "-C", source, "UniGetUI.app"]);
-            tar.WaitForExit();
-            Assert.Equal(0, tar.ExitCode);
+            string entry = folder.Length == 0 ? "UniGetUI.app" : folder;
+            RunTool("/usr/bin/tar", ["-czf", Archive, "-C", source, entry], keepAttributes ? null : "1");
         }
 
-        public string InstalledVersion() => File.ReadAllText(Path.Join(Target, "version"));
+        public string InstalledVersion() => VersionOf(Target);
 
-        public int Run(int pid, string? hash = null, string? pathPrefix = null)
+        public static string VersionOf(string bundle) => File.ReadAllText(Path.Join(bundle, "Contents", "Resources", "version"));
+
+        private static void RunTool(string tool, string[] arguments, string? copyFileDisable = null)
+        {
+            var startInfo = new ProcessStartInfo(tool, arguments) { UseShellExecute = false };
+            if (copyFileDisable is not null)
+            {
+                startInfo.Environment["COPYFILE_DISABLE"] = copyFileDisable;
+            }
+
+            using Process process = Process.Start(startInfo)!;
+            process.WaitForExit();
+            Assert.Equal(0, process.ExitCode);
+        }
+
+        public int Run(int pid, string? hash = null, string? pathPrefix = null, string requirement = Requirement)
         {
             var startInfo = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
-            foreach (string arg in new[] { "-c", MacUpdateTargetResolver.ElevatedSwapScript, "sh", Target, Archive, hash ?? Hash, pid.ToString() })
+            foreach (string arg in new[]
+                     {
+                         "-c", MacUpdateTargetResolver.ElevatedSwapScript, "sh", Target, Archive, hash ?? Hash, pid.ToString(), requirement,
+                     })
             {
                 startInfo.ArgumentList.Add(arg);
             }

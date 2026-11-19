@@ -613,6 +613,18 @@ public abstract partial class AbstractOperation : IDisposable
                 return OperationVeredict.Canceled;
 
             i++;
+            if (preReq.SkipOnceSucceeded && preReq.Operation.Status is OperationStatus.Succeeded)
+            {
+                Line(
+                    CoreTools.Translate(
+                        "PreOperation {0} out of {1} already succeeded, skipping it",
+                        i,
+                        count
+                    ),
+                    LineType.Information
+                );
+                continue;
+            }
             Line(
                     CoreTools.Translate("Running PreOperation ({0}/{1})...", i, count),
                 LineType.Information

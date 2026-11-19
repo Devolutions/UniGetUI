@@ -103,11 +103,13 @@ public abstract partial class AbstractOperation
     {
         public readonly AbstractOperation Operation;
         public readonly bool MustSucceed;
+        public readonly bool SkipOnceSucceeded;
 
-        public InnerOperation(AbstractOperation op, bool mustSucceed)
+        public InnerOperation(AbstractOperation op, bool mustSucceed, bool skipOnceSucceeded = false)
         {
             Operation = op;
             MustSucceed = mustSucceed;
+            SkipOnceSucceeded = skipOnceSucceeded;
             op.IsInnerOperation = true;
         }
     }

@@ -1124,7 +1124,7 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
-    public async Task ARetriedUninstallThenInstallIsCheckedAgainBeforeItsUninstallRunsAgain()
+    public async Task ARetriedUninstallThenInstallIsCheckedAgainBeforeItsFailedUninstallRunsAgain()
     {
         if (!OperatingSystem.IsWindows())
             return;
@@ -1133,7 +1133,46 @@ public sealed class PackageOperationsTests
         string? refusal = null;
         var manager = CreateRecordingProcessManager(
             executed,
-            operation => operation is not OperationType.Install,
+            operation => operation is not OperationType.Uninstall,
+            (_, _) => refusal
+        );
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+        InitializeLoaders();
+        var uninstall = new UninstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+        using var install = new InstallPackageOperation(
+            package,
+            new InstallOptions(),
+            IgnoreParallelInstalls: true,
+            req: uninstall
+        );
+
+        await install.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+        Assert.Equal(OperationStatus.Failed, install.Status);
+
+        refusal = "REFUSED";
+        install.Retry(AbstractOperation.RetryMode.Retry);
+        await WaitForConditionAsync(() => install.Status is OperationStatus.Failed && install.Metadata.FailureMessage == "REFUSED");
+
+        Assert.Equal(["Uninstall|RAN-Uninstall-Contoso.Tool-"], executed);
+    }
+
+    [Fact]
+    public async Task ARetriedUninstallThenInstallDoesNotUninstallAgainOnceTheUninstallSucceeded()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var executed = new List<string>();
+        bool installSucceeds = false;
+        string? refusal = null;
+        var manager = CreateRecordingProcessManager(
+            executed,
+            operation => operation is not OperationType.Install || installSucceeds,
             (_, _) => refusal
         );
         var package = new PackageBuilder()
@@ -1159,10 +1198,18 @@ public sealed class PackageOperationsTests
         );
 
         refusal = "REFUSED";
+        installSucceeds = true;
         install.Retry(AbstractOperation.RetryMode.Retry);
-        await WaitForConditionAsync(() => install.Status is OperationStatus.Failed && install.Metadata.FailureMessage == "REFUSED");
+        await WaitForConditionAsync(() => install.Status is OperationStatus.Succeeded);
 
-        Assert.Equal(["Uninstall|RAN-Uninstall-Contoso.Tool-", "Install|RAN-Install-Contoso.Tool-"], executed);
+        Assert.Equal(
+            [
+                "Uninstall|RAN-Uninstall-Contoso.Tool-",
+                "Install|RAN-Install-Contoso.Tool-",
+                "Install|RAN-Install-Contoso.Tool-",
+            ],
+            executed
+        );
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
+        <!-- LibraryImport (IdleMemoryTrimmer) generates unsafe marshalling code. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

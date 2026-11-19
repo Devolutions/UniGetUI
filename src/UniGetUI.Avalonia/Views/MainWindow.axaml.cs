@@ -21,6 +21,7 @@ using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages;
+using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -259,6 +260,7 @@ public partial class MainWindow : Window
         Resized += (_, _) => _ = SaveGeometryAsync();
         ModalLayer.SizeChanged += (_, _) => UpdateModalSurfaceSize();
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
+        IdleMemoryTrimmer.IsAppInBackground = static () => !_isOnScreen;
         Activated += (_, _) => SetFocusedCaretVisible(true);
         Deactivated += (_, _) => SetFocusedCaretVisible(false);
         this.GetObservable(WindowStateProperty).SubscribeValue(state => { SyncShowWindowState(state); UpdateOnScreenState(); _ = SaveGeometryAsync(); });
@@ -2525,8 +2527,19 @@ public partial class MainWindow : Window
 
     private void UpdateOnScreenState()
     {
+        bool wasOnScreen = _isOnScreen;
         _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
         BackgroundEfficiencyMode.Refresh();
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        // Stop the open page's periodic work while nobody can see it (see SuspendForBackground).
+        // Suspending again is harmless, and lets a minimized window that is then hidden to the
+        // tray release its web views too.
+        if (!_isOnScreen)
+            viewModel.SuspendForBackground(releaseWebViews: !IsVisible);
+        else if (!wasOnScreen)
+            viewModel.ResumeFromBackground();
     }
 
     private void SyncShowWindowState(WindowState state)

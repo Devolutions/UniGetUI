@@ -24,6 +24,24 @@ namespace UniGetUI.PackageEngine.PackageLoader
         public readonly IReadOnlyList<IPackage> RemovedPackages;
     }
 
+    public class PackageLoadFinishedEventArgs : EventArgs
+    {
+        public static readonly PackageLoadFinishedEventArgs Normal = new(false);
+        public static readonly PackageLoadFinishedEventArgs ListingOnlyLoad = new(true);
+
+        private PackageLoadFinishedEventArgs(bool listingOnly) => ListingOnly = listingOnly;
+
+        /// <summary>
+        /// Whether the load that finished only listed packages (a remote rescan or the periodic
+        /// inventory refresh). Handlers that act on a finished load, such as installing updates
+        /// automatically, skip such loads.
+        /// </summary>
+        public bool ListingOnly { get; }
+
+        public static PackageLoadFinishedEventArgs For(bool listingOnly) =>
+            listingOnly ? ListingOnlyLoad : Normal;
+    }
+
     public abstract class AbstractPackageLoader
     {
         /// <summary>
@@ -47,9 +65,10 @@ namespace UniGetUI.PackageEngine.PackageLoader
         public DateTime? LastLoadFinishedUtc { get; private set; }
 
         /// <summary>
-        /// Whether the running load, or the last one when none runs, was started inside
-        /// <see cref="PackageListingScope.EnterListingOnly"/>. Handlers that act on a finished
-        /// load, such as installing updates automatically, skip such loads.
+        /// Whether the running load, or the last one when none runs, only lists packages; see
+        /// <see cref="ReloadPackagesListingOnly"/>. Handlers of a finished load read
+        /// <see cref="PackageLoadFinishedEventArgs.ListingOnly"/> instead, since another load may
+        /// have started by the time they run.
         /// </summary>
         public bool LoadIsListingOnly { get; private set; }
 
@@ -92,7 +111,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// <summary>
         /// Fires when the loader finishes fetching packages
         /// </summary>
-        public event EventHandler<EventArgs>? FinishedLoading;
+        public event EventHandler<PackageLoadFinishedEventArgs>? FinishedLoading;
 
         /// <summary>
         /// Fires when the manager starts fetching packages
@@ -171,16 +190,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
             completion.TrySetResult();
         }
 
-        protected virtual bool DidManagerReportFailure(IPackageManager manager) => false;
-
         public void StopLoading(bool emitFinishSignal = true)
         {
+            bool listingOnly = IsLoading && LoadIsListingOnly;
             LoadOperationIdentifier = -1;
             IsLoaded = false;
             IsLoading = false;
             CompleteCurrentLoad();
             if (emitFinishSignal)
-                InvokeFinishedLoadingEvent();
+                InvokeFinishedLoadingEvent(listingOnly);
         }
 
         protected void InvokePackagesChangedEvent(
@@ -197,18 +215,56 @@ namespace UniGetUI.PackageEngine.PackageLoader
             StartedLoading?.Invoke(this, EventArgs.Empty);
         }
 
-        protected void InvokeFinishedLoadingEvent()
+        protected void InvokeFinishedLoadingEvent(bool listingOnly = false)
         {
-            FinishedLoading?.Invoke(this, EventArgs.Empty);
+            FinishedLoading?.Invoke(this, PackageLoadFinishedEventArgs.For(listingOnly));
+        }
 
-            // A load leaves the managers' output and the list it replaced behind as garbage.
-            IdleMemoryTrimmer.Request();
+        /// <summary>
+        /// Marks the start of a load that a subclass runs itself, so that waiters and reloads
+        /// requested meanwhile see a normal load with a completion to wait for.
+        /// </summary>
+        protected TaskCompletionSource BeginExternalLoad()
+        {
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Volatile.Write(ref _loadCompletion, completion);
+            AdvanceLoadGeneration();
+            LoadIsListingOnly = false;
+            IsLoading = true;
+            return completion;
+        }
+
+        protected void EndExternalLoad(TaskCompletionSource completion)
+        {
+            IsLoading = false;
+            CompleteLoad(completion);
+        }
+
+        /// <summary>
+        /// Lists the packages of one manager and reports whether that call failed or did not run.
+        /// </summary>
+        protected virtual IReadOnlyList<IPackage> LoadPackagesFromManager(
+            IPackageManager manager,
+            out bool failed
+        )
+        {
+            failed = false;
+            return LoadPackagesFromManager(manager);
         }
 
         /// <summary>
         /// Will trigger a forceful reload of the packages
         /// </summary>
-        public virtual async Task ReloadPackages()
+        public virtual Task ReloadPackages() => ReloadPackagesCore(listingOnly: false);
+
+        /// <summary>
+        /// Reloads the packages in listing-only mode (see <see cref="PackageListingScope"/>): the
+        /// managers neither repair themselves nor change anything but their catalogues. Handlers of
+        /// <see cref="FinishedLoading"/> are told so through its arguments.
+        /// </summary>
+        public Task ReloadPackagesListingOnly() => ReloadPackagesCore(listingOnly: true);
+
+        private async Task ReloadPackagesCore(bool listingOnly)
         {
             TaskCompletionSource? completion = null;
             Dictionary<IPackageManager, TaskCompletionSource>? managerLoads = null;
@@ -222,17 +278,18 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     return;
                 }
 
+                // A listing-only load skips what a normal load triggers (automatic updates,
+                // maintenance records), so a normal reload must not settle for it.
+                while (IsLoading && LoadIsListingOnly && !listingOnly)
+                {
+                    Task running = WaitForCurrentLoadAsync();
+                    if (running.IsCompleted)
+                        break;
+                    await running;
+                }
+
                 if (IsLoading)
                 {
-                    // A listing-only load skips what a normal load triggers (automatic updates,
-                    // maintenance records), so a normal reload must not settle for it.
-                    if (LoadIsListingOnly && !PackageListingScope.IsListingOnly)
-                    {
-                        await WaitForCurrentLoadAsync();
-                        await ReloadPackages();
-                        return;
-                    }
-
                     Logger.Debug($"[{this.GetType()}] Packages are already being loaded!!!");
                     return;
                 }
@@ -249,7 +306,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 );
                 Volatile.Write(ref _managerLoads, managerLoads);
                 long startGeneration = AdvanceLoadGeneration();
-                LoadIsListingOnly = PackageListingScope.IsListingOnly;
+                LoadIsListingOnly = listingOnly;
                 IsLoading = true;
                 LastLoadReportedFailures = false;
                 StartedLoading?.Invoke(this, EventArgs.Empty);
@@ -267,18 +324,22 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     await CoreTools.WaitForInternetConnection();
                 }
 
-                List<Task<IReadOnlyList<IPackage>>> tasks = [];
-                Dictionary<Task<IReadOnlyList<IPackage>>, IPackageManager> taskManagers = [];
+                List<Task<(IReadOnlyList<IPackage> Packages, bool Failed)>> tasks = [];
+                Dictionary<Task<(IReadOnlyList<IPackage> Packages, bool Failed)>, IPackageManager> taskManagers = [];
                 HashSet<IPackageManager> succeededManagers = [];
 
                 foreach (IPackageManager manager in Managers)
                 {
                     if (manager.IsReady())
                     {
-                        Task<IReadOnlyList<IPackage>> task = Task.Run(async () =>
+                        var task = Task.Run(async () =>
                         {
                             await WaitBeforeLoadingFromManagerAsync(manager);
-                            return LoadPackagesFromManager(manager);
+                            using IDisposable? scope = listingOnly
+                                ? PackageListingScope.EnterListingOnly()
+                                : null;
+                            var packages = LoadPackagesFromManager(manager, out bool failed);
+                            return (packages, failed);
                         });
                         tasks.Add(task);
                         taskManagers[task] = manager;
@@ -291,7 +352,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                 while (tasks.Count > 0)
                 {
-                    foreach (Task<IReadOnlyList<IPackage>> task in tasks.ToArray())
+                    foreach (var task in tasks.ToArray())
                     {
                         if (!task.IsCompleted)
                         {
@@ -300,7 +361,13 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                         if (task.IsCompleted)
                         {
-                            if (task.IsFaulted || task.IsCanceled)
+                            // Each call reports its own result: a manager's shared failure flag
+                            // can be reset meanwhile by another listing of the same manager.
+                            if (
+                                task.IsFaulted
+                                || task.IsCanceled
+                                || (task.Result.Failed && taskManagers[task].IsReady())
+                            )
                                 LastLoadReportedFailures = true;
 
                             if (
@@ -309,7 +376,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                             )
                             {
                                 var toAdd = new List<IPackage>();
-                                foreach (IPackage package in task.Result)
+                                foreach (IPackage package in task.Result.Packages)
                                 {
                                     if (Contains(package) || !await IsPackageValid(package))
                                     {
@@ -321,21 +388,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
                                 }
 
                                 InvokePackagesChangedEvent(true, toAdd, []);
-                                succeededManagers.Add(taskManagers[task]);
+                                if (!task.Result.Failed)
+                                    succeededManagers.Add(taskManagers[task]);
                             }
 
                             managerLoads[taskManagers[task]].TrySetResult();
                             tasks.Remove(task);
                         }
                     }
-                }
-
-                foreach (IPackageManager manager in Managers)
-                {
-                    if (manager.IsReady() && DidManagerReportFailure(manager))
-                        LastLoadReportedFailures = true;
-                    if (DidManagerReportFailure(manager))
-                        succeededManagers.Remove(manager);
                 }
 
                 if (LoadOperationIdentifier == current_identifier)
@@ -358,7 +418,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     LastLoadFinishedUtc = DateTime.UtcNow;
                     IsLoaded = true;
                     finishWasAnnounced = true;
-                    InvokeFinishedLoadingEvent();
+                    InvokeFinishedLoadingEvent(listingOnly);
                 }
             }
             catch (Exception ex)
@@ -376,7 +436,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                     try
                     {
-                        InvokeFinishedLoadingEvent();
+                        InvokeFinishedLoadingEvent(listingOnly);
                     }
                     catch (Exception announceEx)
                     {

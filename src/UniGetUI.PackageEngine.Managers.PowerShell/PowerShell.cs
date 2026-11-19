@@ -119,9 +119,14 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 outputLines.Add(line);
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            string error = p.StandardError.ReadToEnd();
+            logger.AddToStdErr(error);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            if (p.ExitCode != 0)
+                throw new InvalidOperationException(
+                    $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
+                );
 
             return ParseInstalledPackages(outputLines, this);
         }

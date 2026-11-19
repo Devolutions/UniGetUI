@@ -380,7 +380,7 @@ public partial class PackagesPageViewModel : ViewModelBase
             Loader_StartedLoading(this, EventArgs.Empty);
         else
         {
-            Loader_FinishedLoading(this, EventArgs.Empty);
+            Loader_FinishedLoading(this, PackageLoadFinishedEventArgs.For(Loader.LoadIsListingOnly));
             FilterPackages();
         }
         Loader_PackagesChanged(this, new(false, [], []));
@@ -592,8 +592,8 @@ public partial class PackagesPageViewModel : ViewModelBase
     /// </summary>
     public bool LastLoadWasListingOnly { get; private set; }
 
-    private void Loader_FinishedLoading(object? sender, EventArgs e) =>
-        OnLoaderFinished(Loader.LoadIsListingOnly);
+    private void Loader_FinishedLoading(object? sender, PackageLoadFinishedEventArgs e) =>
+        OnLoaderFinished(e.ListingOnly);
 
     private void OnLoaderFinished(bool listingOnly)
     {

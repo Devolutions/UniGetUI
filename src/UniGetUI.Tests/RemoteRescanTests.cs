@@ -140,6 +140,41 @@ public sealed class RemoteRescanTests
     }
 
     [Fact]
+    public async Task RequestJoiningAScanIsNotAnsweredByALoadThatStartedBeforeIt()
+    {
+        var (installed, updates) = Loaders();
+        var rescan = new RemoteRescan();
+        Task? userLoad = null;
+        Task<bool>? second = null;
+        long secondArrival = 0;
+        rescan.BeforeScanStarts = () =>
+        {
+            rescan.BeforeScanStarts = null;
+            userLoad = installed.ReloadPackages();
+            secondArrival = installed.LoadGeneration;
+            second = rescan.RequestAsync(installed, updates, CancellationToken.None);
+        };
+
+        Task<bool> first = rescan.RequestAsync(installed, updates, CancellationToken.None);
+        await installed.WaitForLoadsAsync(1);
+        using (var cts = new CancellationTokenSource(Timeout))
+            while (second is null)
+                await Task.Delay(10, cts.Token);
+
+        await installed.ReleaseAsync(0);
+        await userLoad!.WaitAsync(Timeout);
+        await AssertPendingAsync(second);
+        await installed.WaitForLoadsAsync(2);
+
+        await installed.ReleaseAsync(1);
+        await updates.ReleaseAsync(0);
+        Assert.True(await first.WaitAsync(Timeout));
+        Assert.True(await second.WaitAsync(Timeout));
+        Assert.True(installed.LastCompletedScan!.StartGeneration > secondArrival);
+        Assert.Equal([false, true], installed.ListingOnly);
+    }
+
+    [Fact]
     public async Task ScanThatPublishesNoResultFailsTheRescan()
     {
         var (installed, updates) = Loaders();
@@ -157,6 +192,14 @@ public sealed class RemoteRescanTests
     {
         var (installed, _) = Loaders();
         var rescan = new RemoteRescan();
+        var seen = new List<(bool Args, bool Ambient)>();
+        bool ambientAtStart = true;
+        installed.StartedLoading += (_, _) => ambientAtStart = PackageListingScope.IsListingOnly;
+        installed.FinishedLoading += (_, e) =>
+        {
+            lock (seen)
+                seen.Add((e.ListingOnly, PackageListingScope.IsListingOnly));
+        };
 
         Assert.True(rescan.TryStartInstalledReload(installed));
         await installed.WaitForLoadsAsync(1);
@@ -164,11 +207,16 @@ public sealed class RemoteRescanTests
 
         await installed.ReleaseAsync(0);
         using var cts = new CancellationTokenSource(Timeout);
-        while (installed.IsLoading)
+        while (installed.IsLoading || seen.Count == 0)
             await Task.Delay(10, cts.Token);
         Assert.Equal(1, installed.Loads);
         Assert.Equal([true], installed.ListingOnly);
         Assert.False(PackageListingScope.IsListingOnly);
+        // The mode reaches handlers through the arguments, never as ambient state they would carry
+        // into the work they start.
+        Assert.False(ambientAtStart);
+        lock (seen)
+            Assert.Equal([(true, false)], seen);
     }
 
     [Fact]

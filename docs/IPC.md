@@ -92,7 +92,8 @@ Source entries with unsafe or ambiguous names are omitted, and source URLs are n
 The scan that answers starts after the request arrived: a load already running is waited out rather than joined, and requests that arrive while a scan is queued share it.
 UniGetUI answers `ok:true` with an empty `result` once both scans have completed for every expected manager and been published, and `Failed` otherwise.
 A remote rescan is the user's Reload minus recovery (Cargo), repair (`AttemptFastRepair`), automatic install or update of packages, and extension update checks.
-Package indexes are refreshed exactly as a Reload refreshes them (`winget source update`, `scoop update` and so on), since that changes only the manager's own catalogue, not what is installed.
+The package-index refresh a Reload performs runs only for managers whose refresh updates a catalogue and nothing else (WinGet, Apt, Pacman, Dnf, Flatpak, Snap, and the installer feeds), and is skipped for any manager whose refresh updates the manager itself or a working tree (Scoop, Homebrew, vcpkg).
+Managers that have no index refresh (Pip, npm, Bun, .NET Tool, PowerShell, PowerShell 7, Cargo, Chocolatey) are unaffected.
 When an interrupted UniGetUI Cargo installation still needs recovery, the Cargo listing is refused and the rescan fails; the log then contains `Remote rescan: Cargo listing refused because an interrupted UniGetUI Cargo installation needs recovery`, and reloading packages once in UniGetUI recovers it.
 
 While registered with an Agent, UniGetUI also reloads its installed-package list every 15 minutes in the same listing-only mode, so changes made on the machine by other means reach the inventory unasked.

@@ -76,13 +76,29 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
 
         p.Start();
 
-        Packages.AddRange(ParseAvailableUpdates(Manager, ReadOutputLines(p, logger)));
-
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        List<string> outputLines = [.. ReadOutputLines(p, logger)];
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
+
+        Packages.AddRange(ParseAvailableUpdates(Manager, outputLines));
 
         return Packages;
+    }
+
+    // APPINSTALLER_CLI_ERROR_NO_APPLICATIONS_FOUND: nothing is installed, which is not a failure.
+    // Source failures only warn on `list` and `upgrade`, so they keep exit code 0.
+    internal static bool IsListingFailure(int exitCode) =>
+        exitCode != 0 && (uint)exitCode != 0x8A150014;
+
+    private void ThrowIfListingFailed(int exitCode, string error)
+    {
+        if (IsListingFailure(exitCode))
+            throw new InvalidOperationException(
+                $"{Manager.Name} exited with code 0x{exitCode:X8} while listing packages: {error.Trim()}"
+            );
     }
 
     private static IEnumerable<string> ReadOutputLines(Process p, IProcessTaskLogger logger)
@@ -215,11 +231,14 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
 
         p.Start();
 
-        Packages.AddRange(ParseInstalledPackages(Manager, ReadOutputLines(p, logger)));
-
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        List<string> outputLines = [.. ReadOutputLines(p, logger)];
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
+
+        Packages.AddRange(ParseInstalledPackages(Manager, outputLines));
 
         return Packages;
     }

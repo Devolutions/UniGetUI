@@ -286,4 +286,17 @@ public sealed class NpmManagerTests
         Assert.Equal(OperationVeredict.Success, success);
         Assert.Equal(OperationVeredict.Failure, failure);
     }
+
+    [Theory]
+    [InlineData(0, "", false)]
+    [InlineData(1, "{\"typescript\":{\"current\":\"5.2.0\",\"wanted\":\"5.3.0\",\"latest\":\"5.3.0\"}}", false)]
+    [InlineData(1, "{\"dependencies\":{},\"error\":{\"code\":\"ELSPROBLEMS\",\"summary\":\"extraneous: x\"}}", false)]
+    [InlineData(1, "", true)]
+    [InlineData(1, "npm ERR! code EACCES", true)]
+    [InlineData(1, "[]", true)]
+    [InlineData(1, "{\"error\":{\"code\":\"ENOENT\",\"summary\":\"no such file or directory\"}}", true)]
+    public void OnlyNpmsOwnNonzeroResultsAreSuccessfulListings(int exitCode, string output, bool failed)
+    {
+        Assert.Equal(failed, Npm.IsListingFailure(exitCode, output));
+    }
 }

@@ -490,11 +490,28 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                 lines.Add(line);
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            string error = p.StandardError.ReadToEnd();
+            logger.AddToStdErr(error);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            ThrowIfListingFailed(p.ExitCode, error, lines);
 
             return ParseAvailableUpdates(lines);
+        }
+
+        // With enhanced exit codes, `choco outdated` exits 2 when updates exist and `choco list`
+        // exits 2 when nothing is installed; both are successful listings.
+        private void ThrowIfListingFailed(int exitCode, string error, IReadOnlyList<string> output)
+        {
+            if (exitCode is 0 or 2)
+                return;
+
+            string details = string.IsNullOrWhiteSpace(error)
+                ? string.Join(' ', output.Where(l => !string.IsNullOrWhiteSpace(l)).TakeLast(3))
+                : error;
+            throw new InvalidOperationException(
+                $"{Name} exited with code {exitCode} while listing packages: {details.Trim()}"
+            );
         }
 
         protected override IReadOnlyList<Package> _getInstalledPackages_UnSafe()
@@ -530,9 +547,11 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                 lines.Add(line);
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            string error = p.StandardError.ReadToEnd();
+            logger.AddToStdErr(error);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            ThrowIfListingFailed(p.ExitCode, error, lines);
 
             return ParseInstalledPackages(lines);
         }

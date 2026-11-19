@@ -81,6 +81,8 @@ public sealed class WinInstaller : PackageManager
     protected override void _loadManagerVersion(out string version) =>
         version = $"Windows {Environment.OSVersion.Version}";
 
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => true;
+
     public override void RefreshPackageIndexes()
     {
         WinFeed.ForgetCachedIndexes();
@@ -89,7 +91,7 @@ public sealed class WinInstaller : PackageManager
 
     internal static Architecture Machine { get; set; } = RuntimeInformation.OSArchitecture;
 
-    internal IReadOnlyList<(IManagerSource Source, WinFeedItem Item)> ListLatest()
+    internal IReadOnlyList<(IManagerSource Source, WinFeedItem Item)> ListLatest(bool throwOnFeedFailure = false)
     {
         var result = new List<(IManagerSource, WinFeedItem)>();
         foreach (var source in SourcesHelper.GetSources())
@@ -99,7 +101,7 @@ public sealed class WinInstaller : PackageManager
                 foreach (var item in WinFeed.Latest(WinFeed.List(source.Url), CompareVersions, Machine))
                     result.Add((source, item));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!throwOnFeedFailure)
             {
                 Logger.Warn($"Could not list the package feed {source.Name} at {source.Url}: {ex.Message}");
             }
@@ -147,9 +149,11 @@ public sealed class WinInstaller : PackageManager
 
     internal sealed record InstalledItem(IManagerSource Source, WinFeedItem Item, ArpEntry Entry, string Installed, bool HasUpdate);
 
-    internal IReadOnlyList<InstalledItem> ListInstalled()
+    // A feed that cannot be read (and has no last known listing) hides what it installed, so the
+    // installed and update listings fail instead of reporting those packages as gone.
+    internal IReadOnlyList<InstalledItem> ListInstalled(bool throwOnFeedFailure = false)
     {
-        var latest = ListLatest();
+        var latest = ListLatest(throwOnFeedFailure);
         var entries = ArpEntries.Read();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var installed = new List<InstalledItem>();
@@ -169,12 +173,12 @@ public sealed class WinInstaller : PackageManager
         ListInstalled().FirstOrDefault(p => string.Equals(p.Item.Id, package.Id, StringComparison.OrdinalIgnoreCase))?.Entry;
 
     protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
-        ListInstalled()
+        ListInstalled(throwOnFeedFailure: true)
             .Select(p => new Package(p.Item.Name, p.Item.Id, p.Installed, p.Source, this))
             .ToArray();
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe() =>
-        ListInstalled()
+        ListInstalled(throwOnFeedFailure: true)
             .Where(p => p.HasUpdate)
             .Select(p => new Package(p.Item.Name, p.Item.Id, p.Installed, p.Item.Version, p.Source, this))
             .ToArray();

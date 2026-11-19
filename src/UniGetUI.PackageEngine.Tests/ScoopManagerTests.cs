@@ -899,5 +899,16 @@ public sealed class ScoopManagerTests : IDisposable
     {
         return PackageEngineFixtureFiles.ReadAllText(relativePath).Replace("\r\n", "\n").Split('\n');
     }
+
+    [Theory]
+    [InlineData(0, "", 0, false)]
+    [InlineData(1, "WARN  There aren't any apps installed.", 0, false)]
+    [InlineData(1, "WARN  There aren't any apps installed.", 2, true)]
+    [InlineData(1, "Invoke-Expression: cannot find path", 0, true)]
+    [InlineData(-196608, "", 0, true)]
+    public void ScoopOnlyAcceptsNoAppsInstalledAsAnEmptyListing(int exitCode, string output, int parsed, bool failed)
+    {
+        Assert.Equal(failed, Scoop.IsInstalledListingFailure(exitCode, [output], parsed));
+    }
 }
 #endif

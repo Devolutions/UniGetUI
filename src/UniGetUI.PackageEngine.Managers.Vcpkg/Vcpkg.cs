@@ -236,9 +236,11 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
                 }
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            string error = p.StandardError.ReadToEnd();
+            logger.AddToStdErr(error);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            ThrowIfListingFailed(p.ExitCode, error);
             return Packages;
         }
 
@@ -314,10 +316,20 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
                 );
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            string error = p.StandardError.ReadToEnd();
+            logger.AddToStdErr(error);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            ThrowIfListingFailed(p.ExitCode, error);
             return Packages;
+        }
+
+        private void ThrowIfListingFailed(int exitCode, string error)
+        {
+            if (exitCode != 0)
+                throw new InvalidOperationException(
+                    $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+                );
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()

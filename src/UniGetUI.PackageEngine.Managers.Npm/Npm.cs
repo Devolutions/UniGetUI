@@ -146,13 +146,53 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
                 string strContents = p.StandardOutput.ReadToEnd();
                 logger.AddToStdOut(strContents);
-                Packages.AddRange(ParseAvailableUpdatesOutput(strContents, DefaultSource, this, options));
-
-                logger.AddToStdErr(p.StandardError.ReadToEnd());
+                string error = p.StandardError.ReadToEnd();
+                logger.AddToStdErr(error);
                 p.WaitForExit();
                 logger.Close(p.ExitCode);
+                ThrowIfListingFailed(p.ExitCode, strContents, error);
+
+                Packages.AddRange(ParseAvailableUpdatesOutput(strContents, DefaultSource, this, options));
             }
             return Packages;
+        }
+
+        private void ThrowIfListingFailed(int exitCode, string output, string error)
+        {
+            if (IsListingFailure(exitCode, output))
+                throw new InvalidOperationException(
+                    $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+                );
+        }
+
+        // `npm outdated` exits 1 when updates exist, and `npm list` exits 1 with an ELSPROBLEMS
+        // error (extraneous or invalid packages) while still printing the whole tree. Any other
+        // nonzero exit, or one without JSON output, is a failed listing.
+        internal static bool IsListingFailure(int exitCode, string output)
+        {
+            if (exitCode == 0)
+                return false;
+            if (string.IsNullOrWhiteSpace(output))
+                return true;
+
+            JsonNode? root;
+            try
+            {
+                root = JsonNode.Parse(output);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return true;
+            }
+
+            if (root is not JsonObject contents)
+                return true;
+
+            return contents["error"] is JsonObject errorObject
+                && (errorObject["code"] is not null || errorObject["summary"] is not null)
+                && errorObject["current"] is null
+                && errorObject["latest"] is null
+                && errorObject["code"]?.ToString() != "ELSPROBLEMS";
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
@@ -195,11 +235,13 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
                 string strContents = p.StandardOutput.ReadToEnd();
                 logger.AddToStdOut(strContents);
-                Packages.AddRange(ParseInstalledPackagesOutput(strContents, DefaultSource, this, options));
-
-                logger.AddToStdErr(p.StandardError.ReadToEnd());
+                string error = p.StandardError.ReadToEnd();
+                logger.AddToStdErr(error);
                 p.WaitForExit();
                 logger.Close(p.ExitCode);
+                ThrowIfListingFailed(p.ExitCode, strContents, error);
+
+                Packages.AddRange(ParseInstalledPackagesOutput(strContents, DefaultSource, this, options));
             }
 
             return Packages;

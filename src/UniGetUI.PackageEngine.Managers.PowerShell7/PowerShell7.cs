@@ -95,12 +95,16 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
+                    // An empty scope makes Get-InstalledPSResource report InstalledPackageNotFound,
+                    // which is not a failure; anything else must fail the listing.
                     Arguments =
                         Status.ExecutableCallArgs
-                        + " \"Write-Output '##SCOPE:AllUsers##';"
-                        + " Get-InstalledPSResource -Scope AllUsers | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository };"
-                        + " Write-Output '##SCOPE:CurrentUser##';"
-                        + " Get-InstalledPSResource -Scope CurrentUser | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository }\"",
+                        + " \"$ErrorActionPreference = 'Stop';"
+                        + " foreach ($scope in 'AllUsers', 'CurrentUser') {"
+                        + " Write-Output ('##SCOPE:' + $scope + '##');"
+                        + " try { Get-InstalledPSResource -Scope $scope | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository } }"
+                        + " catch { if ($_.FullyQualifiedErrorId -notlike 'InstalledPackageNotFound,*') { throw } } };"
+                        + " exit 0\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
@@ -124,9 +128,14 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
                 outputLines.Add(line);
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            string error = p.StandardError.ReadToEnd();
+            logger.AddToStdErr(error);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            if (p.ExitCode != 0)
+                throw new InvalidOperationException(
+                    $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
+                );
 
             return ParseInstalledPackages(outputLines, this);
         }

@@ -213,11 +213,11 @@ internal static class MaintenanceScheduler
             return;
 
         _updatesWereLoaded |= loader.IsLoaded;
-        loader.FinishedLoading += (_, _) =>
+        loader.FinishedLoading += (_, e) =>
         {
             _updatesWereLoaded = true;
             // A remote rescan only lists; it must not claim a check that would make auto-install due.
-            if (!loader.LoadIsListingOnly)
+            if (!e.ListingOnly)
                 RecordUpdateLoad(DateTime.Now);
         };
     }

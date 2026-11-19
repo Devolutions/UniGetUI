@@ -1,13 +1,14 @@
 namespace UniGetUI.PackageEngine.Interfaces;
 
 /// <summary>
-/// Marks package listings started by a remote rescan. Inside this scope a manager lists exactly as
-/// it would for the user's Reload (index refreshes included) but does not repair itself or recover
-/// interrupted work, and fails a listing it cannot make without doing so.
+/// Marks package listings started by a remote rescan or the periodic inventory refresh. Inside
+/// this scope a manager lists as it would for the user's Reload, but refreshes its indexes only
+/// when that updates nothing but a catalogue, does not repair itself or recover interrupted work,
+/// and fails a listing it cannot make without doing so.
 /// </summary>
 /// <remarks>
-/// The flag flows with the execution context, so it reaches the tasks a loader starts for each
-/// manager, but not a listing already running for someone else that a caller merely waits for.
+/// A loader enters it only around its own call to each manager, so it never reaches the loader's
+/// events or the work their handlers start; they learn the mode from the event arguments.
 /// </remarks>
 public static class PackageListingScope
 {

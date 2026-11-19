@@ -447,13 +447,25 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return packages;
         }
 
+        // The update check starts from the installed list, so an installed listing that failed
+        // must fail the update check too instead of reporting that nothing can be updated.
+        private IReadOnlyList<IPackage> GetInstalledPackagesForUpdates()
+        {
+            var installed = GetInstalledPackages(out bool failed);
+            if (failed)
+                throw new InvalidOperationException(
+                    $"{Name} could not list its installed packages, so its updates cannot be checked."
+                );
+            return installed;
+        }
+
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
             int errors = 0;
             var logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
 
             var installedPackages = TaskRecycler<IReadOnlyList<IPackage>>.RunOrAttach(
-                GetInstalledPackages
+                GetInstalledPackagesForUpdates
             );
             var Packages = new List<Package>();
 

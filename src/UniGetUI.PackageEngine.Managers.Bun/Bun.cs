@@ -154,8 +154,25 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            ThrowIfListingFailed(p.ExitCode, strErr, globalDir);
             return result;
         }
+
+        // Bun exits 1 with "missing lockfile" when the global package.json has never been installed
+        // into; that means nothing is installed, not a failed listing.
+        private void ThrowIfListingFailed(int exitCode, string error, string globalDir)
+        {
+            if (exitCode == 0 || !HasGlobalLockfile(globalDir))
+                return;
+
+            throw new InvalidOperationException(
+                $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+            );
+        }
+
+        internal static bool HasGlobalLockfile(string globalDir) =>
+            File.Exists(Path.Combine(globalDir, "bun.lock"))
+            || File.Exists(Path.Combine(globalDir, "bun.lockb"));
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
         {
@@ -206,6 +223,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             logger.AddToStdErr(stderrTask.Result);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            ThrowIfListingFailed(p.ExitCode, stderrTask.Result, globalDir);
 
             return Packages;
         }

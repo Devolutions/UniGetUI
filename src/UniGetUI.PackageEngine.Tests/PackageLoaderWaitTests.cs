@@ -1,3 +1,5 @@
+using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 
@@ -29,6 +31,81 @@ public sealed class PackageLoaderWaitTests
 
         Assert.NotNull(waitStartedInsideTheEvent);
         await AssertCompletesAsync(waitStartedInsideTheEvent);
+    }
+
+    [Fact]
+    public async Task ReloadPackages_DuringASilentReloadAfterAListingOnlyLoadReturnsInsteadOfRecursing()
+    {
+        Settings.Set(Settings.K.DisableWaitForInternetConnection, true);
+        int listings = 0;
+        using var gate = new ManualResetEventSlim(true);
+        var manager = new PackageManagerBuilder()
+            .WithInstalledPackages(_ =>
+            {
+                Interlocked.Increment(ref listings);
+                gate.Wait(TimeSpan.FromSeconds(30));
+                return [];
+            })
+            .Build();
+        var loader = new InstalledPackagesLoader([manager]);
+        await AssertCompletesAsync(loader.ReloadPackagesListingOnly());
+        Assert.True(loader.LoadIsListingOnly);
+
+        gate.Reset();
+        Task silent;
+        try
+        {
+            silent = loader.ReloadPackagesSilently();
+            Assert.True(loader.IsLoading);
+
+            // A silent reload is a normal load: a reload requested during it is not left waiting
+            // for, or spinning on, a listing-only load that is not running.
+            await AssertCompletesAsync(Task.Run(loader.ReloadPackages));
+            Assert.False(loader.LoadIsListingOnly);
+        }
+        finally
+        {
+            gate.Set();
+        }
+
+        await AssertCompletesAsync(silent);
+        Assert.Equal(2, listings);
+    }
+
+    [Fact]
+    public async Task ListingThatFailsIsNotCompleteWhenAnotherListingClearsTheSharedFlag()
+    {
+        Settings.Set(Settings.K.DisableWaitForInternetConnection, true);
+        int failingCalls = 0;
+        TestPackageManager? failing = null;
+        failing = new PackageManagerBuilder()
+            .WithName("failing")
+            .WithInstalledPackages(_ =>
+                Interlocked.Increment(ref failingCalls) <= 2
+                    ? throw new InvalidOperationException("listing failed")
+                    : [])
+            .Build();
+        var other = new PackageManagerBuilder()
+            .WithName("other")
+            .WithInstalledPackages(_ =>
+            {
+                // Lists the failing manager again once its scan call has failed, as another
+                // listing (a UI page, a CLI request) can while this load is still running.
+                SpinWait.SpinUntil(() => failing.LastInstalledListingFailed, TimeSpan.FromSeconds(10));
+                failing.GetInstalledPackages();
+                return [];
+            })
+            .Build();
+        var loader = new InstalledPackagesLoader([failing, other]);
+
+        await AssertCompletesAsync(loader.ReloadPackages());
+
+        Assert.False(failing.LastInstalledListingFailed);
+        Assert.True(loader.LastLoadReportedFailures);
+        var scan = loader.LastCompletedScan;
+        Assert.NotNull(scan);
+        Assert.DoesNotContain(failing, scan.SucceededManagers);
+        Assert.Contains(other, scan.SucceededManagers);
     }
 
     [Fact]

@@ -468,21 +468,54 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
-    public void ListingOnlyScopeRefreshesIndexesButNeverRepairs()
+    public void ListingOnlyScopeRefreshesCatalogueOnlyIndexesButNeverRepairs()
     {
         var manager = CreateReadyManager();
+        manager.RefreshUpdatesOnlyCatalogues = true;
         manager.SetInstalledPackages(() => throw new InvalidOperationException("installed failed"));
         manager.SetAvailableUpdates(() => throw new InvalidOperationException("updates failed"));
 
         using (PackageListingScope.EnterListingOnly())
         {
-            Assert.Empty(manager.GetInstalledPackages());
-            Assert.Empty(manager.GetAvailableUpdates());
+            Assert.Empty(manager.GetInstalledPackages(out bool installedFailed));
+            Assert.Empty(manager.GetAvailableUpdates(out bool updatesFailed));
+            Assert.True(installedFailed);
+            Assert.True(updatesFailed);
         }
 
         Assert.Equal(0, manager.AttemptFastRepairCalls);
         Assert.Equal(1, manager.RefreshPackageIndexesCalls);
         Assert.False(PackageListingScope.IsListingOnly);
+    }
+
+    [Fact]
+    public void ListingOnlyScopeSkipsAnIndexRefreshThatUpdatesMoreThanACatalogue()
+    {
+        var manager = CreateReadyManager();
+        manager.SetAvailableUpdates(() => []);
+
+        using (PackageListingScope.EnterListingOnly())
+            Assert.Empty(manager.GetAvailableUpdates());
+        Assert.Equal(0, manager.RefreshPackageIndexesCalls);
+
+        manager.GetAvailableUpdates();
+        Assert.Equal(1, manager.RefreshPackageIndexesCalls);
+    }
+
+    [Fact]
+    public void EachListingCallReportsItsOwnFailure()
+    {
+        var manager = CreateReadyManager();
+        int calls = 0;
+        manager.SetInstalledPackages(() =>
+            Interlocked.Increment(ref calls) <= 2 ? throw new InvalidOperationException("installed failed") : []);
+
+        manager.GetInstalledPackages(out bool firstFailed);
+        manager.GetInstalledPackages(out bool secondFailed);
+
+        Assert.True(firstFailed);
+        Assert.False(secondFailed);
+        Assert.False(manager.LastInstalledListingFailed);
     }
 
     [Fact]

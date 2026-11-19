@@ -23,10 +23,13 @@ internal interface IAgentRegistrationBackend
     RemoteSourceResolution ResolveSource(string managerId, string sourceName);
 
     /// <summary>
-    /// Whether the current installed list is complete and holds exactly one installation with this
-    /// manager and package ID, and that installation reports exactly this scope.
+    /// Whether the last completed installed scan listed this manager successfully and holds exactly
+    /// one installation with this manager and package ID, reporting exactly this scope.
     /// </summary>
     bool IsOnlyInstalledRow(string managerId, string packageId, string reportedScope);
+
+    /// <summary>Whether the user has this manager enabled.</summary>
+    bool IsManagerEnabled(string managerId);
 
     Task<RemoteGrantDelivery> SubmitGrantAsync(
         RemoteGrantPlan plan,
@@ -76,32 +79,18 @@ internal sealed class IpcRemoteInventoryBackend : IAgentRegistrationBackend
 
     public bool IsOnlyInstalledRow(string managerId, string packageId, string reportedScope)
     {
-        var loader = InstalledPackagesLoader.Instance;
-        if (loader is null || !loader.IsLoaded || loader.IsLoading)
-        {
-            return false;
-        }
-
-        long loadGeneration = loader.LoadGeneration;
-        var scan = loader.LastCompletedScan;
-        if (scan is null || loader.LastLoadReportedFailures
-            || !scan.SucceededManagers.Any(manager =>
-                IpcManagerSettingsApi.GetPublicManagerId(manager) == managerId))
-        {
-            return false;
-        }
-
-        var packages = loader.Packages;
-        // A reload that finishes while copying also makes the copied list unreliable.
-        if (!loader.IsLoaded || loader.IsLoading || loader.LastLoadReportedFailures
-            || loadGeneration != loader.LoadGeneration
-            || !ReferenceEquals(scan, loader.LastCompletedScan))
-        {
-            return false;
-        }
-
-        return IpcRemoteInventory.IsOnlyInstalledRow(packages, managerId, packageId, reportedScope);
+        // The last completed scan is the copy the Agent chose the row from; a load running now
+        // (a rescan after an earlier operation, say) does not make it unidentifiable.
+        var scan = InstalledPackagesLoader.Instance?.LastCompletedScan;
+        return scan is not null
+            && scan.SucceededManagers.Any(manager =>
+                IpcManagerSettingsApi.GetPublicManagerId(manager) == managerId)
+            && IpcRemoteInventory.IsOnlyInstalledRow(scan.Packages, managerId, packageId, reportedScope);
     }
+
+    public bool IsManagerEnabled(string managerId) =>
+        PEInterface.Managers.Any(manager =>
+            IpcManagerSettingsApi.GetPublicManagerId(manager) == managerId && manager.IsEnabled());
 
     public Task<RemoteGrantDelivery> SubmitGrantAsync(
         RemoteGrantPlan plan,
@@ -203,14 +192,13 @@ internal sealed class RemoteRescan
                 return false;
             }
 
-            using (PackageListingScope.EnterListingOnly())
-            {
-                _ = installed.ReloadPackages();
-            }
-
+            _ = installed.ReloadPackagesListingOnly();
             return true;
         }
     }
+
+    /// <summary>Test hook: runs after a running load was waited out, before the scan starts.</summary>
+    internal Action? BeforeScanStarts { get; set; }
 
     private async Task<bool> RunAsync(
         AbstractPackageLoader installed,
@@ -222,23 +210,30 @@ internal sealed class RemoteRescan
         bool dequeued = false;
         try
         {
-            while (installed.IsLoading || updates.IsLoading)
-            {
-                await Task.WhenAll(installed.WaitForCurrentLoadAsync(), updates.WaitForCurrentLoadAsync())
-                    .ConfigureAwait(false);
-            }
-
             Task both;
-            lock (_gate)
+            while (true)
             {
-                // From here a new request queues the next scan, which waits for this one.
-                _queued = null;
-                dequeued = true;
-                using (PackageListingScope.EnterListingOnly())
+                while (installed.IsLoading || updates.IsLoading)
                 {
+                    await Task.WhenAll(installed.WaitForCurrentLoadAsync(), updates.WaitForCurrentLoadAsync())
+                        .ConfigureAwait(false);
+                }
+
+                BeforeScanStarts?.Invoke();
+                lock (_gate)
+                {
+                    // A load may have started since the check above, before a request that joined
+                    // this scan meanwhile arrived; joining it would answer that request too early.
+                    if (installed.IsLoading || updates.IsLoading)
+                        continue;
+
+                    // From here a new request queues the next scan, which waits for this one.
+                    _queued = null;
+                    dequeued = true;
                     // The installed load starts first: the update load waits for each manager's
                     // installed listing only while that one is running.
-                    both = Task.WhenAll(StartOrJoinAsync(installed), StartOrJoinAsync(updates));
+                    both = Task.WhenAll(StartAsync(installed), StartAsync(updates));
+                    break;
                 }
             }
 
@@ -256,14 +251,11 @@ internal sealed class RemoteRescan
         }
     }
 
-    private static async Task StartOrJoinAsync(AbstractPackageLoader loader)
+    private static async Task StartAsync(AbstractPackageLoader loader)
     {
-        // A load that started after the wait above also started after the request, so joining it is fine.
-        if (!loader.IsLoading)
-        {
-            await loader.ReloadPackages().ConfigureAwait(false);
-        }
-
+        // Neither loader was loading under the lock, so this starts a load: a running one would
+        // make the answer fail rather than join it, since StartedAfter checks the published scan.
+        await loader.ReloadPackagesListingOnly().ConfigureAwait(false);
         await loader.WaitForCurrentLoadAsync().ConfigureAwait(false);
     }
 

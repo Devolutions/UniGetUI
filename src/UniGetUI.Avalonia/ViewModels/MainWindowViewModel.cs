@@ -559,10 +559,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (UpgradablePackagesLoader.Instance is { } upgLoader)
         {
-            upgLoader.FinishedLoading += (_, _) =>
+            upgLoader.FinishedLoading += (_, e) =>
             {
                 // Extension update checks may fetch; a remote rescan only lists.
-                if (upgLoader.LoadIsListingOnly) return;
+                if (e.ListingOnly) return;
                 Dispatcher.UIThread.Post(() =>
                 {
                     foreach (var session in _extensions.Values) _ = session.CheckForUpdatesAsync();

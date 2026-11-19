@@ -23,6 +23,8 @@ internal sealed class AgentRequestDispatcher
         "The package rescan did not complete for every enabled package manager.";
     private const string ScopeNotAllowedMessage =
         "This manager cannot run the operation in the requested scope; nothing was started.";
+    private const string ManagerDisabledMessage =
+        "This package manager is disabled in UniGetUI on this machine; nothing was started.";
     private const string RowNotIdentifiedMessage =
         "The installation could not be identified in the installed package list; nothing was started.";
     private const string NotSentMessage =
@@ -241,6 +243,12 @@ internal sealed class AgentRequestDispatcher
         if (managerId is null)
         {
             return Error(id, "InvalidArguments", InvalidMessage);
+        }
+
+        // The user turned this manager off on this machine; nothing is started for it.
+        if (!_backend.IsManagerEnabled(managerId))
+        {
+            return OperationResult(id, "Failed", ManagerDisabledMessage);
         }
 
         if (

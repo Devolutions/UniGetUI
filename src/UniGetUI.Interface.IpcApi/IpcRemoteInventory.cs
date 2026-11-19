@@ -151,7 +151,9 @@ public static class IpcRemoteInventory
     )
     {
         var samePackage = updates
-            .Where(update => update.Manager == row.Manager && update.Id == row.Id)
+            .Where(update => update.Manager == row.Manager && update.Id == row.Id
+                // An update listed for another version is stale: the row was upgraded since.
+                && update.Version == row.Version)
             .ToArray();
         bool loneInstallation =
             installed.Count(other => other.Manager == row.Manager && other.Id == row.Id) == 1;
@@ -186,10 +188,44 @@ public static class IpcRemoteInventory
     /// </summary>
     public static IReadOnlyList<IpcSourceInfo> ListSources()
     {
-        // Built from the local projection without health, which would read the health store.
-        var local = IpcManagerSettingsApi.ToManagerInfo(manager, includeHealth: false);
-        var capabilities = local.Capabilities;
-        return new IpcRemoteManagerInfo
+        var observed = SnapshotPackages(InstalledPackagesLoader.Instance)
+            .Concat(SnapshotPackages(UpgradablePackagesLoader.Instance))
+            .Select(package => package.Source);
+        return BuildSources(PEInterface.Managers, observed);
+    }
+
+    /// <summary>
+    /// Resolves a canonical source name by ordinal comparison against the manager's known sources
+    /// and the sources observed in the last completed scans, the copies the Agent chose from, so
+    /// a load running meanwhile does not hide them.
+    /// </summary>
+    public static RemoteSourceResolution ResolveSource(
+        string manager,
+        string sourceName,
+        bool requireInstalledOrigin = false
+    )
+    {
+        return ResolveSource(PEInterface.Managers, ScannedSources(), manager, sourceName, requireInstalledOrigin);
+    }
+
+    internal static IEnumerable<IManagerSource> ScannedSources() =>
+        (InstalledPackagesLoader.Instance?.LastCompletedScan?.Packages ?? [])
+            .Concat(UpgradablePackagesLoader.Instance?.LastCompletedScan?.Packages ?? [])
+            .Select(package => package.Source);
+
+    /// <param name="requireInstalledOrigin">
+    /// True for update and uninstall, which require package-specific origin evidence not present
+    /// in this source-only lookup.
+    /// </param>
+    internal static RemoteSourceResolution ResolveSource(
+        IEnumerable<IPackageManager> managers,
+        IEnumerable<IManagerSource> observedSources,
+        string manager,
+        string sourceName,
+        bool requireInstalledOrigin = false
+    )
+    {
+        if (string.IsNullOrEmpty(sourceName))
         {
             return RemoteSourceResolution.MissingSourceName;
         }

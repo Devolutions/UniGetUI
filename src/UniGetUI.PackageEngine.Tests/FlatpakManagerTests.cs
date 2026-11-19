@@ -382,4 +382,28 @@ public sealed class FlatpakManagerTests : IDisposable
         var versions = manager.DetailsHelper.GetVersions(package);
         Assert.Empty(versions);
     }
+
+    private sealed class ListingFlatpak : Flatpak
+    {
+        public IReadOnlyList<Package> ListInstalled() => GetInstalledPackages_UnSafe();
+
+        public IReadOnlyList<Package> ListUpdates() => GetAvailableUpdates_UnSafe();
+    }
+
+    [Fact]
+    public void AFailingFlatpakListingIsAFailedListingRatherThanAnEmptyOne()
+    {
+        var flatpak = new ListingFlatpak
+        {
+            Status = new UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers.ManagerStatus
+            {
+                Found = true,
+                ExecutablePath = FailingCommandScript.Create(_testRoot, 1, "cannot open the system installation"),
+                ExecutableCallArgs = "",
+            },
+        };
+
+        Assert.Throws<InvalidOperationException>(flatpak.ListInstalled);
+        Assert.Throws<InvalidOperationException>(flatpak.ListUpdates);
+    }
 }

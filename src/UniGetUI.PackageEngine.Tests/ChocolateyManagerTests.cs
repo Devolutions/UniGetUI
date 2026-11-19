@@ -6,6 +6,7 @@ using UniGetUI.PackageEngine.Managers.Choco;
 using UniGetUI.PackageEngine.Managers.ChocolateyManager;
 using UniGetUI.PackageEngine.Classes.Manager.Providers;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
@@ -967,6 +968,42 @@ public sealed class ChocolateyManagerTests : IDisposable
     private static string[] ReadFixtureLines(string relativePath)
     {
         return PackageEngineFixtureFiles.ReadAllText(relativePath).Replace("\r\n", "\n").Split('\n');
+    }
+
+    private sealed class ListingChocolatey : Chocolatey
+    {
+        public IReadOnlyList<Package> ListInstalled() => _getInstalledPackages_UnSafe();
+
+        public IReadOnlyList<Package> ListUpdates() => GetAvailableUpdates_UnSafe();
+    }
+
+    private ListingChocolatey ChocolateyRunning(int exitCode, string stderr) =>
+        new()
+        {
+            Status = new ManagerStatus
+            {
+                Found = true,
+                ExecutablePath = FailingCommandScript.Create(_testRoot, exitCode, stderr),
+                ExecutableCallArgs = "",
+            },
+        };
+
+    [Fact]
+    public void AFailingChocoListingIsAFailedListingRatherThanAnEmptyOne()
+    {
+        var choco = ChocolateyRunning(1, "choco is broken");
+
+        Assert.Contains("choco is broken", Assert.Throws<InvalidOperationException>(choco.ListInstalled).Message);
+        Assert.Throws<InvalidOperationException>(choco.ListUpdates);
+    }
+
+    [Fact]
+    public void ChocoEnhancedExitCodeTwoIsASuccessfulListing()
+    {
+        var choco = ChocolateyRunning(2, "");
+
+        Assert.Empty(choco.ListInstalled());
+        Assert.Empty(choco.ListUpdates());
     }
 }
 #endif

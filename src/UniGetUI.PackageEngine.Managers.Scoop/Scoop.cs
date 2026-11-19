@@ -644,8 +644,14 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             p.Start();
             RegisterListingProcess(p);
 
+            IReadOnlyList<string> lines = ScoopProcess.ReadLines(p, logger, out string error);
+            if (p.ExitCode != 0)
+                throw new InvalidOperationException(
+                    $"{Name} exited with code {p.ExitCode} while listing available updates: {error.Trim()}"
+                );
+
             return ParseAvailableUpdates(
-                ScoopProcess.ReadLines(p, logger),
+                lines,
                 installedPackages,
                 UpdatesPinnedInstalls(Status.Version)
             );
@@ -680,8 +686,23 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             );
             p.Start();
 
-            return ParseInstalledPackages(ScoopProcess.ReadLines(p, logger));
+            IReadOnlyList<string> lines = ScoopProcess.ReadLines(p, logger, out string error);
+            IReadOnlyList<Package> packages = ParseInstalledPackages(lines);
+            if (IsInstalledListingFailure(p.ExitCode, [.. lines, error], packages.Count))
+                throw new InvalidOperationException(
+                    $"{Name} exited with code {p.ExitCode} while listing installed packages: {error.Trim()}"
+                );
+            return packages;
         }
+
+        // `scoop list` exits 1 with "There aren't any apps installed." when nothing is installed.
+        internal static bool IsInstalledListingFailure(int exitCode, IEnumerable<string> output, int parsedCount) =>
+            exitCode != 0
+            && !(
+                exitCode == 1
+                && parsedCount == 0
+                && output.Any(line => line.Contains("There aren't any apps installed", StringComparison.OrdinalIgnoreCase))
+            );
 
         public override void RefreshPackageIndexes()
         {

@@ -7,6 +7,7 @@ using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
+using UniGetUI.PackageEngine.Tests.Infrastructure.Helpers;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -1110,6 +1111,28 @@ public sealed class WinGetCliParsingTests : IDisposable
     public void IsSeparatorLineOnlyAcceptsDashRuns(string line, bool expected)
     {
         Assert.Equal(expected, WinGetTableLayout.IsSeparatorLine(line));
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(unchecked((int)0x8A150014), false)]
+    [InlineData(unchecked((int)0x8A15000F), true)]
+    [InlineData(1, true)]
+    public void OnlyANoMatchExitIsASuccessfulListing(int exitCode, bool failed)
+    {
+        Assert.Equal(failed, WinGetCliHelper.IsListingFailure(exitCode));
+    }
+
+    [Fact]
+    public void AFailingWinGetCliListingIsAFailedListingRatherThanAnEmptyOne()
+    {
+        var helper = new WinGetCliHelper(
+            new WinGet(),
+            FailingCommandScript.Create(_testRoot, unchecked((int)0x8A15000F), "data required by the source is missing")
+        );
+
+        Assert.Throws<InvalidOperationException>(helper.GetInstalledPackages_UnSafe);
+        Assert.Throws<InvalidOperationException>(helper.GetAvailableUpdates_UnSafe);
     }
 }
 #endif

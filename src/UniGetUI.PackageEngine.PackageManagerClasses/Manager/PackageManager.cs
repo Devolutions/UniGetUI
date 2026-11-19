@@ -793,7 +793,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 else if (kind is ManagerListingKind.Updates)
                     LastUpdatesListingFailed = true;
             }
-            failed = outcome.Failure is not null;
+            // A skipped inventory listing did not list anything, so it cannot count as listed.
+            failed =
+                outcome.Failure is not null
+                || (outcome.Skipped && kind is ManagerListingKind.Installed or ManagerListingKind.Updates);
 
             if (!outcome.Skipped)
             {
@@ -1019,13 +1022,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         /// </summary>
         public bool LastUpdatesListingFailed { get; private set; }
 
-        public IReadOnlyList<IPackage> GetAvailableUpdates()
+        public IReadOnlyList<IPackage> GetAvailableUpdates() => GetAvailableUpdates(out _);
+
+        public IReadOnlyList<IPackage> GetAvailableUpdates(out bool failed)
         {
             LastUpdatesListingFailed = false;
             return TrackListing(
                 ManagerListingKind.Updates,
                 outcome => _getAvailableUpdates(false, outcome),
-                out _
+                out failed
             );
         }
 
@@ -1048,7 +1053,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
             try
             {
-                if (!SecondAttempt)
+                // Nobody may be present during a listing-only scan, so it must not change the
+                // manager itself or a working tree, only a catalogue.
+                if (
+                    !SecondAttempt
+                    && (!PackageListingScope.IsListingOnly || IndexRefreshUpdatesOnlyCatalogues)
+                )
                 {
                     RefreshPackageIndexesSafely();
                 }
@@ -1104,13 +1114,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public void InvalidateInstalledPackages() =>
             Interlocked.Increment(ref _installedPackagesGeneration);
 
-        public IReadOnlyList<IPackage> GetInstalledPackages()
+        public IReadOnlyList<IPackage> GetInstalledPackages() => GetInstalledPackages(out _);
+
+        public IReadOnlyList<IPackage> GetInstalledPackages(out bool failed)
         {
             LastInstalledListingFailed = false;
             return TrackListing(
                 ManagerListingKind.Installed,
                 outcome => _getInstalledPackages(false, outcome),
-                out _
+                out failed
             );
         }
 
@@ -1198,6 +1210,14 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         /// Refreshes the Package Manager sources/indexes
         /// Each manager MUST implement this method.
         /// </summary>
+        /// <summary>
+        /// Whether <see cref="RefreshPackageIndexes"/> only updates the manager's package catalogues.
+        /// A manager whose refresh also updates the manager itself or a working tree (for example
+        /// <c>scoop update</c>, <c>brew update</c> or a <c>git pull</c>) leaves this false, and its
+        /// refresh is skipped in listing-only scans.
+        /// </summary>
+        protected virtual bool IndexRefreshUpdatesOnlyCatalogues => false;
+
         public virtual void RefreshPackageIndexes()
         {
             Logger.Debug($"Manager {Name} has not implemented RefreshPackageIndexes");

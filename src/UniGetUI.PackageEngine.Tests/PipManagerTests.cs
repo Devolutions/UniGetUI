@@ -3,8 +3,10 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Tests;
+using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.PipManager;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -280,6 +282,32 @@ public sealed class PipManagerTests : IDisposable
     private sealed class ScriptedPip(IReadOnlyList<string> candidates) : Pip
     {
         public override IReadOnlyList<string> FindCandidateExecutableFiles() => candidates;
+    }
+
+    private sealed class ListingPip : Pip
+    {
+        public IReadOnlyList<Package> ListInstalled() => GetInstalledPackages_UnSafe();
+
+        public IReadOnlyList<Package> ListUpdates() => GetAvailableUpdates_UnSafe();
+    }
+
+    [Fact]
+    public void AFailingPipListIsAFailedListingRatherThanAnEmptyOne()
+    {
+        var pip = new ListingPip
+        {
+            Status = new ManagerStatus
+            {
+                Found = true,
+                ExecutablePath = FailingCommandScript.Create(_testRoot, 17, "broken environment"),
+                ExecutableCallArgs = "",
+            },
+        };
+
+        var installed = Assert.Throws<InvalidOperationException>(pip.ListInstalled);
+        Assert.Contains("17", installed.Message);
+        Assert.Contains("broken environment", installed.Message);
+        Assert.Throws<InvalidOperationException>(pip.ListUpdates);
     }
 
     [Theory]

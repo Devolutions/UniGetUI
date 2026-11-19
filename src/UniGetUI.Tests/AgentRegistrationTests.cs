@@ -127,6 +127,10 @@ public class AgentRegistrationTests
             return UniqueRow;
         }
 
+        public bool ManagerEnabled = true;
+
+        public bool IsManagerEnabled(string managerId) => ManagerEnabled;
+
         public Task<RemoteGrantDelivery> SubmitGrantAsync(
             RemoteGrantPlan plan,
             string grant,
@@ -1010,6 +1014,26 @@ public class AgentRegistrationTests
 
         Assert.Equal("Failed", result.GetProperty("status").GetString());
         Assert.Equal(("pip", "Some.Pkg", "machine"), Assert.Single(h.Backend.UniqueRowChecks));
+        Assert.Empty(h.Backend.Submitted);
+    }
+
+    [Theory]
+    [InlineData("WinGet", "Install", "winget", null)]
+    [InlineData("Pip", "Update", "", "user")]
+    public async Task OperationForADisabledManagerFailsWithNothingStarted(
+        string manager, string operation, string source, string? reportedScope)
+    {
+        var h = new Harness();
+        h.Backend.ManagerEnabled = false;
+        await h.WelcomeAsync();
+        JsonElement result = Result(
+            await h.RequestAsync(Uuid1, "ExecutePackageOperation", Op(operation, manager, "User", source, reportedScope))
+        );
+
+        Assert.Equal("Failed", result.GetProperty("status").GetString());
+        Assert.Contains("disabled", result.GetProperty("error").GetString());
+        Assert.Empty(h.Backend.ResolvedSources);
+        Assert.Empty(h.Backend.UniqueRowChecks);
         Assert.Empty(h.Backend.Submitted);
     }
 

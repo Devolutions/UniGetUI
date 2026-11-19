@@ -47,6 +47,7 @@ public sealed class RemoteInventorySnapshotTests
         public bool LastUpdatesListingFailed => false;
         public bool LastInstalledListingFailed { get; set; }
         public IReadOnlyList<IPackage> ListedPackages { get; set; } = [];
+        public ManualResetEventSlim? ListingGate { get; set; }
         public long InstalledPackagesGeneration => 0;
         public void InvalidateInstalledPackages() { }
         public int? CompareVersions(string versionA, string versionB) => throw new NotSupportedException();
@@ -62,7 +63,11 @@ public sealed class RemoteInventorySnapshotTests
         public bool IsInitializing => false;
         public IReadOnlyList<ManagerMaintenanceAction> GetMaintenanceActions() => [];
         public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotSupportedException();
-        public IReadOnlyList<IPackage> GetInstalledPackages() => ListedPackages;
+        public IReadOnlyList<IPackage> GetInstalledPackages()
+        {
+            ListingGate?.Wait(TimeSpan.FromSeconds(30));
+            return ListedPackages;
+        }
         public void RefreshPackageIndexes() => throw new NotSupportedException();
         public void AttemptFastRepair() => throw new NotSupportedException();
         public IReadOnlyList<string> FindCandidateExecutableFiles() => [];
@@ -104,6 +109,55 @@ public sealed class RemoteInventorySnapshotTests
         {
             InstalledPackagesLoader.Instance = old;
         }
+    }
+
+    [Fact]
+    public async Task OperationArrivingDuringARescanIsCheckedAgainstTheLastCompletedScan()
+    {
+        var old = InstalledPackagesLoader.Instance;
+        var manager = new SnapshotManager("a");
+        var observed = new ManagerSource(manager, "observed-feed", new Uri("https://feed.example.test/v2"));
+        manager.ListedPackages =
+        [
+            new Package("p", "p", "1.0", "1.0", observed, manager, new OverridenInstallationOptions("user")),
+        ];
+        var loader = new TestInstalledLoader([manager]);
+        var backend = new IpcRemoteInventoryBackend();
+        using var gate = new ManualResetEventSlim(true);
+        manager.ListingGate = gate;
+        Task? rescan = null;
+        try
+        {
+            await loader.ReloadPackages();
+            gate.Reset();
+            rescan = loader.ReloadPackagesListingOnly();
+            Assert.True(loader.IsLoading);
+
+            Assert.True(backend.IsOnlyInstalledRow("a", "p", "user"));
+            Assert.Contains(observed, IpcRemoteInventory.ScannedSources());
+        }
+        finally
+        {
+            gate.Set();
+            if (rescan is not null)
+                await rescan.WaitAsync(TimeSpan.FromSeconds(30));
+            InstalledPackagesLoader.Instance = old;
+        }
+    }
+
+    [Fact]
+    public void UpdateListedForAnotherVersionIsNotShownOnTheRow()
+    {
+        var a = new SnapshotManager("a");
+        var snapshot = IpcRemoteInventory.BuildSnapshot(
+            [a],
+            Scan(Installed, [Row(a, "p", "user", "2.0")], a),
+            Scan(Updated, [Row(a, "p", "user", "1.0", "2.0"), Row(a, "q", null, "1.0", "2.0")], a),
+            []);
+
+        var row = Assert.Single(snapshot!.InstalledPackages);
+        Assert.Equal("", row.NewVersion);
+        Assert.False(row.IsUpgradable);
     }
 
     [Fact]
@@ -205,6 +259,7 @@ public sealed class RemoteInventorySnapshotTests
             throw new NotSupportedException();
         public bool IsOnlyInstalledRow(string managerId, string packageId, string reportedScope) =>
             throw new NotSupportedException();
+        public bool IsManagerEnabled(string managerId) => throw new NotSupportedException();
         public Task<RemoteGrantDelivery> SubmitGrantAsync(
             RemoteGrantPlan plan, string grant, CancellationToken cancellationToken) =>
             throw new NotSupportedException();

@@ -16,10 +16,10 @@ English.PackageBundleName=UniGetUI package bundle
 English.InvalidInstallPath=There is an invalid character in the selected install location. Install location cannot contain special characters. Please input a valid path to continue, such as %1
 English.RemovingOldIcons=Removing old icons...
 ; Unqualified messages are the English fallback for languages not yet translated.
-English.RegAddToPath=Add the uniget command to PATH (reopen terminals after installation)
-English.InvalidAddToPathProperty=Invalid installer command line.%n%n%1%n%nUse the bare property ADDTOPATH=0 or ADDTOPATH=1. Setup will stop without installing.
-English.UnigetPathError=Could not update PATH for the uniget command in %1.%n%n%2%n%nInstallation or uninstallation will continue, but PATH may require manual attention. See the log (use /LOG when uninstalling). Reopen terminals after correcting PATH.
-English.UnigetPathBroadcastError=Windows could not notify running applications of the PATH change. Reopen terminals; signing out and back in may be needed.
+RegAddToPath=Add the uniget command to PATH (reopen terminals after installation)
+InvalidAddToPathProperty=Invalid installer command line.%n%n%1%n%nUse the bare property ADDTOPATH=0 or ADDTOPATH=1. Setup will stop without installing.
+UnigetPathError=Could not update PATH for the uniget command in %1.%n%n%2%n%nInstallation or uninstallation will continue, but PATH may require manual attention. See the log (use /LOG when uninstalling). Reopen terminals after correcting PATH.
+UnigetPathBroadcastError=Windows could not notify running applications of the PATH change. Reopen terminals; signing out and back in may be needed.
 
 ; Armenian
 Armenian.InstallType=Տեղադրման տեսակը
@@ -159,12 +159,12 @@ Italian.RegInst=Esegui installazione normale
 Italian.RegStartMmenuIcon=Crea collegamento programma nel menu Start
 Italian.RegDesktopIcon=Crea collegamento programma sul desktop
 Italian.PackageBundleName=Raccolta pacchetti UniGetUI
-Italian.InvalidInstallPath=Il percorso di installazione selezionato contiene un carattere non valido.%nIl percorso di installazione non può contenere caratteri speciali.%nPer continuare inserisci un percorso valido, ad esempio '%1'.
+Italian.InvalidInstallPath=Il percorso di installazione selezionato contiene un carattere non valido. Il percorso di installazione non può contenere caratteri speciali. Per continuare inserisci un percorso valido, ad esempio '%1'.
 Italian.RemovingOldIcons=Rimozione icone precedenti...
 Italian.LaunchProgram=Esegui %1
 Italian.RegAddToPath=Aggiungi il comando 'uniget' al PATH (dopo l'installazione riapri i terminali)
-Italian.InvalidAddToPathProperty=Riga di comando programma di installazione non valida.%n%n%1%n%nUsa la proprietà ADDTOPATH=0 o ADDTOPATH=1.%nL'installazione si fermerà senza installare.
-Italian.UnigetPathError=Impossibile aggiornare il PATH del comando uniget in '%1'.%n%n%2%n%nL'installazione o disinstallazione continueranno, ma PATH potrebbe richiedere una attività manuale.%nVedere il log (durante la disinstallazione usa /LOG ).%nRiapri i terminali dopo aver corretto il PATH.
+Italian.InvalidAddToPathProperty=Riga di comando programma di installazione non valida.%n%n%1%n%nUsa la proprietà ADDTOPATH=0 o ADDTOPATH=1, senza '/' iniziale.%nL'installazione si fermerà senza installare.
+Italian.UnigetPathError=Impossibile aggiornare il PATH del comando uniget in '%1'.%n%n%2%n%nL'installazione o disinstallazione continueranno, ma PATH potrebbe richiedere una attività manuale.%nVedere il log (durante la disinstallazione usa /LOG).%nRiapri i terminali dopo aver corretto il PATH.
 Italian.UnigetPathBroadcastError=Impossibile notificare alle applicazioni in esecuzione la modifica del PATH.%nRiapri i terminali.%nPotrebbe essere necessario effettuare il logoff/logon.
 
 ; Japanese

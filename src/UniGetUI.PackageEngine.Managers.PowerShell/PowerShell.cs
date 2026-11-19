@@ -95,7 +95,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     FileName = Status.ExecutablePath,
                     Arguments =
                         Status.ExecutableCallArgs
-                        + " \"Get-InstalledModule | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository }\"",
+                        + " \"" + InstalledListingCommand + "\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
@@ -134,6 +134,10 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             return ParseInstalledPackages(outputLines, this);
         }
+
+        internal const string InstalledListingCommand =
+            "$Error.Clear(); Get-InstalledModule | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository };"
+            + " if ($Error.Count -gt 0) { exit 1 }";
 
         protected override bool UseSubstringSearch => true;
 

@@ -4,6 +4,7 @@ using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.AptManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
+using UniGetUI.PackageEngine.Managers.InstallerFeeds;
 using UniGetUI.PackageEngine.Managers.PacmanManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -65,6 +66,63 @@ public sealed class ListingFailureTests : IDisposable
         public Func<IReadOnlyList<Package>> Listing { get; set; } = () => [];
         protected override IReadOnlyList<Package> _getInstalledPackages_UnSafe() => Listing();
         public IReadOnlyList<Package> Read() => GetInstalledPackages_UnSafe();
+    }
+
+    [Fact]
+    public void InstallerSourcesReplayCatalogDiscoveryFailuresAndStrictCallsReadAgain()
+    {
+        string? previous = CatalogFeeds.TestCatalogPathOverride;
+        string path = Path.Combine(_testRoot, "SoftwareCatalog.json");
+        CatalogFeeds.TestCatalogPathOverride = path;
+        try
+        {
+            File.WriteAllText(path, "{broken");
+            var helper = new InstallerFeedSourceHelper(new SharedNuGetListing());
+            for (int i = 0; i < 2; i++)
+            {
+                Exception? failure = null;
+                using var scope = PackageListingScope.TrackFailures(error => failure = error);
+                Assert.Empty(helper.GetSources());
+                Assert.IsAssignableFrom<System.Text.Json.JsonException>(failure);
+            }
+            using (PackageListingScope.EnterListingOnly())
+                Assert.ThrowsAny<System.Text.Json.JsonException>(helper.GetSources);
+
+            File.WriteAllText(path, "{\"catalogs\":[]}");
+            using (PackageListingScope.EnterListingOnly())
+                Assert.Empty(helper.GetSources());
+            helper.ForgetSources();
+            Exception? afterRepair = null;
+            using (PackageListingScope.TrackFailures(error => afterRepair = error))
+                Assert.Empty(helper.GetSources());
+            Assert.Null(afterRepair);
+        }
+        finally
+        {
+            CatalogFeeds.TestCatalogPathOverride = previous;
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("{}")]
+    [InlineData("{\"catalogs\":[]}")]
+    public void MissingOrEmptyInstallerCatalogIsACompleteEmptySourceListing(string? json)
+    {
+        string? previous = CatalogFeeds.TestCatalogPathOverride;
+        string path = Path.Combine(_testRoot, "SoftwareCatalog.json");
+        CatalogFeeds.TestCatalogPathOverride = path;
+        try
+        {
+            if (json is not null)
+                File.WriteAllText(path, json);
+            using var scope = PackageListingScope.EnterListingOnly();
+            Assert.Empty(new InstallerFeedSourceHelper(new SharedNuGetListing()).GetSources());
+        }
+        finally
+        {
+            CatalogFeeds.TestCatalogPathOverride = previous;
+        }
     }
 
     [Fact]

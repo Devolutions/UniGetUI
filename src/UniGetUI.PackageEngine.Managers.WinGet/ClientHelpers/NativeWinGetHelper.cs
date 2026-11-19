@@ -914,27 +914,71 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             Manager.InstalledPackagesGeneration
         );
 
-        // Remote scans must see changes made outside this process before the UI cache expires.
-        if (PackageListingScope.IsListingOnly)
-            return EnumerateLocalWinGetPackages(generations);
+        LocalPackageSnapshot snapshot;
+        try
+        {
+            // Remote scans must see changes made outside this process before the UI cache expires.
+            if (PackageListingScope.IsListingOnly)
+            {
+                snapshot = EnumerateLocalWinGetPackages(generations);
+            }
+            else
+            {
+                snapshot = cacheSeconds is null
+                    ? TaskRecycler<LocalPackageSnapshot>.RunOrAttach(
+                        EnumerateLocalWinGetPackages,
+                        generations
+                    )
+                    : TaskRecycler<LocalPackageSnapshot>.RunOrAttach(
+                        EnumerateLocalWinGetPackages,
+                        generations,
+                        cacheSeconds.Value
+                    );
+            }
+        }
+        catch (LocalPackageEnumerationException ex)
+        {
+            foreach (var failure in ex.Failures)
+                PackageListingScope.ReportIncomplete(failure);
+            ex.Error.Throw();
+            throw;
+        }
 
-        return cacheSeconds is null
-            ? TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
-                EnumerateLocalWinGetPackages,
-                generations
-            )
-            : TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
-                EnumerateLocalWinGetPackages,
-                generations,
-                cacheSeconds.Value
-            );
+        foreach (var failure in snapshot.Failures)
+            PackageListingScope.ReportIncomplete(failure);
+        return snapshot.Packages;
     }
 
-    private IReadOnlyList<CatalogPackage> EnumerateLocalWinGetPackages((long, long) generations)
+    private sealed record LocalPackageSnapshot(
+        IReadOnlyList<CatalogPackage> Packages,
+        IReadOnlyList<Exception> Failures
+    );
+
+    private sealed class LocalPackageEnumerationException(
+        Exception error,
+        IReadOnlyList<Exception> failures
+    ) : Exception("WinGet local package enumeration failed after omitting catalogs.", error)
     {
-        return _localPackagesProvider is not null
-            ? _localPackagesProvider()
-            : GetLocalWinGetPackages();
+        public ExceptionDispatchInfo Error { get; } = ExceptionDispatchInfo.Capture(error);
+        public IReadOnlyList<Exception> Failures { get; } = failures;
+    }
+
+    private LocalPackageSnapshot EnumerateLocalWinGetPackages((long, long) generations)
+    {
+        List<Exception> failures = [];
+        try
+        {
+            // Cache completeness with the rows, not with the first caller's tracking callback.
+            using var tracking = PackageListingScope.TrackFailures(failures.Add);
+            var packages = _localPackagesProvider is not null
+                ? _localPackagesProvider()
+                : GetLocalWinGetPackages();
+            return new(packages, [.. failures]);
+        }
+        catch (Exception ex) when (failures.Count > 0)
+        {
+            throw new LocalPackageEnumerationException(ex, [.. failures]);
+        }
     }
 
     private IReadOnlyList<Package> GetAvailableUpdatesFromSystemCli(Exception ex)
@@ -1136,6 +1180,9 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     ? "without its online-only catalogs"
                     : "from the installed-packages catalog alone"
             );
+            PackageListingScope.ReportIncomplete(new InvalidOperationException(
+                "WinGet local package enumeration omitted online-only catalogs after a failed search."
+            ));
             result = find(offlineCatalogs);
             if (succeeded(result))
                 return result;
@@ -1144,6 +1191,9 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         if (offlineCatalogs.Length > 0)
         {
             onRetry?.Invoke(result, "from the installed-packages catalog alone");
+            PackageListingScope.ReportIncomplete(new InvalidOperationException(
+                "WinGet local package enumeration omitted its source catalogs after a failed search."
+            ));
             result = find([]);
         }
 
@@ -1236,6 +1286,9 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             else
             {
                 onSkipped?.Invoke(catalogName);
+                PackageListingScope.ReportIncomplete(new InvalidOperationException(
+                    $"Skipping unavailable WinGet catalog {catalogName} while loading local packages"
+                ));
             }
         }
 

@@ -194,6 +194,8 @@ public sealed class CargoManagedInstallerTests
     [InlineData("missing-checksum")]
     [InlineData("missing-binary")]
     [InlineData("mismatched-binary")]
+    [InlineData("signed")]
+    [InlineData("tampered-signature")]
     public async Task ManagedInstallEnforcesIntegrityAndKeepsExactVersionOnFallback(string scenario)
     {
         using var sandbox = new CargoTestSandbox();
@@ -215,9 +217,17 @@ public sealed class CargoManagedInstallerTests
             [package.metadata.binstall]
             pkg-url = "https://publisher.test/{name}/{version}/fixture.zip"
             pkg-fmt = "zip"
-            """)));
+            """ + (scenario is "signed" or "tampered-signature" ? $"""
+
+            [package.metadata.binstall.signing]
+            algorithm = "minisign"
+            pubkey = "{CargoTestData.MinisignPublicKey()}"
+            """ : ""))));
         fixture.Bytes(CargoTestData.SourceUrl, source);
-        if (scenario == "missing-checksum")
+        if (scenario is "signed" or "tampered-signature")
+            fixture.Text(CargoTestData.BinaryUrl + ".sig", CargoTestData.MinisignSignature(
+                scenario == "signed" ? binary : [.. binary, 1], "gh=publisher/tool"));
+        else if (scenario == "missing-checksum")
         {
             fixture.Status(CargoTestData.BinaryUrl + ".sha256", HttpStatusCode.NotFound);
             fixture.Status(CargoTestData.BinaryUrl + ".sha512", HttpStatusCode.NotFound);
@@ -248,12 +258,16 @@ public sealed class CargoManagedInstallerTests
                     log.Add, progress.Add, processIsElevated: false, default);
             if (scenario == "mismatched-binary")
                 Assert.Contains("published checksum", (await Assert.ThrowsAsync<InvalidDataException>(Run)).Message);
-            else if (scenario == "verified")
+            else if (scenario == "tampered-signature")
+                Assert.Contains("publisher signature", (await Assert.ThrowsAsync<InvalidDataException>(Run)).Message);
+            else if (scenario is "verified" or "signed")
             {
                 Assert.Equal(OperationVeredict.Success, await Run());
                 Assert.Equal(executable, File.ReadAllBytes(sandbox.PathFor("root/bin/" + binaryName)));
                 Assert.Contains(progress, p => p.Stage == OperationProgressStage.Installing);
                 Assert.Contains(progress, p => p.Stage == OperationProgressStage.Downloading);
+                if (scenario == "signed")
+                    Assert.Contains("Verified the publisher signature of fixture-tool 1.2.3: gh=publisher/tool", log);
             }
             else
             {
@@ -264,7 +278,7 @@ public sealed class CargoManagedInstallerTests
             Assert.Equal(["install", CargoTestData.Id, "--version", UniGetUI.Core.Tools.CoreTools.EscapeCommandLineArgument("1.2.3"),
                 "--locked", "--root", UniGetUI.Core.Tools.CoreTools.EscapeCommandLineArgument(options.CustomInstallLocation)],
                 manager.OperationHelper.GetParameters(package, options, OperationType.Install));
-            if (scenario != "verified")
+            if (scenario is not ("verified" or "signed"))
             {
                 Assert.False(File.Exists(sandbox.PathFor("root/bin/" + binaryName)));
                 Assert.False(File.Exists(sandbox.PathFor("root/.crates.toml")));

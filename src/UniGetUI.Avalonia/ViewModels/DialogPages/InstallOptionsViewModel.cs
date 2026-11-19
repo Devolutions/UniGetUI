@@ -779,6 +779,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.SkipMinorUpdatesLevel = s.SkipMinorUpdatesLevel;
         _options.SkipMajorUpdates = s.SkipMajorUpdates;
         _options.OverridesNextLevelOpts = s.OverridesNextLevelOpts;
+        _options.BundleScopeIsExplicit = false;
         _options.PreRelease = s.PreRelease;
         _options.Version = s.Version;
         _options.Architecture = s.Architecture;

@@ -50,7 +50,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
                 if (e.Data is null)
                     return;
                 string line = e.Data.Trim();
-                var lineType = LineType.Error;
+                var lineType = LineType.StandardError;
                 if (line.Length < 6 || line.Contains("Waiting for another install..."))
                     lineType = LineType.ProgressIndicator;
 
@@ -86,8 +86,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
     /// The elevator's own arguments, as a vector. <see cref="CoreData.ElevatorArgs"/> holds at most
     /// a couple of fixed flags (for example "-A" for sudo with an askpass helper).
     /// </summary>
-    protected static IReadOnlyList<string> ElevatorArgumentPrefix() =>
-        CoreData.ElevatorArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    protected static IReadOnlyList<string> ElevatorArgumentPrefix() => CoreData.ElevatorArgumentVector;
 
     protected void RefreshProcessEnvironment()
     {
@@ -248,7 +247,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
         {
             if (line.Item2 is LineType.VerboseDetails && line.Item1 == "-----------------------")
                 output.Clear();
-            if (line.Item2 is LineType.Error or LineType.Information)
+            if (line.Item2 is LineType.Error or LineType.StandardError or LineType.Information)
                 output.Add(line.Item1);
         }
 

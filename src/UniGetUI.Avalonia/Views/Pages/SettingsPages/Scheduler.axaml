@@ -332,14 +332,24 @@
             <settings:CheckboxCard x:Name="QuitAfterAutomaticUpdatesCard"
                                    SettingName="QuitAfterAutomaticUpdates"
                                    Text="{t:Translate Text='Quit UniGetUI once automatic updates have finished'}"
-                                   Description="{t:Translate Text='Only when UniGetUI is running in the background with its window closed.'}"
+                                   Description="{t:Translate Text='By default, only when UniGetUI is running in the background with its window closed.'}"
+                                   StateChangedCommand="{Binding RefreshAutomaticQuitStateCommand}"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0"/>
 
             <settings:CheckboxCard x:Name="QuitWhenNothingToInstallCard"
                                    SettingName="QuitWhenNothingToInstall"
                                    Text="{t:Translate Text='Quit UniGetUI when automatic updates find nothing to install'}"
-                                   Description="{t:Translate Text='Only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.'}"
+                                   Description="{t:Translate Text='By default, only when UniGetUI is running in the background with its window closed. No further update checks or backups will run until UniGetUI is started again.'}"
+                                   StateChangedCommand="{Binding RefreshAutomaticQuitStateCommand}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0"/>
+
+            <settings:CheckboxCard x:Name="QuitEvenWhenWindowIsOpenCard"
+                                   SettingName="QuitEvenWhenWindowIsOpen"
+                                   Text="{t:Translate Text='Quit even when the UniGetUI window is open'}"
+                                   Description="{t:Translate Text='Applies to both options above. UniGetUI waits up to five minutes for an open dialog to close, and stays open if there is unsaved work.'}"
+                                   IsEnabled="{Binding IsAutomaticQuitEnabled}"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"/>
 

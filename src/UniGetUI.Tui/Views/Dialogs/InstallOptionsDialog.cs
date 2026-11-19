@@ -371,6 +371,7 @@ internal sealed class InstallOptionsDialog : FormDialog
         to.SkipMinorUpdatesLevel = from.SkipMinorUpdatesLevel;
         to.SkipMajorUpdates = from.SkipMajorUpdates;
         to.OverridesNextLevelOpts = from.OverridesNextLevelOpts;
+        to.BundleScopeIsExplicit = false;
         to.PreRelease = from.PreRelease;
         to.Version = from.Version;
         to.Architecture = from.Architecture;

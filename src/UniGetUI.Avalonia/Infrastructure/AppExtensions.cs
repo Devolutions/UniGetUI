@@ -4,6 +4,7 @@ using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Extensions.Drivers;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -122,6 +123,29 @@ internal static class AppExtensions
         InitializePreferences = AgentSkillsDependencies.ApplyPinnedUpdateExclusions,
     };
 
+    public static readonly AppExtension Drivers = new()
+    {
+        Id = "drivers",
+        Name = "Drivers",
+        Description = "Find and install driver updates offered by Windows Update",
+        Icon = IconType.Drivers,
+        EnabledSetting = Settings.K.EnableDrivers,
+        Page = PageType.Drivers,
+        SettingsPage = typeof(DriversSettings),
+        CreateSettingsPage = () => new DriversSettings(),
+        Start = window => window.StartDrivers(),
+        IsAvailable = () => DriverUpdateService.IsSupported,
+        UnavailableReason = () => CoreTools.Translate("Requires Windows"),
+        Status = () => MainWindow.Instance?.Drivers is not { } drivers
+            ? ""
+            : drivers.UpdateCount switch
+            {
+                0 => drivers.HasScanned && !drivers.HasError ? CoreTools.Translate("Up to date") : "",
+                1 => CoreTools.Translate("1 driver update"),
+                int count => CoreTools.Translate("{0} driver updates", count),
+            },
+    };
+
 #if UNIGETUI_XCODE_EXTENSION
     public static readonly AppExtension Xcode = new()
     {
@@ -152,9 +176,10 @@ internal static class AppExtensions
     /// <summary>Every extension available on this system, in the order Settings lists them.</summary>
     public static IReadOnlyList<AppExtension> All { get; } =
 #if UNIGETUI_XCODE_EXTENSION
-        OperatingSystem.IsMacOS() ? [GitRepositories, AgentSkills, Xcode] : [GitRepositories, AgentSkills];
+        OperatingSystem.IsMacOS() ? [GitRepositories, AgentSkills, Xcode]
+            : OperatingSystem.IsWindows() ? [GitRepositories, AgentSkills, Drivers] : [GitRepositories, AgentSkills];
 #else
-        [GitRepositories, AgentSkills];
+        OperatingSystem.IsWindows() ? [GitRepositories, AgentSkills, Drivers] : [GitRepositories, AgentSkills];
 #endif
 
     public static void InitializePreferences()

@@ -88,6 +88,7 @@ public static class SettingsSearchIndex
         new("Do not automatically install updates when the battery saver is on", ["battery saver"], typeof(Scheduler), "AUPBatterySaverCard"),
         new("Quit UniGetUI once automatic updates have finished", ["quit", "close", "exit after updates"], typeof(Scheduler), "QuitAfterAutomaticUpdatesCard"),
         new("Quit UniGetUI when automatic updates find nothing to install", ["quit", "close", "exit", "no updates"], typeof(Scheduler), "QuitWhenNothingToInstallCard"),
+        new("Quit even when the UniGetUI window is open", ["quit", "close", "exit", "window open"], typeof(Scheduler), "QuitEvenWhenWindowIsOpenCard"),
         new("Minimum age for updates", ["minimum age", "update security"], typeof(Updates), "MinimumUpdateAgeSelector"),
         new("Custom minimum age (days)", ["custom age"], typeof(Updates), "MinimumUpdateAgeCustomInput"),
         new("Warn me when the installer URL host changes between the installed version and the new version (WinGet only)", ["installer host", "url host"], typeof(Updates), "InstallerHostWarningCard"),
@@ -156,6 +157,7 @@ public static class SettingsSearchIndex
         new("Search skills.sh", ["skills.sh", "skills discovery", "registry"], typeof(AgentSkillsSettingsControl), "SkillsShDiscoveryToggle"),
         new("Installation targets", ["skills", "agents", "codex", "claude", "copilot"], typeof(AgentSkillsSettingsControl), "TargetModeSelector"),
         new("Notion integration", ["skills", "notion", "sign in"], typeof(AgentSkillsSettingsControl), "NotionExpander"),
+        new("Enable Drivers", ["drivers", "driver updates", "windows update", "hardware", "optional updates"], typeof(DriversSettings), "DriversCard", WindowsOnly: true),
 #if UNIGETUI_XCODE_EXTENSION
         new("Enable Xcode", ["xcode", "xcodes", "apple", "ios", "macos", "developer tools"], typeof(XcodeSettings), "XcodeCard", MacOnly: true),
         new("Check for new Xcode versions automatically", ["xcode check interval", "xcode updates"], typeof(XcodeSettings), "XcodeCheckIntervalCard", MacOnly: true),
@@ -331,6 +333,7 @@ public static class SettingsSearchIndex
         nameof(ExtensionsHomepage) => "Extensions",
         nameof(GitRepositoriesSettings) => "Git Repositories",
         nameof(AgentSkillsSettingsControl) => "Agent Skills",
+        nameof(DriversSettings) => "Drivers",
 #if UNIGETUI_XCODE_EXTENSION
         nameof(XcodeSettings) => "Xcode",
 #endif

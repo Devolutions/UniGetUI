@@ -224,5 +224,10 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             int returnCode,
             InstallOptions? options = null
         ) => null;
+
+        public string? GetReinstallRefusal(IPackage package, InstallOptions options) => null;
+
+        public bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode) =>
+            false;
     }
 }

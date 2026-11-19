@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -86,13 +88,19 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 {
                     listing.LastSuccessUtc = now;
                     listing.ConsecutiveFailures = 0;
+                    listing.FailureStreakStartUtc = null;
                     listing.LastPackageCount = packageCount;
                 }
                 else
                 {
+                    if (listing.ConsecutiveFailures == 0)
+                        listing.FailureStreakStartUtc = now;
+                    else
+                        listing.FailureStreakStartUtc ??= listing.LastFailureUtc;
                     listing.LastFailureUtc = now;
                     listing.LastFailureReason = Describe(failure);
-                    listing.LastFailureWasTimeout = failure is TimeoutException;
+                    listing.LastFailureWasTimeout =
+                        IsTimeout(failure) || (fastRepairCause is not null && IsTimeout(fastRepairCause));
                     listing.ConsecutiveFailures++;
                 }
 
@@ -125,6 +133,40 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 _recordsPath = null;
             }
         }
+
+        private const int RpcTimeoutHResult = unchecked((int)0x8001011F);
+        private const int Win32Timeout = 1460;
+        private const int Win32WaitTimeout = 258;
+        private const int WinHttpTimeout = 12002;
+
+        internal static bool IsTimeout(Exception failure)
+        {
+            for (Exception? current = failure; current is not null; current = current.InnerException)
+            {
+                switch (current)
+                {
+                    case TimeoutException:
+                        return true;
+                    case SocketException socket when socket.SocketErrorCode is SocketError.TimedOut:
+                        return true;
+                    case Win32Exception win32
+                        when win32.NativeErrorCode is Win32Timeout or Win32WaitTimeout or WinHttpTimeout:
+                        return true;
+                }
+
+                if (IsTimeoutHResult(current.HResult))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsTimeoutHResult(int hresult) =>
+            hresult == RpcTimeoutHResult
+            || (
+                (hresult & unchecked((int)0xFFFF0000)) == unchecked((int)0x80070000)
+                && (hresult & 0xFFFF) is Win32Timeout or Win32WaitTimeout or WinHttpTimeout
+            );
 
         private static string Describe(Exception failure) =>
             UrlCredentials()

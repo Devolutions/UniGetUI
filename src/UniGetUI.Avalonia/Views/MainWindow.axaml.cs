@@ -21,6 +21,7 @@ using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages;
+using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -50,6 +51,7 @@ public enum PageType
     ManagerHealth,
     AgentSkills,
     Xcode,
+    Drivers,
 }
 
 public partial class MainWindow : Window
@@ -174,6 +176,8 @@ public partial class MainWindow : Window
     private const double DefaultWindowWidth = 1450;
     private const double DefaultWindowHeight = 900;
     private WindowPlacementResult? _unsavedPlacement;
+    private bool _unsavedPlacementIsMaximized;
+    private WindowPlacementResult? _normalPlacement;
     private bool _hasOpened;
 
     // Last user-chosen height (px) of the operations panel; restored when re-expanded.
@@ -209,6 +213,7 @@ public partial class MainWindow : Window
     public bool CatalogEditorEnabled => ViewModel.Sidebar.CatalogEditorEnabled;
     public bool GitRepositoriesEnabled => ViewModel.Sidebar.GitRepositoriesEnabled;
     public GitRepositoriesViewModel? GitRepositories => ViewModel.GitRepositories;
+    public DriversViewModel? Drivers => ViewModel.Drivers;
     public void SetGitRepositoriesEnabled(bool enabled) => ViewModel.SetGitRepositoriesEnabled(enabled);
     public void SetExtensionEnabled(PageType page, bool enabled) => ViewModel.SetExtensionEnabled(page, enabled);
 #if UNIGETUI_XCODE_EXTENSION
@@ -255,7 +260,10 @@ public partial class MainWindow : Window
         Resized += (_, _) => _ = SaveGeometryAsync();
         ModalLayer.SizeChanged += (_, _) => UpdateModalSurfaceSize();
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
-        this.GetObservable(WindowStateProperty).SubscribeValue(state => { UpdateOnScreenState(); _ = SaveGeometryAsync(); });
+        IdleMemoryTrimmer.IsAppInBackground = static () => !_isOnScreen;
+        Activated += (_, _) => SetFocusedCaretVisible(true);
+        Deactivated += (_, _) => SetFocusedCaretVisible(false);
+        this.GetObservable(WindowStateProperty).SubscribeValue(state => { SyncShowWindowState(state); UpdateOnScreenState(); _ = SaveGeometryAsync(); });
         this.GetObservable(IsVisibleProperty).SubscribeValue(_ => UpdateOnScreenState());
 
         _trayService = new TrayService(this);
@@ -289,7 +297,7 @@ public partial class MainWindow : Window
         }
 
         SetupMicaAndAccentBorder();
-        UpdateWindowCornerPreference();
+        UpdateDwmFrame();
 
         ActualThemeVariantChanged += (_, _) =>
         {
@@ -301,15 +309,30 @@ public partial class MainWindow : Window
         // Restore the saved size as an exact outer rect in physical pixels. Because our
         // WM_NCCALCSIZE keeps client == window rect, this round-trips with SaveGeometry with no
         // frame drift, unlike Avalonia's Width/Height setter (see RestoreGeometry).
-        if (_pendingRestoreWidth > 0 && _pendingRestoreHeight > 0 && WindowState == WindowState.Normal
+        if (_pendingRestoreWidth > 0 && _pendingRestoreHeight > 0
+            && WindowState is WindowState.Normal or WindowState.Maximized
             && TryGetPlatformHandle()?.Handle is { } sizeHandle && sizeHandle != 0)
         {
             uint dpi = NativeMethods.GetDpiForWindow(sizeHandle);
             if (dpi == 0) dpi = 96;
             double scale = dpi / 96.0;
-            NativeMethods.SetWindowPos(sizeHandle, 0, 0, 0,
-                (int)Math.Round(_pendingRestoreWidth * scale), (int)Math.Round(_pendingRestoreHeight * scale),
-                SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+            int widthPx = (int)Math.Round(_pendingRestoreWidth * scale);
+            int heightPx = (int)Math.Round(_pendingRestoreHeight * scale);
+            if (WindowState == WindowState.Normal)
+            {
+                NativeMethods.SetWindowPos(sizeHandle, 0, 0, 0, widthPx, heightPx,
+                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+            }
+            else
+            {
+                var placement = new NativeMethods.WINDOWPLACEMENT { length = Marshal.SizeOf<NativeMethods.WINDOWPLACEMENT>() };
+                if (NativeMethods.GetWindowPlacement(sizeHandle, ref placement))
+                {
+                    placement.rcNormalPosition.Right = placement.rcNormalPosition.Left + widthPx;
+                    placement.rcNormalPosition.Bottom = placement.rcNormalPosition.Top + heightPx;
+                    NativeMethods.SetWindowPlacement(sizeHandle, ref placement);
+                }
+            }
         }
         _pendingRestoreWidth = _pendingRestoreHeight = 0;
     }
@@ -1163,17 +1186,30 @@ public partial class MainWindow : Window
         {
             // Width/Height stay NaN until the window has been laid out, which never happens on a
             // daemon launch the user has not opened yet. Saving then would persist a 0x0 size.
-            if (!_hasOpened || double.IsNaN(Width) || double.IsNaN(Height))
+            if (!_hasOpened || double.IsNaN(Width) || double.IsNaN(Height)
+                || WindowState == WindowState.Minimized)
                 return;
 
-            int state = WindowState == WindowState.Maximized ? 1 : 0;
-            if (state == 0 && _unsavedPlacement is { } unsaved
-                && WindowPlacement.IsSamePlacement(unsaved, Position, Width, Height))
+            bool maximized = WindowState == WindowState.Maximized;
+            if (WindowState == WindowState.Normal)
+                _normalPlacement = new WindowPlacementResult(Position, Width, Height);
+            else if (maximized && TryGetNativeNormalPlacement() is { } native)
+                _normalPlacement = native;
+
+            WindowPlacementResult? compared = maximized
+                ? _normalPlacement
+                : new WindowPlacementResult(Position, Width, Height);
+            if (_unsavedPlacement is { } unsaved && _unsavedPlacementIsMaximized == maximized
+                && compared is { } current
+                && WindowPlacement.IsSamePlacement(unsaved, current.Position, current.Width, current.Height))
                 return;
 
             _unsavedPlacement = null;
-            string geometry = $"v2,{Position.X},{Position.Y},{(int)Width},{(int)Height},{state}";
-            Settings.SetValue(Settings.K.WindowGeometry, geometry);
+            if (maximized && _normalPlacement is { } normal)
+                Settings.SetValue(Settings.K.WindowNormalGeometry,
+                    $"{normal.Position.X},{normal.Position.Y},{(int)Math.Round(normal.Width)},{(int)Math.Round(normal.Height)}");
+            Settings.SetValue(Settings.K.WindowGeometry,
+                $"v2,{Position.X},{Position.Y},{(int)Math.Round(Width)},{(int)Math.Round(Height)},{(maximized ? 1 : 0)}");
         }
         catch (Exception ex)
         {
@@ -1230,10 +1266,12 @@ public partial class MainWindow : Window
 
         if (state == 1)
         {
-            // Mirror WinUI behaviour: don't reapply the saved (maximized) bounds, just
-            // maximize. The OS / Avalonia picks a sensible un-maximize restore size.
-            WindowState = WindowState.Maximized;
-            return;
+            if (ParseNormalGeometry() is not { } normal)
+            {
+                WindowState = WindowState.Maximized;
+                return;
+            }
+            (x, y, width, height) = normal;
         }
 
         var screens = GetPlacementScreens();
@@ -1242,10 +1280,48 @@ public partial class MainWindow : Window
         {
             placement = WindowPlacement.FitSaved(screens, placement.Position, width, height, MinWidth, MinHeight);
             _unsavedPlacement = placement;
+            _unsavedPlacementIsMaximized = state == 1;
             Logger.Warn($"Restored geometry was outside of desktop bounds, fitted it to {placement}");
         }
 
         ApplyPlacement(placement);
+        if (state == 1)
+            WindowState = WindowState.Maximized;
+    }
+
+    private static (int X, int Y, int Width, int Height)? ParseNormalGeometry()
+    {
+        string[] items = Settings.GetValue(Settings.K.WindowNormalGeometry).Split(',');
+        if (items.Length == 4
+            && int.TryParse(items[0], out int x) && int.TryParse(items[1], out int y)
+            && int.TryParse(items[2], out int width) && int.TryParse(items[3], out int height)
+            && width > 0 && height > 0)
+            return (x, y, width, height);
+        return null;
+    }
+
+    private WindowPlacementResult? TryGetNativeNormalPlacement()
+    {
+        if (!OperatingSystem.IsWindows() || TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
+            return null;
+
+        var placement = new NativeMethods.WINDOWPLACEMENT { length = Marshal.SizeOf<NativeMethods.WINDOWPLACEMENT>() };
+        if (!NativeMethods.GetWindowPlacement(handle, ref placement))
+            return null;
+
+        var rect = placement.rcNormalPosition;
+        nint monitor = NativeMethods.MonitorFromWindow(handle, MONITOR_DEFAULTTONEAREST);
+        var info = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>() };
+        if (monitor == 0 || !NativeMethods.GetMonitorInfo(monitor, ref info))
+            return null;
+
+        uint dpi = NativeMethods.GetDpiForWindow(handle);
+        if (dpi == 0) dpi = 96;
+        double scale = dpi / 96.0;
+        var position = new PixelPoint(
+            rect.Left + info.rcWork.Left - info.rcMonitor.Left,
+            rect.Top + info.rcWork.Top - info.rcMonitor.Top);
+        return new WindowPlacementResult(position, (rect.Right - rect.Left) / scale, (rect.Bottom - rect.Top) / scale);
     }
 
     private void ApplyDefaultGeometry()
@@ -1257,6 +1333,7 @@ public partial class MainWindow : Window
         int primary = Math.Max(0, screens.FindIndex(screen => screen.IsPrimary));
         var placement = WindowPlacement.ForDefault(screens[primary], DefaultWindowWidth, DefaultWindowHeight, MinWidth, MinHeight);
         _unsavedPlacement = placement;
+        _unsavedPlacementIsMaximized = false;
         WindowStartupLocation = WindowStartupLocation.Manual;
         ApplyPlacement(placement);
     }
@@ -1266,6 +1343,7 @@ public partial class MainWindow : Window
         Width = placement.Width;
         Height = placement.Height;
         Position = placement.Position;
+        _normalPlacement = placement;
         // On Windows our WM_NCCALCSIZE makes the client rect equal the full window rect, so the
         // saved size is the outer size. Avalonia's Width/Height setter re-adds WS_THICKFRAME via
         // AdjustWindowRectEx, inflating the window a little on every restart; OnOpened restores
@@ -1472,12 +1550,22 @@ public partial class MainWindow : Window
         ApplyWindowBorderColor(handle);
     }
 
-    private void UpdateWindowCornerPreference()
+    private void UpdateDwmFrame()
     {
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
             return;
 
-        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
+        int frame = WindowState == WindowState.Normal ? 1 : 0;
+        var margins = new NativeMethods.MARGINS
+        {
+            cxLeftWidth = frame,
+            cxRightWidth = frame,
+            cyTopHeight = frame,
+            cyBottomHeight = frame,
+        };
+        NativeMethods.DwmExtendFrameIntoClientArea(handle, ref margins);
+
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
             return;
 
         int corner = WindowState == WindowState.Normal ? DWMWCP_ROUND : DWMWCP_DONOTROUND;
@@ -1527,7 +1615,7 @@ public partial class MainWindow : Window
         if ((msg == WM_SHOWWINDOW || (msg == WM_SIZE && (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)))
             && Instance is { } cornerOwner)
         {
-            Dispatcher.UIThread.Post(cornerOwner.UpdateWindowCornerPreference);
+            Dispatcher.UIThread.Post(cornerOwner.UpdateDwmFrame);
         }
 
         if (msg == WM_NCPAINT)
@@ -1759,12 +1847,32 @@ public partial class MainWindow : Window
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool IsZoomed(nint hWnd);
 
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool GetWindowPlacement(nint hWnd, ref WINDOWPLACEMENT lpwndpl);
+
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetWindowPlacement(nint hWnd, ref WINDOWPLACEMENT lpwndpl);
+
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
 
         [DllImport("dwmapi.dll")]
         public static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int value, int size);
+
+        [LibraryImport("dwmapi.dll")]
+        public static partial int DwmExtendFrameIntoClientArea(nint hwnd, ref MARGINS pMarInset);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct STYLESTRUCT
@@ -1806,6 +1914,17 @@ public partial class MainWindow : Window
             public int Top;
             public int Right;
             public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WINDOWPLACEMENT
+        {
+            public int length;
+            public int flags;
+            public int showCmd;
+            public POINT ptMinPosition;
+            public POINT ptMaxPosition;
+            public RECT rcNormalPosition;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -2387,8 +2506,47 @@ public partial class MainWindow : Window
 
     public void UpdateSystemTrayStatus() => _trayService?.UpdateStatus();
 
+    // A blinking text caret keeps the whole render loop running (about 30 frames a second), and
+    // UniGetUI opens with the caret in the search box, so a window left open behind other apps
+    // never went idle. Nobody types in a window that is not the active one, so its caret is
+    // hidden until the window is active again, as native Windows text boxes do.
+    private void SetFocusedCaretVisible(bool visible)
+    {
+        if (FocusManager?.GetFocusedElement() is not TextBox box)
+            return;
+
+        var presenter = box.GetVisualDescendants().OfType<global::Avalonia.Controls.Presenters.TextPresenter>().FirstOrDefault();
+        if (presenter is null)
+            return;
+
+        if (visible)
+            presenter.ShowCaret();
+        else
+            presenter.HideCaret();
+    }
+
     private void UpdateOnScreenState()
-        => _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+    {
+        bool wasOnScreen = _isOnScreen;
+        _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
+        BackgroundEfficiencyMode.Refresh();
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        // Stop the open page's periodic work while nobody can see it (see SuspendForBackground).
+        // Suspending again is harmless, and lets a minimized window that is then hidden to the
+        // tray release its web views too.
+        if (!_isOnScreen)
+            viewModel.SuspendForBackground(releaseWebViews: !IsVisible);
+        else if (!wasOnScreen)
+            viewModel.ResumeFromBackground();
+    }
+
+    private void SyncShowWindowState(WindowState state)
+    {
+        if (OperatingSystem.IsWindows() && state is WindowState.Normal or WindowState.Maximized)
+            WindowState = state;
+    }
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level, string? launchAction = null) =>
         ShowBanner(title, message, level, launchAction);
@@ -2413,6 +2571,8 @@ public partial class MainWindow : Window
     public bool IsQuitting => _shutdownCoordinator.IsQuitting;
 
     internal bool HasUnsavedWork => ViewModel.HasUnsavedWork;
+
+    internal bool HasOpenDialog => _modalStack.Count > 0 || NativePickerTracker.IsOpen;
 
     internal bool CanQuitWithoutAsking => ViewModel.CanShutdownWithoutAsking;
 
@@ -2442,12 +2602,12 @@ public partial class MainWindow : Window
         bool ipcStopped = false;
         try
         {
-            await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            await AvaloniaBootstrapper.StopBackgroundServicesAsync().WaitAsync(TimeSpan.FromSeconds(5));
             ipcStopped = true;
         }
         catch (TimeoutException ex)
         {
-            Logger.Warn("Timed out while stopping Avalonia IPC API during shutdown");
+            Logger.Warn("Timed out while stopping the Agent registration and IPC API during shutdown");
             Logger.Warn(ex);
         }
         catch (Exception ex)

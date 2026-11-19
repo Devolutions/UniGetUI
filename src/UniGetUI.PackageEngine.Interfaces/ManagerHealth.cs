@@ -31,6 +31,7 @@ namespace UniGetUI.PackageEngine.Interfaces
         public string? LastFailureReason { get; set; }
         public bool LastFailureWasTimeout { get; set; }
         public int ConsecutiveFailures { get; set; }
+        public DateTime? FailureStreakStartUtc { get; set; }
         public int? LastPackageCount { get; set; }
         public DateTime? LastFastRepairUtc { get; set; }
         public string? LastFastRepairReason { get; set; }
@@ -44,6 +45,7 @@ namespace UniGetUI.PackageEngine.Interfaces
                 LastFailureReason = LastFailureReason,
                 LastFailureWasTimeout = LastFailureWasTimeout,
                 ConsecutiveFailures = ConsecutiveFailures,
+                FailureStreakStartUtc = FailureStreakStartUtc,
                 LastPackageCount = LastPackageCount,
                 LastFastRepairUtc = LastFastRepairUtc,
                 LastFastRepairReason = LastFastRepairReason,

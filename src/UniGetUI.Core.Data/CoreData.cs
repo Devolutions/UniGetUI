@@ -410,6 +410,9 @@ namespace UniGetUI.Core.Data
         /// </summary>
         public static string ElevatorArgs = "";
 
+        public static IReadOnlyList<string> ElevatorArgumentVector =>
+            ElevatorArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
         /// <summary>
         /// This method will return the most appropriate data directory.
         /// If the new directory exists, it will be used.

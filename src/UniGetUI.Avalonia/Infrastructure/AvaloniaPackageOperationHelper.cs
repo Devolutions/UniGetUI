@@ -142,7 +142,7 @@ internal static class AvaloniaPackageOperationHelper
             ? CoreTools.MakeValidFileName(extension[1..])
             : "exe";
 
-        var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await NativePickerTracker.Track(win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = suggestedName,
             SuggestedStartLocation = await GetDefaultDownloadFolderAsync(win),
@@ -154,7 +154,7 @@ internal static class AvaloniaPackageOperationHelper
                 new FilePickerFileType(CoreTools.Translate("Compressed file")) { Patterns = ["*.zip"] },
                 new FilePickerFileType(CoreTools.Translate("MSIX")) { Patterns = ["*.msix"] },
             ],
-        });
+        }));
 
         var path = file?.TryGetLocalPath();
         if (path is null) return;
@@ -195,11 +195,11 @@ internal static class AvaloniaPackageOperationHelper
 
         if (eligible.Count == 0) return;
 
-        var folders = await win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await NativePickerTracker.Track(win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             AllowMultiple = false,
             SuggestedStartLocation = await GetDefaultDownloadFolderAsync(win),
-        });
+        }));
 
         var folder = folders.FirstOrDefault();
         var outputPath = folder?.TryGetLocalPath();
@@ -230,11 +230,11 @@ internal static class AvaloniaPackageOperationHelper
         TEL_InstallReferral referral,
         MainWindow win)
     {
-        var folders = await win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await NativePickerTracker.Track(win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             AllowMultiple = false,
             SuggestedStartLocation = await GetDefaultDownloadFolderAsync(win),
-        });
+        }));
         var folder = folders.FirstOrDefault();
         var outputPath = folder?.TryGetLocalPath();
         if (outputPath is null) return;

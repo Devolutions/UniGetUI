@@ -114,11 +114,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             if (MainWindow.Instance is not { } window
                 || !await IgnoreUpdatesConfirmationDialog.ConfirmAsync(window, packages)) return;
             foreach (var pkg in packages)
-            {
-                await pkg.AddToIgnoredUpdatesAsync();
-                UpgradablePackagesLoader.Instance.Remove(pkg);
-                UpgradablePackagesLoader.Instance.IgnoredPackages[pkg.Id] = pkg;
-            }
+                await UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(pkg);
         });
         EnableWhen(ignoreButton, () => HasCheckedPackages);
         ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
@@ -208,9 +204,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             var pkg = SelectedItem;
             if (pkg is null) return;
-            _ = pkg.AddToIgnoredUpdatesAsync();
-            UpgradablePackagesLoader.Instance.Remove(pkg);
-            UpgradablePackagesLoader.Instance.IgnoredPackages[pkg.Id] = pkg;
+            _ = UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(pkg);
         };
 
         var menuSkipVersion = new MenuItem
@@ -222,9 +216,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             var pkg = SelectedItem;
             if (pkg is null) return;
-            _ = pkg.AddToIgnoredUpdatesAsync(pkg.NewVersionString);
-            UpgradablePackagesLoader.Instance.Remove(pkg);
-            UpgradablePackagesLoader.Instance.IgnoredPackages[pkg.Id] = pkg;
+            _ = UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(pkg, pkg.NewVersionString);
         };
 
         // ── Pause updates submenu ──────────────────────────────────────────
@@ -251,9 +243,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             {
                 var pkg = SelectedItem;
                 if (pkg is null) return;
-                _ = pkg.AddToIgnoredUpdatesAsync("<" + t.GetDateFromNow());
-                UpgradablePackagesLoader.Instance.IgnoredPackages[pkg.Id] = pkg;
-                UpgradablePackagesLoader.Instance.Remove(pkg);
+                _ = UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(pkg, "<" + t.GetDateFromNow());
             };
             menuPause.Items.Add(item);
         }

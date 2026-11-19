@@ -69,5 +69,9 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
             int returnCode,
             InstallOptions? options = null
         );
+
+        public string? GetReinstallRefusal(IPackage package, InstallOptions options);
+
+        public bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode);
     }
 }

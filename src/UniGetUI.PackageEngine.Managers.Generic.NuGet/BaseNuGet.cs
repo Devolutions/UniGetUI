@@ -197,23 +197,17 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             .Content.ReadAsStringAsync()
                             .GetAwaiter()
                             .GetResult();
-                        MatchCollection matches = Regex.Matches(
-                            SearchResults,
-                            "<entry>([\\s\\S]*?)<\\/entry>"
-                        );
-
-                        foreach (Match match in matches)
+                        foreach (Match match in V2Entry.Matches(SearchResults))
                         {
-                            if (!match.Success)
+                            if (
+                                ReadV2Property(match.Value, V2IdLink, V2IdElement) is not { } id
+                                || ReadV2Property(match.Value, V2VersionLink, V2VersionElement)
+                                    is not { } version
+                            )
                             {
                                 continue;
                             }
 
-                            string id = Regex.Match(match.Value, "Id='([^<>']+)'").Groups[1].Value;
-                            string version = Regex
-                                .Match(match.Value, "Version='([^<>']+)'")
-                                .Groups[1]
-                                .Value;
                             var float_version = CoreTools.VersionStringToStruct(version);
                             // Match title = Regex.Match(match.Value, "<title[ \\\"\\=A-Za-z0-9]+>([^<>]+)<\\/title>");
 
@@ -571,32 +565,25 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
 
                 int requestErrors = 0;
+                string sourceKey = source.Url.AbsoluteUri;
+                bool servedByArtifactory = IsKnownArtifactory(sourceKey);
                 string? Fetch(string url)
                 {
-                    try
+                    V2Response response = FetchV2(client, source, url);
+                    if (response.Error is not null)
                     {
-                        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                        NuGetFeedCredentials.ApplyTo(request, source.Url);
-                        using HttpResponseMessage response = client.Send(request);
-
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            logger.Error(
-                                $"Failed to fetch api at Url={url} with status code {response.StatusCode}"
-                            );
-                            requestErrors++;
-                            return null;
-                        }
-
-                        return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error($"Failed to fetch api at Url={url} on source {source.Name}");
-                        logger.Error(ex);
+                        logger.Error(response.Error);
                         requestErrors++;
                         return null;
                     }
+
+                    if (response.FromArtifactory && !servedByArtifactory)
+                    {
+                        servedByArtifactory = true;
+                        ArtifactorySources[sourceKey] = DateTime.UtcNow;
+                    }
+
+                    return response.Content;
                 }
 
                 List<Package> Parse(string content) =>
@@ -610,19 +597,104 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     );
 
                 bool foundAny = false;
-                foreach (
-                    string SearchUrl in BuildV2UpdateUrls(source, installedPackages, canPrerelease)
-                )
+                if (!servedByArtifactory)
                 {
-                    if (Fetch(SearchUrl) is not { } SearchResults)
-                        continue;
+                    foreach (
+                        string SearchUrl in BuildV2UpdateUrls(source, installedPackages, canPrerelease)
+                    )
+                    {
+                        if (Fetch(SearchUrl) is not { } SearchResults)
+                            continue;
 
-                    List<Package> found = Parse(SearchResults);
-                    foundAny |= found.Count > 0;
-                    packages.AddRange(found);
+                        if (servedByArtifactory)
+                            break;
+
+                        List<Package> found = Parse(SearchResults);
+                        foundAny |= found.Count > 0;
+                        packages.AddRange(found);
+                    }
                 }
 
-                if (
+                void LookUpEachId()
+                {
+                    IPackage[] installed = [.. newestInstalled.Values];
+                    var lookups = new V2IdLookup[installed.Length];
+                    int unreachable = 0;
+                    Parallel.For(
+                        0,
+                        installed.Length,
+                        new ParallelOptions
+                        {
+                            MaxDegreeOfParallelism = NuGetV3Client.MaxConcurrentRequests,
+                        },
+                        i =>
+                        {
+                            if (Volatile.Read(ref unreachable) is not 0)
+                            {
+                                lookups[i] = new(null, false, 0, string.Empty, false, [], Skipped: true);
+                                return;
+                            }
+
+                            lookups[i] = LookUpV2Id(client, source, installed[i], canPrerelease);
+                            if (lookups[i].Unreachable)
+                                Interlocked.Exchange(ref unreachable, 1);
+                        }
+                    );
+
+                    List<string> notListed = [];
+                    int skipped = 0;
+                    bool sentCredentials = false;
+                    for (int i = 0; i < installed.Length; i++)
+                    {
+                        IPackage package = installed[i];
+                        V2IdLookup lookup = lookups[i];
+                        if (lookup.Skipped)
+                        {
+                            skipped++;
+                            continue;
+                        }
+
+                        sentCredentials |= lookup.SentCredentials;
+                        foreach (string error in lookup.Errors)
+                            logger.Error(error);
+                        requestErrors += lookup.Errors.Count;
+
+                        if (lookup.NewestEntry is not null)
+                            packages.AddRange(Parse(lookup.NewestEntry));
+                        else if (lookup.UnreadableEntries > 0 && !lookup.Listed)
+                            logger.Log(
+                                $"Source {source.Name} answered for {package.Id} with "
+                                    + $"{lookup.UnreadableEntries} entries whose id or version could not be "
+                                    + $"read. Response began with: {lookup.Excerpt}"
+                            );
+                        else if (!lookup.Listed && lookup.Errors.Count is 0)
+                            notListed.Add(package.Id);
+                    }
+
+                    if (skipped > 0)
+                    {
+                        logger.Error(
+                            $"Source {source.Name} could not be reached, so {skipped} more packages were not looked up"
+                        );
+                        requestErrors++;
+                    }
+
+                    if (notListed.Count > 0)
+                        logger.Log(
+                            $"Source {source.Name} lists no version of {string.Join(", ", notListed)} "
+                                + $"(credentials sent: {(sentCredentials ? "yes" : "no")})"
+                        );
+                }
+
+                if (servedByArtifactory)
+                {
+                    logger.Log(
+                        $"Source {source.Name} is served by JFrog Artifactory, whose GetUpdates() misses "
+                            + "updates, so each package is looked up by id instead"
+                    );
+                    LookUpEachId();
+                }
+                else if (
                     !foundAny
                     && requestErrors is 0
                     && BuildV2UpdateUrls(
@@ -638,20 +710,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                         $"GetUpdates() on source {source.Name} returned no update although newer versions "
                             + "exist, so each package is looked up by id instead"
                     );
-
-                    string baseUrl = source.Url.ToString().Trim('/');
-                    string latestFilter = canPrerelease
-                        ? "IsAbsoluteLatestVersion"
-                        : "IsLatestVersion";
-                    foreach (IPackage package in newestInstalled.Values)
-                    {
-                        string id = HttpUtility.UrlEncode(package.Id.Replace("'", "''"));
-                        if (
-                            Fetch($"{baseUrl}/FindPackagesById()?id='{id}'&$filter={latestFilter}")
-                            is { } content
-                        )
-                            packages.AddRange(Parse(content));
-                    }
+                    LookUpEachId();
                 }
 
                 errors += requestErrors;
@@ -685,8 +744,223 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         internal const int MaxV2UpdateUrlLength = 8000;
 
-        private static bool HasV2Entries(string content) =>
-            Regex.IsMatch(content, "<entry[\\s>]");
+        internal const int MaxV2VersionPages = 50;
+
+        private static readonly ConcurrentDictionary<string, DateTime> ArtifactorySources = new();
+
+        private static readonly Regex V2Entry = new("<entry(?:\\s[^>]*)?>[\\s\\S]*?</entry>");
+        private static readonly Regex V2IdElement = V2PropertyElement("Id");
+        private static readonly Regex V2IdLink = V2PropertyLink("Id");
+        private static readonly Regex V2VersionElement = V2PropertyElement("Version");
+        private static readonly Regex V2VersionLink = V2PropertyLink("Version");
+        private static readonly Regex V2Unlisted = new(
+            "<(?:[\\w.-]+:)?Published(?:\\s[^>]*)?>\\s*1900-"
+        );
+
+        private static Regex V2PropertyElement(string name) =>
+            new($"<(?:[\\w.-]+:)?{name}(?:\\s[^>]*)?>([^<]*)</(?:[\\w.-]+:)?{name}>");
+
+        private static Regex V2PropertyLink(string name) => new($"\\b{name}='([^'<>]+)'");
+
+        private static bool HasV2Entries(string content) => V2Entry.IsMatch(content);
+
+        internal static string? ReadV2Id(string entry) => ReadV2Property(entry, V2IdElement, V2IdLink);
+
+        internal static string? ReadV2Version(string entry) =>
+            ReadV2Property(entry, V2VersionElement, V2VersionLink);
+
+        private static string? ReadV2Property(string entry, Regex preferred, Regex fallback)
+        {
+            string value = WebUtility.HtmlDecode(preferred.Match(entry).Groups[1].Value).Trim();
+            if (value.Length is 0)
+                value = WebUtility.HtmlDecode(fallback.Match(entry).Groups[1].Value).Trim();
+            return value.Length > 0 ? value : null;
+        }
+
+        private static bool IsV2UpdateCandidate(string entry, string version, bool canPrerelease) =>
+            !V2Unlisted.IsMatch(entry) && (canPrerelease || !version.Split('+')[0].Contains('-'));
+
+        private sealed record V2Response(
+            string? Content,
+            string? Error,
+            bool FromArtifactory,
+            bool SentCredentials,
+            bool Unreachable = false
+        );
+
+        private const string ArtifactoryNamespace = "http://jfrog.com/xmlns/nuget/";
+
+        private static V2Response FetchV2(HttpClient client, IManagerSource source, string url)
+        {
+            bool sentCredentials = false;
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                NuGetFeedCredentials.ApplyTo(request, source.Url);
+                sentCredentials = request.Headers.Authorization is not null;
+                using HttpResponseMessage response = client.Send(request);
+
+                if (!response.IsSuccessStatusCode)
+                    return new(
+                        null,
+                        $"Failed to fetch api at Url={url} with status code {response.StatusCode}",
+                        false,
+                        sentCredentials
+                    );
+
+                string content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                return new(
+                    content,
+                    null,
+                    response.Headers.Contains("X-Artifactory-Id")
+                        || response.Headers.Contains("X-JFrog-Version")
+                        || content.Contains(ArtifactoryNamespace, StringComparison.Ordinal),
+                    sentCredentials
+                );
+            }
+            catch (Exception ex)
+            {
+                return new(
+                    null,
+                    $"Failed to fetch api at Url={url} on source {source.Name}: {ex}",
+                    false,
+                    sentCredentials,
+                    Unreachable: ex is HttpRequestException or TaskCanceledException
+                );
+            }
+        }
+
+        private static bool IsKnownArtifactory(string sourceKey) =>
+            ArtifactorySources.TryGetValue(sourceKey, out DateTime seen)
+            && DateTime.UtcNow - seen < ArtifactoryMemoLifetime;
+
+        private static readonly TimeSpan ArtifactoryMemoLifetime = TimeSpan.FromHours(1);
+
+        private sealed record V2IdLookup(
+            string? NewestEntry,
+            bool Listed,
+            int UnreadableEntries,
+            string Excerpt,
+            bool SentCredentials,
+            IReadOnlyList<string> Errors,
+            bool Unreachable = false,
+            bool Skipped = false
+        );
+
+        private V2IdLookup LookUpV2Id(
+            HttpClient client,
+            IManagerSource source,
+            IPackage package,
+            bool canPrerelease
+        )
+        {
+            try
+            {
+                return LookUpV2IdUnsafe(client, source, package, canPrerelease);
+            }
+            catch (Exception ex)
+            {
+                return new(
+                    null,
+                    false,
+                    0,
+                    string.Empty,
+                    false,
+                    [$"Failed to look up package {package.Id} on source {source.Name}: {ex}"]
+                );
+            }
+        }
+
+        private V2IdLookup LookUpV2IdUnsafe(
+            HttpClient client,
+            IManagerSource source,
+            IPackage package,
+            bool canPrerelease
+        )
+        {
+            string id = HttpUtility.UrlEncode(package.Id.Replace("'", "''"));
+            string lookup = $"{source.Url.ToString().Trim('/')}/FindPackagesById()?id='{id}'";
+            string latestFilter = canPrerelease ? "IsAbsoluteLatestVersion" : "IsLatestVersion";
+
+            string? newestEntry = null;
+            string? newestVersion = null;
+            int unreadable = 0;
+            string lastContent = string.Empty;
+            bool sentCredentials = false;
+            bool unreachable = false;
+            List<string> errors = [];
+
+            bool ListsAnyVersion(string firstPage)
+            {
+                bool listed = false;
+                HashSet<string> visited = [];
+                HashSet<string> seenVersions = new(StringComparer.OrdinalIgnoreCase);
+                Uri? url = new(firstPage);
+                for (int page = 0; url is not null && page < MaxV2VersionPages; page++)
+                {
+                    if (!visited.Add(url.AbsoluteUri))
+                        break;
+
+                    V2Response response = FetchV2(client, source, url.AbsoluteUri);
+                    sentCredentials |= response.SentCredentials;
+                    if (response.Content is not { } content)
+                    {
+                        errors.Add(response.Error ?? $"No content from Url={url}");
+                        unreachable |= response.Unreachable;
+                        break;
+                    }
+
+                    lastContent = content;
+                    bool newVersionOnPage = false;
+                    foreach (Match entry in V2Entry.Matches(content))
+                    {
+                        if (
+                            ReadV2Version(entry.Value) is not { } version
+                            || ReadV2Id(entry.Value) is not { } entryId
+                        )
+                        {
+                            unreadable++;
+                            continue;
+                        }
+
+                        if (!entryId.Equals(package.Id, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        listed = true;
+                        newVersionOnPage |= seenVersions.Add(version);
+                        if (
+                            !IsV2UpdateCandidate(entry.Value, version, canPrerelease)
+                            || !IsNewerVersion(version, package.VersionString)
+                            || (newestVersion is not null && !IsNewerVersion(version, newestVersion))
+                        )
+                            continue;
+
+                        newestEntry = entry.Value;
+                        newestVersion = version;
+                    }
+
+                    if (!newVersionOnPage)
+                        break;
+
+                    url = FindNextPageUrl(content, url);
+                }
+
+                return listed;
+            }
+
+            bool listed =
+                ListsAnyVersion($"{lookup}&$filter={latestFilter}")
+                || (errors.Count is 0 && ListsAnyVersion($"{lookup}&semVerLevel=2.0.0"));
+
+            string excerpt = string.Empty;
+            if (unreadable > 0)
+            {
+                excerpt = Regex.Replace(lastContent, "\\s+", " ");
+                excerpt = excerpt[..Math.Min(excerpt.Length, 600)];
+            }
+
+            return new(newestEntry, listed, unreadable, excerpt, sentCredentials, errors, unreachable);
+        }
 
         internal static Uri? FindNextPageUrl(string content, Uri currentUrl)
         {
@@ -990,20 +1264,13 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         )
         {
             var packages = new List<Package>();
-            MatchCollection matches = Regex.Matches(searchResults, "<entry>([\\s\\S]*?)<\\/entry>");
-
-            foreach (Match match in matches)
+            foreach (Match match in V2Entry.Matches(searchResults))
             {
-                if (!match.Success)
-                    continue;
-
-                string id = Regex.Match(match.Value, "<d:Id>([^<]+)</d:Id>").Groups[1].Value;
-                string new_version = Regex
-                    .Match(match.Value, "<d:Version>([^<]+)</d:Version>")
-                    .Groups[1]
-                    .Value;
-
-                if (!packageIdVersion.TryGetValue(id.ToLowerInvariant(), out string? installedVersion))
+                if (
+                    ReadV2Id(match.Value) is not { } id
+                    || ReadV2Version(match.Value) is not { } new_version
+                    || !packageIdVersion.TryGetValue(id.ToLowerInvariant(), out string? installedVersion)
+                )
                     continue;
 
                 logger?.Log($"Found package {id} version {new_version} on source {source.Name}");

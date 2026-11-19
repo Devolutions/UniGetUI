@@ -5604,6 +5604,10 @@
       "icon": "https://community.chocolatey.org/content/packageimages/bootstrap-studio.install.6.3.1.png",
       "images": []
     },
+    "borderless-gaming": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/borderless-gaming-alt.png",
+      "images": []
+    },
     "borderlessgaming": {
       "icon": "https://community.chocolatey.org/content/packageimages/borderlessgaming.9.5.6.png",
       "images": []

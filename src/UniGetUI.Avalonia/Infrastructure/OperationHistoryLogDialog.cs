@@ -11,6 +11,7 @@ using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Operations.History;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -26,9 +27,10 @@ internal static class OperationHistoryLogDialog
         IBrush defaultBrush = LookupBrush("TextFillColorPrimaryBrush", theme, Brushes.White);
         IBrush errorBrush = LookupBrush("StatusErrorForeground", theme, Brushes.Red);
 
+        bool failed = record.Status == OperationHistoryRecord.StatusFailed;
         var lines = record.Output
             .Select(l => new LogLineItem(l.Text.Replace("\r", "").Replace("\n", ""),
-                l.Type == "Error" ? errorBrush : defaultBrush))
+                AbstractOperation.IsErrorLine(l.Type, failed) ? errorBrush : defaultBrush))
             .ToList();
         if (lines.Count == 0)
             lines.Add(new LogLineItem(CoreTools.Translate("No output was recorded for this operation."), defaultBrush));
@@ -60,12 +62,12 @@ internal static class OperationHistoryLogDialog
         var exportButton = CreateDialogButton(CoreTools.Translate("Export to a file"));
         exportButton.Click += async (_, _) =>
         {
-            var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var file = await NativePickerTracker.Track(owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = CoreTools.Translate("Export log"),
                 SuggestedFileName = CoreTools.Translate("UniGetUI Log"),
                 FileTypeChoices = [new FilePickerFileType(CoreTools.Translate("Text")) { Patterns = ["*.txt"] }],
-            });
+            }));
             if (file is not null)
                 await File.WriteAllTextAsync(file.Path.LocalPath, plainText);
         };

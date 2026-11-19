@@ -9,6 +9,7 @@
 
     <PropertyGroup>
         <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

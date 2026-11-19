@@ -62,6 +62,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         protected virtual bool? IsEligibleUpdateTarget(IPackage update, string version) => true;
 
+        protected virtual bool IsUpdateSuppressed(IPackage update) => false;
+
         protected virtual IReadOnlyList<string> ListVersionsForUpdateSelection(IPackage update, bool includePreReleases) =>
             DetailsHelper.GetVersions(update);
 
@@ -108,15 +110,31 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 )
                     return null;
 
-                Logger.Info(
-                    $"Offering {update.Id} {target} instead of {update.NewVersionString}: major updates are skipped for this package."
-                );
-                var overrides = update.OverridenOptions;
-                overrides.PinUpdateToNewVersion = true;
-                return new Package(update.Name, update.Id, update.VersionString, target, update.Source, this, overrides)
+                var withinMajor = new Package(
+                    update.Name,
+                    update.Id,
+                    update.VersionString,
+                    target,
+                    update.Source,
+                    this,
+                    update.OverridenOptions
+                )
                 {
                     RequiresReinstallToUpdate = update.RequiresReinstallToUpdate,
                 };
+                if (IsUpdateSuppressed(withinMajor))
+                {
+                    Logger.Info(
+                        $"Not offering {update.Id} {target} within its installed major: that update is suppressed until a newer version is available."
+                    );
+                    return null;
+                }
+
+                Logger.Info(
+                    $"Offering {update.Id} {target} instead of {update.NewVersionString}: major updates are skipped for this package."
+                );
+                withinMajor.OverridenOptions.PinUpdateToNewVersion = true;
+                return withinMajor;
             }
             catch (Exception ex)
             {

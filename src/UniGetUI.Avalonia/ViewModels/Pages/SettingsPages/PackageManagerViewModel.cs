@@ -294,8 +294,8 @@ public partial class PackageManagerViewModel : ViewModelBase
     private async Task PickVcpkgRoot(Visual? visual)
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(
-            new FolderPickerOpenOptions { AllowMultiple = false });
+        var folders = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions { AllowMultiple = false }));
         if (folders is not [{ } folder]) return;
         var path = folder.TryGetLocalPath();
         if (string.IsNullOrEmpty(path)) return;

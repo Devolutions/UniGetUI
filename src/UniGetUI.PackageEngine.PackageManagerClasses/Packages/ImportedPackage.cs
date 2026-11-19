@@ -43,12 +43,35 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public async Task<Package> RegisterAndGetPackageAsync()
         {
             var package = new Package(Name, Id, _version, Source, Manager);
-            await InstallOptionsFactory.SaveForPackageAsync(installation_options, package);
+            var savedOptions = installation_options.Copy();
+            // The bundle's scope selection applies to this install, not later package operations.
+            savedOptions.BundleScopeIsExplicit = false;
+            await InstallOptionsFactory.SaveForPackageAsync(savedOptions, package);
 
             if (updates_options.UpdatesIgnored)
                 await AddToIgnoredUpdatesAsync(updates_options.IgnoredVersion);
 
             return package;
+        }
+
+        public async Task<InstallOptions> LoadOptionsForInstallationAsync(
+            IPackage package,
+            bool? elevated = null,
+            bool? interactive = null,
+            bool? noIntegrity = null
+        )
+        {
+            var bundleOptions = installation_options.Copy();
+            var options = await InstallOptionsFactory.LoadApplicableAsync(
+                package,
+                elevated: elevated,
+                interactive: interactive,
+                no_integrity: noIntegrity,
+                overridePackageOptions: bundleOptions
+            );
+            if (!bundleOptions.OverridesNextLevelOpts && bundleOptions.BundleScopeIsExplicit)
+                options.InstallationScope = bundleOptions.InstallationScope;
+            return options;
         }
 
         public override Task<InstallOptions> GetInstallOptions() =>

@@ -319,6 +319,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 && helper.ReportedUpdateNotApplicable(processOutput, returnCode);
         }
 
+        public bool ReportedUnconfirmedUpgradeLookup(IPackage package) =>
+            WinGetPkgOperationHelper.ReportedUnconfirmedUpgradeLookup(package);
+
         public bool ReportedDifferentInstallTechnology(IReadOnlyList<string> processOutput) =>
             WinGetPkgOperationHelper.ReportedDifferentInstallTechnology(processOutput);
 
@@ -330,6 +333,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         public bool HonorsIntegrityCheckSkipWhenElevated =>
             SelectedCliToolKind is WinGetCliToolKind.BundledPinget;
+
+        protected override bool IsUpdateSuppressed(UniGetUI.PackageEngine.Interfaces.IPackage update) =>
+            WinGetPkgOperationHelper.IsStuckUpgradeLoop(update);
 
         public override bool CanUpdateToExactVersion =>
             SelectedCliToolKind is WinGetCliToolKind.SystemWinGet

@@ -27,6 +27,7 @@ public class IpcOperationInfo
     public bool CanForget { get; set; }
     public IReadOnlyList<string> AvailableQueueActions { get; set; } = [];
     public IReadOnlyList<string> AvailableRetryModes { get; set; } = [];
+    public bool UpdateRefusedByPublisher { get; set; }
     public IpcPackageInfo? Package { get; set; }
     public string ManagerName { get; set; } = "";
     public string SourceName { get; set; } = "";
@@ -119,6 +120,50 @@ public static class IpcOperationApi
     private static readonly ConcurrentDictionary<string, TrackedOperation> Operations = new();
     private const int MaxTrackedOperations = 200;
 
+    /// <summary>
+    /// Raised when an operation starts being tracked or a tracked operation changes status,
+    /// on whichever thread did it. Every operation is tracked here, including the ones started
+    /// over IPC (the command line), which never reach the shell's own operation list.
+    /// </summary>
+    public static event EventHandler? ActivityChanged;
+
+    /// <summary>
+    /// Whether any tracked operation is queued or running, or an operation that is run to
+    /// completion inside one IPC call (see <see cref="BeginActivity"/>) is under way.
+    /// </summary>
+    public static bool HasActiveOperations()
+    {
+        return Volatile.Read(ref _untrackedActivities) > 0
+            || Operations.Values.Any(entry => IsActive(entry.Operation.Status));
+    }
+
+    private static int _untrackedActivities;
+
+    /// <summary>
+    /// Marks an operation that runs to completion inside one IPC call and is never listed
+    /// (a bundle install, a source change) as activity, until the returned object is disposed.
+    /// </summary>
+    public static IDisposable BeginActivity()
+    {
+        Interlocked.Increment(ref _untrackedActivities);
+        ActivityChanged?.Invoke(null, EventArgs.Empty);
+        return new ActivityScope();
+    }
+
+    private sealed class ActivityScope : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            Interlocked.Decrement(ref _untrackedActivities);
+            ActivityChanged?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
     public static string Track(AbstractOperation operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
@@ -130,13 +175,18 @@ public static class IpcOperationApi
             {
                 var tracked = new TrackedOperation(operation);
                 operation.LogLineAdded += (_, line) => tracked.AddLine(line.Item1, line.Item2);
-                operation.StatusChanged += (_, _) => tracked.Touch();
+                operation.StatusChanged += (_, _) =>
+                {
+                    tracked.Touch();
+                    ActivityChanged?.Invoke(null, EventArgs.Empty);
+                };
                 operation.OperationFinished += (_, _) => tracked.Touch();
                 return tracked;
             }
         );
 
         PruneCompletedOperations();
+        ActivityChanged?.Invoke(null, EventArgs.Empty);
         return operationId;
     }
 
@@ -168,6 +218,7 @@ public static class IpcOperationApi
             CanForget = info.CanForget,
             AvailableQueueActions = info.AvailableQueueActions,
             AvailableRetryModes = info.AvailableRetryModes,
+            UpdateRefusedByPublisher = info.UpdateRefusedByPublisher,
             Package = info.Package,
             ManagerName = info.ManagerName,
             SourceName = info.SourceName,
@@ -310,6 +361,9 @@ public static class IpcOperationApi
                 ? ["run-now", "run-next", "run-last"]
                 : [],
             AvailableRetryModes = !IsActive(operation.Status) ? GetRetryModes(operation) : [],
+            UpdateRefusedByPublisher =
+                operation is PackageOperation packageOperation
+                && PackageOperation.CanIgnoreUpdatesAfterFailure(packageOperation),
             Package = GetOperationPackage(operation),
             ManagerName = GetManagerName(operation),
             SourceName = GetSourceName(operation),
@@ -493,7 +547,7 @@ public static class IpcOperationApi
             AbstractOperation.LineType.VerboseDetails => "verbose",
             AbstractOperation.LineType.ProgressIndicator => "progress",
             AbstractOperation.LineType.Information => "information",
-            AbstractOperation.LineType.Error => "error",
+            AbstractOperation.LineType.Error or AbstractOperation.LineType.StandardError => "error",
             _ => type.ToString().ToLowerInvariant(),
         };
     }

@@ -121,10 +121,10 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
     private async Task PickBackupDirectory(Visual? visual)
     {
         if (IsDisposed || visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await NativePickerTracker.Track(topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             AllowMultiple = false,
-        });
+        }));
         if (IsDisposed || folders is not [{ } folder]) return;
         var path = folder.TryGetLocalPath();
         if (path is null) return;

@@ -536,6 +536,10 @@ public partial class PackagesPageViewModel : ViewModelBase
         await dialog.ShowDialog(owner);
     }
 
+    // The installed loader keeps scope-distinct installations apart, so its rows must be matched the same way.
+    private long RowIdentity(IPackage package) =>
+        Loader is InstalledPackagesLoader ? package.GetInstalledIdentityHash() : package.GetVersionedHash();
+
     // ─── Loader events ────────────────────────────────────────────────────────
     private void Loader_PackagesChanged(object? sender, PackagesChangedEvent e)
     {
@@ -550,14 +554,14 @@ public partial class PackagesPageViewModel : ViewModelBase
             var added = new List<PackageWrapper>();
             foreach (var pkg in e.AddedPackages)
             {
-                if (_wrappedPackages.Any(w => w.Package.GetVersionedHash() == pkg.GetVersionedHash())) continue;
+                if (_wrappedPackages.Any(w => RowIdentity(w.Package) == RowIdentity(pkg))) continue;
                 var wrapper = new PackageWrapper(pkg, this);
                 _wrappedPackages.Add(wrapper);
                 added.Add(wrapper);
                 AddPackageToSourcesList(pkg);
             }
             var toRemove = _wrappedPackages
-                .Where(w => e.RemovedPackages.Any(r => r.GetVersionedHash() == w.Package.GetVersionedHash()))
+                .Where(w => e.RemovedPackages.Any(r => RowIdentity(r) == RowIdentity(w.Package)))
                 .ToList();
             foreach (var wrapper in toRemove) { wrapper.Dispose(); _wrappedPackages.Remove(wrapper); }
 

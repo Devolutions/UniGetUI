@@ -13,6 +13,7 @@ public abstract partial class AbstractOperation : IDisposable
     public event EventHandler<OperationStatus>? StatusChanged;
     public event EventHandler<EventArgs>? CancelRequested;
     public event EventHandler<(string, LineType)>? LogLineAdded;
+    public event EventHandler<EventArgs>? OutputRetyped;
     public event EventHandler<EventArgs>? OperationStarting;
     public event EventHandler<EventArgs>? OperationFinished;
     public event EventHandler<EventArgs>? Enqueued;
@@ -249,10 +250,53 @@ public abstract partial class AbstractOperation : IDisposable
         LogLineAdded?.Invoke(this, (Logger.Redact(line), type));
     }
 
+    public int OutputLineCount()
+    {
+        lock (LogListLock)
+            return LogList.Count;
+    }
+
+    private void ResolveStandardError(int firstLine, AbstractOperation child)
+    {
+        LineType childOutcome = child.Status is OperationStatus.Failed ? LineType.Error : LineType.Information;
+        var childLines = child.GetOutput();
+        bool changed = false;
+        lock (LogListLock)
+        {
+            int offset = childLines.Count - (LogList.Count - firstLine);
+            for (int i = firstLine; i < LogList.Count; i++)
+            {
+                if (LogList[i].Item2 is not LineType.StandardError)
+                    continue;
+                int c = offset + i - firstLine;
+                bool resolvedByDescendant =
+                    c >= 0
+                    && childLines[c].Item1 == LogList[i].Item1
+                    && childLines[c].Item2 is LineType.Error or LineType.Information;
+                LogList[i] = (LogList[i].Item1, resolvedByDescendant ? childLines[c].Item2 : childOutcome);
+                changed = true;
+            }
+        }
+        if (changed)
+            OutputRetyped?.Invoke(this, EventArgs.Empty);
+    }
+
     protected IReadOnlyList<(string, LineType)> GetRawOutput()
     {
         lock (LogListLock)
             return LogList.ToArray();
+    }
+
+    public IReadOnlyList<(string, LineType)> GetOutput(int firstLine)
+    {
+        lock (LogListLock)
+        {
+            int start = Math.Clamp(firstLine, 0, LogList.Count);
+            var tail = LogList.GetRange(start, LogList.Count - start);
+            if (!Logger.RedactUsername)
+                return tail;
+            return tail.Select(l => (Logger.Redact(l.Item1), l.Item2)).ToArray();
+        }
     }
 
     public IReadOnlyList<(string, LineType)> GetOutput()
@@ -538,7 +582,20 @@ public abstract partial class AbstractOperation : IDisposable
     {
         OperationVeredict result;
 
-        if (RefusalBeforeStart() is { } refusal)
+        string? refusal;
+        try
+        {
+            refusal = await RefusalBeforeStartAsync();
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            return OperationVeredict.Canceled;
+        }
+
+        if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
+            return OperationVeredict.Canceled;
+
+        if (refusal is not null)
         {
             Line(refusal, LineType.Error);
             return OperationVeredict.Failure;
@@ -560,16 +617,20 @@ public abstract partial class AbstractOperation : IDisposable
                     CoreTools.Translate("Running PreOperation ({0}/{1})...", i, count),
                 LineType.Information
             );
-            preReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
             if (!TrySetActiveInnerOperation(preReq.Operation))
                 return OperationVeredict.Canceled;
+            EventHandler<(string, LineType)> forwardPreLine = (_, line) => Line(line.Item1, line.Item2);
+            preReq.Operation.LogLineAdded += forwardPreLine;
+            int preFirstLine = OutputLineCount();
             try
             {
                 await preReq.Operation.MainThread();
             }
             finally
             {
+                preReq.Operation.LogLineAdded -= forwardPreLine;
                 ClearActiveInnerOperation(preReq.Operation);
+                ResolveStandardError(preFirstLine, preReq.Operation);
             }
             if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
                 return OperationVeredict.Canceled;
@@ -666,16 +727,20 @@ public abstract partial class AbstractOperation : IDisposable
             if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
                 return OperationVeredict.Canceled;
 
-            postReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
             if (!TrySetActiveInnerOperation(postReq.Operation))
                 return OperationVeredict.Canceled;
+            EventHandler<(string, LineType)> forwardPostLine = (_, line) => Line(line.Item1, line.Item2);
+            postReq.Operation.LogLineAdded += forwardPostLine;
+            int postFirstLine = OutputLineCount();
             try
             {
                 await postReq.Operation.MainThread();
             }
             finally
             {
+                postReq.Operation.LogLineAdded -= forwardPostLine;
                 ClearActiveInnerOperation(postReq.Operation);
+                ResolveStandardError(postFirstLine, postReq.Operation);
             }
             if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
                 return OperationVeredict.Canceled;
@@ -938,7 +1003,7 @@ public abstract partial class AbstractOperation : IDisposable
     }
 
     protected virtual IReadOnlyList<InnerOperation> GetAttemptPreOperations() => [];
-    protected virtual string? RefusalBeforeStart() => null;
+    protected virtual Task<string?> RefusalBeforeStartAsync() => Task.FromResult<string?>(null);
     protected abstract Task<OperationVeredict> PerformOperation();
     public abstract Task<Uri> GetOperationIcon();
 

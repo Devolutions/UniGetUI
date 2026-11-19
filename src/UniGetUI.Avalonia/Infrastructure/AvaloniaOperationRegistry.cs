@@ -13,6 +13,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageOperations;
 
@@ -54,6 +55,9 @@ public static class AvaloniaOperationRegistry
                 Operations.Add(op);
                 OperationViewModels.Add(vm);
             }
+
+            // A queued operation must not start in efficiency mode.
+            BackgroundEfficiencyMode.Refresh();
         });
 
         op.OperationStarting += (_, _) =>
@@ -115,7 +119,8 @@ public static class AvaloniaOperationRegistry
     public static void RetryFailed()
     {
         var failed = OperationViewModels
-            .Where(vm => vm.Operation.Status is OperationStatus.Failed)
+            .Where(vm => vm.Operation.Status is OperationStatus.Failed
+                && PackageOperation.IsWorthRetryingInBulk(vm.Operation))
             .ToList();
         foreach (var vm in failed)
             vm.Operation.Retry(AbstractOperation.RetryMode.Retry);
@@ -198,6 +203,9 @@ public static class AvaloniaOperationRegistry
 
     private static void UpdateTrayStatus()
     {
+        // Runs whenever an operation is added, removed or changes status.
+        BackgroundEfficiencyMode.Refresh();
+
         if (Application.Current?.ApplicationLifetime
                 is IClassicDesktopStyleApplicationLifetime { MainWindow: UniGetUI.Avalonia.Views.MainWindow mw })
             mw.UpdateSystemTrayStatus();

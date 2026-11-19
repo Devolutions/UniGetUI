@@ -9,7 +9,8 @@ public class AutomaticQuitMonitorTests
         IsEnabled: true,
         IsAlreadyQuitting: false,
         IsWindowVisible: false,
-        HasUnsavedWork: false);
+        HasUnsavedWork: false,
+        IsDialogOpen: false);
 
     private static readonly AutomaticQuitSnapshot Busy = Idle with { IsBusy = true };
 
@@ -98,6 +99,112 @@ public class AutomaticQuitMonitorTests
         Assert.Equal(0, quits);
     }
 
+    [Theory]
+    [InlineData(false, false, false, false, false)]
+    [InlineData(false, true, false, false, false)]
+    [InlineData(false, true, true, false, false)]
+    [InlineData(true, false, false, true, false)]
+    [InlineData(true, false, true, false, false)]
+    [InlineData(true, true, false, true, false)]
+    [InlineData(true, true, true, false, true)]
+    public void CaptureMapsTheWindowStateAndTheOverride(
+        bool isWindowVisible,
+        bool hasOpenDialog,
+        bool quitEvenWhenWindowIsOpen,
+        bool expectedWindowVisible,
+        bool expectedDialogOpen)
+    {
+        AutomaticQuitSnapshot snapshot = AutomaticQuitMonitor.Capture(
+            isBusy: false,
+            isEnabled: true,
+            isAlreadyQuitting: false,
+            isWindowVisible: isWindowVisible,
+            hasUnsavedWork: false,
+            hasOpenDialog: hasOpenDialog,
+            quitEvenWhenWindowIsOpen: quitEvenWhenWindowIsOpen);
+
+        Assert.Equal(expectedWindowVisible, snapshot.IsWindowVisible);
+        Assert.Equal(expectedDialogOpen, snapshot.IsDialogOpen);
+    }
+
+    [Fact]
+    public void CapturePassesTheOtherSignalsThrough()
+    {
+        AutomaticQuitSnapshot snapshot = AutomaticQuitMonitor.Capture(
+            isBusy: true,
+            isEnabled: false,
+            isAlreadyQuitting: true,
+            isWindowVisible: false,
+            hasUnsavedWork: true,
+            hasOpenDialog: false,
+            quitEvenWhenWindowIsOpen: false);
+
+        Assert.Equal(
+            Idle with { IsBusy = true, IsEnabled = false, IsAlreadyQuitting = true, HasUnsavedWork = true },
+            snapshot);
+    }
+
+    [Fact]
+    public async Task QuitsAnywayOnceADialogHasStayedOpenForTheWholeGracePeriod()
+    {
+        AutomaticQuitSnapshot dialog = Idle with { IsDialogOpen = true };
+        var samples = new Queue<AutomaticQuitSnapshot?>(
+            Enumerable.Repeat<AutomaticQuitSnapshot?>(dialog, AutomaticQuitMonitor.MaxDialogWaitChecks + 1));
+        int quits = 0;
+
+        AutomaticQuitDecision decision = await Run(samples, () => quits++);
+
+        Assert.Equal(AutomaticQuitDecision.Quit, decision);
+        Assert.Equal(1, quits);
+        Assert.Empty(samples);
+    }
+
+    [Fact]
+    public async Task ClosingTheDialogRestartsTheGracePeriod()
+    {
+        AutomaticQuitSnapshot dialog = Idle with { IsDialogOpen = true };
+        var sequence = Enumerable.Repeat<AutomaticQuitSnapshot?>(dialog, AutomaticQuitMonitor.MaxDialogWaitChecks - 1)
+            .Append(Idle)
+            .Concat(Enumerable.Repeat<AutomaticQuitSnapshot?>(dialog, AutomaticQuitMonitor.MaxDialogWaitChecks - 1))
+            .Append(Idle)
+            .Append(Idle);
+        var samples = new Queue<AutomaticQuitSnapshot?>(sequence);
+        int quits = 0;
+
+        AutomaticQuitDecision decision = await Run(samples, () => quits++);
+
+        Assert.Equal(AutomaticQuitDecision.Quit, decision);
+        Assert.Equal(1, quits);
+        Assert.Empty(samples);
+    }
+
+    [Fact]
+    public async Task WaitsForAnOpenDialogToCloseBeforeQuitting()
+    {
+        AutomaticQuitSnapshot dialog = Idle with { IsDialogOpen = true };
+        var samples = new Queue<AutomaticQuitSnapshot?>([Idle, dialog, dialog, dialog, Idle, Idle]);
+        int quits = 0;
+
+        AutomaticQuitDecision decision = await Run(samples, () => quits++);
+
+        Assert.Equal(AutomaticQuitDecision.Quit, decision);
+        Assert.Equal(1, quits);
+        Assert.Empty(samples);
+    }
+
+    [Fact]
+    public async Task UnsavedWorkStillBlocksTheQuitOnceTheDialogCloses()
+    {
+        var samples = new Queue<AutomaticQuitSnapshot?>(
+            [Idle with { IsDialogOpen = true }, Idle, Idle with { HasUnsavedWork = true }]);
+        int quits = 0;
+
+        AutomaticQuitDecision decision = await Run(samples, () => quits++);
+
+        Assert.Equal(AutomaticQuitDecision.UnsavedWork, decision);
+        Assert.Equal(0, quits);
+    }
+
     [Fact]
     public async Task DoesNotQuitTwiceWhenAQuitIsAlreadyInProgress()
     {
@@ -126,10 +233,11 @@ public class AutomaticQuitMonitorTests
     public void SafeguardsAreNotCheckedUntilTheMachineIsIdleLongEnough()
     {
         int idleChecks = 0;
+        int dialogChecks = 0;
         AutomaticQuitSnapshot visible = Idle with { IsWindowVisible = true };
 
-        Assert.Equal(AutomaticQuitDecision.KeepWaiting, AutomaticQuitMonitor.Evaluate(visible, ref idleChecks));
-        Assert.Equal(AutomaticQuitDecision.WindowVisible, AutomaticQuitMonitor.Evaluate(visible, ref idleChecks));
+        Assert.Equal(AutomaticQuitDecision.KeepWaiting, AutomaticQuitMonitor.Evaluate(visible, ref idleChecks, ref dialogChecks));
+        Assert.Equal(AutomaticQuitDecision.WindowVisible, AutomaticQuitMonitor.Evaluate(visible, ref idleChecks, ref dialogChecks));
     }
 
     [Theory]

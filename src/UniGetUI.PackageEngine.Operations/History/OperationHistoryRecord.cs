@@ -290,17 +290,17 @@ public sealed class OperationHistoryRecord
     {
         if (status != StatusFailed) return "";
 
-        var line = LastOfType(output, nameof(AbstractOperation.LineType.Error))
+        var line = LastOfType(output, nameof(AbstractOperation.LineType.Error), nameof(AbstractOperation.LineType.StandardError))
                    ?? LastOfType(output, nameof(AbstractOperation.LineType.Information));
 
         string text = line?.Text.Trim() ?? "";
         return text.Length > 300 ? text[..300] + "…" : text;
     }
 
-    private static OperationHistoryOutputLine? LastOfType(IReadOnlyList<OperationHistoryOutputLine> output, string type)
+    private static OperationHistoryOutputLine? LastOfType(IReadOnlyList<OperationHistoryOutputLine> output, params string[] types)
     {
         for (int i = output.Count - 1; i >= 0; i--)
-            if (output[i].Type == type && !string.IsNullOrWhiteSpace(output[i].Text))
+            if (types.Contains(output[i].Type) && !string.IsNullOrWhiteSpace(output[i].Text))
                 return output[i];
         return null;
     }

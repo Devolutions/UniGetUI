@@ -21,6 +21,9 @@ public sealed class IpcPackageInfo
     public string NewVersion { get; set; } = "";
     public string Source { get; set; } = "";
     public string Manager { get; set; } = "";
+
+    /// <summary>The scope the manager reported for this installation; null when unknown.</summary>
+    public string? ReportedScope { get; set; }
     public bool IsUpgradable { get; set; }
     public bool SystemRestartPending { get; set; }
 }
@@ -157,7 +160,7 @@ public static class IpcPackageApi
     {
         var pendingRestartKeys = PendingRebootStore.GetPendingKeys();
         return GetInstalledPackagesSnapshot(managerName)
-            .DistinctBy(GetPackageIdentity)
+            .DistinctBy(GetInstalledPackageIdentity)
             .Select(package => ToIpcPackageInfo(package, pendingRestartKeys))
             .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(package => package.Id, StringComparer.OrdinalIgnoreCase)
@@ -196,7 +199,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindUpgradablePackageOrInstalledPackage(request);
+        var package = ResolveUpdatePackageForMutation(request);
         if (
             package.IsUpgradable
             && string.IsNullOrWhiteSpace(request.Version)
@@ -313,7 +316,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindInstalledPackage(request);
+        var package = ResolveInstalledPackageForMutation(request);
         return ExecuteOperationAsync(
             "uninstall-package",
             package,
@@ -382,7 +385,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindInstalledPackage(request);
+        var package = ResolveInstalledPackageForMutation(request);
         return ExecuteOperationAsync(
             "reinstall-package",
             package,
@@ -397,7 +400,7 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var package = FindInstalledPackage(request);
+        var package = ResolveInstalledPackageForMutation(request);
         var options = await InstallOptionsFactory.LoadApplicableAsync(package);
         ApplyRequestOptions(options, request);
 
@@ -649,7 +652,7 @@ public static class IpcPackageApi
 
         if (!string.IsNullOrWhiteSpace(request.Scope))
         {
-            options.InstallationScope = request.Scope;
+            options.InstallationScope = ScopeForOptions(request.Scope);
         }
 
         if (request.PreRelease.HasValue)
@@ -769,6 +772,195 @@ public static class IpcPackageApi
     {
         return TryFindPackageForStateMutation(request)
             ?? FindSearchResult(request);
+    }
+
+    // Used by destructive operations: the installed copy is chosen by the reported scope, and
+    // several scope copies without a deciding scope fail rather than being guessed.
+    internal static IPackage ResolveInstalledPackageForMutation(IpcPackageActionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var installed = GetInstalledPackagesSnapshot(request.ManagerName)
+            .Where(candidate => MatchesIdentity(candidate, request))
+            .ToArray();
+        if (installed.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"No installed package matching id \"{request.PackageId}\" was found."
+            );
+        }
+
+        return SelectCopy(installed, NormalizeRequestedScope(request), request.PackageId);
+    }
+
+    // The upgradable loader may collapse scopes; do not use ambiguous update metadata.
+    internal static IPackage ResolveUpdatePackageForMutation(IpcPackageActionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        string? requestedScope = NormalizeRequestedScope(request);
+        var allInstalled = GetInstalledPackagesSnapshot(request.ManagerName)
+            .Where(candidate => MatchesIdentity(candidate, request))
+            .ToArray();
+        var allUpgradable = GetUpgradablePackagesSnapshot(request.ManagerName)
+            .Where(candidate => MatchesIdentity(candidate, request))
+            .ToArray();
+        if (allInstalled.Length == 0 && allUpgradable.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"No installed package matching id \"{request.PackageId}\" was found."
+            );
+        }
+
+        // When only one manager has an update, it is the one to update, whatever else has the id.
+        var manager = SingleManager(
+            allUpgradable.Length > 0 ? allUpgradable : allInstalled,
+            request.PackageId
+        );
+        var installed = allInstalled.Where(p => p.Manager == manager).ToArray();
+        var upgradable = allUpgradable.Where(p => p.Manager == manager).ToArray();
+        IPackage? installedCopy = installed.Length > 0
+            ? SelectCopy(installed, requestedScope, request.PackageId)
+            : null;
+
+        string? target = requestedScope ?? installedCopy?.NormalizedReportedScope;
+        bool installedScopesAreUnique =
+            installed.Length > 0
+            && installed.Select(p => p.NormalizedReportedScope).Distinct().Count() == 1;
+
+        bool placeholderLabels = installedScopesAreUnique && !ReportsReliableScope(installed[0]);
+
+        var usable = target is null || placeholderLabels
+            ? upgradable
+            : upgradable
+                .Where(p =>
+                    p.NormalizedReportedScope == target
+                    || (p.NormalizedReportedScope is null && installedScopesAreUnique)
+                )
+                .ToArray();
+
+        if (usable.Length > 0)
+        {
+            return SelectCopy(usable, target, request.PackageId);
+        }
+
+        if (upgradable.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"An update of \"{request.PackageId}\" is available, but it cannot be tied to the "
+                    + (requestedScope is null ? "installed" : $"\"{requestedScope}\"")
+                    + " scope; specify the scope of an installation that reports the update."
+            );
+        }
+
+        return installedCopy
+            ?? throw new InvalidOperationException(
+                $"No installed package matching id \"{request.PackageId}\" was found."
+            );
+    }
+
+    // The literal request aliases "Global" and "Local" mean machine and user. Other values are
+    // lowercased and trimmed for comparison only; ApplyRequestOptions keeps them as requested.
+    private static string? CanonicalScope(string? scope)
+    {
+        if (string.IsNullOrWhiteSpace(scope))
+        {
+            return null;
+        }
+
+        string lowered = scope.Trim().ToLowerInvariant();
+        return lowered switch
+        {
+            "global" or PackageScope.Machine => PackageScope.Machine,
+            "local" or PackageScope.User => PackageScope.User,
+            _ => lowered,
+        };
+    }
+
+    private static string ScopeForOptions(string scope) =>
+        CanonicalScope(scope) is { } canonical
+        && (canonical == PackageScope.Machine || canonical == PackageScope.User)
+            ? canonical
+            : scope;
+
+    private static string? NormalizeRequestedScope(IpcPackageActionRequest request) =>
+        CanonicalScope(request.Scope);
+
+    // A manager whose rows carry a placeholder scope label (Pip labels every row machine wherever
+    // the package lives) cannot have that label contradict a request.
+    private static bool ReportsReliableScope(IPackage package) =>
+        package.Manager.Capabilities.ReportsReliableInstalledScope;
+
+    private static IPackageManager SingleManager(IReadOnlyList<IPackage> candidates, string packageId)
+    {
+        var managers = candidates.Select(p => p.Manager).Distinct().ToArray();
+        return managers.Length == 1
+            ? managers[0]
+            : throw new InvalidOperationException(
+                $"\"{packageId}\" is installed by more than one package manager; specify the manager to use."
+            );
+    }
+
+    // Scope copies are told apart only within one manager and canonical source.
+    private static IPackage SelectCopy(
+        IReadOnlyList<IPackage> candidates,
+        string? scope,
+        string packageId
+    )
+    {
+        SingleManager(candidates, packageId);
+        if (
+            candidates.Select(p => p.Source.Name).Distinct(StringComparer.Ordinal).Skip(1).Any()
+            && candidates.Select(p => p.NormalizedReportedScope).Distinct().Skip(1).Any()
+        )
+        {
+            throw new InvalidOperationException(
+                $"\"{packageId}\" is installed from more than one source; specify the source to use."
+            );
+        }
+
+        return SelectScopedCopy(candidates, scope, packageId);
+    }
+
+    private static IPackage SelectScopedCopy(
+        IReadOnlyList<IPackage> candidates,
+        string? scope,
+        string packageId
+    )
+    {
+        // When every copy reports one scope, the request only conflicts with a reliably known
+        // label; unknown and placeholder labels cannot contradict it.
+        if (candidates.Select(p => p.NormalizedReportedScope).Distinct().Count() <= 1)
+        {
+            if (
+                scope is null
+                || candidates[0].NormalizedReportedScope is null
+                || candidates[0].NormalizedReportedScope == scope
+                || !ReportsReliableScope(candidates[0])
+            )
+            {
+                return candidates[0];
+            }
+
+            throw new InvalidOperationException(
+                $"No installation of \"{packageId}\" in the \"{scope}\" scope was found."
+            );
+        }
+
+        if (scope is not null)
+        {
+            var matching = candidates.Where(p => p.NormalizedReportedScope == scope).ToArray();
+            if (matching.Length > 0)
+            {
+                return matching[0];
+            }
+
+            throw new InvalidOperationException(
+                $"No installation of \"{packageId}\" in the \"{scope}\" scope was found."
+            );
+        }
+
+        throw new InvalidOperationException(
+            $"\"{packageId}\" is installed in more than one scope; specify the scope to use."
+        );
     }
 
     private static IPackage FindInstalledPackage(IpcPackageActionRequest request)
@@ -949,7 +1141,18 @@ public static class IpcPackageApi
             );
     }
 
-    private static string GetPackageIdentity(IPackage package)
+    internal static (string Manager, string Source, string Id, string Version, string NewVersion, string? Scope) GetInstalledPackageIdentity(
+        IPackage package
+    ) => (
+        package.Manager.Id,
+        package.Source.Name,
+        package.Id,
+        package.VersionString,
+        package.NewVersionString,
+        package.NormalizedReportedScope
+    );
+
+    internal static string GetPackageIdentity(IPackage package)
     {
         return $"{package.Manager.Id}|{package.Source.Name}|{package.Id}|{package.VersionString}|{package.NewVersionString}";
     }
@@ -957,7 +1160,7 @@ public static class IpcPackageApi
     private static IpcPackageInfo ToIpcPackageInfo(IPackage package)
         => ToIpcPackageInfo(package, null);
 
-    private static IpcPackageInfo ToIpcPackageInfo(
+    internal static IpcPackageInfo ToIpcPackageInfo(
         IPackage package,
         IReadOnlySet<string>? pendingRestartKeys
     )
@@ -970,6 +1173,7 @@ public static class IpcPackageApi
             NewVersion = package.IsUpgradable ? package.NewVersionString : "",
             Source = package.Source.AsString_DisplayName,
             Manager = IpcManagerSettingsApi.GetPublicManagerId(package.Manager),
+            ReportedScope = string.IsNullOrWhiteSpace(package.ReportedScope) ? null : package.ReportedScope,
             IsUpgradable = package.IsUpgradable,
             SystemRestartPending = pendingRestartKeys is null
                 ? PendingRebootStore.IsPending(package.Manager.Id, package.Id)

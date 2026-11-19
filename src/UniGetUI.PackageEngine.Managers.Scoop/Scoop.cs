@@ -94,6 +94,9 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
         [GeneratedRegex(@"\bv(\d+\.\d+\.\d+)\b")]
         private static partial Regex ScoopReleaseVersionRegex();
 
+        public override int? CompareVersions(string versionA, string versionB) =>
+            versionA is null || versionB is null ? null : ScoopVersion.Compare(versionB, versionA);
+
         internal Func<string, (string Bucket, string Version)?> FindBucketManifest;
 
         private IReadOnlyDictionary<string, string> _pinnedInstalls = new Dictionary<string, string>();

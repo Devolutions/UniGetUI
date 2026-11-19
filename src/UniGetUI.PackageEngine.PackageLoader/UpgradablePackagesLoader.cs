@@ -30,6 +30,16 @@ namespace UniGetUI.PackageEngine.PackageLoader
             Instance = this;
         }
 
+        public async Task IgnoreUpdatesAsync(IPackage package, string version = "*")
+        {
+            await package.AddToIgnoredUpdatesAsync(version);
+            if (GetEquivalentPackage(package) is not { } upgradable)
+                return;
+
+            IgnoredPackages[upgradable.Id] = upgradable;
+            Remove(upgradable);
+        }
+
         protected override async Task<bool> IsPackageValid(IPackage package)
         {
             if (package.VersionString == package.NewVersionString)

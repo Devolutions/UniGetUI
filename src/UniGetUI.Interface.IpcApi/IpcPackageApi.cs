@@ -131,6 +131,17 @@ internal enum IpcPackageLookupMode
 
 public static class IpcPackageApi
 {
+    private static readonly IpcSnapshotRefresher SnapshotRefresher = CreateSnapshotRefresher();
+
+    private static IpcSnapshotRefresher CreateSnapshotRefresher()
+    {
+        var refresher = new IpcSnapshotRefresher(AbstractOperation.QueueLength, RefreshPackageSnapshotsAsync);
+        AbstractOperation.QueueDrained += (_, _) => refresher.StartIfIdle();
+        return refresher;
+    }
+
+    internal static Task WaitForPendingSnapshotRefreshAsync() => SnapshotRefresher.WaitForPendingAsync();
+
     public static IReadOnlyList<IpcPackageInfo> SearchPackages(
         string query,
         string? managerName = null,
@@ -296,6 +307,7 @@ public static class IpcPackageApi
                 "The current UniGetUI session has not loaded its package updates."
             );
 
+        await SnapshotRefresher.WaitForPendingAsync();
         if (loader.IsLoading)
         {
             await loader.WaitForCurrentLoadAsync();
@@ -616,7 +628,8 @@ public static class IpcPackageApi
         try
         {
             await operation.MainThread();
-            await RefreshPackageSnapshotsAsync();
+            if (operation is not DownloadOperation)
+                SnapshotRefresher.Request();
         }
         finally
         {
@@ -627,16 +640,8 @@ public static class IpcPackageApi
     // The installed loader keeps multiple versions, so a downgrade or reinstall leaves the old entry cached.
     private static async Task RefreshPackageSnapshotsAsync()
     {
-        try
-        {
-            await ReloadAfterCurrentLoadAsync(InstalledPackagesLoader.Instance);
-            await RefreshUpgradablePackagesSnapshotAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Could not refresh package snapshots after an IPC operation");
-            Logger.Warn(ex);
-        }
+        await ReloadAfterCurrentLoadAsync(InstalledPackagesLoader.Instance);
+        await RefreshUpgradablePackagesSnapshotAsync();
     }
 
     private static void ApplyRequestOptions(
@@ -1084,6 +1089,7 @@ public static class IpcPackageApi
         }
 
         // A reload clears the list first; reading it during the reload returns an empty or partial list.
+        SnapshotRefresher.WaitForPendingAsync().GetAwaiter().GetResult();
         loader.WaitForCurrentLoadAsync().GetAwaiter().GetResult();
 
         if (loader.Packages.Count > 0)

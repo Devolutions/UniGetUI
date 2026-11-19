@@ -35,6 +35,7 @@ public sealed class IpcOperationScopeTests : IDisposable
 
     public void Dispose()
     {
+        IpcPackageApi.WaitForPendingSnapshotRefreshAsync().Wait(TimeSpan.FromSeconds(30));
         CoreData.TEST_DataDirectoryOverride = null;
         try
         {

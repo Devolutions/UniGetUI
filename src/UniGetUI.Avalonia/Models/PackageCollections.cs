@@ -209,9 +209,14 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
     public string InstallerHostChangeTooltip { get; private set; } = "";
 
     public bool RequiresReinstallToUpdate => Package.RequiresReinstallToUpdate;
-    public bool ShowsNewVersionIcon => !InstallerHostChanged && !RequiresReinstallToUpdate;
-    public bool ShowsReinstallIcon => RequiresReinstallToUpdate && !InstallerHostChanged;
+    public bool IsUpdateHeldBack => Package.HeldBackUpdate is not null;
+    public bool ShowsNewVersionIcon => !InstallerHostChanged && !RequiresReinstallToUpdate && !IsUpdateHeldBack;
+    public bool ShowsReinstallIcon => RequiresReinstallToUpdate && !InstallerHostChanged && !IsUpdateHeldBack;
+    public bool ShowsHeldBackIcon => IsUpdateHeldBack && !InstallerHostChanged;
+    public bool ShowsReinstallBadge => RequiresReinstallToUpdate && !IsUpdateHeldBack;
     public string? ReinstallTooltip { get; }
+    public string? HeldBackTooltip { get; }
+    public string? NewVersionTooltip => HeldBackTooltip ?? ReinstallTooltip;
 
     public bool InstalledVersionIsUnverified => Package.InstalledVersionIsUnverified;
     public string? InstalledVersionTooltip { get; private set; }
@@ -226,8 +231,8 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
 
     public string NewVersionAutomationName =>
         WithInstallerHostWarning(
-            ReinstallTooltip is { } reinstall
-                ? $"{Package.NewVersionString}, {reinstall}"
+            NewVersionTooltip is { } notice
+                ? $"{Package.NewVersionString}, {notice}"
                 : Package.NewVersionString
         );
 
@@ -282,6 +287,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
                 "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package."
             )
             : null;
+        HeldBackTooltip = HeldBackUpdateNotice.Build(package);
 
         Package.PropertyChanged += Package_PropertyChanged;
         UpdateDisplayState();
@@ -819,6 +825,10 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
                     PropertyChanged?.Invoke(
                         this,
                         new PropertyChangedEventArgs(nameof(ShowsReinstallIcon))
+                    );
+                    PropertyChanged?.Invoke(
+                        this,
+                        new PropertyChangedEventArgs(nameof(ShowsHeldBackIcon))
                     );
                     PropertyChanged?.Invoke(
                         this,

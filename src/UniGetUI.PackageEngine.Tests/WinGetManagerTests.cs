@@ -2234,7 +2234,7 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
-    public void WinGetStopsOfferingARefusedUpdateWithinASkippedMajor()
+    public void WinGetHoldsBackARefusedUpdateWithinASkippedMajor()
     {
         var manager = new FixedVersionsWinGet(["2.0.0", "1.1.0", "1.0.0"]);
         SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
@@ -2263,7 +2263,11 @@ public sealed class WinGetManagerTests : IDisposable
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(listed));
-        Assert.Null(manager.ResolveSkippedMajorUpdate(listed));
+        var held = manager.ResolveSkippedMajorUpdate(listed);
+        Assert.NotNull(held);
+        Assert.Equal("1.1.0", held.NewVersionString);
+        Assert.Equal(HeldBackUpdateReason.RefusedByPublisher, held.HeldBackUpdate?.Reason);
+        Assert.True(PackageOperation.IsLeftOutOfBulkUpdates(held, new InstallOptions()));
         Assert.False(listed.OverridenOptions.PinUpdateToNewVersion);
     }
 
@@ -3511,7 +3515,7 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
-    public void ConsumeAlreadyUpgradedSuppression_BreaksLoopAfterRepeatedPhantomUpgrades()
+    public void RepeatedPhantomUpgradesHoldTheUpdateBackInsteadOfHidingIt()
     {
         var manager = new WinGet();
         var package = new PackageBuilder()
@@ -3530,13 +3534,107 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.True(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
         Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
 
-        // At the threshold it stays suppressed across scans (#5158).
         manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
         manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
 
         Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
-        Assert.True(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
-        Assert.True(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+        Assert.Equal(
+            new HeldBackUpdate(HeldBackUpdateReason.NeverApplied, StuckUpgradeThresholdForTest),
+            WinGetPkgOperationHelper.GetHeldBackUpdate(package.Id, package.NewVersionString)
+        );
+    }
+
+    [Fact]
+    public void ARefusedUpdateIsHeldBackAsRefusedByThePublisher()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.HeldRefused")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150114));
+
+        Assert.Equal(
+            HeldBackUpdateReason.RefusedByPublisher,
+            WinGetPkgOperationHelper.GetHeldBackUpdate(package.Id, "2.0.0")?.Reason
+        );
+        Assert.Null(WinGetPkgOperationHelper.GetHeldBackUpdate(package.Id, "3.0.0"));
+    }
+
+    [Fact]
+    public void AHeldBackReasonLeavesTheAttemptsEntryReadableByOlderBuilds()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.OlderBuildFormat")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150114));
+
+        string? attempts = Settings.GetDictionaryItem<string, string>(Settings.K.WinGetUpgradeAttempts, package.Id);
+        Assert.NotNull(attempts);
+        Assert.Equal("2.0.0", attempts.Split('\n')[^1]);
+        Assert.Equal(2, attempts.Split('\n').Length);
+        Assert.Equal(
+            HeldBackUpdateReason.RefusedByPublisher,
+            WinGetPkgOperationHelper.GetHeldBackUpdate(package.Id, "2.0.0")?.Reason
+        );
+
+        var newer = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.OlderBuildFormat")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        for (int i = 0; i < StuckUpgradeThresholdForTest; i++)
+            manager.OperationHelper.GetResult(newer, OperationType.Update, [], 0);
+
+        Assert.Equal(
+            HeldBackUpdateReason.NeverApplied,
+            WinGetPkgOperationHelper.GetHeldBackUpdate(package.Id, "3.0.0")?.Reason
+        );
+    }
+
+    [Fact]
+    public void AHeldBackEntryWrittenBeforeReasonsWereStoredReadsAsNeverApplied()
+    {
+        Settings.SetDictionaryItem<string, string>(
+            Settings.K.WinGetUpgradeAttempts,
+            "Contoso.LegacyEntry",
+            $"{StuckUpgradeThresholdForTest}\n2.0.0"
+        );
+
+        Assert.Equal(
+            new HeldBackUpdate(HeldBackUpdateReason.NeverApplied, StuckUpgradeThresholdForTest),
+            WinGetPkgOperationHelper.GetHeldBackUpdate("Contoso.LegacyEntry", "2.0.0")
+        );
+    }
+
+    [Fact]
+    public void ClearHeldBackUpdateLetsTheUpdateBeTriedAgain()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.TryAgain")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        for (int i = 0; i < StuckUpgradeThresholdForTest; i++)
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        manager.OperationHelper.ClearHeldBackUpdate(package);
+
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
     }
 
     [Fact]
@@ -3737,9 +3835,8 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
-    public void BuildUpdatePackages_DropsAKnownVersionUpdateThatKeepsFailingToStick()
+    public void BuildUpdatePackages_HoldsBackAKnownVersionUpdateThatKeepsFailingToStick()
     {
-        // End-to-end: a known-version package looping through the real Pinget path is eventually dropped (#5158).
         var manager = new WinGet();
         var helper = new PingetCliHelper(manager, @"C:\Program Files\UniGetUI\pinget.exe");
 
@@ -3753,16 +3850,13 @@ public sealed class WinGetManagerTests : IDisposable
         for (int i = 0; i < StuckUpgradeThresholdForTest; i++)
             manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
 
-        // WinGet still lists it as 1.0.0 -> 2.0.0, but we now suppress it.
-        Assert.Empty(
-            helper.BuildUpdatePackages(
-                PingetCliHelper.DeserializeJson<ListResponse>(
-                    UpdateJson("Contoso.PhantomLoop", "1.0.0", "2.0.0")
-                )
-            )
-        );
+        var result = PingetCliHelper.DeserializeJson<ListResponse>(UpdateJson("Contoso.PhantomLoop", "1.0.0", "2.0.0"));
+        for (int scan = 0; scan < 2; scan++)
+        {
+            var listed = Assert.Single(helper.BuildUpdatePackages(result));
+            Assert.Equal(HeldBackUpdateReason.NeverApplied, listed.HeldBackUpdate?.Reason);
+        }
 
-        // A package that has not looped is still offered normally.
         Assert.Single(
             helper.BuildUpdatePackages(
                 PingetCliHelper.DeserializeJson<ListResponse>(

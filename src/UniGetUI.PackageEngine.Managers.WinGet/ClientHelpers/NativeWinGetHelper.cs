@@ -552,12 +552,11 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     InstalledVersionIsUnverified = WinGetPkgOperationHelper.IsUnknownVersion(
                         reportedVersion
                     ),
+                    HeldBackUpdate = WinGetPkgOperationHelper.GetHeldBackUpdate(
+                        nativePackage.Id,
+                        nativePackage.DefaultInstallVersion.Version
+                    ),
                 };
-
-                // Suppress an update that repeatedly fails to stick (#5158); the COM path still avoids
-                // the one-shot "already upgraded" cache (#5042).
-                if (WinGetPkgOperationHelper.IsStuckUpgradeLoop(UniGetUIPackage))
-                    continue;
 
                 NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
                 NativePackageHandler.AddLocalIdentifier(
@@ -807,10 +806,8 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                         reportedVersion
                     ),
                     RequiresReinstallToUpdate = true,
+                    HeldBackUpdate = WinGetPkgOperationHelper.GetHeldBackUpdate(nativePackage.Id, newest.Version),
                 };
-
-                if (WinGetPkgOperationHelper.IsStuckUpgradeLoop(package))
-                    continue;
 
                 NativePackageHandler.AddPackage(package, nativePackage);
                 NativePackageHandler.AddLocalIdentifier(package, nativePackage.InstalledVersion?.Id);

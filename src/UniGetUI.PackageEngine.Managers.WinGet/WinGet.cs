@@ -334,8 +334,8 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
         public bool HonorsIntegrityCheckSkipWhenElevated =>
             SelectedCliToolKind is WinGetCliToolKind.BundledPinget;
 
-        protected override bool IsUpdateSuppressed(UniGetUI.PackageEngine.Interfaces.IPackage update) =>
-            WinGetPkgOperationHelper.IsStuckUpgradeLoop(update);
+        protected override UniGetUI.PackageEngine.Interfaces.HeldBackUpdate? GetHeldBackUpdate(string id, string version) =>
+            WinGetPkgOperationHelper.GetHeldBackUpdate(id, version);
 
         public override bool CanUpdateToExactVersion =>
             SelectedCliToolKind is WinGetCliToolKind.SystemWinGet

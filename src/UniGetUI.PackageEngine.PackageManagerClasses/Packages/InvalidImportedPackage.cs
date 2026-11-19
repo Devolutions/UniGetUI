@@ -52,6 +52,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public bool RequiresReinstallToUpdate => false;
 
+        public HeldBackUpdate? HeldBackUpdate => null;
+
         public string VersionString { get; }
 
         public CoreTools.Version NormalizedVersion { get; }

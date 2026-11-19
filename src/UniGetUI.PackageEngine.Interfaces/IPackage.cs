@@ -25,6 +25,7 @@ namespace UniGetUI.PackageEngine.Interfaces
         public bool HasConcreteVersion { get; }
         public bool InstalledVersionIsUnverified { get; }
         public bool RequiresReinstallToUpdate { get; }
+        public HeldBackUpdate? HeldBackUpdate { get; }
         public CoreTools.Version NormalizedVersion { get; }
         public CoreTools.Version NormalizedNewVersion { get; }
         public IManagerSource Source { get; }

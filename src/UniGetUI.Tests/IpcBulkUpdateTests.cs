@@ -62,6 +62,24 @@ public sealed class IpcBulkUpdateTests
     }
 
     [Fact]
+    public void HeldBackUpdatesKeepTheirReasonThroughTheIpcJsonContext()
+    {
+        var package = new IpcPackageInfo
+        {
+            Id = "MSYS2.MSYS2",
+            Manager = "winget",
+            UpdateHeldBack = "refusedByPublisher",
+        };
+
+        string json = IpcJson.Serialize(package);
+        IpcPackageInfo? parsed = IpcJson.Deserialize<IpcPackageInfo>(json);
+
+        Assert.Contains("\"updateHeldBack\"", json);
+        Assert.Equal("refusedByPublisher", parsed?.UpdateHeldBack);
+        Assert.Null(IpcJson.Deserialize<IpcPackageInfo>(IpcJson.Serialize(new IpcPackageInfo()))?.UpdateHeldBack);
+    }
+
+    [Fact]
     public void WaitedResultStaysPendingWhileTheOperationRuns()
     {
         IpcPackageOperationResult result = IpcClient.ToWaitedResult(

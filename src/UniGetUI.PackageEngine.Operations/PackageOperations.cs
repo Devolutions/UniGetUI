@@ -1663,7 +1663,8 @@ namespace UniGetUI.PackageEngine.Operations
             && !IsBrokerEligible(package);
 
         public static bool IsLeftOutOfBulkUpdates(IPackage package, InstallOptions options) =>
-            package.RequiresReinstallToUpdate && !options.UninstallBeforeUpdate;
+            package.HeldBackUpdate is not null
+            || (package.RequiresReinstallToUpdate && !options.UninstallBeforeUpdate);
 
         public static async Task<IReadOnlyList<IPackage>> WithoutUpdatesLeftOutOfBulkAsync(
             IEnumerable<IPackage> packages
@@ -1672,6 +1673,8 @@ namespace UniGetUI.PackageEngine.Operations
             List<IPackage> kept = [];
             foreach (IPackage package in packages)
             {
+                if (package.HeldBackUpdate is not null)
+                    continue;
                 if (
                     !package.RequiresReinstallToUpdate
                     || !IsLeftOutOfBulkUpdates(

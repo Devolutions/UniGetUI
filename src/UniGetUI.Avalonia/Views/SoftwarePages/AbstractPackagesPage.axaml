@@ -826,6 +826,11 @@
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding ShowsReinstallIcon}"
                                                                   ToolTip.Tip="{Binding ReinstallTooltip}"/>
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/warning_round.svg"
+                                                                  Width="22" Height="22" VerticalAlignment="Center"
+                                                                  Foreground="#F59E0B"
+                                                                  IsVisible="{Binding ShowsHeldBackIcon}"
+                                                                  ToolTip.Tip="{Binding HeldBackTooltip}"/>
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
                                                                   Width="22" Height="22" VerticalAlignment="Center"
                                                                   Foreground="#F59E0B"
@@ -833,7 +838,7 @@
                                                                   ToolTip.Tip="{Binding InstallerHostChangeTooltip}"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Package.NewVersionString}" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis"
-                                                           ToolTip.Tip="{Binding ReinstallTooltip}"/>
+                                                           ToolTip.Tip="{Binding NewVersionTooltip}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -983,8 +988,15 @@
                                                                       VerticalAlignment="Top"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
                                                                       Width="17" Height="17"
-                                                                      IsVisible="{Binding RequiresReinstallToUpdate}"
+                                                                      IsVisible="{Binding ShowsReinstallBadge}"
                                                                       ToolTip.Tip="{Binding ReinstallTooltip}"
+                                                                      HorizontalAlignment="Left"
+                                                                      VerticalAlignment="Top"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/warning_round.svg"
+                                                                      Width="17" Height="17"
+                                                                      Foreground="#F59E0B"
+                                                                      IsVisible="{Binding IsUpdateHeldBack}"
+                                                                      ToolTip.Tip="{Binding HeldBackTooltip}"
                                                                       HorizontalAlignment="Left"
                                                                       VerticalAlignment="Top"/>
                                                 </Panel>
@@ -1106,8 +1118,15 @@
                                                                       VerticalAlignment="Top"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
                                                                       Width="24" Height="24"
-                                                                      IsVisible="{Binding RequiresReinstallToUpdate}"
+                                                                      IsVisible="{Binding ShowsReinstallBadge}"
                                                                       ToolTip.Tip="{Binding ReinstallTooltip}"
+                                                                      HorizontalAlignment="Left"
+                                                                      VerticalAlignment="Top"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/warning_round.svg"
+                                                                      Width="24" Height="24"
+                                                                      Foreground="#F59E0B"
+                                                                      IsVisible="{Binding IsUpdateHeldBack}"
+                                                                      ToolTip.Tip="{Binding HeldBackTooltip}"
                                                                       HorizontalAlignment="Left"
                                                                       VerticalAlignment="Top"/>
                                                 </Panel>

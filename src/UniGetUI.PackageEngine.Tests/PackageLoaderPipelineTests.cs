@@ -327,6 +327,33 @@ public sealed class PackageLoaderPipelineTests
     }
 
     [Fact]
+    public async Task ReloadPackages_ChecksAnUpdateAgainOnceItIsNoLongerHeldBack()
+    {
+        bool heldBack = true;
+        var manager = new PackageManagerBuilder()
+            .WithInstalledPackages(testManager =>
+            {
+                var builder = new PackageBuilder()
+                    .WithManager(testManager)
+                    .WithId("Contoso.Tool")
+                    .WithVersion("1.0.0")
+                    .WithNewVersion("2.0.0");
+                if (heldBack)
+                    builder.HeldBack();
+                return [builder.Build()];
+            })
+            .Build();
+        var loader = new TestPackageLoader([manager], checkedByDefault: true);
+
+        await loader.ReloadPackages();
+        Assert.False(loader.GetPackageForId("Contoso.Tool")!.IsChecked);
+
+        heldBack = false;
+        await loader.ReloadPackages();
+        Assert.True(loader.GetPackageForId("Contoso.Tool")!.IsChecked);
+    }
+
+    [Fact]
     public async Task ReloadPackages_AppliesTheDefaultCheckedState_ToPackagesThatWereNotOnTheList()
     {
         var ids = new List<string> { "Contoso.First" };

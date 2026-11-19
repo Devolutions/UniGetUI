@@ -11,6 +11,7 @@ public sealed class PackageBuilder
     private string _installedVersion = "1.0.0";
     private string? _availableVersion;
     private bool _requiresReinstallToUpdate;
+    private HeldBackUpdate? _heldBackUpdate;
     private IManagerSource? _source;
     private IPackageManager? _manager;
     private OverridenInstallationOptions? _options;
@@ -63,6 +64,12 @@ public sealed class PackageBuilder
         return this;
     }
 
+    public PackageBuilder HeldBack(HeldBackUpdateReason reason = HeldBackUpdateReason.NeverApplied, int attempts = 3)
+    {
+        _heldBackUpdate = new HeldBackUpdate(reason, attempts);
+        return this;
+    }
+
     public Package Build()
     {
         var manager = _manager ?? new PackageManagerBuilder().Build();
@@ -73,6 +80,7 @@ public sealed class PackageBuilder
             : new Package(_name, _id, _installedVersion, _availableVersion, source, manager, _options)
             {
                 RequiresReinstallToUpdate = _requiresReinstallToUpdate,
+                HeldBackUpdate = _heldBackUpdate,
             };
     }
 }

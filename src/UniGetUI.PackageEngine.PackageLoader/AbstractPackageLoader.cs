@@ -61,7 +61,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         protected readonly ConcurrentDictionary<long, IPackage> PackageReference;
 
-        private readonly ConcurrentDictionary<long, (bool Checked, bool RequiresReinstall)> _rememberedSelection = new();
+        private readonly ConcurrentDictionary<long, (bool Checked, bool UncheckedByDefault)> _rememberedSelection = new();
 
         /// <summary>
         /// Fires when a block of packages (one package or more) is added or removed to the loader
@@ -404,10 +404,13 @@ namespace UniGetUI.PackageEngine.PackageLoader
             {
                 _rememberedSelection[entry.Key] = (
                     entry.Value.IsChecked,
-                    entry.Value.RequiresReinstallToUpdate
+                    IsUncheckedByDefault(entry.Value)
                 );
             }
         }
+
+        private static bool IsUncheckedByDefault(IPackage package) =>
+            package.RequiresReinstallToUpdate || package.HeldBackUpdate is not null;
 
         protected async Task AddPackage(IPackage package, bool restoreSelection = false)
         {
@@ -417,9 +420,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
             package.IsChecked =
                 restoreSelection
                 && _rememberedSelection.TryGetValue(HashPackage(package), out var remembered)
-                && (remembered.RequiresReinstall || !package.RequiresReinstallToUpdate)
+                && remembered.UncheckedByDefault == IsUncheckedByDefault(package)
                     ? remembered.Checked
-                    : PACKAGES_CHECKED_BY_DEFAULT && !package.RequiresReinstallToUpdate;
+                    : PACKAGES_CHECKED_BY_DEFAULT && !IsUncheckedByDefault(package);
             await WhenAddingPackage(package);
             PackageReference.TryAdd(HashPackage(package), package);
         }

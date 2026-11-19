@@ -666,9 +666,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             {
                 Logger.Warn(
                     $"WinGet refuses to update {package.Id}: its manifest says it must be updated another way; "
-                    + $"hiding the update to {package.NewVersionString} until a newer version is available"
+                    + $"holding back the update to {package.NewVersionString} until a newer version is available"
                 );
-                SuppressPhantomUpgrade(package);
+                SuppressPhantomUpgrade(package, HeldBackUpdateReason.RefusedByPublisher);
             }
             return OperationVeredict.Failure;
         }
@@ -697,9 +697,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             if (operation is OperationType.Update && !ReportedDifferentInstallTechnology(processOutput))
             {
                 if (!ReportedNoUpgradeCandidate(processOutput, returnCode))
-                    SuppressPhantomUpgrade(package);
+                    SuppressPhantomUpgrade(package, HeldBackUpdateReason.NotApplicable);
                 else if (RecheckUpgrade(package) is UpgradeRecheck.NotOffered)
-                    SuppressPhantomUpgrade(package);
+                    SuppressPhantomUpgrade(package, HeldBackUpdateReason.NotApplicable);
                 else
                     _unconfirmedUpgradeLookups.AddOrUpdate(package, new object());
             }
@@ -907,26 +907,52 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             && trusted.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(hosts.Contains);
     }
 
-    // Stored as "count\nversion"; count resets when the target version changes.
     private static void RecordUpgradeAttempt(string id, string version)
     {
-        int count = 1;
-        var existing = Settings.GetDictionaryItem<string, string>(Settings.K.WinGetUpgradeAttempts, id);
-        if (existing is not null)
-        {
-            int sep = existing.IndexOf(AttemptSeparator);
-            if (sep > 0
-                && existing[(sep + 1)..] == version
-                && int.TryParse(existing[..sep], out int previous))
-            {
-                count = previous + 1;
-            }
-        }
+        int count = ReadUpgradeAttempts(id) is { } existing && existing.Version == version
+            ? existing.Count + 1
+            : 1;
+        WriteUpgradeAttempts(id, count, version, HeldBackUpdateReason.NeverApplied);
+    }
+
+    private static void WriteUpgradeAttempts(string id, int count, string version, HeldBackUpdateReason reason)
+    {
         Settings.SetDictionaryItem<string, string>(
             Settings.K.WinGetUpgradeAttempts,
             id,
             $"{count}{AttemptSeparator}{version}"
         );
+        if (reason is HeldBackUpdateReason.NeverApplied)
+            Settings.RemoveDictionaryKey<string, string>(Settings.K.WinGetHeldBackReasons, id);
+        else
+            Settings.SetDictionaryItem<string, string>(
+                Settings.K.WinGetHeldBackReasons,
+                id,
+                $"{version}{AttemptSeparator}{reason}"
+            );
+    }
+
+    private static (int Count, string Version)? ReadUpgradeAttempts(string id)
+    {
+        var existing = Settings.GetDictionaryItem<string, string>(Settings.K.WinGetUpgradeAttempts, id);
+        if (existing is null)
+            return null;
+
+        int sep = existing.IndexOf(AttemptSeparator);
+        return sep > 0 && int.TryParse(existing[..sep], out int count)
+            ? (count, existing[(sep + 1)..])
+            : null;
+    }
+
+    private static HeldBackUpdateReason ReadHeldBackReason(string id, string version)
+    {
+        var existing = Settings.GetDictionaryItem<string, string>(Settings.K.WinGetHeldBackReasons, id);
+        int sep = existing?.IndexOf(AttemptSeparator) ?? -1;
+        return sep > 0
+            && existing![..sep] == version
+            && Enum.TryParse(existing[(sep + 1)..], out HeldBackUpdateReason reason)
+                ? reason
+                : HeldBackUpdateReason.NeverApplied;
     }
 
     internal static bool ReportedInstallerHashMismatch(int returnCode) =>
@@ -1073,32 +1099,33 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         }
     }
 
-    public static void SuppressPhantomUpgrade(IPackage package)
+    public static void SuppressPhantomUpgrade(IPackage package, HeldBackUpdateReason reason)
     {
         if (IsUnknownVersion(package.NewVersionString))
             return;
-        Settings.SetDictionaryItem<string, string>(
-            Settings.K.WinGetUpgradeAttempts,
-            package.Id,
-            $"{StuckUpgradeThreshold}{AttemptSeparator}{package.NewVersionString}"
-        );
+        WriteUpgradeAttempts(package.Id, StuckUpgradeThreshold, package.NewVersionString, reason);
     }
 
-    // An update WinGet keeps offering even after enough "successful" upgrades to it (#5158).
-    public static bool IsStuckUpgradeLoop(IPackage package)
+    public static HeldBackUpdate? GetHeldBackUpdate(string id, string newVersion)
     {
-        var existing = Settings.GetDictionaryItem<string, string>(
-            Settings.K.WinGetUpgradeAttempts,
-            package.Id
-        );
-        if (existing is null)
-            return false;
+        if (ReadUpgradeAttempts(id) is not { } existing
+            || existing.Version != newVersion
+            || existing.Count < StuckUpgradeThreshold)
+            return null;
 
-        int sep = existing.IndexOf(AttemptSeparator);
-        return sep > 0
-            && existing[(sep + 1)..] == package.NewVersionString
-            && int.TryParse(existing[..sep], out int count)
-            && count >= StuckUpgradeThreshold;
+        return new HeldBackUpdate(ReadHeldBackReason(id, newVersion), existing.Count);
+    }
+
+    public static bool IsStuckUpgradeLoop(IPackage package) =>
+        GetHeldBackUpdate(package.Id, package.NewVersionString) is not null;
+
+    public override void ClearHeldBackUpdate(IPackage package)
+    {
+        if (!IsStuckUpgradeLoop(package))
+            return;
+        Logger.Info($"Clearing the held-back update of {package.Id} to {package.NewVersionString} so it can be tried again");
+        Settings.RemoveDictionaryKey<string, string>(Settings.K.WinGetUpgradeAttempts, package.Id);
+        Settings.RemoveDictionaryKey<string, string>(Settings.K.WinGetHeldBackReasons, package.Id);
     }
 
     public static bool UpdateAlreadyInstalled(IPackage package)
@@ -1117,20 +1144,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         );
     }
 
-    // Persistently hide an update that never sticks (#5158); otherwise hide a just-upgraded package
-    // once to bridge CLI index lag, then let it reappear next scan (#5042).
+    // Hide a just-upgraded package once to bridge CLI index lag, then let it reappear next scan (#5042).
     public static bool ConsumeAlreadyUpgradedSuppression(IPackage package)
     {
-        if (IsStuckUpgradeLoop(package))
-        {
-            Logger.Warn(
-                $"WinGet package {package.Id} keeps being offered as an update to {package.NewVersionString} "
-                + $"but the upgrade never sticks after {StuckUpgradeThreshold} attempts; suppressing it until a "
-                + "newer version is available (issue #5158)"
-            );
-            return true;
-        }
-
         if (!UpdateAlreadyInstalled(package))
             return false;
 

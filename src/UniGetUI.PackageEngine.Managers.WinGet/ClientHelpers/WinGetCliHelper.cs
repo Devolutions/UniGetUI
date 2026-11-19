@@ -158,11 +158,12 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
                 var package = new Package(name, id, version, newVersion, source, manager)
                 {
                     InstalledVersionIsUnverified = versionUnknown,
+                    HeldBackUpdate = WinGetPkgOperationHelper.GetHeldBackUpdate(id, newVersion),
                 };
                 // Skip one-shot suppression for unknown versions so the restored mark isn't cleared.
-                bool suppressed = versionUnknown
-                    ? WinGetPkgOperationHelper.IsStuckUpgradeLoop(package)
-                    : WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package);
+                bool suppressed = package.HeldBackUpdate is null
+                    && !versionUnknown
+                    && WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package);
                 if (!suppressed)
                 {
                     packages.Add(package);

@@ -71,7 +71,7 @@ internal sealed class TrayService : IDisposable
             bool anyRunning = AvaloniaOperationRegistry.Operations.Any(
                 o => o.Status is OperationStatus.Running or OperationStatus.InQueue);
 
-            int updatesCount = UpgradablePackagesLoader.Instance?.Count() ?? 0;
+            int updatesCount = UpgradablePackagesLoader.Instance?.ActionableCount() ?? 0;
 
             int rebootPendingCount = PendingRebootStore.PendingCount;
             bool appRestartRequired = AvaloniaOperationRegistry.AppRestartRequired;

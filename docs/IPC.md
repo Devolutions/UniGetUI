@@ -396,6 +396,12 @@ Every package payload carries `systemRestartPending`: `true` when that package i
 packages this machine is waiting on a restart for. See
 [Pending machine restarts](#pending-machine-restarts).
 
+An update the package manager keeps failing to apply is still listed by `packages/updates`, with
+`updateHeldBack` set to why it is held back: `neverApplied` (reported as installed several times
+while the installed version never moved), `refusedByPublisher` (the publisher requires updating
+it another way) or `notApplicable` (no installer of that version applies to this machine). It is
+`null` otherwise. `packages/update-all` and automatic updates leave held-back updates out.
+
 | Method | Path | Auth | Parameters/body | CLI equivalent | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `GET` | `/uniget/v1/packages/search` | Yes | Query `query`, optional `manager`, optional `maxResults` | `package search` | Search endpoint. |
@@ -421,8 +427,9 @@ packages this machine is waiting on a restart for. See
 `update-all` and `update-manager` queue one update operation per available update and return at
 once; they never wait for the updates themselves. They update what the Software Updates page
 lists, so ignored updates, skipped minor updates and the minimum update age apply, and a package
-that already has an update queued or running is skipped. If the update list has not been loaded
-yet, the request waits for that first load.
+that already has an update queued or running is skipped, as is an update held back (see
+`updateHeldBack` above). If the update list has not been loaded yet, the request waits for that
+first load.
 
 The response lists the operations it queued:
 

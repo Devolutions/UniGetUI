@@ -30,6 +30,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
             Instance = this;
         }
 
+        public int ActionableCount() => Packages.Count(package => package.HeldBackUpdate is null);
+
         public async Task IgnoreUpdatesAsync(IPackage package, string version = "*")
         {
             await package.AddToIgnoredUpdatesAsync(version);

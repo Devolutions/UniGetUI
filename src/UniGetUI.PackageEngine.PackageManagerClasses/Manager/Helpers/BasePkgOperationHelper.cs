@@ -183,4 +183,6 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
 
     public virtual bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode) =>
         false;
+
+    public virtual void ClearHeldBackUpdate(IPackage package) { }
 }

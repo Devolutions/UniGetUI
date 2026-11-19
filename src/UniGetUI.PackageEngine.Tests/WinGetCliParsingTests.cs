@@ -2,6 +2,7 @@
 using UniGetUI.Core.Data;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
@@ -314,7 +315,7 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Fact]
-    public void ParseAvailableUpdatesKeepsARefusedUpdateHiddenWhenTheInstalledVersionIsUnknown()
+    public void ParseAvailableUpdatesHoldsBackARefusedUpdateWhenTheInstalledVersionIsUnknown()
     {
         var manager = new WinGet();
         var refused = new PackageBuilder()
@@ -336,10 +337,41 @@ public sealed class WinGetCliParsingTests : IDisposable
 
         manager.OperationHelper.GetResult(refused, OperationType.Update, [], unchecked((int)0x8A150114));
 
-        IReadOnlyList<Package> relisted = WinGetCliHelper.ParseAvailableUpdates(manager, listing);
-        Assert.Single(relisted);
-        Assert.Equal("Fabrikam.Other", relisted[0].Id);
-        Assert.Single(WinGetCliHelper.ParseAvailableUpdates(manager, listing));
+        for (int scan = 0; scan < 2; scan++)
+        {
+            IReadOnlyList<Package> relisted = WinGetCliHelper.ParseAvailableUpdates(manager, listing);
+            Assert.Equal(2, relisted.Count);
+            Assert.Equal(
+                HeldBackUpdateReason.RefusedByPublisher,
+                relisted.Single(p => p.Id == "Fabrikam.Refused").HeldBackUpdate?.Reason
+            );
+            Assert.Null(relisted.Single(p => p.Id == "Fabrikam.Other").HeldBackUpdate);
+        }
+    }
+
+    [Fact]
+    public void ParseAvailableUpdatesStillHidesAJustUpgradedPackageOnce()
+    {
+        var manager = new WinGet();
+        var upgraded = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Fabrikam.Lagging")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        string[] listing = Lines(
+            """
+            Name    Id               Version Available Source
+            --------------------------------------------------
+            Lagging Fabrikam.Lagging 1.0.0   2.0.0     winget
+            """
+        );
+
+        manager.OperationHelper.GetResult(upgraded, OperationType.Update, [], 0);
+
+        Assert.Empty(WinGetCliHelper.ParseAvailableUpdates(manager, listing));
+        Package relisted = Assert.Single(WinGetCliHelper.ParseAvailableUpdates(manager, listing));
+        Assert.Null(relisted.HeldBackUpdate);
     }
 
     [Fact]

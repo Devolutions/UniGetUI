@@ -1,3 +1,4 @@
+using System.Text.Json;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
@@ -23,6 +24,7 @@ public sealed class IpcPackageInfo
     public string Manager { get; set; } = "";
     public bool IsUpgradable { get; set; }
     public bool SystemRestartPending { get; set; }
+    public string? UpdateHeldBack { get; set; }
 }
 
 public sealed class IpcPackageActionRequest
@@ -971,6 +973,9 @@ public static class IpcPackageApi
             Source = package.Source.AsString_DisplayName,
             Manager = IpcManagerSettingsApi.GetPublicManagerId(package.Manager),
             IsUpgradable = package.IsUpgradable,
+            UpdateHeldBack = package.HeldBackUpdate is { } held
+                ? JsonNamingPolicy.CamelCase.ConvertName(held.Reason.ToString())
+                : null,
             SystemRestartPending = pendingRestartKeys is null
                 ? PendingRebootStore.IsPending(package.Manager.Id, package.Id)
                 : pendingRestartKeys.Contains(

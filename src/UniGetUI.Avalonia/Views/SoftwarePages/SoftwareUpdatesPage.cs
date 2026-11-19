@@ -31,6 +31,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     private MenuItem? _menuReleaseNotes;
     private IPackage? _releaseNotesPackage;
     private MenuItem? _menuManual;
+    private MenuItem? _menuRetryHeldBack;
 
     public SoftwareUpdatesPage() : base(new PackagesPageData
     {
@@ -59,7 +60,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             upgradableLoader.PackagesChanged += (_, e) =>
             {
-                if (OperatingSystem.IsWindows() && e.RemovedPackages.Count > 0 && !upgradableLoader.IsLoading && !upgradableLoader.Any())
+                if (OperatingSystem.IsWindows() && e.RemovedPackages.Count > 0 && !upgradableLoader.IsLoading && upgradableLoader.ActionableCount() == 0)
                     WindowsAppNotificationBridge.RemoveUpdatesAvailableNotification();
             };
         }
@@ -195,6 +196,19 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         };
         menuUninstall.Click += (_, _) => _ = LaunchUninstallFromUpdates([SelectedItem!]);
 
+        _menuRetryHeldBack = new MenuItem
+        {
+            Header = CoreTools.Translate("Try this update again"),
+            Icon = LoadMenuIcon("reload"),
+        };
+        _menuRetryHeldBack.Click += (_, _) =>
+        {
+            var pkg = SelectedItem;
+            if (pkg is null) return;
+            pkg.Manager.OperationHelper.ClearHeldBackUpdate(pkg);
+            _ = LaunchUpdate([pkg]);
+        };
+
         var menuIgnore = new MenuItem
         {
             Header = CoreTools.Translate("Ignore updates for this package"),
@@ -277,6 +291,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         menu.Items.Add(menuUninstallThenUpdate);
         menu.Items.Add(menuUninstall);
         menu.Items.Add(new Separator());
+        menu.Items.Add(_menuRetryHeldBack);
         menu.Items.Add(menuIgnore);
         menu.Items.Add(menuSkipVersion);
         menu.Items.Add(menuPause);
@@ -291,11 +306,13 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     {
         if (_menuAsAdmin is null || _menuInteractive is null || _menuSkipHash is null
             || _menuDownloadInstaller is null || _menuOpenInstallLocation is null
-            || _menuReleaseNotes is null || _menuManual is null)
+            || _menuReleaseNotes is null || _menuManual is null || _menuRetryHeldBack is null)
         {
             Logger.Warn("Context menu items are null on SoftwareUpdatesPage");
             return;
         }
+
+        _menuRetryHeldBack.IsVisible = package.HeldBackUpdate is { Reason: not HeldBackUpdateReason.RefusedByPublisher };
 
         var caps = package.Manager.Capabilities;
         _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
@@ -487,6 +504,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
             var upgradable = UpgradablePackagesLoader.Instance.Packages
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
+                .Where(p => p.HeldBackUpdate is null)
                 .ToList();
 
             if (upgradable.Count == 0)

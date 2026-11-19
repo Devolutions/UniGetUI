@@ -73,5 +73,7 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
         public string? GetReinstallRefusal(IPackage package, InstallOptions options);
 
         public bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode);
+
+        public void ClearHeldBackUpdate(IPackage package);
     }
 }

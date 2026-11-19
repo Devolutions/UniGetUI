@@ -62,7 +62,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         protected virtual bool? IsEligibleUpdateTarget(IPackage update, string version) => true;
 
-        protected virtual bool IsUpdateSuppressed(IPackage update) => false;
+        protected virtual HeldBackUpdate? GetHeldBackUpdate(string id, string version) => null;
 
         protected virtual IReadOnlyList<string> ListVersionsForUpdateSelection(IPackage update, bool includePreReleases) =>
             DetailsHelper.GetVersions(update);
@@ -121,13 +121,13 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 )
                 {
                     RequiresReinstallToUpdate = update.RequiresReinstallToUpdate,
+                    HeldBackUpdate = GetHeldBackUpdate(update.Id, target),
                 };
-                if (IsUpdateSuppressed(withinMajor))
+                if (withinMajor.HeldBackUpdate is not null)
                 {
                     Logger.Info(
-                        $"Not offering {update.Id} {target} within its installed major: that update is suppressed until a newer version is available."
+                        $"Listing {update.Id} {target} within its installed major as held back until a newer version is available."
                     );
-                    return null;
                 }
 
                 Logger.Info(

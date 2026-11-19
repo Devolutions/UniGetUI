@@ -80,10 +80,15 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
             )
             {
                 InstalledVersionIsUnverified = versionUnknown,
+                HeldBackUpdate = WinGetPkgOperationHelper.GetHeldBackUpdate(match.Id, match.AvailableVersion!),
             };
 
             // Skip one-shot suppression for unknown versions so the restored mark isn't cleared.
-            if (versionUnknown || !WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package))
+            if (
+                versionUnknown
+                || package.HeldBackUpdate is not null
+                || !WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package)
+            )
             {
                 packages.Add(package);
             }

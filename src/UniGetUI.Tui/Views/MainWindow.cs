@@ -201,7 +201,7 @@ internal sealed class MainWindow : Window
         string setting = Settings.GetValue(Settings.K.StartupPage);
         if (setting is TuiPageIds.Discover or TuiPageIds.Updates or TuiPageIds.Installed or TuiPageIds.Bundles or TuiPageIds.Settings)
             return setting;
-        return UpgradablePackagesLoader.Instance?.Packages.Count > 0 ? TuiPageIds.Updates : TuiPageIds.Discover;
+        return UpgradablePackagesLoader.Instance?.ActionableCount() > 0 ? TuiPageIds.Updates : TuiPageIds.Discover;
     }
 
     /// <summary>
@@ -327,7 +327,7 @@ internal sealed class MainWindow : Window
     {
         string badge = id switch
         {
-            TuiPageIds.Updates => SafeCount(() => UpgradablePackagesLoader.Instance.Packages.Count) is > 0 and var n ? $" ({n})" : "",
+            TuiPageIds.Updates => SafeCount(UpgradablePackagesLoader.Instance.ActionableCount) is > 0 and var n ? $" ({n})" : "",
             TuiPageIds.Operations => TuiOperationRegistry.ActiveCount is > 0 and var a ? $" ({a})"
                 : TuiOperationRegistry.ErrorsOccurred > 0 ? " (!)" : "",
             TuiPageIds.Bundles => TuiBundleService.HasUnsavedChanges ? " *" : "",
@@ -422,7 +422,7 @@ internal sealed class MainWindow : Window
         RefreshTabs();
         string version = Settings.Get(Settings.K.ShowVersionNumberOnTitlebar) ? $"  v{CoreData.VersionName}" : "";
         _headerText.Text = $" UniGetUI · Terminal UI{version}" + (TuiEngine.IsFakeData ? "   [FAKE DATA]" : "");
-        int updates = SafeCount(() => UpgradablePackagesLoader.Instance.Packages.Count);
+        int updates = SafeCount(UpgradablePackagesLoader.Instance.ActionableCount);
         int active = TuiOperationRegistry.ActiveCount;
         bool loading = SafeCount(() => (InstalledPackagesLoader.Instance.IsLoading || UpgradablePackagesLoader.Instance.IsLoading) ? 1 : 0) == 1;
         _headerStatus.Text = (loading ? CoreTools.Translate("Loading packages") + "…  " : "")

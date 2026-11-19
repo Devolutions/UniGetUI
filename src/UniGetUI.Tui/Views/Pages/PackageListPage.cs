@@ -58,12 +58,13 @@ internal sealed class PackageRow : INotifyPropertyChanged
 
     public string State => Package.Tag switch
     {
-        PackageTag.AlreadyInstalled => "inst",
-        PackageTag.IsUpgradable => "upd",
-        PackageTag.Pinned => "pin",
         PackageTag.OnQueue => "queue",
         PackageTag.BeingProcessed => "busy",
         PackageTag.Failed => "fail",
+        _ when Package.HeldBackUpdate is not null => "held",
+        PackageTag.AlreadyInstalled => "inst",
+        PackageTag.IsUpgradable => "upd",
+        PackageTag.Pinned => "pin",
         PackageTag.Unavailable => "n/a",
         _ => "",
     };
@@ -1145,6 +1146,8 @@ internal sealed class PackageListPage : UserControl, ITuiPage
                 list.Add(new(CoreTools.Translate("Ignore updates for this package"), "g", IgnoreSelectedAsync, () => hasFocus));
                 list.Add(new(CoreTools.Translate("Skip this version"), null, () => SkipVersionAsync(focused!), () => hasFocus));
                 list.Add(new(CoreTools.Translate("Pause updates for") + "…", null, () => PauseUpdatesAsync(focused!), () => hasFocus));
+                list.Add(new(CoreTools.Translate("Why is this update held back?"), null, () => ExplainHeldBackAsync(focused!), () => focused?.HeldBackUpdate is not null));
+                list.Add(new(CoreTools.Translate("Try this update again"), null, () => RetryHeldBackAsync(focused!), () => focused?.HeldBackUpdate is { Reason: not HeldBackUpdateReason.RefusedByPublisher }));
                 list.Add(new(CoreTools.Translate("Manage ignored updates"), null, ManageIgnoredAsync));
                 break;
             case PackagePageKind.Installed:
@@ -1402,6 +1405,17 @@ internal sealed class PackageListPage : UserControl, ITuiPage
 
         foreach (var p in packages) await TuiPackageActions.IgnoreUpdatesAsync(p);
         TuiNotifications.Info(CoreTools.Translate("Ignored updates"), CoreTools.Translate("{0} package(s) will no longer show updates", packages.Count));
+    }
+
+    private static Task ExplainHeldBackAsync(IPackage package) =>
+        HeldBackUpdateNotice.Build(package) is { } notice
+            ? TuiPrompts.InfoAsync(CoreTools.Translate("Why is this update held back?"), notice)
+            : Task.CompletedTask;
+
+    private Task RetryHeldBackAsync(IPackage package)
+    {
+        package.Manager.OperationHelper.ClearHeldBackUpdate(package);
+        return UpdateAsync([package]);
     }
 
     private async Task SkipVersionAsync(IPackage package)

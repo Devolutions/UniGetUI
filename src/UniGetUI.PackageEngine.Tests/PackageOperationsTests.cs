@@ -367,6 +367,63 @@ public sealed class PackageOperationsTests
         Assert.Same(regular, Assert.Single(kept));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BulkUpdatesLeaveOutHeldBackUpdatesWhateverTheOptions(bool uninstallBeforeUpdate)
+    {
+        var manager = CreateManager();
+        var regular = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Regular")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var held = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Held")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .HeldBack()
+            .Build();
+
+        Assert.True(
+            PackageOperation.IsLeftOutOfBulkUpdates(
+                held,
+                new InstallOptions { UninstallBeforeUpdate = uninstallBeforeUpdate }
+            )
+        );
+        Assert.Same(regular, Assert.Single(await PackageOperation.WithoutUpdatesLeftOutOfBulkAsync([regular, held])));
+    }
+
+    [Fact]
+    public async Task HeldBackUpdatesAreListedUncheckedAndLeftOutOfTheCount()
+    {
+        InitializeLoaders();
+        var manager = CreateManager();
+        var regular = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Regular")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var held = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Held")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .HeldBack(HeldBackUpdateReason.RefusedByPublisher)
+            .Build();
+
+        await UpgradablePackagesLoader.Instance.AddForeign(regular);
+        await UpgradablePackagesLoader.Instance.AddForeign(held);
+
+        Assert.True(regular.IsChecked);
+        Assert.False(held.IsChecked);
+        Assert.Equal(2, UpgradablePackagesLoader.Instance.Count());
+        Assert.Equal(1, UpgradablePackagesLoader.Instance.ActionableCount());
+    }
+
     [Fact]
     public async Task UpdatesThatNeedAReinstallAreNotCheckedByDefault()
     {

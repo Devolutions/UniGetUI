@@ -297,6 +297,7 @@ internal static class TuiUpdatesPolicy
         {
             var upgradable = UpgradablePackagesLoader.Instance.Packages
                 .Where(p => p.Tag is not UniGetUI.Interface.Enums.PackageTag.OnQueue and not UniGetUI.Interface.Enums.PackageTag.BeingProcessed)
+                .Where(p => p.HeldBackUpdate is null)
                 .ToList();
             TuiShell.InvalidateChrome();
             if (upgradable.Count == 0) return;

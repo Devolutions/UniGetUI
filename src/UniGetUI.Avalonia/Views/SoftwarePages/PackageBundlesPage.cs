@@ -346,7 +346,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     {
         if (GetMainWindow() is not { } win) return;
 
-        var files = await win.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await NativePickerTracker.Track(win.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             AllowMultiple = false,
             FileTypeFilter =
@@ -354,7 +354,7 @@ public class PackageBundlesPage : AbstractPackagesPage
                 new FilePickerFileType("Package bundles") { Patterns = ["*.ubundle", "*.json", "*.yaml", "*.xml"] },
                 new FilePickerFileType("All files")       { Patterns = ["*"] },
             ],
-        });
+        }));
 
         if (files is not [{ } file]) return;
         var path = file.TryGetLocalPath();
@@ -367,7 +367,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     {
         if (GetMainWindow() is not { } win) return;
 
-        var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await NativePickerTracker.Track(win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = CoreTools.Translate("Package bundle") + ".ubundle",
             FileTypeChoices =
@@ -375,7 +375,7 @@ public class PackageBundlesPage : AbstractPackagesPage
                 new FilePickerFileType("UniGetUI Bundle") { Patterns = ["*.ubundle"] },
                 new FilePickerFileType("JSON")            { Patterns = ["*.json"] },
             ],
-        });
+        }));
 
         if (file is null) return;
         var path = file.TryGetLocalPath();
@@ -535,14 +535,14 @@ public class PackageBundlesPage : AbstractPackagesPage
             if (GetMainWindow() is not { } win) return;
 
             string defaultName = CoreTools.Translate("Install script") + ".ps1";
-            var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var file = await NativePickerTracker.Track(win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 SuggestedFileName = defaultName,
                 FileTypeChoices =
                 [
                     new FilePickerFileType(CoreTools.Translate("PowerShell script")) { Patterns = ["*.ps1"] },
                 ],
-            });
+            }));
 
             var path = file?.TryGetLocalPath();
             if (path is null) return;

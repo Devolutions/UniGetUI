@@ -5,7 +5,8 @@ public readonly record struct AutomaticQuitSnapshot(
     bool IsEnabled,
     bool IsAlreadyQuitting,
     bool IsWindowVisible,
-    bool HasUnsavedWork);
+    bool HasUnsavedWork,
+    bool IsDialogOpen);
 
 public enum AutomaticQuitDecision
 {
@@ -105,9 +106,36 @@ public static class AutomaticQuitMonitor
             && (checkSucceeded || foundUpdates)
             && handled.TryClaim();
 
-    public static AutomaticQuitDecision Evaluate(AutomaticQuitSnapshot snapshot, ref int idleChecks)
+    public const int MaxDialogWaitChecks = 60;
+
+    public static AutomaticQuitSnapshot Capture(
+        bool isBusy,
+        bool isEnabled,
+        bool isAlreadyQuitting,
+        bool isWindowVisible,
+        bool hasUnsavedWork,
+        bool hasOpenDialog,
+        bool quitEvenWhenWindowIsOpen)
+        => new(
+            IsBusy: isBusy,
+            IsEnabled: isEnabled,
+            IsAlreadyQuitting: isAlreadyQuitting,
+            IsWindowVisible: isWindowVisible && !quitEvenWhenWindowIsOpen,
+            HasUnsavedWork: hasUnsavedWork,
+            IsDialogOpen: isWindowVisible && quitEvenWhenWindowIsOpen && hasOpenDialog);
+
+    public static AutomaticQuitDecision Evaluate(AutomaticQuitSnapshot snapshot, ref int idleChecks, ref int dialogChecks)
     {
         if (snapshot.IsBusy)
+        {
+            idleChecks = 0;
+            dialogChecks = 0;
+            return AutomaticQuitDecision.KeepWaiting;
+        }
+
+        if (!snapshot.IsDialogOpen)
+            dialogChecks = 0;
+        else if (++dialogChecks < MaxDialogWaitChecks)
         {
             idleChecks = 0;
             return AutomaticQuitDecision.KeepWaiting;
@@ -139,6 +167,7 @@ public static class AutomaticQuitMonitor
             await launching;
 
         int idleChecks = 0;
+        int dialogChecks = 0;
         while (true)
         {
             await waitForNextSample();
@@ -147,7 +176,7 @@ public static class AutomaticQuitMonitor
                 if (sample() is not { } snapshot)
                     return AutomaticQuitDecision.Cancelled;
 
-                AutomaticQuitDecision result = Evaluate(snapshot, ref idleChecks);
+                AutomaticQuitDecision result = Evaluate(snapshot, ref idleChecks, ref dialogChecks);
                 if (result is AutomaticQuitDecision.Quit)
                     quit();
                 return result;

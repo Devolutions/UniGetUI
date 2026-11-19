@@ -182,6 +182,7 @@ public static partial class Settings
         SkillsTargetAgents,
         SkillsNotionCliVersion,
         SkillsShDiscoveryEnabled,
+        DisableLinuxDesktopEntry,
 
         Test1,
         Test2,
@@ -373,6 +374,7 @@ public static partial class Settings
             K.SkillsTargetAgents => "SkillsTargetAgents",
             K.SkillsNotionCliVersion => "SkillsNotionCliVersion",
             K.SkillsShDiscoveryEnabled => "SkillsShDiscoveryEnabled",
+            K.DisableLinuxDesktopEntry => "DisableLinuxDesktopEntry",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

@@ -1617,7 +1617,7 @@ internal static partial class AvaloniaAutoUpdater
 
     // True when the running process looks like a development build rather than an
     // installed copy that should replace itself in place.
-    private static bool LooksLikeDevBuild(string exeName, string installDir)
+    internal static bool LooksLikeDevBuild(string exeName, string installDir)
     {
         if (exeName.Equals("dotnet", StringComparison.OrdinalIgnoreCase))
             return true;

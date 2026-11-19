@@ -3102,5 +3102,7 @@
   "Hardware ID": "Hardware ID",
   "Windows Update ID": "Windows Update ID",
   "{0} (revision {1})": "{0} (revision {1})",
-  "More information": "More information"
+  "More information": "More information",
+  "Graphical interface for your package managers": "Graphical interface for your package managers",
+  "Show UniGetUI in the applications menu": "Show UniGetUI in the applications menu"
 }

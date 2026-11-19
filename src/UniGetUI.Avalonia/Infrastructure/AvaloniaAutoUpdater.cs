@@ -1238,7 +1238,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         // Verify the embedded app is signed by Devolutions before trusting it.
-        if (!VerifyMacAppSignature(newApp))
+        if (!await Task.Run(() => VerifyMacAppSignature(newApp)))
         {
             LogUpdateError("The extracted app failed signature validation. Aborting update.");
             RaiseStatus(
@@ -1253,7 +1253,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         // A genuine but older release would otherwise pass: the bundle must be the release that was offered.
-        string? bundleVersion = MacAppSignature.ReadShortVersion(newApp);
+        string? bundleVersion = await Task.Run(() => MacAppSignature.ReadShortVersion(newApp));
         if (!AutoUpdaterHelpers.BundleVersionMatchesRelease(bundleVersion, expectedVersion))
         {
             LogUpdateError($"The extracted app is version {bundleVersion ?? "(unknown)"}, not {expectedVersion}. Aborting update.");

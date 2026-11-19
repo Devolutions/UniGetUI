@@ -2233,6 +2233,40 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    [Fact]
+    public void WinGetStopsOfferingARefusedUpdateWithinASkippedMajor()
+    {
+        var manager = new FixedVersionsWinGet(["2.0.0", "1.1.0", "1.0.0"]);
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var listed = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.RefusedWithinMajor")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
+            listed
+        );
+
+        var offered = manager.ResolveSkippedMajorUpdate(listed);
+        Assert.NotNull(offered);
+        Assert.Equal("1.1.0", offered.NewVersionString);
+        Assert.True(offered.OverridenOptions.PinUpdateToNewVersion);
+
+        var veredict = manager.OperationHelper.GetResult(
+            offered,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150114)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(listed));
+        Assert.Null(manager.ResolveSkippedMajorUpdate(listed));
+        Assert.False(listed.OverridenOptions.PinUpdateToNewVersion);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -4587,6 +4621,14 @@ public sealed class WinGetManagerTests : IDisposable
             .GetProperty(nameof(WinGet.SelectedCliToolKind), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
             .GetSetMethod(nonPublic: true)!
             .Invoke(manager, [kind]);
+    }
+
+    private sealed class FixedVersionsWinGet(IReadOnlyList<string> versions) : WinGet
+    {
+        protected override IReadOnlyList<string> ListVersionsForUpdateSelection(
+            IPackage update,
+            bool includePreReleases
+        ) => versions;
     }
 
     private sealed class TestableWinGet : WinGet

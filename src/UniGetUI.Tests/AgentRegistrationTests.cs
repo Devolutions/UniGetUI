@@ -83,56 +83,13 @@ public class AgentRegistrationTests
     {
         public ManualResetEventSlim SourcesGate { get; } = new(true);
         public int Calls;
-        public int SourceCalls;
-        public bool InstalledReady = true;
 
-        public bool TryListInstalledPackages(out IReadOnlyList<IpcPackageInfo> packages)
-        {
-            Interlocked.Increment(ref Calls);
-            packages = [];
-            return InstalledReady;
-        }
-
-        public bool TryListUpgradablePackages(out IReadOnlyList<IpcPackageInfo> packages)
-        {
-            Interlocked.Increment(ref Calls);
-            packages = [];
-            return true;
-        }
-
-        public IReadOnlyList<IpcManagerInfo> ListManagers()
+        public IReadOnlyList<IpcRemoteManagerInfo> ListManagers()
         {
             Interlocked.Increment(ref Calls); SourcesGate.Wait();
             return [];
         }
-
-        public IReadOnlyList<IpcSourceInfo> ListSources()
-        {
-            Interlocked.Increment(ref Calls);
-            return [];
-        }
-
-        // Resolves by the source name's prefix so tests choose the outcome without a real manager.
-        public RemoteSourceResolution ResolveSource(
-            string manager,
-            string sourceName,
-            bool requireInstalledOrigin = false
-        )
-        {
-            Interlocked.Increment(ref SourceCalls);
-            return sourceName switch
-            {
-                "" => RemoteSourceResolution.MissingSourceName,
-                "origin-unknown" => requireInstalledOrigin
-                    ? RemoteSourceResolution.OriginUnknown
-                    : RemoteSourceResolution.Resolved,
-                "ambiguous" => RemoteSourceResolution.Ambiguous,
-                "missing" => RemoteSourceResolution.NotFound,
-                _ => RemoteSourceResolution.Resolved,
-            };
-        }
     }
-
     private sealed class BlockedWriteStream : Stream
     {
         public bool Disposed { get; private set; }
@@ -283,6 +240,42 @@ public class AgentRegistrationTests
 
     private static string ErrorCode(JsonElement response) =>
         response.GetProperty("error").GetProperty("code").GetString()!;
+
+    private sealed class ManualClock : TimeProvider
+    {
+        public long Now;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => Now;
+    }
+
+    [Fact]
+    public void BackoffStartsOverOnlyAfterARegisteredSessionStayedUp()
+    {
+        var clock = new ManualClock();
+        var options = new AgentRegistrationOptions
+        {
+            MinBackoff = TimeSpan.FromSeconds(1),
+            StableSessionTime = TimeSpan.FromSeconds(30),
+        };
+        var client = new AgentRegistrationClient(
+            new FakeConnector(new FakeConnection(new BlockedWriteStream(), verified: false)),
+            new FakeBackend(),
+            options,
+            clock,
+            _ => { }
+        );
+        var grown = TimeSpan.FromSeconds(16);
+        long registeredAt = clock.GetTimestamp();
+
+        clock.Now += TimeSpan.FromSeconds(29).Ticks;
+        Assert.Equal(grown, client.BackoffAfterSession(grown, registeredAt));
+        Assert.Equal(grown, client.BackoffAfterSession(grown, null));
+
+        clock.Now += TimeSpan.FromSeconds(1).Ticks;
+        Assert.Equal(options.MinBackoff, client.BackoffAfterSession(grown, registeredAt));
+    }
 
     [Fact]
     public async Task FailedServerVerificationWritesNothingAndCloses()
@@ -578,7 +571,7 @@ public class AgentRegistrationTests
         );
         await h.RequestAsync(Uuid2, "ExecutePackageOperation", Op(source: "feed"));
 
-        Assert.Equal(0, Volatile.Read(ref h.Backend.SourceCalls));
+        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
     }
 
     [Theory]
@@ -596,7 +589,7 @@ public class AgentRegistrationTests
 
         Assert.True(response.GetProperty("ok").GetBoolean());
         Assert.Equal("Failed", response.GetProperty("result").GetProperty("status").GetString());
-        Assert.Equal(0, Volatile.Read(ref h.Backend.SourceCalls));
+        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
     }
 
     [Theory]
@@ -635,7 +628,7 @@ public class AgentRegistrationTests
 
         Assert.False(response.GetProperty("ok").GetBoolean());
         Assert.Equal("InvalidArguments", ErrorCode(response));
-        Assert.Equal(0, Volatile.Read(ref h.Backend.SourceCalls));
+        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
     }
 
     [Theory]
@@ -654,7 +647,7 @@ public class AgentRegistrationTests
 
         Assert.Equal("Failed", response.GetProperty("result").GetProperty("status").GetString());
         Assert.DoesNotContain("origin-unknown", response.GetRawText());
-        Assert.Equal(0, Volatile.Read(ref h.Backend.SourceCalls));
+        Assert.Equal(0, Volatile.Read(ref h.Backend.Calls));
     }
 
     [Theory]

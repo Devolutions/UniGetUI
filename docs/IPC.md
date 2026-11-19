@@ -75,6 +75,8 @@ On Windows, an unelevated GUI session separately attempts to register with the l
 Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
 This connection is separate from the local IPC API and remains active when that API is disabled.
 The registration connection answers `ListManagers`, reports installed packages, updates, sources, and version requests as unavailable, and rejects package operations without starting them.
+Its `ListManagers` items carry only a fixed set of fields, with `executablePath` and `executableArguments` empty and `health` at its unknown default, so a field added to the local manager endpoint is not sent to the Agent.
+After a lost connection it retries with a growing delay, which starts over only when the lost session had stayed registered for at least 30 seconds.
 Unavailable remote operations never fall back to local package execution.
 
 ## Authentication

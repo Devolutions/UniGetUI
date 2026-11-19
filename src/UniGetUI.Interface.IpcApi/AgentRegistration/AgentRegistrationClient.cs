@@ -89,9 +89,10 @@ public sealed class AgentRegistrationClient
         while (!ct.IsCancellationRequested)
         {
             bool registered = false;
+            long? registeredAt = null;
             try
             {
-                registered = await RunOnceAsync(() => backoff = _options.MinBackoff, ct)
+                registered = await RunOnceAsync(() => registeredAt = _time.GetTimestamp(), ct)
                     .ConfigureAwait(false);
             }
             catch (Exception) when (!ct.IsCancellationRequested) { }
@@ -111,6 +112,7 @@ public sealed class AgentRegistrationClient
                 unavailableLogged = true;
             }
 
+            backoff = BackoffAfterSession(backoff, registeredAt);
             double jitter = 0.5 + Random.Shared.NextDouble() * 0.5;
             try
             {
@@ -124,6 +126,13 @@ public sealed class AgentRegistrationClient
             backoff = TimeSpan.FromTicks(Math.Min(backoff.Ticks * 2, _options.MaxBackoff.Ticks));
         }
     }
+
+    // An Agent that welcomes and then drops the session at once must not be redialled every
+    // MinBackoff, so the backoff starts over only after a session that stayed up.
+    internal TimeSpan BackoffAfterSession(TimeSpan backoff, long? registeredAt) =>
+        registeredAt is long at && _time.GetElapsedTime(at) >= _options.StableSessionTime
+            ? _options.MinBackoff
+            : backoff;
 
     /// <summary>One connection attempt; returns whether the Agent registered this process.</summary>
     internal async Task<bool> RunOnceAsync(Action onRegistered, CancellationToken ct)

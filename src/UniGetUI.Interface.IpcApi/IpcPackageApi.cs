@@ -789,7 +789,7 @@ public static class IpcPackageApi
             );
         }
 
-        return SelectScopedCopy(installed, NormalizeRequestedScope(request), request.PackageId);
+        return SelectCopy(installed, NormalizeRequestedScope(request), request.PackageId);
     }
 
     // The upgradable loader may collapse scopes; do not use ambiguous update metadata.
@@ -797,29 +797,36 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
         string? requestedScope = NormalizeRequestedScope(request);
-        var installed = GetInstalledPackagesSnapshot(request.ManagerName)
+        var allInstalled = GetInstalledPackagesSnapshot(request.ManagerName)
             .Where(candidate => MatchesIdentity(candidate, request))
             .ToArray();
-        IPackage? installedCopy = installed.Length > 0
-            ? SelectScopedCopy(installed, requestedScope, request.PackageId)
-            : null;
-
-        var upgradable = GetUpgradablePackagesSnapshot(request.ManagerName)
+        var allUpgradable = GetUpgradablePackagesSnapshot(request.ManagerName)
             .Where(candidate => MatchesIdentity(candidate, request))
             .ToArray();
-        if (installed.Length == 0 && upgradable.Length == 0)
+        if (allInstalled.Length == 0 && allUpgradable.Length == 0)
         {
             throw new InvalidOperationException(
                 $"No installed package matching id \"{request.PackageId}\" was found."
             );
         }
 
+        // When only one manager has an update, it is the one to update, whatever else has the id.
+        var manager = SingleManager(
+            allUpgradable.Length > 0 ? allUpgradable : allInstalled,
+            request.PackageId
+        );
+        var installed = allInstalled.Where(p => p.Manager == manager).ToArray();
+        var upgradable = allUpgradable.Where(p => p.Manager == manager).ToArray();
+        IPackage? installedCopy = installed.Length > 0
+            ? SelectCopy(installed, requestedScope, request.PackageId)
+            : null;
+
         string? target = requestedScope ?? installedCopy?.NormalizedReportedScope;
         bool installedScopesAreUnique =
             installed.Length > 0
             && installed.Select(p => p.NormalizedReportedScope).Distinct().Count() == 1;
 
-        bool placeholderLabels = installedScopesAreUnique && HasPlaceholderScopeLabels(installed[0]);
+        bool placeholderLabels = installedScopesAreUnique && !ReportsReliableScope(installed[0]);
 
         var usable = target is null || placeholderLabels
             ? upgradable
@@ -832,7 +839,7 @@ public static class IpcPackageApi
 
         if (usable.Length > 0)
         {
-            return SelectScopedCopy(usable, target, request.PackageId);
+            return SelectCopy(usable, target, request.PackageId);
         }
 
         if (upgradable.Length > 0)
@@ -877,12 +884,41 @@ public static class IpcPackageApi
     private static string? NormalizeRequestedScope(IpcPackageActionRequest request) =>
         CanonicalScope(request.Scope);
 
-    // Pip's list parsers (installed and outdated) label every row machine regardless of where the
-    // package lives, so that one label cannot contradict a request. Only machine is known to be
-    // that unconditional placeholder; any other Pip label is not assumed to be placeholder data.
-    private static bool HasPlaceholderScopeLabels(IPackage package) =>
-        package.Manager.Id.Equals("pip", StringComparison.OrdinalIgnoreCase)
-        && package.NormalizedReportedScope == PackageScope.Machine;
+    // A manager whose rows carry a placeholder scope label (Pip labels every row machine wherever
+    // the package lives) cannot have that label contradict a request.
+    private static bool ReportsReliableScope(IPackage package) =>
+        package.Manager.Capabilities.ReportsReliableInstalledScope;
+
+    private static IPackageManager SingleManager(IReadOnlyList<IPackage> candidates, string packageId)
+    {
+        var managers = candidates.Select(p => p.Manager).Distinct().ToArray();
+        return managers.Length == 1
+            ? managers[0]
+            : throw new InvalidOperationException(
+                $"\"{packageId}\" is installed by more than one package manager; specify the manager to use."
+            );
+    }
+
+    // Scope copies are told apart only within one manager and canonical source.
+    private static IPackage SelectCopy(
+        IReadOnlyList<IPackage> candidates,
+        string? scope,
+        string packageId
+    )
+    {
+        SingleManager(candidates, packageId);
+        if (
+            candidates.Select(p => p.Source.Name).Distinct(StringComparer.Ordinal).Skip(1).Any()
+            && candidates.Select(p => p.NormalizedReportedScope).Distinct().Skip(1).Any()
+        )
+        {
+            throw new InvalidOperationException(
+                $"\"{packageId}\" is installed from more than one source; specify the source to use."
+            );
+        }
+
+        return SelectScopedCopy(candidates, scope, packageId);
+    }
 
     private static IPackage SelectScopedCopy(
         IReadOnlyList<IPackage> candidates,
@@ -891,14 +927,14 @@ public static class IpcPackageApi
     )
     {
         // When every copy reports one scope, the request only conflicts with a reliably known
-        // label; unknown labels and Pip's unconditional machine label cannot contradict it.
+        // label; unknown and placeholder labels cannot contradict it.
         if (candidates.Select(p => p.NormalizedReportedScope).Distinct().Count() <= 1)
         {
             if (
                 scope is null
                 || candidates[0].NormalizedReportedScope is null
                 || candidates[0].NormalizedReportedScope == scope
-                || HasPlaceholderScopeLabels(candidates[0])
+                || !ReportsReliableScope(candidates[0])
             )
             {
                 return candidates[0];

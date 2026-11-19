@@ -1564,7 +1564,7 @@ namespace UniGetUI.PackageEngine.Operations
                         .Where(candidate => candidate.Source.Name == Package.Source.Name)
                         .ToArray();
                 }
-                if (targetScope is not null)
+                if (targetScope is not null && Package.Manager.Capabilities.ReportsReliableInstalledScope)
                 {
                     installedMatches = installedMatches
                         .Where(candidate =>

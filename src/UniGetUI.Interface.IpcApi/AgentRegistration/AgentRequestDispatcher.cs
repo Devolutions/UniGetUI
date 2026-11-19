@@ -54,7 +54,14 @@ internal sealed class AgentRequestDispatcher
                     "Failed",
                     InventoryUnavailableMessage
                 ),
-                "ListManagers" => OkRaw(id, IpcJson.Serialize(_backend.ListManagers())),
+                "ListManagers" => Ok(
+                    id,
+                    writer => JsonSerializer.Serialize(
+                        writer,
+                        _backend.ListManagers(),
+                        IpcJson.GetTypeInfo<IReadOnlyList<IpcRemoteManagerInfo>>()
+                    )
+                ),
                 "GetPackageVersions" => GetPackageVersions(id, arguments),
                 "ExecutePackageOperation" => ExecutePackageOperation(id, arguments),
                 _ => Error(id, "UnsupportedCommand", UnsupportedMessage),
@@ -75,7 +82,7 @@ internal sealed class AgentRequestDispatcher
     public static byte[] InvalidArguments(string id) =>
         Error(id, "InvalidArguments", InvalidMessage);
 
-    private byte[] GetPackageVersions(string id, JsonElement args)
+    private static byte[] GetPackageVersions(string id, JsonElement args)
     {
         if (
             !TryGetString(args, "manager", out string manager)
@@ -92,7 +99,7 @@ internal sealed class AgentRequestDispatcher
         return Error(id, "Failed", VersionsUnavailableMessage);
     }
 
-    private byte[] ExecutePackageOperation(string id, JsonElement args)
+    private static byte[] ExecutePackageOperation(string id, JsonElement args)
     {
         if (
             !TryGetString(args, "operationId", out string operationId)
@@ -181,13 +188,6 @@ internal sealed class AgentRequestDispatcher
         {
             writer.WritePropertyName("result");
             writeResult(writer);
-        });
-
-    private static byte[] OkRaw(string id, string json) =>
-        Build(id, true, writer =>
-        {
-            writer.WritePropertyName("result");
-            writer.WriteRawValue(json, skipInputValidation: true);
         });
 
     private static byte[] Error(string id, string code, string message) =>

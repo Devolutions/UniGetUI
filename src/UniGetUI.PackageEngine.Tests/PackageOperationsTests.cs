@@ -2882,6 +2882,43 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task InstallSnapshotKeepsTheListedRowWhenTheManagerScopeLabelIsAPlaceholder()
+    {
+        TestPackageManager? manager = null;
+        manager = new PackageManagerBuilder()
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.ReportsReliableInstalledScope = false;
+                return capabilities;
+            })
+            .WithInstalledPackages(_ => [new PackageBuilder()
+                .WithManager(manager!)
+                .WithId("dotnetsay")
+                .WithVersion("2.1.4")
+                .WithOptions(new OverridenInstallationOptions(PackageScope.Machine))
+                .Build()])
+            .Build();
+        var searchResult = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("3.0.3")
+            .WithOptions(new OverridenInstallationOptions(PackageScope.User))
+            .Build();
+        InitializeLoaders();
+        using var operation = new SimulatedInstallPackageOperation(
+            searchResult,
+            new InstallOptions { Version = "2.1.4" },
+            OperationVeredict.Success
+        );
+
+        await operation.MainThread();
+        await WaitForAsync(() => InstalledPackagesLoader.Instance.GetEquivalentPackages(searchResult).Count > 0);
+
+        // The listed row is what the manager reported, not a synthetic row carrying the requested scope
+        Assert.Equal(PackageScope.Machine, Assert.Single(InstalledPackagesLoader.Instance.GetEquivalentPackages(searchResult)).ReportedScope);
+    }
+
+    [Fact]
     public async Task UpdateOperationSuccessfulRunPrefersAuthoritativeInstalledVersion()
     {
         TestPackageManager? manager = null;

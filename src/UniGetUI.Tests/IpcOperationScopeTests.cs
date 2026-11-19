@@ -406,15 +406,81 @@ public sealed class IpcOperationScopeTests : IDisposable
     }
 
     [Fact]
-    public async Task PipRejectsAnExplicitlyUserScopedRowForAMachineRequest()
+    public async Task ScopeLabelsOfAManagerWithoutReliableScopesCannotContradictARequest()
     {
-        var manager = new Pip();
+        var manager = new PowerShell7();
+        var capabilities = manager.Capabilities;
+        capabilities.ReportsReliableInstalledScope = false;
+        manager.Capabilities = capabilities;
         await CreateLoadersAsync([PackageScope.User], [PackageScope.User], manager);
 
-        foreach (var operation in Operations)
+        Assert.Equal(
+            PackageScope.User,
+            IpcPackageApi.ResolveInstalledPackageForMutation(Request(manager, "Global")).NormalizedReportedScope
+        );
+        Assert.True(IpcPackageApi.ResolveUpdatePackageForMutation(Request(manager, "Global")).IsUpgradable);
+    }
+
+    private static async Task<(Npm Npm, PowerShell7 Pwsh)> CreateTwoManagersSharingAnIdAsync(bool bothHaveUpdates)
+    {
+        var npm = new Npm();
+        var pwsh = new PowerShell7();
+        _ = new DiscoverablePackagesLoader([npm, pwsh]);
+        var upgradable = new UpgradablePackagesLoader([npm, pwsh]);
+        var installed = new InstalledPackagesLoader([npm, pwsh]);
+        await installed.AddForeign(new Package("Requests", "requests", "1.0", npm.DefaultSource, npm, new OverridenInstallationOptions(PackageScope.User)));
+        await installed.AddForeign(new Package("Requests", "requests", "1.0", pwsh.DefaultSource, pwsh));
+        await upgradable.AddForeign(new Package("Requests", "requests", "1.0", "2.0", npm.DefaultSource, npm, new OverridenInstallationOptions(PackageScope.User)));
+        if (bothHaveUpdates)
+            await upgradable.AddForeign(new Package("Requests", "requests", "1.0", "2.0", pwsh.DefaultSource, pwsh));
+        else
+            await upgradable.AddForeign(new Package("Other", "other", "1.0", "2.0", pwsh.DefaultSource, pwsh));
+        return (npm, pwsh);
+    }
+
+    private static IpcPackageActionRequest AnyManagerRequest() => new() { PackageId = "requests", WaitForCompletion = false };
+
+    [Fact]
+    public async Task UpdateUsesTheOnlyManagerWithAnUpdateWhenAnotherManagerHasTheSameId()
+    {
+        var (npm, _) = await CreateTwoManagersSharingAnIdAsync(bothHaveUpdates: false);
+
+        var package = IpcPackageApi.ResolveUpdatePackageForMutation(AnyManagerRequest());
+
+        Assert.True(package.IsUpgradable);
+        Assert.Same(npm, package.Manager);
+    }
+
+    [Fact]
+    public async Task UpdateAsksForTheManagerWhenSeveralManagersHaveAnUpdate()
+    {
+        await CreateTwoManagersSharingAnIdAsync(bothHaveUpdates: true);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            IpcPackageApi.ResolveUpdatePackageForMutation(AnyManagerRequest()));
+
+        Assert.Contains("specify the manager", ex.Message);
+    }
+
+    [Fact]
+    public async Task UninstallAndReinstallAskForTheManagerWhenSeveralManagersHaveTheId()
+    {
+        var (npm, _) = await CreateTwoManagersSharingAnIdAsync(bothHaveUpdates: false);
+
+        foreach (var operation in new Func<IpcPackageActionRequest, Task>[]
         {
-            await Assert.ThrowsAsync<InvalidOperationException>(() => operation(Request(manager, "Global")));
+            IpcPackageApi.UninstallPackageAsync,
+            IpcPackageApi.ReinstallPackageAsync,
+            IpcPackageApi.UninstallThenReinstallPackageAsync,
+        })
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => operation(AnyManagerRequest()));
+            Assert.Contains("specify the manager", ex.Message);
         }
+
+        var request = AnyManagerRequest();
+        request.ManagerName = npm.Id;
+        Assert.Same(npm, IpcPackageApi.ResolveInstalledPackageForMutation(request).Manager);
     }
 
     [Fact]

@@ -25,6 +25,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         private readonly long _hash;
         private readonly long _versionedHash;
+        private readonly long _installedIdentityHash;
         private readonly string _ignoredId;
         private readonly string _iconId;
 
@@ -72,6 +73,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public string AutomationName { get; }
         public string Id { get; }
         public string? ReportedScope { get; }
+        public string? NormalizedReportedScope { get; }
         public virtual string VersionString { get; }
 
         public virtual bool HasConcreteVersion => true;
@@ -143,13 +145,43 @@ namespace UniGetUI.PackageEngine.PackageClasses
             _versionedHash = CoreTools.HashStringAsLong(
                 $"{Manager.Name}\\{Source.AsString_DisplayName}\\{Id}\\{installed_version}"
             );
+            NormalizedReportedScope = IPackage.NormalizeReportedScope(ReportedScope);
+            _installedIdentityHash = ComputeInstalledIdentityHash(
+                Manager.Id,
+                Source.Name,
+                Id,
+                installed_version,
+                NormalizedReportedScope
+            );
             _ignoredId = IgnoredUpdatesDatabase.GetIgnoredIdForPackage(this);
             _iconId = GenerateIconId(this);
+        }
+
+        /// <summary>
+        /// The value of <see cref="IPackage.GetInstalledIdentityHash"/>. It builds a string and hashes it, so
+        /// implementations compared many times (such as list rows) compute it once and store it.
+        /// </summary>
+        public static long ComputeInstalledIdentityHash(
+            string managerId,
+            string? sourceName,
+            string id,
+            string version,
+            string? normalizedScope
+        )
+        {
+            // Length-framed so that no component value, whatever separators it holds, can alias another.
+            static string Frame(string value) => $"{value.Length}:{value}";
+            var scope = normalizedScope is { } s ? "s" + Frame(s) : "u";
+            return CoreTools.HashStringAsLong(
+                Frame(managerId) + Frame(sourceName ?? "") + Frame(id) + Frame(version) + scope
+            );
         }
 
         public long GetHash() => _hash;
 
         public long GetVersionedHash() => _versionedHash;
+
+        public long GetInstalledIdentityHash() => _installedIdentityHash;
 
         public bool Equals(IPackage? other) => _versionedHash == other?.GetHash();
 

@@ -42,6 +42,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         // False when the installed inventory cannot tell which source a package came from (Chocolatey
         // assigns its default source; a macOS .pkg receipt or app records no feed).
         public bool InstalledPackagesKeepTheirSource = true;
+        // False when the scope a manager puts on installed and update rows is a placeholder rather
+        // than where the package lives (Pip labels every row machine), so it cannot contradict a requested scope.
+        public bool ReportsReliableInstalledScope = true;
         public bool CanDownloadInstaller = false;
         public bool CanUninstallPreviousVersionsAfterUpdate = false;
         public bool CanListDependencies = false;

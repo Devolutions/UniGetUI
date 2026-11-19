@@ -10,6 +10,8 @@ internal sealed record AgentRegistrationOptions
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromSeconds(90);
     public TimeSpan MinBackoff { get; init; } = TimeSpan.FromSeconds(1);
     public TimeSpan MaxBackoff { get; init; } = TimeSpan.FromSeconds(60);
+    /// <summary>How long a registered session must last before the reconnect backoff starts over.</summary>
+    public TimeSpan StableSessionTime { get; init; } = TimeSpan.FromSeconds(30);
     public int MaxOutstandingRequests { get; init; } = 8;
     public string ClientVersion { get; init; } = CoreData.VersionName;
 }

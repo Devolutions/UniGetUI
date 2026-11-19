@@ -2565,12 +2565,12 @@ public partial class MainWindow : Window
         bool ipcStopped = false;
         try
         {
-            await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            await AvaloniaBootstrapper.StopBackgroundServicesAsync().WaitAsync(TimeSpan.FromSeconds(5));
             ipcStopped = true;
         }
         catch (TimeoutException ex)
         {
-            Logger.Warn("Timed out while stopping Avalonia IPC API during shutdown");
+            Logger.Warn("Timed out while stopping the Agent registration and IPC API during shutdown");
             Logger.Warn(ex);
         }
         catch (Exception ex)

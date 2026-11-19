@@ -1,5 +1,6 @@
 using System.Text.Json;
 using UniGetUI.Interface;
+using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -82,6 +83,45 @@ public sealed class IpcInstalledScopeTests
 
         Assert.Equal(hashes.Length, hashes.Distinct().Count());
         Assert.Equal(hashes[0], Make(first, PackageScope.User.ToUpperInvariant()).GetInstalledIdentityHash());
+    }
+
+    private sealed class CountingSource(IManagerSource inner) : IManagerSource
+    {
+        public int NameReads;
+        public IconType IconId => inner.IconId;
+        public bool IsVirtualManager => inner.IsVirtualManager;
+        public IPackageManager Manager => inner.Manager;
+        public string Name
+        {
+            get
+            {
+                NameReads++;
+                return inner.Name;
+            }
+        }
+        public Uri Url { get => inner.Url; set { } }
+        public int? PackageCount => inner.PackageCount;
+        public string? UpdateDate => inner.UpdateDate;
+        public string AsString => inner.AsString;
+        public string AsString_DisplayName => inner.AsString_DisplayName;
+        public void RefreshSourceNames() { }
+        public override string ToString() => inner.ToString() ?? "";
+    }
+
+    // Rows are compared pairwise on every reload, so the identity must not be rebuilt and rehashed per call.
+    [Fact]
+    public void InstalledIdentityHashIsComputedOncePerPackage()
+    {
+        var manager = new Pip();
+        var source = new CountingSource(new ManagerSource(manager, "registry:a", new Uri("https://a.example.test/")));
+        var package = new Package("Requests", "requests", "2.0", source, manager, new OverridenInstallationOptions(PackageScope.User));
+        long expected = Package.ComputeInstalledIdentityHash(manager.Id, "registry:a", "requests", "2.0", PackageScope.User);
+        int readsAfterConstruction = source.NameReads;
+
+        for (int i = 0; i < 100; i++)
+            Assert.Equal(expected, package.GetInstalledIdentityHash());
+
+        Assert.Equal(readsAfterConstruction, source.NameReads);
     }
 
     [Fact]

@@ -1,110 +1,67 @@
+using System.Text.Json;
 using UniGetUI.Interface;
 using UniGetUI.PackageEngine;
-using UniGetUI.PackageEngine.Classes.Manager;
-using UniGetUI.PackageEngine.Enums;
-using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
-using UniGetUI.PackageEngine.Managers.PipManager;
-using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
-using UniGetUI.PackageEngine.PackageClasses;
-using UniGetUI.PackageEngine.PackageLoader;
-using UniGetUI.PackageEngine.Structs;
 
 namespace UniGetUI.Tests;
 
 public sealed class IpcRemoteInventoryTests
 {
-    private const string Secret = "s3cr3t-token";
+    private static readonly string[] RemoteManagerFields =
+    [
+        "name", "displayName", "enabled", "ready", "notificationsSuppressed",
+        "executablePath", "executableArguments",
+        "capabilities", "capabilities.canRunAsAdmin", "capabilities.canSkipIntegrityChecks",
+        "capabilities.canRunInteractively", "capabilities.canRemoveDataOnUninstall",
+        "capabilities.canDownloadInstaller", "capabilities.supportsCustomVersions",
+        "capabilities.supportsCustomArchitectures", "capabilities.supportsCustomScopes",
+        "capabilities.supportsPreRelease", "capabilities.supportsCustomLocations",
+        "capabilities.supportsCustomSources", "capabilities.mustInstallSourcesAsAdmin",
+        "health", "health.state", "health.needsAttention", "health.failingListing", "health.reason",
+        "health.consecutiveFailures",
+        .. ListingFields("health.search"), .. ListingFields("health.installed"), .. ListingFields("health.updates"),
+    ];
 
-    [Fact]
-    public void CredentialBearingAndAmbiguousSourcesAreBlankedNeverSent()
-    {
-        var manager = new Pip();
-        var credentialed = new ManagerSource(
-            manager,
-            $"registry+https://user:{Secret}@private.example.test/index",
-            new Uri($"https://user:{Secret}@private.example.test/index"));
-        var safe = new ManagerSource(manager, "mirror", new Uri("https://mirror.example.test/"));
-        var ambiguousA = new ManagerSource(manager, "corp", new Uri("https://a.example.test/"));
-        var ambiguousB = new ManagerSource(manager, "corp", new Uri("https://b.example.test/"));
-        IPackage[] packages =
-        [
-            new Package("Secret", "secret", "1.0", credentialed, manager),
-            new Package("Safe", "safe", "1.0", safe, manager),
-            new Package("A", "a", "1.0", ambiguousA, manager),
-            new Package("B", "b", "1.0", ambiguousB, manager),
-        ];
-
-        var projected = IpcRemoteInventory.ProjectPackages(packages, installed: true, new HashSet<string>());
-        var sources = IpcRemoteInventory.BuildSources([manager], packages.Select(package => package.Source));
-        var json = IpcJson.Serialize(projected.ToArray()) + IpcJson.Serialize(sources.ToArray());
-
-        Assert.DoesNotContain(Secret, json, StringComparison.Ordinal);
-        Assert.DoesNotContain("\"sourceName\":", json, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void SourceResolutionCannotInferInstalledOrigin()
-    {
-        var manager = new Pip();
-        var capabilities = manager.Capabilities;
-        capabilities.InstalledPackagesKeepTheirSource = false;
-        manager.Capabilities = capabilities;
-        var feed = new ManagerSource(manager, "nuget.org", new Uri("https://api.nuget.org/v3/index.json"));
-        IPackage[] packages = [new Package("Tool", "tool", "1.0", feed, manager)];
-
-        foreach (var installed in new[] { true, false })
+    private static string[] ListingFields(string prefix) =>
+    [
+        prefix,
+        .. new[]
         {
-            var info = IpcRemoteInventory.ProjectPackages(packages, installed, new HashSet<string>()).Single();
-            Assert.Equal(feed.AsString_DisplayName, info.Source);
+            "lastSuccessUtc", "lastFailureUtc", "lastFailureReason", "lastFailureWasTimeout",
+            "consecutiveFailures", "failureStreakStartUtc", "lastPackageCount", "lastFastRepairUtc",
+            "lastFastRepairReason", "recentDurationsMs",
+        }.Select(name => $"{prefix}.{name}"),
+    ];
+
+    private static void CollectNames(JsonElement element, string prefix, SortedSet<string> names)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            string name = prefix.Length == 0 ? property.Name : $"{prefix}.{property.Name}";
+            names.Add(name);
+            if (property.Value.ValueKind == JsonValueKind.Object)
+                CollectNames(property.Value, name, names);
         }
-
-        var unverified = new ManagerSource(new Pip(), "nuget.org", feed.Url);
-        IPackage[] withoutProvenance = [new Package("Tool", "tool", "1.0", unverified, unverified.Manager)];
-        Assert.Equal(unverified.AsString_DisplayName,
-            IpcRemoteInventory.ProjectPackages(withoutProvenance, installed: true, new HashSet<string>()).Single().Source);
-        Assert.True(unverified.Manager.Capabilities.InstalledPackagesKeepTheirSource);
-        Assert.Equal(
-            RemoteSourceResolution.OriginUnknown,
-            IpcRemoteInventory.ResolveSource(
-                [unverified.Manager], [unverified], unverified.Manager.Id, "nuget.org", requireInstalledOrigin: true));
-
-        IManagerSource[] sources = [feed];
-        Assert.Equal(
-            RemoteSourceResolution.OriginUnknown,
-            IpcRemoteInventory.ResolveSource([manager], sources, manager.Id, "nuget.org", requireInstalledOrigin: true));
-        Assert.Equal(
-            RemoteSourceResolution.Resolved,
-            IpcRemoteInventory.ResolveSource([manager], sources, manager.Id, "nuget.org"));
     }
 
     [Fact]
-    public async Task SideBySideVersionsCanShareAnUnknownSourceAndScope()
+    public void ListManagersSendsOnlyTheListedFieldsWithLocalDetailsBlanked()
     {
-        var manager = new PowerShell7();
-        _ = new DiscoverablePackagesLoader([manager]);
-        _ = new UpgradablePackagesLoader([manager]);
-        var loader = new InstalledPackagesLoader([manager]);
-        var source = manager.SourcesHelper.Factory.GetSourceOrDefault("PSGallery");
-        Assert.True(manager.SourcesHelper.Factory.IsPlaceholder(source));
+        var managers = IpcRemoteInventory.ListManagers();
+        Assert.NotEmpty(managers);
+        using var json = JsonDocument.Parse(IpcJson.Serialize(managers));
 
-        await loader.AddForeign(new Package(
-            "XKCD", "XKCD", "1.9.0", source, manager, new OverridenInstallationOptions(PackageScope.User)));
-        await loader.AddForeign(new Package(
-            "XKCD", "XKCD", "1.12.6", source, manager, new OverridenInstallationOptions(PackageScope.User)));
-
-        var packages = IpcRemoteInventory.ProjectPackages(loader.Packages, installed: true, new HashSet<string>());
-
-        Assert.Equal(2, packages.Count);
-        Assert.All(packages, package =>
+        foreach (var manager in json.RootElement.EnumerateArray())
         {
-            Assert.Equal("pwsh", package.Manager);
-            Assert.Equal("XKCD", package.Id);
-            Assert.Equal(PackageScope.User, package.ReportedScope);
-        });
-        Assert.Equal(["1.12.6", "1.9.0"], packages.Select(package => package.Version).Order(StringComparer.Ordinal));
+            var names = new SortedSet<string>(StringComparer.Ordinal);
+            CollectNames(manager, "", names);
+            Assert.Equal(RemoteManagerFields.Order(StringComparer.Ordinal), names);
+            Assert.Equal("", manager.GetProperty("executablePath").GetString());
+            Assert.Equal("", manager.GetProperty("executableArguments").GetString());
+            Assert.Equal("unknown", manager.GetProperty("health").GetProperty("state").GetString());
+            Assert.Equal(JsonValueKind.Null, manager.GetProperty("health").GetProperty("reason").ValueKind);
+        }
     }
-
     [Fact]
     public void ManagerInventoryDoesNotPersistManagerHealth()
     {
@@ -134,41 +91,5 @@ public sealed class IpcRemoteInventoryTests
                 File.Delete(secondPath);
             Directory.Delete(directory);
         }
-    }
-
-    [Theory]
-    [InlineData("mirror", RemoteSourceResolution.Resolved)]
-    [InlineData("Mirror", RemoteSourceResolution.NotFound)]
-    [InlineData("Mirror Display", RemoteSourceResolution.NotFound)]
-    [InlineData("corp", RemoteSourceResolution.Ambiguous)]
-    [InlineData("", RemoteSourceResolution.MissingSourceName)]
-    public void SourceResolvesOnlyByUniqueOrdinalCanonicalName(string sourceName, RemoteSourceResolution expected)
-    {
-        var manager = new Pip();
-        IManagerSource[] observed =
-        [
-            new ManagerSource(manager, "mirror", new Uri("https://mirror.example.test/")),
-            new ManagerSource(manager, "corp", new Uri("https://a.example.test/")),
-            new ManagerSource(manager, "corp", new Uri("https://b.example.test/")),
-        ];
-
-        Assert.Equal(expected, IpcRemoteInventory.ResolveSource([manager], observed, manager.Id, sourceName));
-        Assert.Equal(
-            RemoteSourceResolution.UnknownManager,
-            IpcRemoteInventory.ResolveSource([manager], observed, "not-a-manager", "mirror"));
-    }
-
-    [Fact]
-    public void IncompleteLocalInventoryIsReportedBusyWithoutStartingALoad()
-    {
-        var manager = new Pip();
-        _ = new DiscoverablePackagesLoader([manager]);
-        _ = new UpgradablePackagesLoader([manager]);
-        var loader = new InstalledPackagesLoader([manager]);
-
-        Assert.False(IpcRemoteInventory.TryListInstalledPackages(out var packages));
-        Assert.Empty(packages);
-        Assert.False(loader.IsLoading);
-        Assert.False(loader.IsLoaded);
     }
 }

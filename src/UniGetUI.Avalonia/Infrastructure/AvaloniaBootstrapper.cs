@@ -263,7 +263,8 @@ internal static class AvaloniaBootstrapper
         }
     }
 
-    public static async Task StopIpcApiAsync()
+    /// <summary>Stops the Devolutions Agent registration and the IPC API.</summary>
+    public static async Task StopBackgroundServicesAsync()
     {
         AgentRegistrationClient? agentRegistration = _agentRegistration;
         _agentRegistration = null;

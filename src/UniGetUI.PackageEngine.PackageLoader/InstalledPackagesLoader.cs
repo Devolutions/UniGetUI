@@ -57,13 +57,13 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public async Task ReloadPackagesSilently()
         {
-            if (IsLoading)
+            TaskCompletionSource? completion = BeginExternalLoad();
+            if (completion is null)
             {
                 Logger.Debug($"[{this.GetType()}] Packages are already being loaded!!!");
                 return;
             }
 
-            TaskCompletionSource completion = BeginExternalLoad();
             try
             {
                 InvokeStartedLoadingEvent();

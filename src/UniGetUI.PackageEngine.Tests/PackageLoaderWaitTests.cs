@@ -16,6 +16,82 @@ public sealed class PackageLoaderWaitTests
         protected override Task WhenAddingPackage(IPackage package) => Task.CompletedTask;
     }
 
+    private sealed class GatedManagers(IPackageManager manager) : IReadOnlyList<IPackageManager>, IDisposable
+    {
+        private int _enumerations;
+        public readonly ManualResetEventSlim Release = new(false);
+        public readonly TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource EnteredTwice = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Count => 1;
+        public IPackageManager this[int index] => index == 0 ? manager : throw new IndexOutOfRangeException();
+
+        public IEnumerator<IPackageManager> GetEnumerator()
+        {
+            if (Interlocked.Increment(ref _enumerations) == 1)
+            {
+                Entered.SetResult();
+                if (!Release.Wait(TimeSpan.FromSeconds(10)))
+                    throw new TimeoutException("Load initialization was not released");
+            }
+            else
+                EnteredTwice.TrySetResult();
+            yield return manager;
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+        public void Dispose() => Release.Dispose();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConcurrentReloadsCannotStartWhileAnotherLoadIsPublishingItsState(bool silent)
+    {
+        Settings.Set(Settings.K.DisableWaitForInternetConnection, true);
+        using var releaseListing = new ManualResetEventSlim(false);
+        using var secondCalled = new ManualResetEventSlim(false);
+        int listings = 0;
+        var manager = new PackageManagerBuilder().WithInstalledPackages(_ =>
+        {
+            Interlocked.Increment(ref listings);
+            releaseListing.Wait(TimeSpan.FromSeconds(10));
+            return [];
+        }).Build();
+        using var managers = new GatedManagers(manager);
+        var previousLoader = InstalledPackagesLoader.Instance;
+        var loader = new InventoryLoader(managers);
+        Task first = Task.Run(loader.ReloadPackages);
+        Task? second = null;
+        try
+        {
+            await managers.Entered.Task.WaitAsync(WaitBudget);
+            second = Task.Factory.StartNew(() =>
+            {
+                secondCalled.Set();
+                return silent ? loader.ReloadPackagesSilently() : loader.ReloadPackagesListingOnly();
+            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+            Assert.True(secondCalled.Wait(WaitBudget));
+            await Task.WhenAny(managers.EnteredTwice.Task, Task.Delay(300));
+            Assert.False(managers.EnteredTwice.Task.IsCompleted,
+                "Another reload entered initialization before the first published its load state");
+
+            managers.Release.Set();
+            await second.WaitAsync(WaitBudget);
+            Assert.True(loader.IsLoading);
+        }
+        finally
+        {
+            managers.Release.Set();
+            releaseListing.Set();
+            await first.WaitAsync(WaitBudget);
+            if (second is not null)
+                await second.WaitAsync(WaitBudget);
+            InstalledPackagesLoader.Instance = previousLoader;
+        }
+        Assert.Equal(1, listings);
+        Assert.Equal(1, loader.LoadGeneration);
+    }
+
     [Fact]
     public async Task WaitForCurrentLoadAsync_CompletesWhenNoLoadIsRunning()
     {

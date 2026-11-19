@@ -89,6 +89,7 @@ Installations of one package that differ in reported scope are separate rows, an
 `sourceName` is always empty.
 Its `managers` items carry only a fixed set of fields, with `executablePath` and `executableArguments` empty and `health` at its unknown default, so a field added to the local manager endpoint is not sent to the Agent.
 Source entries with unsafe or ambiguous names are omitted, and source URLs are never sent.
+Safely reportable sources observed in either completed scan remain available when their manager is disabled, but its package rows are omitted and operations naming it are refused.
 
 ### Inventory rescan
 
@@ -97,6 +98,8 @@ The scan that answers starts after the request arrived: a load already running i
 UniGetUI answers `ok:true` with an empty `result` once both scans have completed for every expected manager and been published, and `Failed` otherwise.
 A remote rescan is the user's Reload minus recovery (Cargo), repair (`AttemptFastRepair`), automatic install or update of packages, and extension update checks.
 In this listing-only mode, command failures and parse errors fail the listing rather than keeping partial rows; PowerShell 7 also treats module-listing errors as terminating.
+Listing-only WinGet and Scoop calls bypass their short-lived installed-list caches, so a rescan immediately after an operation reads the changed installation state.
+Normal, listing-only and silent reloads arbitrate their start atomically within each loader.
 The package-index refresh a Reload performs runs only for managers whose refresh updates a catalogue and nothing else (WinGet, Apt, Pacman, Dnf, Flatpak, Snap, and the installer feeds), and is skipped for any manager whose refresh updates the manager itself or a working tree (Scoop, Homebrew, vcpkg).
 Managers that have no index refresh (Pip, npm, Bun, .NET Tool, PowerShell, PowerShell 7, Cargo, Chocolatey) are unaffected.
 When an interrupted UniGetUI Cargo installation still needs recovery, the Cargo listing is refused and the rescan fails; the log then contains `Remote rescan: Cargo listing refused because an interrupted UniGetUI Cargo installation needs recovery`, and reloading packages once in UniGetUI recovers it.

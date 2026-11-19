@@ -193,6 +193,31 @@ public sealed class RemoteInventorySnapshotTests
     }
 
     [Fact]
+    public void DisabledManagersKeepObservedSourcesWithoutExportingTheirPackages()
+    {
+        var enabled = new SnapshotManager("enabled");
+        var disabled = new SnapshotManager("disabled", enabled: false);
+        var installedSource = new ManagerSource(disabled, "observed-installed", new Uri("https://example.test/installed"));
+        var updateSource = new ManagerSource(disabled, "observed-updates", new Uri("https://example.test/updates"));
+        var installed = new Package("q", "q", "1.0", "1.0", installedSource, disabled);
+        var update = new Package("q", "q", "1.0", "2.0", updateSource, disabled);
+
+        var snapshot = IpcRemoteInventory.BuildSnapshot(
+            [enabled, disabled],
+            Scan(Installed, [Row(enabled, "p", null), installed], enabled),
+            Scan(Updated, [update]),
+            []);
+
+        Assert.NotNull(snapshot);
+        Assert.Equal("p", Assert.Single(snapshot.InstalledPackages).Id);
+        Assert.Empty(snapshot.Updates);
+        Assert.Null(snapshot.UpdateCompletedUtc);
+        Assert.Contains(snapshot.Sources, source => source.Manager == "disabled" && source.Name == "observed-installed");
+        Assert.Contains(snapshot.Sources, source => source.Manager == "disabled" && source.Name == "observed-updates");
+        Assert.All(snapshot.Sources, source => Assert.Equal("", source.Url));
+    }
+
+    [Fact]
     public void ScopeDistinctInstallationsStaySeparateAndTakeTheirOwnUpdate()
     {
         var a = new SnapshotManager("a");

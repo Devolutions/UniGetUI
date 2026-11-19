@@ -81,7 +81,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
         logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
-        ThrowIfListingFailed(p.ExitCode, error);
+        ThrowIfListingFailed(p.ExitCode, error, outputLines);
 
         Packages.AddRange(ParseAvailableUpdates(Manager, outputLines));
 
@@ -93,12 +93,21 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
     internal static bool IsListingFailure(int exitCode) =>
         exitCode != 0 && (uint)exitCode != 0x8A150014;
 
-    private void ThrowIfListingFailed(int exitCode, string error)
+    private void ThrowIfListingFailed(int exitCode, string error, IEnumerable<string> outputLines)
     {
-        if (IsListingFailure(exitCode))
+        string? sourceFailure = outputLines
+            .Concat(error.Split('\n'))
+            .FirstOrDefault(line =>
+            {
+                string message = line.TrimStart();
+                return message.StartsWith("Failed when searching source", StringComparison.OrdinalIgnoreCase)
+                    || message.StartsWith("Failed when opening source", StringComparison.OrdinalIgnoreCase)
+                    || message.StartsWith("Failed in attempting to update the source", StringComparison.OrdinalIgnoreCase);
+            });
+        if (IsListingFailure(exitCode) || sourceFailure is not null)
         {
             var failure = new InvalidOperationException(
-                $"{Manager.Name} exited with code 0x{exitCode:X8} while listing packages: {error.Trim()}"
+                $"{Manager.Name} exited with code 0x{exitCode:X8} while listing packages: {sourceFailure?.Trim() ?? error.Trim()}"
             );
             Logger.Warn(failure.Message);
             PackageListingScope.ReportIncomplete(failure);
@@ -240,7 +249,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
         logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
-        ThrowIfListingFailed(p.ExitCode, error);
+        ThrowIfListingFailed(p.ExitCode, error, outputLines);
 
         Packages.AddRange(ParseInstalledPackages(Manager, outputLines));
 

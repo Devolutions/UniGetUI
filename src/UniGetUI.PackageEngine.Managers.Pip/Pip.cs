@@ -859,7 +859,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         private IReadOnlyList<Package> GetAvailableUpdatesFromCli()
         {
             return ParseAvailableUpdates(
-                RunPipCommand(" list --outdated " + GetProxyArgument(), LoggableTaskType.ListUpdates),
+                RunPipCommand(" list --outdated " + GetListingFormatArgument() + GetProxyArgument(), LoggableTaskType.ListUpdates),
                 DefaultSource,
                 this
             );
@@ -871,7 +871,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             try
             {
                 IReadOnlyList<Package> installed = ParseInstalledPackages(
-                    RunPipCommand(" list " + GetProxyArgument(), LoggableTaskType.ListInstalledPackages),
+                    RunPipCommand(" list " + GetListingFormatArgument() + GetProxyArgument(), LoggableTaskType.ListInstalledPackages),
                     DefaultSource,
                     this
                 );
@@ -965,11 +965,14 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
         {
             return ParseInstalledPackages(
-                RunPipCommand(" list " + GetProxyArgument(), LoggableTaskType.ListInstalledPackages),
+                RunPipCommand(" list " + GetListingFormatArgument() + GetProxyArgument(), LoggableTaskType.ListInstalledPackages),
                 DefaultSource,
                 this
             );
         }
+
+        private static string GetListingFormatArgument() =>
+            PackageListingScope.IsListingOnly ? "--format=columns " : "";
 
         private IReadOnlyList<string> RunPipCommand(string arguments, LoggableTaskType taskType)
         {
@@ -1043,33 +1046,49 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         )
         {
             bool dashesPassed = false;
+            bool headerPassed = false;
+            bool hasContent = false;
+            string? malformedRow = null;
             List<Package> packages = [];
             int requiredElements = expectAvailableVersion ? 3 : 2;
 
             foreach (string line in outputLines)
             {
+                string[] elements = Regex
+                    .Replace(line.Trim(), " {2,}", " ")
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (elements.Length == 0 || FALSE_PACKAGE_IDS.Contains(elements[0]))
+                {
+                    if (elements.Length > 0 && elements[0] == "Package")
+                    {
+                        hasContent = true;
+                        headerPassed = elements.Length >= 2 && elements[1] == "Version"
+                            && (!expectAvailableVersion || (elements.Length >= 3 && elements[2] == "Latest"));
+                    }
+                    continue;
+                }
+
+                hasContent = true;
                 if (!dashesPassed)
                 {
-                    if (line.Contains("----"))
+                    if (elements.Length >= requiredElements && elements.All(element => element.All(character => character == '-')))
                     {
                         dashesPassed = true;
                     }
                     continue;
                 }
 
-                string[] elements = Regex
-                    .Replace(line.Trim(), " {2,}", " ")
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (elements.Length < requiredElements)
                 {
+                    malformedRow ??= line;
                     continue;
                 }
 
                 if (
-                    FALSE_PACKAGE_IDS.Contains(elements[0])
-                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                    FALSE_PACKAGE_VERSIONS.Contains(elements[1])
                 )
                 {
+                    malformedRow ??= line;
                     continue;
                 }
 
@@ -1094,6 +1113,13 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                         )
                 );
             }
+
+            if ((hasContent && (!headerPassed || !dashesPassed)) || malformedRow is not null)
+                PackageListingScope.ReportIncomplete(new InvalidDataException(
+                    malformedRow is not null
+                        ? $"Pip returned a malformed package row: {malformedRow}"
+                        : "Pip did not return the expected package table header."
+                ));
 
             return packages;
         }

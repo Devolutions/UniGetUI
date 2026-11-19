@@ -661,14 +661,23 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             );
         }
 
-        protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
-            TaskRecycler<IReadOnlyList<Package>>.RunOrAttach(
-                _getInstalledPackages_UnSafe,
-                InstalledPackagesGeneration,
-                15
-            );
+        private sealed record InstalledListing(IReadOnlyList<Package> Packages, Exception? Failure);
 
-        private IReadOnlyList<Package> _getInstalledPackages_UnSafe(long installedPackagesGeneration)
+        protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
+        {
+            var listing = PackageListingScope.IsListingOnly
+                ? _getInstalledPackages_UnSafe(InstalledPackagesGeneration)
+                : TaskRecycler<InstalledListing>.RunOrAttach(
+                    _getInstalledPackages_UnSafe,
+                    InstalledPackagesGeneration,
+                    15
+                );
+            if (listing.Failure is { } failure)
+                PackageListingScope.ReportIncomplete(failure);
+            return listing.Packages;
+        }
+
+        private InstalledListing _getInstalledPackages_UnSafe(long installedPackagesGeneration)
         {
             using Process p = new()
             {
@@ -692,15 +701,15 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
             IReadOnlyList<string> lines = ScoopProcess.ReadLines(p, logger, out string error);
             IReadOnlyList<Package> packages = ParseInstalledPackages(lines);
+            Exception? failure = null;
             if (IsInstalledListingFailure(p.ExitCode, [.. lines, error], packages.Count))
             {
-                var failure = new InvalidOperationException(
+                failure = new InvalidOperationException(
                     $"{Name} exited with code {p.ExitCode} while listing installed packages: {error.Trim()}"
                 );
                 Logger.Warn(failure.Message);
-                PackageListingScope.ReportIncomplete(failure);
             }
-            return packages;
+            return new(packages, failure);
         }
 
         // `scoop list` exits 1 with "There aren't any apps installed." when nothing is installed.

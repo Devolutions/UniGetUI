@@ -627,6 +627,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             Logger.Debug(
                 $"Could not read the installed entry of {DescribePackage(nativePackage)}: {ex.Message}"
             );
+            PackageListingScope.ReportIncomplete(ex);
             return null;
         }
     }
@@ -723,11 +724,12 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
             return newest.GetApplicableInstaller(Factory.CreateInstallOptions()) is null ? null : newest;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!PackageListingScope.IsListingOnly)
         {
             Logger.Debug(
                 $"Could not check whether {DescribePackage(nativePackage)} has an update that needs a reinstall: {ex.Message}"
             );
+            PackageListingScope.ReportIncomplete(ex);
             return null;
         }
     }
@@ -912,6 +914,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             Manager.InstalledPackagesGeneration
         );
 
+        // Remote scans must see changes made outside this process before the UI cache expires.
+        if (PackageListingScope.IsListingOnly)
+            return EnumerateLocalWinGetPackages(generations);
+
         return cacheSeconds is null
             ? TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
                 EnumerateLocalWinGetPackages,
@@ -991,6 +997,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         Logger.Warn(
             $"Skipping WinGet package while {operation}: {packageDescription}. {ex.GetType().Name}: {ex.Message}"
         );
+        PackageListingScope.ReportIncomplete(ex);
     }
 
     private static string DescribePackage(CatalogPackage nativePackage)

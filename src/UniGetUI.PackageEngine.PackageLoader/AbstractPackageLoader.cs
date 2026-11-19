@@ -82,6 +82,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         public CompletedPackageScan? LastCompletedScan => Volatile.Read(ref _lastCompletedScan);
 
         private TaskCompletionSource? _loadCompletion;
+        private readonly object _loadStateLock = new();
 
         private IReadOnlyDictionary<IPackageManager, TaskCompletionSource> _managerLoads =
             new Dictionary<IPackageManager, TaskCompletionSource>();
@@ -158,16 +159,18 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// </summary>
         public Task WaitForCurrentLoadAsync()
         {
-            var completion = Volatile.Read(ref _loadCompletion);
-            return IsLoading && completion is not null ? completion.Task : Task.CompletedTask;
+            lock (_loadStateLock)
+                return IsLoading && _loadCompletion is not null
+                    ? _loadCompletion.Task
+                    : Task.CompletedTask;
         }
 
         public Task WaitForManagerAsync(IPackageManager manager)
         {
-            var managerLoads = Volatile.Read(ref _managerLoads);
-            return IsLoading && managerLoads.TryGetValue(manager, out var load)
-                ? load.Task
-                : Task.CompletedTask;
+            lock (_loadStateLock)
+                return IsLoading && _managerLoads.TryGetValue(manager, out var load)
+                    ? load.Task
+                    : Task.CompletedTask;
         }
 
         private static void CompleteManagerLoads(
@@ -192,11 +195,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public void StopLoading(bool emitFinishSignal = true)
         {
-            bool listingOnly = IsLoading && LoadIsListingOnly;
-            LoadOperationIdentifier = -1;
-            IsLoaded = false;
-            IsLoading = false;
-            CompleteCurrentLoad();
+            bool listingOnly;
+            lock (_loadStateLock)
+            {
+                listingOnly = IsLoading && LoadIsListingOnly;
+                LoadOperationIdentifier = -1;
+                IsLoaded = false;
+                IsLoading = false;
+                CompleteCurrentLoad();
+            }
             if (emitFinishSignal)
                 InvokeFinishedLoadingEvent(listingOnly);
         }
@@ -227,20 +234,29 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// Marks the start of a load that a subclass runs itself, so that waiters and reloads
         /// requested meanwhile see a normal load with a completion to wait for.
         /// </summary>
-        protected TaskCompletionSource BeginExternalLoad()
+        protected TaskCompletionSource? BeginExternalLoad()
         {
-            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            Volatile.Write(ref _loadCompletion, completion);
-            AdvanceLoadGeneration();
-            LoadIsListingOnly = false;
-            IsLoading = true;
-            return completion;
+            lock (_loadStateLock)
+            {
+                if (IsLoading)
+                    return null;
+                var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                Volatile.Write(ref _loadCompletion, completion);
+                AdvanceLoadGeneration();
+                LoadIsListingOnly = false;
+                IsLoading = true;
+                return completion;
+            }
         }
 
         protected void EndExternalLoad(TaskCompletionSource completion)
         {
-            IsLoading = false;
-            CompleteLoad(completion);
+            lock (_loadStateLock)
+            {
+                if (ReferenceEquals(_loadCompletion, completion))
+                    IsLoading = false;
+                CompleteLoad(completion);
+            }
         }
 
         /// <summary>
@@ -272,6 +288,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
             TaskCompletionSource? completion = null;
             Dictionary<IPackageManager, TaskCompletionSource>? managerLoads = null;
             int current_identifier = 0;
+            long startGeneration = 0;
             bool finishWasAnnounced = false;
             try
             {
@@ -283,35 +300,39 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                 // A listing-only load skips what a normal load triggers (automatic updates,
                 // maintenance records), so a normal reload must not settle for it.
-                while (IsLoading && LoadIsListingOnly && !listingOnly)
+                while (true)
                 {
-                    Task running = WaitForCurrentLoadAsync();
-                    if (running.IsCompleted)
-                        break;
+                    Task running;
+                    lock (_loadStateLock)
+                    {
+                        if (!IsLoading)
+                        {
+                            LoadOperationIdentifier = new Random().Next();
+                            current_identifier = LoadOperationIdentifier;
+                            completion = new TaskCompletionSource(
+                                TaskCreationOptions.RunContinuationsAsynchronously
+                            );
+                            managerLoads = Managers.Distinct().ToDictionary(
+                                manager => manager,
+                                _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+                            );
+                            Volatile.Write(ref _loadCompletion, completion);
+                            Volatile.Write(ref _managerLoads, managerLoads);
+                            startGeneration = AdvanceLoadGeneration();
+                            LoadIsListingOnly = listingOnly;
+                            LastLoadReportedFailures = false;
+                            IsLoading = true;
+                            break;
+                        }
+                        if (!LoadIsListingOnly || listingOnly)
+                        {
+                            Logger.Debug($"[{this.GetType()}] Packages are already being loaded!!!");
+                            return;
+                        }
+                        running = _loadCompletion!.Task;
+                    }
                     await running;
                 }
-
-                if (IsLoading)
-                {
-                    Logger.Debug($"[{this.GetType()}] Packages are already being loaded!!!");
-                    return;
-                }
-
-                LoadOperationIdentifier = new Random().Next();
-                current_identifier = LoadOperationIdentifier;
-                completion = new TaskCompletionSource(
-                    TaskCreationOptions.RunContinuationsAsynchronously
-                );
-                Volatile.Write(ref _loadCompletion, completion);
-                managerLoads = Managers.Distinct().ToDictionary(
-                    manager => manager,
-                    _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
-                );
-                Volatile.Write(ref _managerLoads, managerLoads);
-                long startGeneration = AdvanceLoadGeneration();
-                LoadIsListingOnly = listingOnly;
-                IsLoading = true;
-                LastLoadReportedFailures = false;
                 StartedLoading?.Invoke(this, EventArgs.Empty);
 
                 RememberSelectionState();
@@ -401,25 +422,28 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     }
                 }
 
-                if (LoadOperationIdentifier == current_identifier)
+                bool finishedCurrentLoad;
+                lock (_loadStateLock)
                 {
-                    Volatile.Write(
-                        ref _lastCompletedScan,
-                        new CompletedPackageScan(
-                            PackageReference.Values.ToArray(),
-                            DateTime.UtcNow,
-                            succeededManagers,
-                            startGeneration
-                        )
-                    );
+                    finishedCurrentLoad = LoadOperationIdentifier == current_identifier;
+                    if (finishedCurrentLoad)
+                    {
+                        Volatile.Write(
+                            ref _lastCompletedScan,
+                            new CompletedPackageScan(
+                                PackageReference.Values.ToArray(),
+                                DateTime.UtcNow,
+                                succeededManagers,
+                                startGeneration
+                            )
+                        );
+                        IsLoading = false;
+                        LastLoadFinishedUtc = DateTime.UtcNow;
+                        IsLoaded = true;
+                    }
                 }
-
-                IsLoading = false;
-
-                if (LoadOperationIdentifier == current_identifier)
+                if (finishedCurrentLoad)
                 {
-                    LastLoadFinishedUtc = DateTime.UtcNow;
-                    IsLoaded = true;
                     finishWasAnnounced = true;
                     InvokeFinishedLoadingEvent(listingOnly);
                 }
@@ -428,15 +452,21 @@ namespace UniGetUI.PackageEngine.PackageLoader
             {
                 Logger.Error(ex);
 
-                if (
-                    !finishWasAnnounced
-                    && completion is not null
-                    && LoadOperationIdentifier == current_identifier
-                )
+                bool announceFailure;
+                lock (_loadStateLock)
                 {
-                    LastLoadReportedFailures = true;
-                    IsLoading = false;
+                    announceFailure = !finishWasAnnounced
+                        && completion is not null
+                        && LoadOperationIdentifier == current_identifier;
+                    if (announceFailure)
+                    {
+                        LastLoadReportedFailures = true;
+                        IsLoading = false;
+                    }
+                }
 
+                if (announceFailure)
+                {
                     try
                     {
                         InvokeFinishedLoadingEvent(listingOnly);

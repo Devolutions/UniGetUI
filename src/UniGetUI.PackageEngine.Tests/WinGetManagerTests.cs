@@ -1392,6 +1392,69 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal(1, snapshots);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NativeWinGetListingOnlyCallsDoNotReuseAnEarlierSnapshot(bool updates)
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        int snapshots = 0;
+        var helper = new NativeWinGetHelper(
+            new TestableWinGet(),
+            systemCliHelperFactory: null,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+            {
+                snapshots++;
+                return [];
+            }
+        );
+        Func<IReadOnlyList<Package>> list = updates
+            ? helper.GetAvailableUpdates_UnSafe
+            : helper.GetInstalledPackages_UnSafe;
+
+        Assert.Empty(list());
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Empty(list());
+        Assert.Empty(list());
+
+        Assert.Equal(3, snapshots);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NativeWinGetSkippedPackagesMarkTheListingIncompleteWithoutCliFallback(bool updates)
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        int fallbacks = 0;
+        var helper = new NativeWinGetHelper(
+            new TestableWinGet(),
+            systemCliHelperFactory: _ =>
+            {
+                fallbacks++;
+                throw new InvalidOperationException("A skipped row must not trigger CLI recovery.");
+            },
+            skipInitialization: true,
+            localPackagesProvider: () => [null!, null!]
+        );
+        Func<IReadOnlyList<Package>> list = updates
+            ? helper.GetAvailableUpdates_UnSafe
+            : helper.GetInstalledPackages_UnSafe;
+        List<Exception> failures = [];
+
+        using var tracking = PackageListingScope.TrackFailures(failures.Add);
+        Assert.Empty(list());
+        Assert.Equal(2, failures.Count);
+        Assert.All(failures, error => Assert.IsType<NullReferenceException>(error));
+
+        failures.Clear();
+        using var scope = PackageListingScope.EnterListingOnly();
+        var failure = Assert.Throws<NullReferenceException>(() => list());
+        Assert.Same(failure, Assert.Single(failures));
+        Assert.Equal(0, fallbacks);
+    }
+
     [Fact]
     public void NativeWinGetHelperTakesAFreshSnapshotOnceTheInstalledPackagesAreInvalidated()
     {

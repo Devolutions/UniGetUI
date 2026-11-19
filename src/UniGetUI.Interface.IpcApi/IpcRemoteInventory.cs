@@ -196,7 +196,9 @@ public static class IpcRemoteInventory
             row.IsUpgradable = row.NewVersion.Length != 0;
         }
 
-        var observed = installedPackages.Concat(updatePackages).Select(package => package.Source);
+        var observed = installedScan.Packages
+            .Concat(updateScan?.Packages ?? [])
+            .Select(package => package.Source);
         return new RemoteInventorySnapshot(
             installedScan.CompletedUtc,
             updatesComplete ? updateScan!.CompletedUtc : null,

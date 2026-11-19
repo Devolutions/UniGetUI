@@ -1142,6 +1142,57 @@ public sealed class WinGetCliParsingTests : IDisposable
         Assert.Throws<InvalidOperationException>(helper.GetAvailableUpdates_UnSafe);
     }
 
+    [Theory]
+    [InlineData("Failed when searching source: winget", false)]
+    [InlineData("Failed when opening source(s); try the 'source reset' command if the problem persists.", false)]
+    [InlineData("Failed in attempting to update the source: winget", true)]
+    [InlineData("Failed when searching source 'winget'; results will not be included: connection failed", true)]
+    public void AZeroExitSourceFailureKeepsPartialRowsButFailsListingOnly(string diagnostic, bool stderr)
+    {
+        string[] output =
+        [
+            "Name Id      Version Available Source",
+            "-------------------------------------",
+            "Git  Git.Git 2.45.0  2.46.0    winget",
+        ];
+        var helper = new WinGetCliHelper(
+            new WinGet(),
+            FailingCommandScript.Create(
+                _testRoot, 0, stderr ? diagnostic : "", stderr ? output : [diagnostic, .. output])
+        );
+        List<Exception> failures = [];
+
+        using var tracking = UniGetUI.PackageEngine.Interfaces.PackageListingScope.TrackFailures(failures.Add);
+        Assert.Equal("Git.Git", Assert.Single(helper.GetInstalledPackages_UnSafe()).Id);
+        var update = Assert.Single(helper.GetAvailableUpdates_UnSafe());
+        Assert.Equal("Git.Git", update.Id);
+        Assert.Equal("2.46.0", update.NewVersionString);
+        Assert.Equal(2, failures.Count);
+
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidOperationException>(helper.GetInstalledPackages_UnSafe);
+        Assert.Throws<InvalidOperationException>(helper.GetAvailableUpdates_UnSafe);
+    }
+
+    [Theory]
+    [InlineData(0, "No applicable upgrade found.")]
+    [InlineData(0, "No installed package found matching input criteria.")]
+    [InlineData(unchecked((int)0x8A150014), "No installed package found matching input criteria.")]
+    public void AnEmptySuccessfulCliListingIsNotASourceFailure(int exitCode, string output)
+    {
+        var helper = new WinGetCliHelper(
+            new WinGet(),
+            FailingCommandScript.Create(_testRoot, exitCode, "", output)
+        );
+        List<Exception> failures = [];
+
+        using var tracking = UniGetUI.PackageEngine.Interfaces.PackageListingScope.TrackFailures(failures.Add);
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
+        Assert.Empty(helper.GetInstalledPackages_UnSafe());
+        Assert.Empty(helper.GetAvailableUpdates_UnSafe());
+        Assert.Empty(failures);
+    }
+
     [Fact]
     public void ARecordThatFailsToParseKeepsOtherRowsNormallyButFailsListingOnly()
     {

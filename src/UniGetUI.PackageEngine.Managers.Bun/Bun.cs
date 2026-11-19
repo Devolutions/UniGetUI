@@ -160,9 +160,12 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
         // Bun exits 1 with "missing lockfile" when the global package.json has never been installed
         // into; that means nothing is installed, not a failed listing.
-        private void ThrowIfListingFailed(int exitCode, string error, string globalDir)
+        internal void ThrowIfListingFailed(int exitCode, string error, string globalDir)
         {
-            if (exitCode == 0 || !HasGlobalLockfile(globalDir))
+            if (exitCode == 0
+                || (exitCode == 1
+                    && error.Contains("missing lockfile", StringComparison.OrdinalIgnoreCase)
+                    && !HasGlobalLockfile(globalDir)))
                 return;
 
             var failure = new InvalidOperationException(

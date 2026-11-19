@@ -295,7 +295,7 @@ public partial class MainWindow : Window
         }
 
         SetupMicaAndAccentBorder();
-        UpdateWindowCornerPreference();
+        UpdateDwmFrame();
 
         ActualThemeVariantChanged += (_, _) =>
         {
@@ -1548,12 +1548,22 @@ public partial class MainWindow : Window
         ApplyWindowBorderColor(handle);
     }
 
-    private void UpdateWindowCornerPreference()
+    private void UpdateDwmFrame()
     {
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
             return;
 
-        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
+        int frame = WindowState == WindowState.Normal ? 1 : 0;
+        var margins = new NativeMethods.MARGINS
+        {
+            cxLeftWidth = frame,
+            cxRightWidth = frame,
+            cyTopHeight = frame,
+            cyBottomHeight = frame,
+        };
+        NativeMethods.DwmExtendFrameIntoClientArea(handle, ref margins);
+
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
             return;
 
         int corner = WindowState == WindowState.Normal ? DWMWCP_ROUND : DWMWCP_DONOTROUND;
@@ -1603,7 +1613,7 @@ public partial class MainWindow : Window
         if ((msg == WM_SHOWWINDOW || (msg == WM_SIZE && (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)))
             && Instance is { } cornerOwner)
         {
-            Dispatcher.UIThread.Post(cornerOwner.UpdateWindowCornerPreference);
+            Dispatcher.UIThread.Post(cornerOwner.UpdateDwmFrame);
         }
 
         if (msg == WM_NCPAINT)
@@ -1849,6 +1859,18 @@ public partial class MainWindow : Window
 
         [DllImport("dwmapi.dll")]
         public static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int value, int size);
+
+        [LibraryImport("dwmapi.dll")]
+        public static partial int DwmExtendFrameIntoClientArea(nint hwnd, ref MARGINS pMarInset);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct STYLESTRUCT

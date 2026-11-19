@@ -426,6 +426,9 @@ function Wait-ForInstalledPackage {
             @($response.packages | Where-Object {
                     $_.id -eq $Fixture.packageId -and (
                         [string]::IsNullOrWhiteSpace($ExpectedVersion) -or $_.version -eq $ExpectedVersion
+                    ) -and (
+                        -not $Fixture.ContainsKey('expectedReportedScope') -or
+                        $_.reportedScope -eq $Fixture.expectedReportedScope
                     )
                 }).Count -gt 0
         } `

@@ -69,6 +69,16 @@ When the client **does** receive an explicit override:
 - it connects to that transport choice instead of auto-selecting the newest session
 - it waits up to 5 seconds for a matching persisted token to appear
 
+## Devolutions Agent registration
+
+On Windows, an unelevated GUI session separately attempts to register with the local Devolutions Agent service.
+Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
+This connection is separate from the local IPC API and remains active when that API is disabled.
+The registration connection answers `ListManagers`, reports installed packages, updates, sources, and version requests as unavailable, and rejects package operations without starting them.
+Its `ListManagers` items carry only a fixed set of fields, with `executablePath` and `executableArguments` empty and `health` at its unknown default, so a field added to the local manager endpoint is not sent to the Agent.
+After a lost connection it retries with a growing delay, which starts over only when the lost session had stayed registered for at least 30 seconds.
+Unavailable remote operations never fall back to local package execution.
+
 ## Authentication
 
 | Endpoint | Auth |
@@ -224,6 +234,11 @@ These keys are used by package-related endpoints such as install, update, uninst
 | `architecture` | Architecture override |
 | `location` | Install location override |
 | `outputPath` | Download output path. Defaults to the download location configured in the settings, or to the user's Downloads folder |
+
+The `scope` parameter accepts `user` or `local` for the user scope and `machine` or `global` for the machine scope, case-insensitively.
+These manager-relative labels do not establish operating-system ownership.
+When installed rows have different reported scopes, update, uninstall, and reinstall requests must select a matching scope rather than guessing.
+Pip reports `machine` for its installed rows without distinguishing where each package was installed, so that label alone cannot establish its scope.
 
 ### App navigation query parameters
 
@@ -390,11 +405,15 @@ them first.
 | `POST` | `/uniget/v1/bundles/remove` | Yes | JSON body: bundle package request body | `bundle remove` |
 | `POST` | `/uniget/v1/bundles/install` | Yes | JSON body: bundle install request body | `bundle install` |
 
+An explicitly requested scope on a bundle entry is used for its installation while other inherited options continue to follow manager defaults.
+
 ### Packages
 
 Every package payload carries `systemRestartPending`: `true` when that package is one of the
 packages this machine is waiting on a restart for. See
 [Pending machine restarts](#pending-machine-restarts).
+
+`reportedScope` preserves the scope value assigned when the package was listed, or `null` when no scope was supplied; it does not establish user or machine ownership.
 
 | Method | Path | Auth | Parameters/body | CLI equivalent | Notes |
 | --- | --- | --- | --- | --- | --- |

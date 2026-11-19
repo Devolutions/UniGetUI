@@ -11,6 +11,7 @@ namespace UniGetUI.PackageEngine.Serializable
         private const string INTERACTIVE = "InteractiveInstallation";
         private const string AS_ADMIN = "RunAsAdministrator";
         private const string PRERELEASE = "PreRelease";
+        private const string BUNDLE_SCOPE_EXPLICIT = "BundleScopeIsExplicit";
         private const string SKIP_MINOR = "SkipMinorUpdates";
         private const string SKIP_MINOR_LEVEL = "SkipMinorUpdatesLevel";
         private const string SKIP_MAJOR = "SkipMajorUpdates";
@@ -47,6 +48,7 @@ namespace UniGetUI.PackageEngine.Serializable
             { INTERACTIVE, false },
             { AS_ADMIN, false },
             { PRERELEASE, false },
+            { BUNDLE_SCOPE_EXPLICIT, false },
             { SKIP_MINOR, false },
             { SKIP_MAJOR, false },
             { REMOVE_DATA_UNINST, false },
@@ -104,6 +106,11 @@ namespace UniGetUI.PackageEngine.Serializable
         {
             get => _boolVal[PRERELEASE];
             set => _boolVal[PRERELEASE] = value;
+        }
+        public bool BundleScopeIsExplicit
+        {
+            get => _boolVal[BUNDLE_SCOPE_EXPLICIT];
+            set => _boolVal[BUNDLE_SCOPE_EXPLICIT] = value;
         }
         public bool SkipMinorUpdates
         {

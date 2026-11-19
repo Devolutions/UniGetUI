@@ -314,6 +314,35 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Fact]
+    public void ParseAvailableUpdatesKeepsARefusedUpdateHiddenWhenTheInstalledVersionIsUnknown()
+    {
+        var manager = new WinGet();
+        var refused = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Fabrikam.Refused")
+            .WithVersion("Unknown")
+            .WithNewVersion("2.0.0")
+            .Build();
+        string[] listing = Lines(
+            """
+            Name    Id               Version Available Source
+            --------------------------------------------------
+            Refused Fabrikam.Refused Unknown 2.0.0     winget
+            Other   Fabrikam.Other   Unknown 2.0.0     winget
+            """
+        );
+
+        Assert.Equal(2, WinGetCliHelper.ParseAvailableUpdates(manager, listing).Count);
+
+        manager.OperationHelper.GetResult(refused, OperationType.Update, [], unchecked((int)0x8A150114));
+
+        IReadOnlyList<Package> relisted = WinGetCliHelper.ParseAvailableUpdates(manager, listing);
+        Assert.Single(relisted);
+        Assert.Equal("Fabrikam.Other", relisted[0].Id);
+        Assert.Single(WinGetCliHelper.ParseAvailableUpdates(manager, listing));
+    }
+
+    [Fact]
     public void ParseInstalledPackagesFlagsRowsWhoseVersionWinGetCouldNotRead()
     {
         var manager = new WinGet();

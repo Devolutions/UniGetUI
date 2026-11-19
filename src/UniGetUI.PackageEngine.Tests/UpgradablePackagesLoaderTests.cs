@@ -198,6 +198,53 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
         Assert.False(await loader.EvaluatePackageAsync(supersededPackage));
     }
 
+    [Fact]
+    public async Task IgnoreUpdatesAsync_RemovesTheListedUpdateWhenGivenAnotherInstanceOfIt()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+        var listed = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var installed = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+        await loader.AddForeign(listed);
+
+        await loader.IgnoreUpdatesAsync(installed);
+
+        Assert.False(loader.Contains(listed));
+        Assert.Same(listed, loader.IgnoredPackages["Contoso.Tool"]);
+        Assert.True(await listed.HasUpdatesIgnoredAsync());
+    }
+
+    [Fact]
+    public async Task IgnoreUpdatesAsync_RecordsTheRuleEvenWhenNoUpdateIsListed()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+        var installed = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+
+        await loader.IgnoreUpdatesAsync(installed, "2.0.0");
+
+        Assert.Empty(loader.IgnoredPackages);
+        Assert.True(await installed.HasUpdatesIgnoredAsync("2.0.0"));
+        Assert.False(await installed.HasUpdatesIgnoredAsync("3.0.0"));
+    }
+
     // Regression test for issue #5293: the installed version carried a Homebrew build revision
     // ("18.4_1"), which the version parser read as 18.41. That compared as greater than the
     // available 18.6, so the loader discarded the update and it never reached the UI.

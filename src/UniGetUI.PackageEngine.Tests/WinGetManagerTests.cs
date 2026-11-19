@@ -2233,6 +2233,40 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    [Fact]
+    public void WinGetStopsOfferingARefusedUpdateWithinASkippedMajor()
+    {
+        var manager = new FixedVersionsWinGet(["2.0.0", "1.1.0", "1.0.0"]);
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var listed = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.RefusedWithinMajor")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, SkipMajorUpdates = true },
+            listed
+        );
+
+        var offered = manager.ResolveSkippedMajorUpdate(listed);
+        Assert.NotNull(offered);
+        Assert.Equal("1.1.0", offered.NewVersionString);
+        Assert.True(offered.OverridenOptions.PinUpdateToNewVersion);
+
+        var veredict = manager.OperationHelper.GetResult(
+            offered,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150114)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(listed));
+        Assert.Null(manager.ResolveSkippedMajorUpdate(listed));
+        Assert.False(listed.OverridenOptions.PinUpdateToNewVersion);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -4365,6 +4399,112 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
         Assert.False(operation.FailedBecauseApplicationRunning);
         Assert.False(PackageOperation.CanRetryClosingRunningApp(operation));
+        Assert.False(PackageOperation.CanIgnoreUpdatesAfterFailure(operation));
+    }
+
+    [Fact]
+    public void WinGetRecognisesOnlyTheUpgradeNotSupportedCode()
+    {
+        Assert.True(WinGetPkgOperationHelper.ReportedUpdateNotSupported(unchecked((int)0x8A150114)));
+        Assert.False(WinGetPkgOperationHelper.ReportedUpdateNotSupported(unchecked((int)0x8A150014)));
+        Assert.False(WinGetPkgOperationHelper.ReportedUpdateNotSupported(0));
+    }
+
+    [Fact]
+    public async Task WinGetUpdateNotSupportedExplainsTheFailureAndOffersToIgnoreUpdates()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.SelfUpdatingTool")
+            .WithName("MSYS2")
+            .WithVersion("20260611")
+            .WithNewVersion("20260927")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(
+            unchecked((int)0x8A150114),
+            [
+                "Found MSYS2 [Contoso.SelfUpdatingTool] Version 20260927",
+                "The package cannot be upgraded using winget. Please use the method provided by the publisher for upgrading this package.",
+            ]
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.Contains("MSYS2", operation.Metadata.FailureMessage);
+        Assert.False(operation.Metadata.FailureMessage.EndsWith('.'));
+        Assert.True(operation.FailedBecauseUpdateNotSupported);
+        Assert.True(PackageOperation.CanIgnoreUpdatesAfterFailure(operation));
+        Assert.False(PackageOperation.IsWorthRetryingInBulk(operation));
+        Assert.False(operation.FailedBecauseApplicationRunning);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        veredict = await operation.ProbeProcessVeredict(26, []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.False(PackageOperation.CanIgnoreUpdatesAfterFailure(operation));
+        Assert.True(PackageOperation.IsWorthRetryingInBulk(operation));
+    }
+
+    [Fact]
+    public void WinGetHidesARefusedUpdateOnlyUntilANewerVersionIsOffered()
+    {
+        var manager = new WinGet();
+        var refused = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.RefusedUpdate")
+            .WithVersion("20260611")
+            .WithNewVersion("20260927")
+            .Build();
+        var newer = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.RefusedUpdate")
+            .WithVersion("20260611")
+            .WithNewVersion("20261025")
+            .Build();
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(refused));
+
+        var veredict = manager.OperationHelper.GetResult(
+            refused,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150114)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(refused));
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(newer));
+    }
+
+    [Fact]
+    public void WinGetDoesNotHideAnythingWhenAnInstallIsRefused()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.RefusedInstall")
+            .WithVersion("20260611")
+            .WithNewVersion("20260927")
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Install,
+            [],
+            unchecked((int)0x8A150114)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+        Assert.Null(
+            manager.OperationHelper.GetFailureExplanation(package, OperationType.Install, [], unchecked((int)0x8A150114))
+        );
+        Assert.True(manager.OperationHelper.UpdateWasRefusedByPublisher([], unchecked((int)0x8A150114)));
+        Assert.False(manager.OperationHelper.UpdateWasRefusedByPublisher([], unchecked((int)0x8A150014)));
     }
 
     [Fact]
@@ -4481,6 +4621,14 @@ public sealed class WinGetManagerTests : IDisposable
             .GetProperty(nameof(WinGet.SelectedCliToolKind), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
             .GetSetMethod(nonPublic: true)!
             .Invoke(manager, [kind]);
+    }
+
+    private sealed class FixedVersionsWinGet(IReadOnlyList<string> versions) : WinGet
+    {
+        protected override IReadOnlyList<string> ListVersionsForUpdateSelection(
+            IPackage update,
+            bool includePreReleases
+        ) => versions;
     }
 
     private sealed class TestableWinGet : WinGet

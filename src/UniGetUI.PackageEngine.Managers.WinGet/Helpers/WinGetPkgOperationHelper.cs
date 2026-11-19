@@ -660,6 +660,19 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             return OperationVeredict.Failure;
         }
 
+        if (ReportedUpdateNotSupported(returnCode))
+        {
+            if (operation is OperationType.Update)
+            {
+                Logger.Warn(
+                    $"WinGet refuses to update {package.Id}: its manifest says it must be updated another way; "
+                    + $"hiding the update to {package.NewVersionString} until a newer version is available"
+                );
+                SuppressPhantomUpgrade(package);
+            }
+            return OperationVeredict.Failure;
+        }
+
         if (ReportedUpdateNotApplicable(processOutput, returnCode))
         { // The update is not applicable to the platform
             // The scope/architecture we forced may exclude the only installer the package ships
@@ -940,6 +953,26 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 line.Contains(message, StringComparison.OrdinalIgnoreCase)
             )
         );
+
+    internal static bool ReportedUpdateNotSupported(int returnCode) =>
+        (uint)returnCode is 0x8A150114;
+
+    public override bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode) =>
+        ReportedUpdateNotSupported(returnCode);
+
+    public override string? GetFailureExplanation(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options = null
+    ) =>
+        operation is OperationType.Update && ReportedUpdateNotSupported(returnCode)
+            ? CoreTools.Translate(
+                "WinGet cannot update {package}. Its publisher requires updating it another way, for example from within the app itself",
+                new Dictionary<string, object?> { { "package", package.Name } }
+            )
+            : null;
 
     internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>
         (uint)returnCode is 0x8A150101 or 0x8A150103 or 0x8A150111;

@@ -259,6 +259,10 @@ Every operation payload carries `systemRestartRequired`: `true` when the operati
 the machine must be restarted before the change takes effect. See
 [Pending machine restarts](#pending-machine-restarts).
 
+A failed update also carries `updateRefusedByPublisher`: `true` when the package manager refused the
+update because the package's publisher requires it to be updated another way (WinGet's
+`UpgradeBehavior: deny`). Retrying cannot succeed; `package ignored add` stops it from being offered.
+
 | Method | Path | Auth | Parameters/body | CLI equivalent |
 | --- | --- | --- | --- | --- |
 | `GET` | `/uniget/v1/operations` | Yes | None | `operation list` |

@@ -170,12 +170,8 @@ internal static class TuiPackageActions
 
     // ─── Ignored updates ────────────────────────────────────────────────────
 
-    public static async Task IgnoreUpdatesAsync(IPackage package, string version = "*")
-    {
-        await package.AddToIgnoredUpdatesAsync(version);
-        UpgradablePackagesLoader.Instance.IgnoredPackages[package.Id] = package;
-        UpgradablePackagesLoader.Instance.Remove(package);
-    }
+    public static Task IgnoreUpdatesAsync(IPackage package, string version = "*") =>
+        UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(package, version);
 
     public static Task SkipVersionAsync(IPackage package) => IgnoreUpdatesAsync(package, package.NewVersionString);
 
@@ -197,13 +193,7 @@ internal static class TuiPackageActions
             return false;
         }
 
-        await package.AddToIgnoredUpdatesAsync();
-        if (package.GetUpgradablePackage() is { } upgradable)
-        {
-            UpgradablePackagesLoader.Instance.IgnoredPackages[upgradable.Id] = upgradable;
-            UpgradablePackagesLoader.Instance.Remove(upgradable);
-        }
-
+        await UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(package);
         return true;
     }
 

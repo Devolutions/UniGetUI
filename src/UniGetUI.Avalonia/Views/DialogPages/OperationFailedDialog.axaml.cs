@@ -8,6 +8,7 @@ using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Operations;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
@@ -41,11 +42,13 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
         };
         closeButton.Click += (_, _) => Close();
 
-        var retryButton = BuildRetryButton(operation);
+        var primaryButton = operation is PackageOperation pkgOp && PackageOperation.CanIgnoreUpdatesAfterFailure(pkgOp)
+            ? BuildIgnoreUpdatesButton(pkgOp)
+            : BuildRetryButton(operation);
 
-        ButtonsLayout.Children.Add(retryButton);
+        ButtonsLayout.Children.Add(primaryButton);
         ButtonsLayout.Children.Add(closeButton);
-        Grid.SetColumn(retryButton, 0);
+        Grid.SetColumn(primaryButton, 0);
         Grid.SetColumn(closeButton, 1);
     }
 
@@ -80,6 +83,30 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
     {
         base.OnOpened(e);
         Dispatcher.UIThread.Post(OutputText.ScrollToBottom, DispatcherPriority.Background);
+    }
+
+    private Control BuildIgnoreUpdatesButton(PackageOperation operation)
+    {
+        var button = new SplitButton
+        {
+            Content = CoreTools.Translate("Ignore updates for this package"),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            Classes = { "operation-dialog-action" },
+        };
+        button.Click += async (_, _) =>
+        {
+            Close();
+            await UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(operation.Package);
+        };
+
+        var flyout = new MenuFlyout();
+        flyout.Items.Add(MenuItem(CoreTools.Translate("Retry"),
+            () => { operation.Retry(AbstractOperation.RetryMode.Retry); Close(); }));
+        foreach (var item in CollectRetryMenuItems(operation))
+            flyout.Items.Add(item);
+        button.Flyout = flyout;
+        return button;
     }
 
     private Control BuildRetryButton(AbstractOperation operation)

@@ -76,6 +76,8 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
                 SupportsCustomScopes = true,
+                // Installed and update rows are all labelled machine; pip list does not say where a package lives
+                ReportsReliableInstalledScope = false,
                 CanDownloadInstaller = true,
                 SupportsPreRelease = true,
                 SerializesOperations = true,

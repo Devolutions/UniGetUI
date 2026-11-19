@@ -594,6 +594,8 @@ Windows only. A folder rule names the subfolder of the current user's Start Menu
 | `bundle remove` | `--id <package-id>` | `--manager <id>`, `--source <source>`, `--version <version>`, `--scope <scope>`, `--pre-release`, `--selection <mode>` | Removes matching package entries from the bundle. |
 | `bundle install` | None | `--include-installed true\|false`, `--elevated true\|false`, `--interactive true\|false`, `--skip-hash true\|false` | Installs the bundle through UniGetUI’s shared operation pipeline. |
 
+An explicitly requested scope on a bundle entry is used for its installation while other inherited options continue to follow manager defaults.
+
 ### Packages
 
 | Command | Required options | Optional options | Notes |
@@ -615,6 +617,8 @@ Windows only. A folder rule names the subfolder of the current user's Start Menu
 | `package ignored remove` | `--id <package-id>` | `--manager <id>`, `--version <version>`, `--source <source>` | Removes an ignored-update rule. |
 | `package update-all` | None | `--manager <id>`, `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Queues an update for every available update and returns their operation ids. With `--wait true`, waits for all of them (default timeout 3600 seconds) and exits with `1` if any did not succeed or the wait timed out. Works in headless sessions. |
 | `package update-manager` | `--manager <id>` | `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Same as `package update-all --manager <id>`. |
+
+For package operations, `--scope` accepts `user` or `local` and `machine` or `global` case-insensitively; these labels are manager-relative and do not establish operating-system ownership.
 
 ## Headless behavior
 

@@ -21,6 +21,7 @@ using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages;
+using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -259,6 +260,7 @@ public partial class MainWindow : Window
         Resized += (_, _) => _ = SaveGeometryAsync();
         ModalLayer.SizeChanged += (_, _) => UpdateModalSurfaceSize();
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
+        IdleMemoryTrimmer.IsAppInBackground = static () => !_isOnScreen;
         Activated += (_, _) => SetFocusedCaretVisible(true);
         Deactivated += (_, _) => SetFocusedCaretVisible(false);
         this.GetObservable(WindowStateProperty).SubscribeValue(state => { SyncShowWindowState(state); UpdateOnScreenState(); _ = SaveGeometryAsync(); });
@@ -295,7 +297,7 @@ public partial class MainWindow : Window
         }
 
         SetupMicaAndAccentBorder();
-        UpdateWindowCornerPreference();
+        UpdateDwmFrame();
 
         ActualThemeVariantChanged += (_, _) =>
         {
@@ -1548,12 +1550,22 @@ public partial class MainWindow : Window
         ApplyWindowBorderColor(handle);
     }
 
-    private void UpdateWindowCornerPreference()
+    private void UpdateDwmFrame()
     {
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
             return;
 
-        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
+        int frame = WindowState == WindowState.Normal ? 1 : 0;
+        var margins = new NativeMethods.MARGINS
+        {
+            cxLeftWidth = frame,
+            cxRightWidth = frame,
+            cyTopHeight = frame,
+            cyBottomHeight = frame,
+        };
+        NativeMethods.DwmExtendFrameIntoClientArea(handle, ref margins);
+
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
             return;
 
         int corner = WindowState == WindowState.Normal ? DWMWCP_ROUND : DWMWCP_DONOTROUND;
@@ -1603,7 +1615,7 @@ public partial class MainWindow : Window
         if ((msg == WM_SHOWWINDOW || (msg == WM_SIZE && (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)))
             && Instance is { } cornerOwner)
         {
-            Dispatcher.UIThread.Post(cornerOwner.UpdateWindowCornerPreference);
+            Dispatcher.UIThread.Post(cornerOwner.UpdateDwmFrame);
         }
 
         if (msg == WM_NCPAINT)
@@ -1849,6 +1861,18 @@ public partial class MainWindow : Window
 
         [DllImport("dwmapi.dll")]
         public static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int value, int size);
+
+        [LibraryImport("dwmapi.dll")]
+        public static partial int DwmExtendFrameIntoClientArea(nint hwnd, ref MARGINS pMarInset);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct STYLESTRUCT
@@ -2503,8 +2527,19 @@ public partial class MainWindow : Window
 
     private void UpdateOnScreenState()
     {
+        bool wasOnScreen = _isOnScreen;
         _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
         BackgroundEfficiencyMode.Refresh();
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        // Stop the open page's periodic work while nobody can see it (see SuspendForBackground).
+        // Suspending again is harmless, and lets a minimized window that is then hidden to the
+        // tray release its web views too.
+        if (!_isOnScreen)
+            viewModel.SuspendForBackground(releaseWebViews: !IsVisible);
+        else if (!wasOnScreen)
+            viewModel.ResumeFromBackground();
     }
 
     private void SyncShowWindowState(WindowState state)
@@ -2567,12 +2602,12 @@ public partial class MainWindow : Window
         bool ipcStopped = false;
         try
         {
-            await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            await AvaloniaBootstrapper.StopBackgroundServicesAsync().WaitAsync(TimeSpan.FromSeconds(5));
             ipcStopped = true;
         }
         catch (TimeoutException ex)
         {
-            Logger.Warn("Timed out while stopping Avalonia IPC API during shutdown");
+            Logger.Warn("Timed out while stopping the Agent registration and IPC API during shutdown");
             Logger.Warn(ex);
         }
         catch (Exception ex)

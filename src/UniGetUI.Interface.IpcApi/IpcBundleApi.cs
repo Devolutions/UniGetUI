@@ -279,13 +279,11 @@ public static class IpcBundleApi
             }
 
             var registeredPackage = await imported.RegisterAndGetPackageAsync();
-            var bundleOptions = await imported.GetInstallOptions();
-            var options = await InstallOptionsFactory.LoadApplicableAsync(
+            var options = await imported.LoadOptionsForInstallationAsync(
                 registeredPackage,
                 elevated: request.Elevated,
                 interactive: request.Interactive,
-                no_integrity: request.SkipHash,
-                overridePackageOptions: bundleOptions
+                noIntegrity: request.SkipHash
             );
 
             using var operation = new InstallPackageOperation(registeredPackage, options);
@@ -424,6 +422,8 @@ public static class IpcBundleApi
         }
 
         var serialized = await package.AsSerializableAsync();
+        if (!serialized.InstallationOptions.OverridesNextLevelOpts && !string.IsNullOrWhiteSpace(request.Scope))
+            serialized.InstallationOptions.BundleScopeIsExplicit = true;
         IpcPackageApi.ApplyRequestedOptions(serialized.InstallationOptions, packageRequest);
         return new ImportedPackage(serialized, package.Manager, package.Source);
     }

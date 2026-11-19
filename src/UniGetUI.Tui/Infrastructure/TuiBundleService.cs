@@ -202,16 +202,21 @@ internal static class TuiBundleService
     public static async Task<int> InstallAsync(IReadOnlyList<IPackage> packages, bool? elevated = null,
         bool? interactive = null, bool? skipHash = null)
     {
-        var toInstall = new List<IPackage>();
+        int started = 0;
         foreach (var package in packages)
         {
             if (package is ImportedPackage imported)
-                toInstall.Add(await imported.RegisterAndGetPackageAsync());
+            {
+                var registered = await imported.RegisterAndGetPackageAsync();
+                var options = await imported.LoadOptionsForInstallationAsync(
+                    registered, elevated, interactive, skipHash);
+                if (TuiPackageActions.StartInstall(registered, options)) started++;
+            }
             else
                 Logger.Warn($"Skipping incompatible bundle package Id={package.Id}");
         }
 
-        return await TuiPackageActions.InstallAsync(toInstall, elevated, interactive, skipHash);
+        return started;
     }
 
     public static IPackage DeserializePackage(SerializablePackage raw)

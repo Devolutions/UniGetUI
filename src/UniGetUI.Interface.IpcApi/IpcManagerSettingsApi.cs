@@ -284,7 +284,10 @@ public static class IpcManagerSettingsApi
         return ToManagerInfo(manager);
     }
 
-    private static IpcManagerInfo ToManagerInfo(IPackageManager manager)
+    internal static IpcManagerInfo ToManagerInfo(IPackageManager manager) =>
+        ToManagerInfo(manager, includeHealth: true);
+
+    internal static IpcManagerInfo ToManagerInfo(IPackageManager manager, bool includeHealth)
     {
         return new IpcManagerInfo
         {
@@ -313,7 +316,7 @@ public static class IpcManagerSettingsApi
                 SupportsCustomSources = manager.Capabilities.SupportsCustomSources,
                 MustInstallSourcesAsAdmin = manager.Capabilities.Sources.MustBeInstalledAsAdmin,
             },
-            Health = IpcManagerHealthInfo.From(manager),
+            Health = includeHealth ? IpcManagerHealthInfo.From(manager) : new(),
         };
     }
 

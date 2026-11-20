@@ -51,6 +51,7 @@ public sealed class IpcOperationScopeTests : IDisposable
         IPackageManager? manager = null
     )
     {
+        await IpcPackageApi.WaitForPendingSnapshotRefreshAsync();
         manager ??= new Pip();
         _ = new DiscoverablePackagesLoader([manager]);
         var upgradable = new UpgradablePackagesLoader([manager]);

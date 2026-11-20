@@ -3205,6 +3205,32 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public void EndingTheLastAdmittedWorkReportsTheEngineIdle()
+    {
+        int raised = 0;
+        EventHandler<EventArgs> handler = (_, _) => raised++;
+        AbstractOperation.BecameIdle += handler;
+        try
+        {
+            Assert.True(AbstractOperation.TryBeginWork());
+            Assert.True(AbstractOperation.TryBeginWork());
+            Assert.False(AbstractOperation.IsIdle());
+
+            AbstractOperation.EndWork();
+            Assert.Equal(0, raised);
+            Assert.False(AbstractOperation.IsIdle());
+
+            AbstractOperation.EndWork();
+            Assert.Equal(1, raised);
+            Assert.True(AbstractOperation.IsIdle());
+        }
+        finally
+        {
+            AbstractOperation.BecameIdle -= handler;
+        }
+    }
+
+    [Fact]
     public void AdmittedWorkAndTheHoldExcludeEachOther()
     {
         Assert.True(AbstractOperation.TryBeginWork());

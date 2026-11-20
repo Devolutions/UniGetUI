@@ -12,6 +12,8 @@ public abstract partial class AbstractOperation
     /// </summary>
     public static event EventHandler<EventArgs>? QueueDrained;
 
+    public static event EventHandler<EventArgs>? BecameIdle;
+
     public static class RetryMode
     {
         public const string NoRetry = "";

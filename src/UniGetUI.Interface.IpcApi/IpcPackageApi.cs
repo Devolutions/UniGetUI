@@ -137,6 +137,7 @@ public static class IpcPackageApi
     {
         var refresher = new IpcSnapshotRefresher(AbstractOperation.IsIdle, RefreshPackageSnapshotsAsync);
         AbstractOperation.QueueDrained += (_, _) => refresher.StartIfIdle();
+        AbstractOperation.BecameIdle += (_, _) => refresher.StartIfIdle();
         return refresher;
     }
 

@@ -85,6 +85,8 @@ public abstract partial class AbstractOperation : IDisposable
     {
         lock (AdmissionLock)
             _admittedWork--;
+        if (IsIdle())
+            BecameIdle?.Invoke(null, EventArgs.Empty);
     }
     protected bool QUEUE_ENABLED;
     protected bool FORCE_HOLD_QUEUE;

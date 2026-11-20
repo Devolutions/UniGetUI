@@ -49,8 +49,16 @@ internal sealed class AboutDialog : TuiDialog
         _form.AddHeader(CoreTools.Translate("Translators"));
         _form.AddNote(Safe(() => string.Join(", ", LanguageData.TranslatorsList.Select(p => $"{p.Name} ({p.Language})"))));
         _form.AddHeader(CoreTools.Translate("Third-party licenses"));
-        foreach (var (name, license) in LicenseData.LicenseNames.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
-            _form.AddNote($"{name}: {license}" + (LicenseData.HomepageUrls.TryGetValue(name, out var url) ? $"  {url}" : ""));
+        var components = ThirdPartyNotices.Load();
+        if (components.Count == 0)
+            _form.AddNote(CoreTools.Translate("The third-party notices are not included in this build of UniGetUI."));
+        if (File.Exists(ThirdPartyNotices.TextFilePath))
+        {
+            _form.AddNote(ThirdPartyNotices.TextFilePath);
+            _form.AddButton(CoreTools.Translate("Open the full notices file"), () => TuiPackageActions.OpenExternally(ThirdPartyNotices.TextFilePath));
+        }
+        foreach (var component in components)
+            _form.AddNote($"{component.Name} {component.Version}: {component.License}" + (string.IsNullOrWhiteSpace(component.Source) ? "" : $"  {component.Source}"));
 
         AddButton(CoreTools.Translate("Close"), () => Close(null));
     }

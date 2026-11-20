@@ -1,0 +1,9 @@
+{
+  "packages": {
+    "Devolutions.*": { "reason": "Internal Devolutions packages" },
+    "@devolutions/*": { "reason": "Internal Devolutions npm packages" },
+    "libDevolutions*": { "reason": "Internal Devolutions native libraries" },
+    "UniGetUIMacNotificationBridge": { "reason": "Our own macOS notification bridge, built from scripts/macos/UniGetUIMacNotificationBridge.m by UniGetUI.Avalonia.csproj; a .dylib carries no company name to recognize it by" },
+    "getfilesiginforedist.dll": { "reason": "Native file of Microsoft.Security.Extensions, copied into Devolutions.UniGetUI.Elevator without file properties; declared in config/manual-components.windows.json" }
+  }
+}

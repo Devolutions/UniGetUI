@@ -1,0 +1,49 @@
+{
+  "packages": {
+    "Avalonia.Angle.Windows.Natives": {
+      "license": "BSD-3-Clause",
+      "notices": [
+        { "name": "xxHash", "path": "config/texts/Avalonia.Angle.Windows.Natives/xxhash.txt" },
+        { "name": "zlib", "path": "config/texts/Avalonia.Angle.Windows.Natives/zlib.txt" },
+        { "name": "Abseil", "path": "config/texts/Avalonia.Angle.Windows.Natives/abseil.txt" },
+        { "name": "astc-encoder", "path": "config/texts/Avalonia.Angle.Windows.Natives/astc-encoder.txt" },
+        { "name": "LLVM libc++", "path": "config/texts/Avalonia.Angle.Windows.Natives/libc++.txt" }
+      ]
+    },
+    "HarfBuzzSharp.NativeAssets.Linux": {
+      "notices": [ { "name": "HarfBuzz and its dependencies", "path": "config/texts/SkiaSharp.NativeAssets/THIRD-PARTY-NOTICES.txt" } ]
+    },
+    "HarfBuzzSharp.NativeAssets.macOS": {
+      "notices": [ { "name": "HarfBuzz and its dependencies", "path": "config/texts/SkiaSharp.NativeAssets/THIRD-PARTY-NOTICES.txt" } ]
+    },
+    "HarfBuzzSharp.NativeAssets.Win32": {
+      "notices": [ { "name": "HarfBuzz and its dependencies", "path": "config/texts/SkiaSharp.NativeAssets/THIRD-PARTY-NOTICES.txt" } ]
+    },
+    "MessageFormat": {
+      "license": "MIT"
+    },
+    "Microsoft.Windows.SDK.NET.Ref": {
+      "license": "LicenseRef-Microsoft-Windows-SDK",
+      "copyright": "Copyright (c) Microsoft Corporation. All rights reserved.",
+      "licenseTextPath": "config/texts/Microsoft.Windows.SDK.NET.Ref/sdk_license.txt"
+    },
+    "SkiaSharp.NativeAssets.Linux": {
+      "notices": [ { "name": "Skia and its dependencies", "path": "config/texts/SkiaSharp.NativeAssets/THIRD-PARTY-NOTICES.txt" } ]
+    },
+    "SkiaSharp.NativeAssets.macOS": {
+      "notices": [ { "name": "Skia and its dependencies", "path": "config/texts/SkiaSharp.NativeAssets/THIRD-PARTY-NOTICES.txt" } ]
+    },
+    "SkiaSharp.NativeAssets.Win32": {
+      "notices": [ { "name": "Skia and its dependencies", "path": "config/texts/SkiaSharp.NativeAssets/THIRD-PARTY-NOTICES.txt" } ]
+    },
+    "Unicode.net": {
+      "license": "MIT"
+    },
+    "UniGetUI Elevator.exe": {
+      "license": "MIT",
+      "source": "https://github.com/gerardog/gsudo",
+      "copyright": "Gerardo Grignoli and GitHub Contributors",
+      "licenseTextPath": "config/texts/gsudo.LICENSE.txt"
+    }
+  }
+}

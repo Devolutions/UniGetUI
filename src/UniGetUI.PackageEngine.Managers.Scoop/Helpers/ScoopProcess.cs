@@ -6,7 +6,10 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 {
     internal static class ScoopProcess
     {
-        public static IReadOnlyList<string> ReadLines(Process p, IProcessTaskLogger logger)
+        public static IReadOnlyList<string> ReadLines(Process p, IProcessTaskLogger logger) =>
+            ReadLines(p, logger, out _);
+
+        public static IReadOnlyList<string> ReadLines(Process p, IProcessTaskLogger logger, out string stdErrText)
         {
             Task<string> stdErr = ReadStdErrAsync(p);
 
@@ -18,7 +21,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 lines.Add(line);
             }
 
-            Finish(p, logger, stdErr);
+            stdErrText = Finish(p, logger, stdErr);
             return lines;
         }
 
@@ -52,11 +55,13 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             }
         }
 
-        private static void Finish(Process p, IProcessTaskLogger logger, Task<string> stdErr)
+        private static string Finish(Process p, IProcessTaskLogger logger, Task<string> stdErr)
         {
-            logger.AddToStdErr(stdErr.GetAwaiter().GetResult());
+            string stdErrText = stdErr.GetAwaiter().GetResult();
+            logger.AddToStdErr(stdErrText);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            return stdErrText;
         }
     }
 }

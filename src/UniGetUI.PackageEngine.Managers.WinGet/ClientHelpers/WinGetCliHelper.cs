@@ -76,13 +76,42 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
 
         p.Start();
 
-        Packages.AddRange(ParseAvailableUpdates(Manager, ReadOutputLines(p, logger)));
-
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        List<string> outputLines = [.. ReadOutputLines(p, logger)];
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error, outputLines);
+
+        Packages.AddRange(ParseAvailableUpdates(Manager, outputLines));
 
         return Packages;
+    }
+
+    // APPINSTALLER_CLI_ERROR_NO_APPLICATIONS_FOUND: nothing is installed, which is not a failure.
+    // Source failures only warn on `list` and `upgrade`, so they keep exit code 0.
+    internal static bool IsListingFailure(int exitCode) =>
+        exitCode != 0 && (uint)exitCode != 0x8A150014;
+
+    private void ThrowIfListingFailed(int exitCode, string error, IEnumerable<string> outputLines)
+    {
+        string? sourceFailure = outputLines
+            .Concat(error.Split('\n'))
+            .FirstOrDefault(line =>
+            {
+                string message = line.TrimStart();
+                return message.StartsWith("Failed when searching source", StringComparison.OrdinalIgnoreCase)
+                    || message.StartsWith("Failed when opening source", StringComparison.OrdinalIgnoreCase)
+                    || message.StartsWith("Failed in attempting to update the source", StringComparison.OrdinalIgnoreCase);
+            });
+        if (IsListingFailure(exitCode) || sourceFailure is not null)
+        {
+            var failure = new InvalidOperationException(
+                $"{Manager.Name} exited with code 0x{exitCode:X8} while listing packages: {sourceFailure?.Trim() ?? error.Trim()}"
+            );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     private static IEnumerable<string> ReadOutputLines(Process p, IProcessTaskLogger logger)
@@ -215,11 +244,14 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
 
         p.Start();
 
-        Packages.AddRange(ParseInstalledPackages(Manager, ReadOutputLines(p, logger)));
-
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        List<string> outputLines = [.. ReadOutputLines(p, logger)];
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error, outputLines);
+
+        Packages.AddRange(ParseInstalledPackages(Manager, outputLines));
 
         return Packages;
     }
@@ -264,6 +296,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
                 catch (Exception e)
                 {
                     Logger.Error(e);
+                    PackageListingScope.ReportIncomplete(e);
                 }
             }
         }

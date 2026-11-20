@@ -2,10 +2,12 @@
 using System.Diagnostics;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.ScoopManager;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -898,6 +900,73 @@ public sealed class ScoopManagerTests : IDisposable
     private static string[] ReadFixtureLines(string relativePath)
     {
         return PackageEngineFixtureFiles.ReadAllText(relativePath).Replace("\r\n", "\n").Split('\n');
+    }
+
+    [Theory]
+    [InlineData(0, "", 0, false)]
+    [InlineData(1, "WARN  There aren't any apps installed.", 0, false)]
+    [InlineData(1, "WARN  There aren't any apps installed.", 2, true)]
+    [InlineData(1, "Invoke-Expression: cannot find path", 0, true)]
+    [InlineData(-196608, "", 0, true)]
+    public void ScoopOnlyAcceptsNoAppsInstalledAsAnEmptyListing(int exitCode, string output, int parsed, bool failed)
+    {
+        Assert.Equal(failed, Scoop.IsInstalledListingFailure(exitCode, [output], parsed));
+    }
+
+    private sealed class ListingScoop : Scoop
+    {
+        public IReadOnlyList<Package> ListInstalled() => GetInstalledPackages_UnSafe();
+    }
+
+    private ManagerStatus ScoopListingStatus(int exitCode, string error, string version)
+    {
+        string script = Path.Combine(_testRoot, $"listing-{Guid.NewGuid():N}.ps1");
+        File.WriteAllLines(script,
+        [
+            "Write-Output 'Name Version Source Updated Info'",
+            "Write-Output '---- ------- ------ ------- ----'",
+            $"Write-Output 'git  {version}     main'",
+            $"[Console]::Error.WriteLine('{error}')",
+            $"exit {exitCode}",
+        ]);
+        return new()
+        {
+            Found = true,
+            ExecutablePath = CoreData.PowerShell5,
+            ExecutableCallArgs = $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\"",
+        };
+    }
+
+    [Fact]
+    public void CachedScoopListingReplaysItsFailureAndKeepsPartialRowsForEveryNormalCaller()
+    {
+        var manager = new ListingScoop { Status = ScoopListingStatus(17, "broken bucket", "1.0") };
+        List<Exception> firstFailures = [];
+        using (PackageListingScope.TrackFailures(firstFailures.Add))
+            Assert.Equal("1.0", Assert.Single(manager.ListInstalled()).VersionString);
+        Assert.IsType<InvalidOperationException>(Assert.Single(firstFailures));
+
+        manager.Status = ScoopListingStatus(0, "", "2.0");
+        List<Exception> cachedFailures = [];
+        using (PackageListingScope.TrackFailures(cachedFailures.Add))
+            Assert.Equal("1.0", Assert.Single(manager.ListInstalled()).VersionString);
+        Assert.IsType<InvalidOperationException>(Assert.Single(cachedFailures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Equal("2.0", Assert.Single(manager.ListInstalled()).VersionString);
+    }
+
+    [Fact]
+    public void EveryListingOnlyScoopCallListsAgainInsteadOfReusingAnEarlierSuccessfulCache()
+    {
+        var manager = new ListingScoop { Status = ScoopListingStatus(0, "", "1.0") };
+        Assert.Equal("1.0", Assert.Single(manager.ListInstalled()).VersionString);
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        manager.Status = ScoopListingStatus(0, "", "2.0");
+        Assert.Equal("2.0", Assert.Single(manager.ListInstalled()).VersionString);
+        manager.Status = ScoopListingStatus(17, "broken bucket", "3.0");
+        Assert.Throws<InvalidOperationException>(manager.ListInstalled);
     }
 }
 #endif

@@ -163,9 +163,18 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                     logger.AddToStdOut(line);
                     outputLines.Add(line);
                 }
-                logger.AddToStdErr(p.StandardError.ReadToEnd());
+                string error = p.StandardError.ReadToEnd();
+                logger.AddToStdErr(error);
                 p.WaitForExit();
                 logger.Close(p.ExitCode);
+                if (p.ExitCode != 0)
+                {
+                    var failure = new InvalidOperationException(
+                        $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
+                    );
+                    UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+                    PackageListingScope.ReportIncomplete(failure);
+                }
 
                 Packages.AddRange(ParseInstalledPackages(outputLines, installedSource, this, options));
             }

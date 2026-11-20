@@ -1,0 +1,562 @@
+{
+  "kind": "Response",
+  "id": "11111111-2222-3333-4444-555555555555",
+  "ok": true,
+  "result": {
+    "completedAt": "2026-11-15T13:20:05.1234567Z",
+    "updateCompletedAt": "2026-11-15T13:22:05.1234567Z",
+    "managers": [
+      {
+        "name": "winget",
+        "displayName": "winget",
+        "enabled": true,
+        "ready": true,
+        "notificationsSuppressed": false,
+        "executablePath": "",
+        "executableArguments": "",
+        "capabilities": {
+          "canRunAsAdmin": false,
+          "canSkipIntegrityChecks": false,
+          "canRunInteractively": false,
+          "canRemoveDataOnUninstall": false,
+          "canDownloadInstaller": false,
+          "supportsCustomVersions": false,
+          "supportsCustomArchitectures": false,
+          "supportsCustomScopes": false,
+          "supportsPreRelease": false,
+          "supportsCustomLocations": false,
+          "supportsCustomSources": false,
+          "mustInstallSourcesAsAdmin": false
+        },
+        "health": {
+          "state": "unknown",
+          "needsAttention": false,
+          "failingListing": null,
+          "reason": null,
+          "consecutiveFailures": 0,
+          "search": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "installed": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "updates": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          }
+        }
+      },
+      {
+        "name": "winps",
+        "displayName": "winps",
+        "enabled": true,
+        "ready": true,
+        "notificationsSuppressed": false,
+        "executablePath": "",
+        "executableArguments": "",
+        "capabilities": {
+          "canRunAsAdmin": false,
+          "canSkipIntegrityChecks": false,
+          "canRunInteractively": false,
+          "canRemoveDataOnUninstall": false,
+          "canDownloadInstaller": false,
+          "supportsCustomVersions": false,
+          "supportsCustomArchitectures": false,
+          "supportsCustomScopes": false,
+          "supportsPreRelease": false,
+          "supportsCustomLocations": false,
+          "supportsCustomSources": false,
+          "mustInstallSourcesAsAdmin": false
+        },
+        "health": {
+          "state": "unknown",
+          "needsAttention": false,
+          "failingListing": null,
+          "reason": null,
+          "consecutiveFailures": 0,
+          "search": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "installed": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "updates": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          }
+        }
+      },
+      {
+        "name": "pwsh",
+        "displayName": "pwsh",
+        "enabled": true,
+        "ready": true,
+        "notificationsSuppressed": false,
+        "executablePath": "",
+        "executableArguments": "",
+        "capabilities": {
+          "canRunAsAdmin": false,
+          "canSkipIntegrityChecks": false,
+          "canRunInteractively": false,
+          "canRemoveDataOnUninstall": false,
+          "canDownloadInstaller": false,
+          "supportsCustomVersions": false,
+          "supportsCustomArchitectures": false,
+          "supportsCustomScopes": false,
+          "supportsPreRelease": false,
+          "supportsCustomLocations": false,
+          "supportsCustomSources": false,
+          "mustInstallSourcesAsAdmin": false
+        },
+        "health": {
+          "state": "unknown",
+          "needsAttention": false,
+          "failingListing": null,
+          "reason": null,
+          "consecutiveFailures": 0,
+          "search": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "installed": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "updates": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          }
+        }
+      },
+      {
+        "name": "dotnet-tool",
+        "displayName": "dotnet-tool",
+        "enabled": true,
+        "ready": true,
+        "notificationsSuppressed": false,
+        "executablePath": "",
+        "executableArguments": "",
+        "capabilities": {
+          "canRunAsAdmin": false,
+          "canSkipIntegrityChecks": false,
+          "canRunInteractively": false,
+          "canRemoveDataOnUninstall": false,
+          "canDownloadInstaller": false,
+          "supportsCustomVersions": false,
+          "supportsCustomArchitectures": false,
+          "supportsCustomScopes": false,
+          "supportsPreRelease": false,
+          "supportsCustomLocations": false,
+          "supportsCustomSources": false,
+          "mustInstallSourcesAsAdmin": false
+        },
+        "health": {
+          "state": "unknown",
+          "needsAttention": false,
+          "failingListing": null,
+          "reason": null,
+          "consecutiveFailures": 0,
+          "search": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "installed": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "updates": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          }
+        }
+      },
+      {
+        "name": "pip",
+        "displayName": "pip",
+        "enabled": true,
+        "ready": true,
+        "notificationsSuppressed": false,
+        "executablePath": "",
+        "executableArguments": "",
+        "capabilities": {
+          "canRunAsAdmin": false,
+          "canSkipIntegrityChecks": false,
+          "canRunInteractively": false,
+          "canRemoveDataOnUninstall": false,
+          "canDownloadInstaller": false,
+          "supportsCustomVersions": false,
+          "supportsCustomArchitectures": false,
+          "supportsCustomScopes": false,
+          "supportsPreRelease": false,
+          "supportsCustomLocations": false,
+          "supportsCustomSources": false,
+          "mustInstallSourcesAsAdmin": false
+        },
+        "health": {
+          "state": "unknown",
+          "needsAttention": false,
+          "failingListing": null,
+          "reason": null,
+          "consecutiveFailures": 0,
+          "search": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "installed": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "updates": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          }
+        }
+      },
+      {
+        "name": "cargo",
+        "displayName": "cargo",
+        "enabled": false,
+        "ready": false,
+        "notificationsSuppressed": false,
+        "executablePath": "",
+        "executableArguments": "",
+        "capabilities": {
+          "canRunAsAdmin": false,
+          "canSkipIntegrityChecks": false,
+          "canRunInteractively": false,
+          "canRemoveDataOnUninstall": false,
+          "canDownloadInstaller": false,
+          "supportsCustomVersions": false,
+          "supportsCustomArchitectures": false,
+          "supportsCustomScopes": false,
+          "supportsPreRelease": false,
+          "supportsCustomLocations": false,
+          "supportsCustomSources": false,
+          "mustInstallSourcesAsAdmin": false
+        },
+        "health": {
+          "state": "unknown",
+          "needsAttention": false,
+          "failingListing": null,
+          "reason": null,
+          "consecutiveFailures": 0,
+          "search": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "installed": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          },
+          "updates": {
+            "lastSuccessUtc": null,
+            "lastFailureUtc": null,
+            "lastFailureReason": null,
+            "lastFailureWasTimeout": false,
+            "consecutiveFailures": 0,
+            "failureStreakStartUtc": null,
+            "lastPackageCount": null,
+            "lastFastRepairUtc": null,
+            "lastFastRepairReason": null,
+            "recentDurationsMs": []
+          }
+        }
+      }
+    ],
+    "sources": [
+      {
+        "manager": "dotnet-tool",
+        "name": "default",
+        "displayName": "Unset",
+        "url": "",
+        "packageCount": null,
+        "updateDate": "",
+        "isKnown": false,
+        "isConfigured": true
+      },
+      {
+        "manager": "pip",
+        "name": "default",
+        "displayName": "Unset",
+        "url": "",
+        "packageCount": null,
+        "updateDate": "",
+        "isKnown": false,
+        "isConfigured": true
+      },
+      {
+        "manager": "pwsh",
+        "name": "default",
+        "displayName": "Unset",
+        "url": "",
+        "packageCount": null,
+        "updateDate": "",
+        "isKnown": false,
+        "isConfigured": true
+      },
+      {
+        "manager": "winget",
+        "name": "default",
+        "displayName": "Unset",
+        "url": "",
+        "packageCount": null,
+        "updateDate": "",
+        "isKnown": false,
+        "isConfigured": true
+      },
+      {
+        "manager": "winps",
+        "name": "default",
+        "displayName": "Unset",
+        "url": "",
+        "packageCount": null,
+        "updateDate": "",
+        "isKnown": false,
+        "isConfigured": true
+      }
+    ],
+    "installedPackages": [
+      {
+        "name": "7zip.7zip",
+        "id": "7zip.7zip",
+        "version": "24.08",
+        "newVersion": "",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "winget",
+        "reportedScope": null,
+        "isUpgradable": false
+      },
+      {
+        "name": "dotnet-ef",
+        "id": "dotnet-ef",
+        "version": "9.0.0",
+        "newVersion": "10.0.0",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "dotnet-tool",
+        "reportedScope": null,
+        "isUpgradable": true
+      },
+      {
+        "name": "Git.Git",
+        "id": "Git.Git",
+        "version": "2.47.0",
+        "newVersion": "",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "winget",
+        "reportedScope": "user",
+        "isUpgradable": false
+      },
+      {
+        "name": "Git.Git",
+        "id": "Git.Git",
+        "version": "2.46.0",
+        "newVersion": "2.47.1",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "winget",
+        "reportedScope": "machine",
+        "isUpgradable": true
+      },
+      {
+        "name": "Pester",
+        "id": "Pester",
+        "version": "5.6.1",
+        "newVersion": "",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "pwsh",
+        "reportedScope": "user",
+        "isUpgradable": false
+      },
+      {
+        "name": "PSReadLine",
+        "id": "PSReadLine",
+        "version": "2.0.0",
+        "newVersion": "",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "winps",
+        "reportedScope": null,
+        "isUpgradable": false
+      },
+      {
+        "name": "requests",
+        "id": "requests",
+        "version": "2.32.3",
+        "newVersion": "",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "pip",
+        "reportedScope": "machine",
+        "isUpgradable": false
+      }
+    ],
+    "updates": [
+      {
+        "name": "dotnet-ef",
+        "id": "dotnet-ef",
+        "version": "9.0.0",
+        "newVersion": "10.0.0",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "dotnet-tool",
+        "reportedScope": null,
+        "isUpgradable": true
+      },
+      {
+        "name": "Git.Git",
+        "id": "Git.Git",
+        "version": "2.46.0",
+        "newVersion": "2.47.1",
+        "source": "Unset",
+        "sourceName": "",
+        "manager": "winget",
+        "reportedScope": "machine",
+        "isUpgradable": true
+      }
+    ]
+  }
+}

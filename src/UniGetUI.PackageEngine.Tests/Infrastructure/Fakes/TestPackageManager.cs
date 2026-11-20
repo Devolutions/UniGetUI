@@ -101,6 +101,10 @@ public sealed class TestPackageManager : PackageManager
 
     public int RefreshPackageIndexesCalls { get; private set; }
 
+    public bool RefreshUpdatesOnlyCatalogues { get; set; }
+
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => RefreshUpdatesOnlyCatalogues;
+
     public string? LastQuery { get; private set; }
 
     public CancellationToken CurrentListingCancellation => ListingCancellationToken;

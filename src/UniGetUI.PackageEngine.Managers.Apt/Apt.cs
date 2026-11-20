@@ -99,6 +99,8 @@ public class Apt : PackageManager
 
     // ── Index refresh ──────────────────────────────────────────────────────
 
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => true;
+
     public override void RefreshPackageIndexes()
     {
         using var p = new Process
@@ -206,10 +208,24 @@ public class Apt : PackageManager
                 this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
         return packages;
+    }
+
+    private void ThrowIfListingFailed(int exitCode, string error)
+    {
+        if (exitCode != 0)
+        {
+            var failure = new InvalidOperationException(
+                $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+            );
+            UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
@@ -257,9 +273,11 @@ public class Apt : PackageManager
                 this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
         return packages;
     }
 }

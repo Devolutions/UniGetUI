@@ -17,7 +17,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
         // Null until a search is made. An empty query browses: see LoadPackagesFromManager.
         private string? QUERY_TEXT;
         private volatile bool _pendingReload;
-        private readonly HashSet<IPackageManager> _failedManagers = [];
 
         public DiscoverablePackagesLoader(IReadOnlyList<IPackageManager> managers)
             : base(
@@ -94,17 +93,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
         private static bool CanSearch(IPackageManager manager, string? query)
             => query != string.Empty || manager.Capabilities.SupportsEmptySearchQuery;
 
-        protected override bool DidManagerReportFailure(IPackageManager manager)
-        {
-            lock (_failedManagers)
-                return _failedManagers.Contains(manager);
-        }
-
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
-        {
-            lock (_failedManagers)
-                _failedManagers.Remove(manager);
+            => LoadPackagesFromManager(manager, out _);
 
+        protected override IReadOnlyList<IPackage> LoadPackagesFromManager(
+            IPackageManager manager,
+            out bool failed
+        )
+        {
+            failed = false;
             string? query = QUERY_TEXT;
             if (query is null || !IsManagerSearched(manager) || !CanSearch(manager, query))
             {
@@ -117,12 +114,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return [];
             }
 
-            IReadOnlyList<IPackage> found = manager.FindPackages(text, out bool failed);
-            if (failed)
-            {
-                lock (_failedManagers)
-                    _failedManagers.Add(manager);
-            }
+            IReadOnlyList<IPackage> found = manager.FindPackages(text, out failed);
             if (text.Length == 0)
             {
                 return found

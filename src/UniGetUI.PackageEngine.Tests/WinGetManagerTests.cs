@@ -1392,6 +1392,177 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal(1, snapshots);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NativeWinGetListingOnlyCallsDoNotReuseAnEarlierSnapshot(bool updates)
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        int snapshots = 0;
+        var helper = new NativeWinGetHelper(
+            new TestableWinGet(),
+            systemCliHelperFactory: null,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+            {
+                snapshots++;
+                return [];
+            }
+        );
+        Func<IReadOnlyList<Package>> list = updates
+            ? helper.GetAvailableUpdates_UnSafe
+            : helper.GetInstalledPackages_UnSafe;
+
+        Assert.Empty(list());
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Empty(list());
+        Assert.Empty(list());
+
+        Assert.Equal(3, snapshots);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NativeWinGetSkippedPackagesMarkTheListingIncompleteWithoutCliFallback(bool updates)
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        int fallbacks = 0;
+        var helper = new NativeWinGetHelper(
+            new TestableWinGet(),
+            systemCliHelperFactory: _ =>
+            {
+                fallbacks++;
+                throw new InvalidOperationException("A skipped row must not trigger CLI recovery.");
+            },
+            skipInitialization: true,
+            localPackagesProvider: () => [null!, null!]
+        );
+        Func<IReadOnlyList<Package>> list = updates
+            ? helper.GetAvailableUpdates_UnSafe
+            : helper.GetInstalledPackages_UnSafe;
+        List<Exception> failures = [];
+
+        using var tracking = PackageListingScope.TrackFailures(failures.Add);
+        Assert.Empty(list());
+        Assert.Equal(2, failures.Count);
+        Assert.All(failures, error => Assert.IsType<NullReferenceException>(error));
+
+        failures.Clear();
+        using var scope = PackageListingScope.EnterListingOnly();
+        var failure = Assert.Throws<NullReferenceException>(() => list());
+        Assert.Same(failure, Assert.Single(failures));
+        Assert.Equal(0, fallbacks);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NativeWinGetSuccessfulCatalogFallbackReplaysIncompleteStateForEveryListing(bool skipUnavailableCatalog)
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        int snapshots = 0;
+        int cliFallbacks = 0;
+        List<string> attempts = [];
+        var helper = new NativeWinGetHelper(
+            new TestableWinGet(),
+            systemCliHelperFactory: _ =>
+            {
+                cliFallbacks++;
+                throw new InvalidOperationException("An omitted catalog must not trigger CLI recovery.");
+            },
+            skipInitialization: true,
+            localPackagesProvider: () =>
+            {
+                snapshots++;
+                string[] configuredCatalogs = skipUnavailableCatalog ? ["offline", "winget"] : ["winget"];
+                var catalogs = NativeWinGetHelper.SelectReachableCatalogs(
+                    configuredCatalogs,
+                    static catalog => catalog,
+                    static catalog => catalog != "offline"
+                );
+                bool found = NativeWinGetHelper.FindWithFallbacks(
+                    catalogs,
+                    static _ => false,
+                    selected =>
+                    {
+                        attempts.Add(selected.Count == 0 ? "(installed)" : string.Join("+", selected));
+                        return selected.Count == 0;
+                    },
+                    static result => result
+                );
+                Assert.True(found);
+                return [];
+            }
+        );
+        int expectedFailures = skipUnavailableCatalog ? 2 : 1;
+        List<Exception> firstFailures = [];
+        using (PackageListingScope.TrackFailures(firstFailures.Add))
+            Assert.Empty(helper.GetInstalledPackages_UnSafe());
+        Assert.Equal(expectedFailures, firstFailures.Count);
+        Assert.Equal(["winget", "(installed)"], attempts);
+
+        List<Exception> cachedFailures = [];
+        using (PackageListingScope.TrackFailures(cachedFailures.Add))
+            Assert.Empty(helper.GetAvailableUpdates_UnSafe());
+        Assert.Equal(firstFailures, cachedFailures);
+        Assert.Equal(1, snapshots);
+        Assert.Equal(["winget", "(installed)"], attempts);
+
+        List<Exception> strictFailures = [];
+        using var tracking = PackageListingScope.TrackFailures(strictFailures.Add);
+        using var scope = PackageListingScope.EnterListingOnly();
+        var failure = Assert.Throws<InvalidOperationException>(helper.GetAvailableUpdates_UnSafe);
+        Assert.Same(failure, Assert.Single(strictFailures));
+        Assert.Equal(2, snapshots);
+        Assert.Equal(skipUnavailableCatalog ? 2 : 3, attempts.Count);
+        Assert.Equal(0, cliFallbacks);
+    }
+
+    [Fact]
+    public void NativeWinGetUnavailableCatalogKeepsNormalCliFallbackButFailsListingOnly()
+    {
+        var manager = new TestableWinGet();
+        var expectedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .Build();
+        int cliListings = 0;
+        var fallback = new TestWinGetManagerHelper
+        {
+            GetInstalledPackagesHandler = () =>
+            {
+                cliListings++;
+                return [expectedPackage];
+            },
+        };
+        var helper = new NativeWinGetHelper(
+            manager,
+            systemCliHelperFactory: _ => fallback,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+            {
+                NativeWinGetHelper.SelectReachableCatalogs(
+                    ["offline"],
+                    static catalog => catalog,
+                    static _ => false
+                );
+                return [];
+            }
+        );
+        List<Exception> failures = [];
+        using var tracking = PackageListingScope.TrackFailures(failures.Add);
+        Assert.Same(expectedPackage, Assert.Single(helper.GetInstalledPackages_UnSafe()));
+        Assert.Single(failures);
+
+        failures.Clear();
+        using var scope = PackageListingScope.EnterListingOnly();
+        var failure = Assert.Throws<InvalidOperationException>(helper.GetInstalledPackages_UnSafe);
+        Assert.Same(failure, Assert.Single(failures));
+        Assert.Equal(1, cliListings);
+    }
+
     [Fact]
     public void NativeWinGetHelperTakesAFreshSnapshotOnceTheInstalledPackagesAreInvalidated()
     {
@@ -1469,8 +1640,10 @@ public sealed class WinGetManagerTests : IDisposable
     {
         List<string> attempts = [];
         List<string> retries = [];
+        List<Exception> failures = [];
         string[] catalogs = catalogList.Split(',');
 
+        using var tracking = PackageListingScope.TrackFailures(failures.Add);
         string result = NativeWinGetHelper.FindWithFallbacks(
             catalogs,
             static catalog => catalog == "msstore",
@@ -1487,6 +1660,7 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal(expectedAttempts, string.Join("|", attempts));
         Assert.Equal(attempts[^1], result);
         Assert.Equal(attempts.Count - 1, retries.Count);
+        Assert.Equal(retries.Count, failures.Count);
     }
 
     [Theory]

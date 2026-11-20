@@ -142,6 +142,7 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
 
         Assert.DoesNotContain(own, StartMenuShortcutsDatabase.GetAllShortcuts());
         Assert.DoesNotContain(own, StartMenuShortcutsDatabase.GetTrackedShortcuts());
+        Assert.Empty(StartMenuShortcutsDatabase.GetPendingShortcuts());
 
         Assert.False(StartMenuShortcutsDatabase.DeleteFromDisk(own));
         StartMenuShortcutsDatabase.DeleteFromDisk([own, other]);

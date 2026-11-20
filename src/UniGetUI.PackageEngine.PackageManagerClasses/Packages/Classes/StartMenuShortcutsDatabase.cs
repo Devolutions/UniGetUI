@@ -408,7 +408,11 @@ public static class StartMenuShortcutsDatabase
             {
                 var parsed = ParseRecordKey(record);
 
-                if (parsed is null || !File.Exists(parsed.Value.OriginalPath))
+                if (
+                    parsed is null
+                    || !File.Exists(parsed.Value.OriginalPath)
+                    || IsOwnShortcut(parsed.Value.OriginalPath)
+                )
                 {
                     Settings.RemoveFromList(PendingShortcutsKey, record);
                     continue;

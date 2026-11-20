@@ -35,6 +35,7 @@ public sealed class IpcOperationScopeTests : IDisposable
 
     public void Dispose()
     {
+        IpcPackageApi.WaitForPendingSnapshotRefreshAsync().Wait(TimeSpan.FromSeconds(30));
         CoreData.TEST_DataDirectoryOverride = null;
         try
         {
@@ -50,6 +51,7 @@ public sealed class IpcOperationScopeTests : IDisposable
         IPackageManager? manager = null
     )
     {
+        await IpcPackageApi.WaitForPendingSnapshotRefreshAsync();
         manager ??= new Pip();
         _ = new DiscoverablePackagesLoader([manager]);
         var upgradable = new UpgradablePackagesLoader([manager]);

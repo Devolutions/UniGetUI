@@ -57,6 +57,12 @@ public abstract partial class AbstractOperation : IDisposable
         }
     }
 
+    public static bool IsIdle()
+    {
+        lock (AdmissionLock)
+            return _admittedWork == 0 && QueueLength() == 0;
+    }
+
     public static bool TryBeginWork()
     {
         lock (AdmissionLock)
@@ -79,6 +85,8 @@ public abstract partial class AbstractOperation : IDisposable
     {
         lock (AdmissionLock)
             _admittedWork--;
+        if (IsIdle())
+            BecameIdle?.Invoke(null, EventArgs.Empty);
     }
     protected bool QUEUE_ENABLED;
     protected bool FORCE_HOLD_QUEUE;
@@ -613,6 +621,18 @@ public abstract partial class AbstractOperation : IDisposable
                 return OperationVeredict.Canceled;
 
             i++;
+            if (preReq.SkipOnceSucceeded && preReq.Operation.Status is OperationStatus.Succeeded)
+            {
+                Line(
+                    CoreTools.Translate(
+                        "PreOperation {0} out of {1} already succeeded, skipping it",
+                        i,
+                        count
+                    ),
+                    LineType.Information
+                );
+                continue;
+            }
             Line(
                     CoreTools.Translate("Running PreOperation ({0}/{1})...", i, count),
                 LineType.Information

@@ -5,14 +5,14 @@ namespace UniGetUI.Interface;
 internal sealed class IpcSnapshotRefresher
 {
     private readonly object _lock = new();
-    private readonly Func<int> _queueLength;
+    private readonly Func<bool> _isIdle;
     private readonly Func<Task> _refresh;
     private bool _requested;
     private Task _pending = Task.CompletedTask;
 
-    public IpcSnapshotRefresher(Func<int> queueLength, Func<Task> refresh)
+    public IpcSnapshotRefresher(Func<bool> isIdle, Func<Task> refresh)
     {
-        _queueLength = queueLength;
+        _isIdle = isIdle;
         _refresh = refresh;
     }
 
@@ -27,7 +27,7 @@ internal sealed class IpcSnapshotRefresher
     {
         lock (_lock)
         {
-            if (!_requested || _queueLength() > 0)
+            if (!_requested || !_isIdle())
                 return;
 
             _requested = false;

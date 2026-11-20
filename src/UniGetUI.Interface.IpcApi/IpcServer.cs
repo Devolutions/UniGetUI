@@ -1821,6 +1821,7 @@ namespace UniGetUI.Interface
                     managerName = IpcManagerSettingsApi.ResolveManager(managerName).Id;
                 }
 
+                await IpcPackageApi.WaitForUpdateListAsync();
                 var operations = await (UpdateAllHandler ?? IpcPackageApi.QueueAllUpdatesAsync)(
                     managerName
                 );

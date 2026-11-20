@@ -57,6 +57,12 @@ public abstract partial class AbstractOperation : IDisposable
         }
     }
 
+    public static bool IsIdle()
+    {
+        lock (AdmissionLock)
+            return _admittedWork == 0 && QueueLength() == 0;
+    }
+
     public static bool TryBeginWork()
     {
         lock (AdmissionLock)

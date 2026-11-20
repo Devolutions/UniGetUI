@@ -5,12 +5,12 @@ namespace UniGetUI.Tests;
 public sealed class IpcSnapshotRefresherTests
 {
     [Fact]
-    public async Task ARequestWaitsUntilTheOperationQueueIsEmpty()
+    public async Task ARequestWaitsUntilNoOperationIsQueuedOrRunning()
     {
-        int queueLength = 2;
+        bool idle = false;
         int refreshes = 0;
         var refresher = new IpcSnapshotRefresher(
-            () => queueLength,
+            () => idle,
             () =>
             {
                 Interlocked.Increment(ref refreshes);
@@ -23,12 +23,11 @@ public sealed class IpcSnapshotRefresherTests
         await refresher.WaitForPendingAsync();
         Assert.Equal(0, refreshes);
 
-        queueLength = 1;
         refresher.StartIfIdle();
         await refresher.WaitForPendingAsync();
         Assert.Equal(0, refreshes);
 
-        queueLength = 0;
+        idle = true;
         refresher.StartIfIdle();
         await refresher.WaitForPendingAsync();
         Assert.Equal(1, refreshes);
@@ -44,7 +43,7 @@ public sealed class IpcSnapshotRefresherTests
         var release = new TaskCompletionSource();
         bool refreshed = false;
         var refresher = new IpcSnapshotRefresher(
-            () => 0,
+            () => true,
             async () =>
             {
                 await release.Task;
@@ -65,7 +64,7 @@ public sealed class IpcSnapshotRefresherTests
     public async Task AFailedRefreshDoesNotFailReaders()
     {
         var refresher = new IpcSnapshotRefresher(
-            () => 0,
+            () => true,
             () => throw new InvalidOperationException("boom")
         );
 

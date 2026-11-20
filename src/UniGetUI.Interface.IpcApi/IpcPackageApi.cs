@@ -135,12 +135,19 @@ public static class IpcPackageApi
 
     private static IpcSnapshotRefresher CreateSnapshotRefresher()
     {
-        var refresher = new IpcSnapshotRefresher(AbstractOperation.QueueLength, RefreshPackageSnapshotsAsync);
+        var refresher = new IpcSnapshotRefresher(AbstractOperation.IsIdle, RefreshPackageSnapshotsAsync);
         AbstractOperation.QueueDrained += (_, _) => refresher.StartIfIdle();
         return refresher;
     }
 
     internal static Task WaitForPendingSnapshotRefreshAsync() => SnapshotRefresher.WaitForPendingAsync();
+
+    internal static async Task WaitForUpdateListAsync()
+    {
+        await SnapshotRefresher.WaitForPendingAsync();
+        if (UpgradablePackagesLoader.Instance is { } loader)
+            await loader.WaitForCurrentLoadAsync();
+    }
 
     public static IReadOnlyList<IpcPackageInfo> SearchPackages(
         string query,

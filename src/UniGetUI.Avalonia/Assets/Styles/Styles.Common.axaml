@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:conv="using:UniGetUI.Avalonia.Converters"
         xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
         xmlns:primitives="using:Avalonia.Controls.Primitives"
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls">
@@ -671,7 +672,7 @@
     </Style>
 
     <Style Selector="DataGridCell">
-        <Setter Property="automation:AutomationProperties.Name" Value="{Binding $self.((Control)Content).(automation:AutomationProperties.Name)}"/>
+        <Setter Property="automation:AutomationProperties.Name" Value="{Binding $self.Content, Converter={x:Static conv:AutomationNameOfContentConverter.Instance}}"/>
     </Style>
 
     <Style Selector="RadioButton:checked /template/ Ellipse#CheckOuterEllipse">

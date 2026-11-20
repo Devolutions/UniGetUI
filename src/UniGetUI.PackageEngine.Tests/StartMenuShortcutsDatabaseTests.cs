@@ -132,6 +132,28 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
         Assert.True(File.Exists(userOwn));
     }
 
+    [Fact]
+    public void PreviouslyTrackedOwnShortcutIsNotListedDeletedOrMoved()
+    {
+        string own = CreateShortcut(_userPrograms, "UniGetUI.lnk");
+        string other = CreateShortcut(_userPrograms, "Contoso Tool.lnk");
+        StartMenuShortcutsDatabase.SetStatus(own, StartMenuShortcutsDatabase.Status.Delete);
+        StartMenuShortcutsDatabase.MarkPending("UniGetUI", own);
+
+        Assert.DoesNotContain(own, StartMenuShortcutsDatabase.GetAllShortcuts());
+        Assert.DoesNotContain(own, StartMenuShortcutsDatabase.GetTrackedShortcuts());
+
+        Assert.False(StartMenuShortcutsDatabase.DeleteFromDisk(own));
+        StartMenuShortcutsDatabase.DeleteFromDisk([own, other]);
+        Assert.True(File.Exists(own));
+        Assert.False(File.Exists(other));
+
+        StartMenuShortcutsDatabase.SetRule("UniGetUI", "Tools");
+        StartMenuShortcutsDatabase.ApplyRule("UniGetUI", [own]);
+        Assert.True(File.Exists(own));
+        Assert.False(File.Exists(Path.Combine(_userPrograms, "Tools", "UniGetUI.lnk")));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

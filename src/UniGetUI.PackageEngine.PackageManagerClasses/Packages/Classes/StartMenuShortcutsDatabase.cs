@@ -19,6 +19,7 @@ public static class StartMenuShortcutsDatabase
     private const int MinimumMatchLength = 3;
     private const int ContainmentMatchLength = 6;
     private const string PendingShortcutsKey = "PendingStartMenuShortcuts";
+    private const string OwnShortcutName = "UniGetUI.lnk";
 
     private static readonly string[] ShortcutExtensions = [".lnk", ".url"];
 
@@ -93,7 +94,32 @@ public static class StartMenuShortcutsDatabase
     public static bool IsManagedShortcutPath(string shortcutPath)
     {
         return GetShortcutRoots()
-            .Any(root => IsUnder(root, shortcutPath) && !LeavesTheStartMenu(root, shortcutPath));
+            .Any(root =>
+                IsUnder(root, shortcutPath)
+                && !LeavesTheStartMenu(root, shortcutPath)
+                && !IsOwnShortcut(root, shortcutPath)
+            );
+    }
+
+    private static bool IsOwnShortcut(string path)
+    {
+        return GetShortcutRoots().Any(root => IsOwnShortcut(root, path));
+    }
+
+    private static bool IsOwnShortcut(string root, string path)
+    {
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(path),
+                Path.Combine(Path.GetFullPath(root), OwnShortcutName),
+                StringComparison.OrdinalIgnoreCase
+            );
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private static bool LeavesTheStartMenu(string root, string path)
@@ -164,7 +190,9 @@ public static class StartMenuShortcutsDatabase
                 foreach (string pattern in ShortcutPatterns)
                 {
                     shortcuts.AddRange(
-                        Directory.EnumerateFiles(root, pattern, ShortcutEnumeration)
+                        Directory
+                            .EnumerateFiles(root, pattern, ShortcutEnumeration)
+                            .Where(shortcut => !IsOwnShortcut(root, shortcut))
                     );
                 }
             }
@@ -313,7 +341,10 @@ public static class StartMenuShortcutsDatabase
 
         foreach (var verdict in GetVerdicts())
         {
-            if (!shortcuts.Contains(verdict.Key, StringComparer.OrdinalIgnoreCase))
+            if (
+                !shortcuts.Contains(verdict.Key, StringComparer.OrdinalIgnoreCase)
+                && !IsOwnShortcut(verdict.Key)
+            )
                 shortcuts.Add(verdict.Key);
         }
 
@@ -335,7 +366,10 @@ public static class StartMenuShortcutsDatabase
                 .Concat(GetPendingShortcuts().Select(pending => pending.ShortcutPath))
         )
         {
-            if (!shortcuts.Contains(shortcut, StringComparer.OrdinalIgnoreCase))
+            if (
+                !shortcuts.Contains(shortcut, StringComparer.OrdinalIgnoreCase)
+                && !IsOwnShortcut(shortcut)
+            )
                 shortcuts.Add(shortcut);
         }
 
@@ -374,7 +408,11 @@ public static class StartMenuShortcutsDatabase
             {
                 var parsed = ParseRecordKey(record);
 
-                if (parsed is null || !File.Exists(parsed.Value.OriginalPath))
+                if (
+                    parsed is null
+                    || !File.Exists(parsed.Value.OriginalPath)
+                    || IsOwnShortcut(parsed.Value.OriginalPath)
+                )
                 {
                     Settings.RemoveFromList(PendingShortcutsKey, record);
                     continue;
@@ -902,6 +940,12 @@ public static class StartMenuShortcutsDatabase
         bool overwrite = false
     )
     {
+        if (IsOwnShortcut(originalPath))
+        {
+            Logger.Warn($"UniGetUI's own Start Menu shortcut {originalPath} will not be relocated");
+            return null;
+        }
+
         try
         {
             string? destinationDirectory = Path.GetDirectoryName(destinationPath);
@@ -939,6 +983,12 @@ public static class StartMenuShortcutsDatabase
 
     public static bool DeleteFromDisk(string shortcutPath)
     {
+        if (IsOwnShortcut(shortcutPath))
+        {
+            Logger.Warn($"UniGetUI's own Start Menu shortcut {shortcutPath} will not be deleted");
+            return false;
+        }
+
         Logger.Info("Deleting Start Menu shortcut " + shortcutPath);
         if (!ShortcutFileRemover.Delete(shortcutPath))
             return false;
@@ -949,6 +999,13 @@ public static class StartMenuShortcutsDatabase
 
     public static void DeleteFromDisk(IReadOnlyList<string> shortcutPaths)
     {
+        foreach (string ownShortcut in shortcutPaths.Where(IsOwnShortcut))
+            Logger.Warn($"UniGetUI's own Start Menu shortcut {ownShortcut} will not be deleted");
+
+        shortcutPaths = shortcutPaths.Where(shortcutPath => !IsOwnShortcut(shortcutPath)).ToList();
+        if (shortcutPaths.Count is 0)
+            return;
+
         foreach (string shortcutPath in shortcutPaths)
             Logger.Info("Deleting Start Menu shortcut " + shortcutPath);
 

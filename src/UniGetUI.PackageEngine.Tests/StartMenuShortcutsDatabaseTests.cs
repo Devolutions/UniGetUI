@@ -110,6 +110,51 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
         Assert.DoesNotContain(ignored, shortcuts);
     }
 
+    [Fact]
+    public void UniGetUIsOwnShortcutIsNeverManaged()
+    {
+        string userOwn = CreateShortcut(_userPrograms, "UniGetUI.lnk");
+        string commonOwn = CreateShortcut(_commonPrograms, "UniGetUI.lnk");
+        string nested = CreateShortcut(Path.Combine(_userPrograms, "Tools"), "UniGetUI.lnk");
+        StartMenuShortcutsDatabase.SetStatus(userOwn, StartMenuShortcutsDatabase.Status.Delete);
+
+        var shortcuts = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
+
+        Assert.DoesNotContain(userOwn, shortcuts);
+        Assert.DoesNotContain(commonOwn, shortcuts);
+        Assert.Contains(nested, shortcuts);
+        Assert.False(StartMenuShortcutsDatabase.IsManagedShortcutPath(userOwn));
+        Assert.False(StartMenuShortcutsDatabase.IsManagedShortcutPath(commonOwn));
+        Assert.True(StartMenuShortcutsDatabase.IsManagedShortcutPath(nested));
+
+        StartMenuShortcutsDatabase.HandleNewShortcuts(BuildPackage("UniGetUI", "UniGetUI"), []);
+
+        Assert.True(File.Exists(userOwn));
+    }
+
+    [Fact]
+    public void PreviouslyTrackedOwnShortcutIsNotListedDeletedOrMoved()
+    {
+        string own = CreateShortcut(_userPrograms, "UniGetUI.lnk");
+        string other = CreateShortcut(_userPrograms, "Contoso Tool.lnk");
+        StartMenuShortcutsDatabase.SetStatus(own, StartMenuShortcutsDatabase.Status.Delete);
+        StartMenuShortcutsDatabase.MarkPending("UniGetUI", own);
+
+        Assert.DoesNotContain(own, StartMenuShortcutsDatabase.GetAllShortcuts());
+        Assert.DoesNotContain(own, StartMenuShortcutsDatabase.GetTrackedShortcuts());
+        Assert.Empty(StartMenuShortcutsDatabase.GetPendingShortcuts());
+
+        Assert.False(StartMenuShortcutsDatabase.DeleteFromDisk(own));
+        StartMenuShortcutsDatabase.DeleteFromDisk([own, other]);
+        Assert.True(File.Exists(own));
+        Assert.False(File.Exists(other));
+
+        StartMenuShortcutsDatabase.SetRule("UniGetUI", "Tools");
+        StartMenuShortcutsDatabase.ApplyRule("UniGetUI", [own]);
+        Assert.True(File.Exists(own));
+        Assert.False(File.Exists(Path.Combine(_userPrograms, "Tools", "UniGetUI.lnk")));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

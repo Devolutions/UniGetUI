@@ -386,6 +386,24 @@ public sealed class AutoUpdaterTests
     }
 
     [Theory]
+    [InlineData("2026.3.3", "2026.3.3", true)]
+    [InlineData("2026.3.3", "2026.3.3-beta1", true)]
+    [InlineData("2026.3.3", "v2026.3.3.0", true)]
+    [InlineData("2026.3.2", "2026.3.3", false)]
+    [InlineData("2026.3.3", "2026.4.3", false)]
+    [InlineData("2026.3.3-beta1", "2026.3.3-beta1", false)]
+    [InlineData(null, "2026.3.3", false)]
+    [InlineData("2026.3.3", "not-a-version", false)]
+    public void BundleVersionMatchesRelease_ComparesOnlyTheCoreVersionOfTheRelease(
+        string? bundleVersion,
+        string releaseVersion,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, AutoUpdaterHelpers.BundleVersionMatchesRelease(bundleVersion, releaseVersion));
+    }
+
+    [Theory]
     [InlineData("2026.3.2-beta1", true)]
     [InlineData("2026.3.2-beta2", true)]
     [InlineData("2026.3.2.0-rc1", true)]

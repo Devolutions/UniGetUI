@@ -709,7 +709,19 @@ jobs:
             codesign --force --sign - "${APP_BUNDLE}"
           fi
 
-          COPYFILE_DISABLE=1 tar -czf "output/UniGetUI.${{ matrix.name }}.tar.gz" "${APP_BUNDLE}"
+          # Keep extended attributes: the signatures of the non-code files in Contents/MacOS live there,
+          # and the self-updater verifies the whole extracted bundle.
+          /usr/bin/tar -czf "output/UniGetUI.${{ matrix.name }}.tar.gz" "${APP_BUNDLE}"
+
+          if [ "$DRY_RUN" = "false" ]; then
+            # Check the archive as the self-updater will (MacAppSignature.Requirement in UniGetUI.Avalonia).
+            CHECK_DIR="$(mktemp -d)"
+            /usr/bin/tar -xzf "output/UniGetUI.${{ matrix.name }}.tar.gz" -C "$CHECK_DIR"
+            codesign --verify --deep --strict \
+              -R='anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and (certificate leaf[subject.OU] = "N592S9ASDB")' \
+              "$CHECK_DIR/UniGetUI.app"
+            rm -rf "$CHECK_DIR"
+          fi
 
           create-dmg \
             --volname "UniGetUI" \

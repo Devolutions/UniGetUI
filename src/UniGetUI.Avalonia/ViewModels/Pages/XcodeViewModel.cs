@@ -910,11 +910,11 @@ public partial class XcodeViewModel : ViewModelBase
     {
         if (MainWindow.Instance is not { } owner)
             return null;
-        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await NativePickerTracker.Track(owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = CoreTools.Translate("Choose where to save the simulator runtime image"),
             AllowMultiple = false,
-        });
+        }));
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 

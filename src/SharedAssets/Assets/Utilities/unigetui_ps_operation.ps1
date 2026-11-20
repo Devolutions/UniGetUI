@@ -104,6 +104,25 @@ for ($i = 2; $i -lt $args.Count; $i++)
     $rest += $args[$i]
 }
 
+function Write-AccessDeniedMarker
+{
+    foreach ($entry in @($Error))
+    {
+        $exception = if ($entry -is [System.Exception]) { $entry } else { $entry.Exception }
+        while ($null -ne $exception)
+        {
+            if ($exception -is [System.UnauthorizedAccessException])
+            {
+                [Console]::Error.WriteLine('UniGetUI: the operation was denied access to a path.')
+                return
+            }
+            $exception = $exception.InnerException
+        }
+    }
+}
+
+$Error.Clear()
+
 # A terminating error, such as a parameter that the cmdlet does not accept, would otherwise be
 # written to the error stream and leave this script to exit 0, reporting a failed operation as a
 # success. Running under -Command used to fail the process for us, so it is done explicitly here.
@@ -117,6 +136,7 @@ catch
     # The whole record, not just the message: the caller matches on the error id to decide
     # whether to retry elevated or without -Scope, and that id is only in the full record.
     Write-Error -ErrorRecord $_
+    Write-AccessDeniedMarker
     exit 1
 }
 
@@ -125,6 +145,7 @@ catch
 # operations do not - so without this a failed operation would be reported as a success.
 if (-not $succeeded)
 {
+    Write-AccessDeniedMarker
     exit 1
 }
 
@@ -132,5 +153,6 @@ if (-not $succeeded)
 # binds -ErrorVariable to this name and it is checked as well.
 if ($UniGetUIOperationError)
 {
+    Write-AccessDeniedMarker
     exit 1
 }

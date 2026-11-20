@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
@@ -179,6 +180,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
         protected void InvokeFinishedLoadingEvent()
         {
             FinishedLoading?.Invoke(this, EventArgs.Empty);
+
+            // A load leaves the managers' output and the list it replaced behind as garbage.
+            IdleMemoryTrimmer.Request();
         }
 
         /// <summary>
@@ -394,7 +398,35 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// <returns>A long int containing the hash</returns>
         protected long HashPackage(IPackage package)
         {
-            return ALLOW_MULTIPLE_PACKAGE_VERSIONS ? package.GetVersionedHash() : package.GetHash();
+            if (!ALLOW_MULTIPLE_PACKAGE_VERSIONS)
+                return package.GetHash();
+
+            return DistinguishReportedScopes ? package.GetInstalledIdentityHash() : package.GetVersionedHash();
+        }
+
+        /// <summary>
+        /// When true, installations that differ only by reported scope are separate entries.
+        /// </summary>
+        protected virtual bool DistinguishReportedScopes => false;
+
+        /// <summary>
+        /// Finds the entry a probe refers to when its exact key misses: same versioned identity, and either side
+        /// not reporting a scope. Ambiguity returns null rather than guessing between scopes.
+        /// </summary>
+        private IPackage? FindScopeTolerant(IPackage package)
+        {
+            if (!DistinguishReportedScopes || !package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
+                return null;
+
+            var matches = Packages
+                .Where(c => c.Manager.Id == package.Manager.Id
+                    && c.Source.Name == package.Source.Name
+                    && c.Id == package.Id
+                    && c.VersionString == package.VersionString
+                    && (c.NormalizedReportedScope is null || package.NormalizedReportedScope is null))
+                .Take(2)
+                .ToArray();
+            return matches.Length == 1 ? matches[0] : null;
         }
 
         private void RememberSelectionState()
@@ -456,7 +488,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return;
             }
 
-            if (FindFromAnySource(package) is { } stored)
+            if ((FindScopeTolerant(package) ?? FindFromAnySource(package)) is { } stored)
             {
                 PackageReference.Remove(HashPackage(stored), out _);
                 InvokePackagesChangedEvent(true, [], [stored]);
@@ -478,7 +510,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (PackageReference.TryGetValue(HashPackage(package), out IPackage? eq))
                 return eq;
 
-            return FindFromAnySource(package);
+            return FindScopeTolerant(package) ?? FindFromAnySource(package);
         }
 
         private IPackage? FindFromAnySource(IPackage package)
@@ -486,10 +518,21 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
                 return null;
 
-            return Packages.FirstOrDefault(candidate =>
+            var matches = Packages.Where(candidate =>
                 PackageIdentity.IsSamePackageFromAnySource(candidate, package)
                 && (!ALLOW_MULTIPLE_PACKAGE_VERSIONS || candidate.VersionString == package.VersionString)
+                && (!DistinguishReportedScopes
+                    || candidate.NormalizedReportedScope is null
+                    || package.NormalizedReportedScope is null
+                    || candidate.NormalizedReportedScope == package.NormalizedReportedScope)
             );
+
+            if (!DistinguishReportedScopes)
+                return matches.FirstOrDefault();
+
+            // Several candidates mean the probe cannot say which installation it refers to.
+            var found = matches.Take(2).ToArray();
+            return found.Length == 1 ? found[0] : null;
         }
 
         /// <summary>

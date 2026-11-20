@@ -181,6 +181,15 @@ namespace UniGetUI.PackageEngine.PackageClasses
             return __extended_hash;
         }
 
+        public long GetInstalledIdentityHash() =>
+            Package.ComputeInstalledIdentityHash(
+                Manager.Id,
+                Source.Name,
+                Id,
+                VersionString,
+                ((IPackage)this).NormalizedReportedScope
+            );
+
         public async Task<bool> HasUpdatesIgnoredAsync(string version = "*")
         {
             return false;

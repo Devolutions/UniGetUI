@@ -227,6 +227,9 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
         public string? GetReinstallRefusal(IPackage package, InstallOptions options) => null;
 
+        public bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode) =>
+            false;
+
         public IReadOnlyList<PythonInterpreterChoice> ListPythonInterpreters() => [];
     }
 }

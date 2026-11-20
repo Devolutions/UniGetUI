@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Scheduling;
 
@@ -16,6 +18,14 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
     public event EventHandler? ManageAutoUpdatesRequested;
 
     public ObservableCollection<ScheduledTaskViewModel> Tasks { get; } = [];
+
+    [ObservableProperty] private bool _isAutomaticQuitEnabled = ReadAutomaticQuitEnabled();
+
+    private static bool ReadAutomaticQuitEnabled()
+        => Settings.Get(Settings.K.QuitAfterAutomaticUpdates) || Settings.Get(Settings.K.QuitWhenNothingToInstall);
+
+    [RelayCommand]
+    private void RefreshAutomaticQuitState() => IsAutomaticQuitEnabled = ReadAutomaticQuitEnabled();
 
     public SchedulerViewModel()
     {

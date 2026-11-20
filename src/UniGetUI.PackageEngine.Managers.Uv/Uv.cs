@@ -27,6 +27,8 @@ public sealed class Uv : PackageManager
             SupportsCustomVersions = true,
             SupportsPreRelease = true,
             SerializesOperations = true,
+            // Installed and update rows are all labelled machine; uv tool list does not say where a tool lives
+            ReportsReliableInstalledScope = false,
             SupportsCustomPythonInterpreters = true,
             SupportsProxy = ProxySupport.Yes,
             SupportsProxyAuth = true,
@@ -315,7 +317,7 @@ public sealed class Uv : PackageManager
     {
         Environment.SetEnvironmentVariable("NO_COLOR", "1", EnvironmentVariableTarget.Process);
 
-        _ = Task.Run(() => PyPIIndexClient.PreWarmIndexAsync());
+        _ = PyPIIndexClient.PreWarmIndexAsync();
     }
 
     public override int? CompareVersions(string versionA, string versionB)

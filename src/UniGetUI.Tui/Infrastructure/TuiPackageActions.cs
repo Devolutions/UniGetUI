@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageOperations;
 using UniGetUI.Tui.FakeData;
 
@@ -31,12 +32,18 @@ internal static class TuiPackageActions
             if (pkg.Source.IsVirtualManager) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg, elevated: elevated,
                 interactive: interactive, no_integrity: skipHash);
-            if (PackageOperation.HasPendingOperation(pkg, OperationType.Install)) continue;
-            TuiOperationRegistry.Start(new InstallPackageOperation(pkg, opts));
-            started++;
+            if (StartInstall(pkg, opts)) started++;
         }
 
         return started;
+    }
+
+    internal static bool StartInstall(IPackage package, InstallOptions options)
+    {
+        if (package.Source.IsVirtualManager || PackageOperation.HasPendingOperation(package, OperationType.Install))
+            return false;
+        TuiOperationRegistry.Start(new InstallPackageOperation(package, options));
+        return true;
     }
 
     public static async Task<int> UpdateAsync(IEnumerable<IPackage> packages, bool? elevated = null,
@@ -170,12 +177,8 @@ internal static class TuiPackageActions
 
     // ─── Ignored updates ────────────────────────────────────────────────────
 
-    public static async Task IgnoreUpdatesAsync(IPackage package, string version = "*")
-    {
-        await package.AddToIgnoredUpdatesAsync(version);
-        UpgradablePackagesLoader.Instance.IgnoredPackages[package.Id] = package;
-        UpgradablePackagesLoader.Instance.Remove(package);
-    }
+    public static Task IgnoreUpdatesAsync(IPackage package, string version = "*") =>
+        UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(package, version);
 
     public static Task SkipVersionAsync(IPackage package) => IgnoreUpdatesAsync(package, package.NewVersionString);
 
@@ -197,13 +200,7 @@ internal static class TuiPackageActions
             return false;
         }
 
-        await package.AddToIgnoredUpdatesAsync();
-        if (package.GetUpgradablePackage() is { } upgradable)
-        {
-            UpgradablePackagesLoader.Instance.IgnoredPackages[upgradable.Id] = upgradable;
-            UpgradablePackagesLoader.Instance.Remove(upgradable);
-        }
-
+        await UpgradablePackagesLoader.Instance.IgnoreUpdatesAsync(package);
         return true;
     }
 

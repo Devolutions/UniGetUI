@@ -8,6 +8,7 @@ internal sealed class TestHttpServer : IDisposable
     private readonly HttpListener _listener = new();
     private readonly Func<HttpListenerRequest, (int StatusCode, string Content, string ContentType)> _handler;
     private readonly bool _handleConcurrently;
+    private readonly IReadOnlyDictionary<string, string> _responseHeaders;
     private int _inFlight;
     private int _peakInFlight;
     private readonly List<string> _requestPaths = [];
@@ -16,11 +17,13 @@ internal sealed class TestHttpServer : IDisposable
 
     public TestHttpServer(
         Func<HttpListenerRequest, (int StatusCode, string Content, string ContentType)> handler,
-        bool handleConcurrently = false
+        bool handleConcurrently = false,
+        IReadOnlyDictionary<string, string>? responseHeaders = null
     )
     {
         _handler = handler;
         _handleConcurrently = handleConcurrently;
+        _responseHeaders = responseHeaders ?? new Dictionary<string, string>();
 
         // A free port can be taken between probing it and binding it, which turns into a random
         // failure once many fixtures run in one suite. Retry on a fresh port instead.
@@ -136,6 +139,8 @@ internal sealed class TestHttpServer : IDisposable
             var (statusCode, content, contentType) = _handler(context.Request);
             context.Response.StatusCode = statusCode;
             context.Response.ContentType = contentType;
+            foreach (var (name, value) in _responseHeaders)
+                context.Response.Headers[name] = value;
             await using StreamWriter writer = new(context.Response.OutputStream);
             await writer.WriteAsync(content);
             await writer.FlushAsync();

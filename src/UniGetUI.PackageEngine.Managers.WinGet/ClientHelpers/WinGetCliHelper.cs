@@ -160,17 +160,17 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
                     InstalledVersionIsUnverified = versionUnknown,
                 };
                 // Skip one-shot suppression for unknown versions so the restored mark isn't cleared.
-                if (
-                    versionUnknown
-                    || !WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package)
-                )
+                bool suppressed = versionUnknown
+                    ? WinGetPkgOperationHelper.IsStuckUpgradeLoop(package)
+                    : WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package);
+                if (!suppressed)
                 {
                     packages.Add(package);
                 }
                 else
                 {
                     Logger.Warn(
-                        $"WinGet package {package.Id} not being shown as an updated as this version has already been marked as installed"
+                        $"WinGet package {package.Id} not being shown as an update to {package.NewVersionString}, since it is suppressed"
                     );
                 }
             }

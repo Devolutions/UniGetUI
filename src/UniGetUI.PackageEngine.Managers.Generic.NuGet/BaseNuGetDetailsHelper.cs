@@ -15,8 +15,6 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 {
     public abstract class BaseNuGetDetailsHelper : BasePkgDetailsHelper
     {
-        private const int MaxV2VersionPages = 50;
-
         public BaseNuGetDetailsHelper(BaseNuGet manager)
             : base(manager) { }
 
@@ -617,7 +615,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             using HttpClient client = new(CoreTools.GenericHttpClientParameters);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
 
-            for (int page = 0; SearchUrl is not null && page < MaxV2VersionPages; page++)
+            for (int page = 0; SearchUrl is not null && page < BaseNuGet.MaxV2VersionPages; page++)
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
                 NuGetFeedCredentials.ApplyTo(request, package.Source.Url);

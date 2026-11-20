@@ -9,6 +9,7 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
+using UniGetUI.Interface.AgentRegistration;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
@@ -33,6 +34,7 @@ internal static class AvaloniaBootstrapper
     // package raises the event, but only one dialog should be visible at a time.
     private static bool _brokerUnavailableDialogActive;
     private static IpcServer? _ipcApi;
+    private static AgentRegistrationClient? _agentRegistration;
 
     public static async Task InitializeAsync()
     {
@@ -143,6 +145,7 @@ internal static class AvaloniaBootstrapper
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
                 TaskScheduler.Default);
+        StartAgentRegistration();
         TelemetryHandler.Configure(
             Secrets.GetOpenSearchUsername(),
             Secrets.GetOpenSearchPassword());
@@ -180,6 +183,7 @@ internal static class AvaloniaBootstrapper
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
                 TaskScheduler.Default);
+        _ = Task.Run(LinuxDesktopEntry.EnsureForCurrentProcess);
         _ = Task.Run(IconDatabase.Instance.LoadFromCacheAsync)
             .ContinueWith(
                 t => Logger.Error(t.Exception!),
@@ -242,8 +246,34 @@ internal static class AvaloniaBootstrapper
         }
     }
 
-    public static async Task StopIpcApiAsync()
+    private static void StartAgentRegistration()
     {
+        try
+        {
+            // Registration is for the signed-in user's own process; it never runs elevated.
+            if (!OperatingSystem.IsWindows() || CoreTools.IsAdministrator())
+                return;
+
+            _agentRegistration = AgentRegistrationClient.CreateDefault();
+            _agentRegistration?.Start();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Could not start Devolutions Agent registration:");
+            Logger.Error(ex);
+        }
+    }
+
+    /// <summary>Stops the Devolutions Agent registration and the IPC API.</summary>
+    public static async Task StopBackgroundServicesAsync()
+    {
+        AgentRegistrationClient? agentRegistration = _agentRegistration;
+        _agentRegistration = null;
+        if (agentRegistration is not null)
+        {
+            await agentRegistration.StopAsync().ConfigureAwait(false);
+        }
+
         if (_ipcApi is null)
         {
             return;

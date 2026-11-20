@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=UniGetUI
+Comment=@COMMENT@
+Exec=@EXEC@
+Icon=@ICON@
+Terminal=false
+Categories=System;Utility;
+StartupNotify=true

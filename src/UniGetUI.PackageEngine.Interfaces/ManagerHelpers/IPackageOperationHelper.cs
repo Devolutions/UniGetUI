@@ -72,6 +72,8 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
 
         public string? GetReinstallRefusal(IPackage package, InstallOptions options);
 
+        public bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode);
+
         /// <summary>
         /// Lets the dialog ask the manager's helper for the installed and downloadable Python
         /// interpreters when the manager capability SupportsCustomPythonInterpreters is set.

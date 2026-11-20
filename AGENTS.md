@@ -91,12 +91,37 @@ installed version during an update check; the `.nupkg` URL comes from the regist
 and metadata comes from the version's page entry when the leaf carries no `catalogEntry`.
 None of this runs for a feed that has a flat container.
 
-On V2, Artifactory answers `GetUpdates()` with nothing unless `includeAllVersions` is true, and
-then truncates the list at 100 without a next link. So when every `GetUpdates()` batch of a
-source comes back empty, one `includeAllVersions=true` request tells "nothing is newer" (still
-empty: stop there) from "this server ignores the request", in which case each installed package
-is looked up with `FindPackagesById()?$filter=IsLatestVersion` (`IsAbsoluteLatestVersion` with
-pre-releases). V2 version lists follow `next` links, up to 50 pages.
+On V2, Artifactory's `GetUpdates()` cannot be trusted: it answers a batch of more than one id
+with nothing, even with `includeAllVersions=true`, and a single id only for some packages. A
+source whose responses carry `X-Artifactory-Id` or `X-JFrog-Version`, or the
+`http://jfrog.com/xmlns/nuget/` namespace in their body (which survives a proxy that strips
+headers), therefore skips `GetUpdates()` after its first answer, and on later checks for an hour,
+and each installed package is looked up by id instead.
+On other servers, when every `GetUpdates()` batch comes back empty, one `includeAllVersions=true`
+request tells "nothing is newer" (still empty: stop there) from "this server ignores the
+request", which leads to the same lookup by id.
+
+That lookup runs for several packages at once (`NuGetV3Client.MaxConcurrentRequests`); a failure
+looking up one package is logged against that package alone, and once the feed cannot be reached
+the remaining packages are skipped with one error instead of one each. It asks
+`FindPackagesById()?$filter=IsLatestVersion` (`IsAbsoluteLatestVersion` with
+pre-releases) without `semVerLevel`, because Artifactory ignores `IsLatestVersion` when
+`semVerLevel=2.0.0` is present. Every response is read as a version listing: the newest listed,
+eligible version above the installed one wins, and `next` links are followed, so a server that
+ignores the filter costs pages, not a wrong answer. Paging stops at a link already fetched or a
+page that adds no version, since some servers answer a paged link with the first page again.
+When the filtered request lists nothing for the id, the full
+`FindPackagesById()?semVerLevel=2.0.0` listing is read instead. Versions published in 1900 are
+unlisted and skipped. Packages no version of which is listed are named in one log line per
+source with whether credentials were sent; a response whose entries cannot be read is logged with
+its beginning. V2 version lists follow `next` links, up to 50 pages.
+
+V2 entries, in search and update results alike, are read without assuming one server's
+serialization: an `<entry>` may carry attributes, the data-service properties may use any
+namespace prefix, and an `Id` or `Version` missing from one place is taken from the other. Update
+results prefer the `Id`/`Version` elements; search prefers the `Packages(Id='…',Version='…')` link,
+as it always has, because galleries put the normalized version there and the original one in the
+element.
 
 ### Fallback behaviour
 
@@ -146,9 +171,11 @@ in the next section.
 Python CLI tools installed into uv's isolated tool environments.
 
 - The shared `UniGetUI.PackageEngine.Managers.Generic.PyPI` project backs both uv and Pip:
-  `PyPIIndexClient` serves the `/simple` project-name list and search matches,
-  `PyPIProjectClient` serves latest-version lookups. Pip and uv each hold their own cache
-  files under that service, so neither manager's index behaviour leaks into the other's.
+  `PyPIIndexClient` serves the `/simple` project-name list and search matches, one
+  `pypi_simple_index.cache` file backs both managers, and the parsed names are held in memory
+  only while searches are being made (`MemoryCacheIdleLifetime`); `PyPIProjectClient` serves
+  latest-version lookups, and Pip keeps its own in-memory ETag cache of resolved versions on
+  top of it.
   `PyPIProjectClient.ParseVersions` orders releases newest first, drops releases whose every
   file is yanked, and drops pre-releases unless asked, so uv's version dropdown lists stable
   releases only; uv's `ListVersionsForUpdateSelection` override keeps pre-releases available
@@ -342,7 +369,9 @@ dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /p:Configuration=R
 The `.NET Tests` workflow runs the Windows build/tests, the full-trim NativeAOT publish and,
 on Ubuntu, the Linux and macOS self-update tests (`test-linux-self-update`, which the Windows
 job reports as skipped) in parallel jobs. `test-codebase` is the aggregate gate and requires
-all three to succeed.
+all three to succeed. That Ubuntu job also runs `LinuxDesktopEntryTests` from `UniGetUI.Tests`,
+which builds for the portable framework off Windows; a test there that needs a Windows-only
+manager goes under `#if WINDOWS`.
 The test job builds once with two MSBuild nodes and runs the complete suite with
 `--no-build /m:1`; keep test hosts serial because suites share on-disk state. NativeAOT
 already checks full trimming, so do not add a second warning-only full-trim publish.

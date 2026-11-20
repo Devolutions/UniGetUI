@@ -1,4 +1,5 @@
-using System.Text.Json.Nodes;
+using System.Text;
+using System.Text.Json;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -19,12 +20,22 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
 
         private const int CacheMaxAgeHours = 24;
 
+        // The index is close to a million names (tens of MB once loaded), so it is only kept
+        // while searches are being made: it is dropped after MemoryCacheIdleLifetime without
+        // one, and read back from the file cache by the next search.
         private static string[]? _cachedNames;
         private static DateTime _cacheTimestamp = DateTime.MinValue;
         private static readonly object _cacheLock = new();
+        private static long _cacheUseStamp;
+
+        internal static TimeSpan MemoryCacheIdleLifetime { get; set; } = TimeSpan.FromMinutes(2);
 
         internal static string GetCacheFilePath() =>
             Path.Join(CoreData.UniGetUICacheDirectory_Data, "pypi_simple_index.cache");
+
+        private static bool IsIndexFileFresh(string cacheFile) =>
+            File.Exists(cacheFile)
+            && (DateTime.Now - File.GetLastWriteTime(cacheFile)).TotalHours < CacheMaxAgeHours;
 
         /// <summary>
         /// Returns every project name on the simple index, from the in-memory cache, the file
@@ -34,28 +45,64 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
         /// <exception cref="InvalidDataException">The fresh download was malformed.</exception>
         internal static string[] GetProjectNames(INativeTaskLogger? logger = null)
         {
+            // A use starts here: a release scheduled by an earlier search must not drop the
+            // index this search is about to read.
+            lock (_cacheLock) { _cacheUseStamp++; }
+            try
+            {
+                return GetProjectNamesCore(logger);
+            }
+            finally
+            {
+                ScheduleIndexRelease();
+            }
+        }
+
+        // Drops the in-memory index once no search has used it for MemoryCacheIdleLifetime.
+        // The use stamp is only changed and compared under _cacheLock, so a release that has
+        // been overtaken by a newer use can never clear the index.
+        internal static void ScheduleIndexRelease()
+        {
+            long stamp;
+            lock (_cacheLock) { stamp = ++_cacheUseStamp; }
+            TimeSpan lifetime = MemoryCacheIdleLifetime;
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(lifetime).ConfigureAwait(false);
+                lock (_cacheLock)
+                {
+                    if (stamp == _cacheUseStamp)
+                        _cachedNames = null;
+                }
+            });
+        }
+
+        private static string[] GetProjectNamesCore(INativeTaskLogger? logger)
+        {
             lock (_cacheLock)
             {
                 if (_cachedNames is not null && (DateTime.Now - _cacheTimestamp).TotalHours < CacheMaxAgeHours)
                     return _cachedNames;
             }
 
-            LogOrForget(logger, "Loading PyPI index");
+            logger?.Log("Loading PyPI index");
 
             string cacheFile = GetCacheFilePath();
-            if (File.Exists(cacheFile) && (DateTime.Now - File.GetLastWriteTime(cacheFile)).TotalHours < CacheMaxAgeHours)
+
+            // Use file cache if fresh enough
+            if (IsIndexFileFresh(cacheFile))
             {
-                LogOrForget(logger, $"Loading PyPI index from file cache ({File.GetLastWriteTime(cacheFile):g})");
+                logger?.Log($"Loading PyPI index from file cache ({File.GetLastWriteTime(cacheFile):g})");
                 string[] cached = File.ReadAllLines(cacheFile);
                 if (cached.Length > 0)
                 {
                     lock (_cacheLock) { _cachedNames = cached; _cacheTimestamp = File.GetLastWriteTime(cacheFile); }
                     return cached;
                 }
-                LogOrForget(logger, "PyPI index file cache was empty, re-downloading...", message => Logger.Error(message));
+                LogError(logger, "PyPI index file cache was empty, re-downloading...");
             }
 
-            LogOrForget(logger, "Downloading PyPI simple index (one-time ~38 MB download, cached for 24 h)...");
+            logger?.Log("Downloading PyPI simple index (one-time ~38 MB download, cached for 24 h)...");
 
             using HttpClient client = new(CoreTools.GenericHttpClientParameters);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
@@ -66,10 +113,12 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
             if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"PyPI simple index returned {(int)response.StatusCode} {response.ReasonPhrase}");
 
-            string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            // Parsed straight from the response bytes: as a string plus a JSON document tree the
+            // ~38 MB index transiently cost several hundred MB.
+            byte[] json = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
             string[] names = ParseSimpleIndexProjectNames(json);
 
-            LogOrForget(logger, $"Downloaded {names.Length} package names from PyPI");
+            logger?.Log($"Downloaded {names.Length} package names from PyPI");
 
             lock (_cacheLock) { _cachedNames = names; _cacheTimestamp = DateTime.Now; }
 
@@ -80,7 +129,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
             }
             catch (Exception e)
             {
-                LogOrForget(logger, $"Could not write PyPI index file cache to {cacheFile}: {e.Message}", message => Logger.Error(message));
+                LogError(logger, $"Could not write PyPI index file cache to {cacheFile}: {e.Message}");
             }
 
             return names;
@@ -88,7 +137,8 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
 
         /// <summary>
         /// Downloads the index in the background so the first search does not have to wait for
-        /// the ~38 MB download inside the search timeout window.
+        /// the ~38 MB download inside the search timeout window. Only the file needs to be
+        /// ready; a fresh one is not loaded until a search.
         /// </summary>
         internal static Task PreWarmIndexAsync()
         {
@@ -96,7 +146,8 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
             {
                 try
                 {
-                    _ = GetProjectNames();
+                    if (!IsIndexFileFresh(GetCacheFilePath()))
+                        _ = GetProjectNames();
                     Logger.Info("PyPI: the simple index is cached and ready");
                 }
                 catch (Exception e)
@@ -106,29 +157,64 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
             });
         }
 
-        private static void LogOrForget(INativeTaskLogger? logger, string message) =>
-            logger?.Log(message);
-
-        private static void LogOrForget(INativeTaskLogger? logger, string message, Action<string> fallback)
+        private static void LogError(INativeTaskLogger? logger, string message)
         {
             if (logger is not null)
-                logger.Log(message);
+                logger.Error(message);
             else
-                fallback(message);
+                Logger.Error(message);
         }
 
         /// <summary>
         /// Splits project-name entries out of a PEP 691 simple index JSON document. An index
         /// that parses but yields zero names is malformed, not an empty feed.
         /// </summary>
-        internal static string[] ParseSimpleIndexProjectNames(string json)
+        internal static string[] ParseSimpleIndexProjectNames(string json) =>
+            ParseSimpleIndexProjectNames(Encoding.UTF8.GetBytes(json));
+
+        // Reads {"projects": [{"name": "..."}, ...]} token by token, keeping only the names.
+        internal static string[] ParseSimpleIndexProjectNames(ReadOnlySpan<byte> utf8Json)
         {
-            var projects = (JsonNode.Parse(json) as JsonObject)?["projects"] as JsonArray;
-            string[] names = projects?
-                .Select(p => p?["name"]?.GetValue<string>())
-                .Where(n => !string.IsNullOrEmpty(n))
-                .Select(n => n!)
-                .ToArray() ?? [];
+            List<string> found = [];
+            var reader = new Utf8JsonReader(utf8Json);
+            bool inProjects = false;
+            while (reader.Read())
+            {
+                if (!inProjects)
+                {
+                    if (reader.TokenType is JsonTokenType.PropertyName && reader.CurrentDepth == 1)
+                    {
+                        bool isProjects = reader.ValueTextEquals("projects");
+                        reader.Read();
+                        if (isProjects && reader.TokenType is JsonTokenType.StartArray)
+                            inProjects = true;
+                        else
+                            reader.Skip();
+                    }
+                    continue;
+                }
+
+                if (reader.TokenType is JsonTokenType.EndArray && reader.CurrentDepth == 1)
+                    break;
+
+                if (reader.TokenType is JsonTokenType.PropertyName && reader.CurrentDepth == 3)
+                {
+                    bool isName = reader.ValueTextEquals("name");
+                    reader.Read();
+                    if (isName && reader.TokenType is JsonTokenType.String)
+                    {
+                        string? name = reader.GetString();
+                        if (!string.IsNullOrEmpty(name))
+                            found.Add(name);
+                    }
+                    else
+                    {
+                        reader.Skip();
+                    }
+                }
+            }
+
+            string[] names = found.ToArray();
 
             if (names.Length == 0)
                 throw new InvalidDataException("PyPI simple index returned 0 packages — response may be malformed");

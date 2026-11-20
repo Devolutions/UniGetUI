@@ -110,6 +110,12 @@ jobs:
         dotnet test UniGetUI.Core.Tools.Tests/UniGetUI.Core.Tools.Tests.csproj --verbosity q --nologo
         --filter "FullyQualifiedName~LinuxUpdateTargetTests|FullyQualifiedName~LinuxSwapScriptTests|FullyQualifiedName~MacUpdateTargetTests"
 
+    - name: Run the Linux desktop entry tests
+      working-directory: src
+      run: >-
+        dotnet test UniGetUI.Tests/UniGetUI.Tests.csproj --verbosity q --nologo
+        --filter "FullyQualifiedName~LinuxDesktopEntryTests"
+
   publish-nativeaot:
     runs-on: windows-latest
     steps:

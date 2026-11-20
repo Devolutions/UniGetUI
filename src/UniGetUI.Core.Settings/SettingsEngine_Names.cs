@@ -38,6 +38,7 @@ public static partial class Settings
         DisableAUPOnMeteredConnections,
         DisableAUPOnBatterySaver,
         DisableAUPOnBattery,
+        DisableBackgroundEfficiencyMode,
         CustomVcpkgRoot,
         AlreadyWarnedAboutAdmin,
         AlreadyWarnedAboutChocolateyMigration,
@@ -61,6 +62,7 @@ public static partial class Settings
         PreferredTheme,
         StartupPage,
         WindowGeometry,
+        WindowNormalGeometry,
         IgnoredUpdatesWindowSize,
         ChangeBackupFileName,
         MaxLocalBackupCount,
@@ -169,6 +171,7 @@ public static partial class Settings
         NavigationPageOrder,
         QuitAfterAutomaticUpdates,
         QuitWhenNothingToInstall,
+        QuitEvenWhenWindowIsOpen,
         InstallUniGetUIUpdatesWhenIdle,
         // NOTE: Set this to true to delegate package operations to Devolutions Agent broker
         // instead of using local UAC elevation. Change default here when ready for production.
@@ -179,6 +182,7 @@ public static partial class Settings
         SkillsTargetAgents,
         SkillsNotionCliVersion,
         SkillsShDiscoveryEnabled,
+        DisableLinuxDesktopEntry,
 
         Test1,
         Test2,
@@ -228,6 +232,7 @@ public static partial class Settings
             K.DisableAUPOnMeteredConnections => "DisableAUPOnMeteredConnections",
             K.DisableAUPOnBatterySaver => "DisableAUPOnBatterySaver",
             K.DisableAUPOnBattery => "DisableAUPOnBattery",
+            K.DisableBackgroundEfficiencyMode => "DisableBackgroundEfficiencyMode",
             K.CustomVcpkgRoot => "CustomVcpkgRoot",
             K.AlreadyWarnedAboutAdmin => "AlreadyWarnedAboutAdmin",
             K.AlreadyWarnedAboutChocolateyMigration => "AlreadyWarnedAboutChocolateyMigration",
@@ -251,6 +256,7 @@ public static partial class Settings
             K.PreferredTheme => "PreferredTheme",
             K.StartupPage => "StartupPage",
             K.WindowGeometry => "WindowGeometry",
+            K.WindowNormalGeometry => "WindowNormalGeometry",
             K.IgnoredUpdatesWindowSize => "IgnoredUpdatesWindowSize",
             K.ChangeBackupFileName => "ChangeBackupFileName",
             K.MaxLocalBackupCount => "MaxLocalBackupCount",
@@ -359,6 +365,7 @@ public static partial class Settings
             K.NavigationPageOrder => "NavigationPageOrder",
             K.QuitAfterAutomaticUpdates => "QuitAfterAutomaticUpdates",
             K.QuitWhenNothingToInstall => "QuitWhenNothingToInstall",
+            K.QuitEvenWhenWindowIsOpen => "QuitEvenWhenWindowIsOpen",
             K.InstallUniGetUIUpdatesWhenIdle => "InstallUniGetUIUpdatesWhenIdle",
             K.UseAgentBroker => "UseAgentBroker",
             K.SkippedUniGetUIVersion => "SkippedUniGetUIVersion",
@@ -367,6 +374,7 @@ public static partial class Settings
             K.SkillsTargetAgents => "SkillsTargetAgents",
             K.SkillsNotionCliVersion => "SkillsNotionCliVersion",
             K.SkillsShDiscoveryEnabled => "SkillsShDiscoveryEnabled",
+            K.DisableLinuxDesktopEntry => "DisableLinuxDesktopEntry",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

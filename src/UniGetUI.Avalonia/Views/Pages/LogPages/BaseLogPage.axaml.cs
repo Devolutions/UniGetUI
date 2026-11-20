@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 using UniGetUI.Core.Tools;
 
@@ -55,7 +56,7 @@ public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardSh
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel is null) return;
 
-        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await NativePickerTracker.Track(topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = CoreTools.Translate("Export log"),
             SuggestedFileName = CoreTools.Translate("UniGetUI Log"),
@@ -63,7 +64,7 @@ public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardSh
             [
                 new FilePickerFileType(CoreTools.Translate("Text")) { Patterns = ["*.txt"] },
             ],
-        });
+        }));
 
         if (file is not null)
             await File.WriteAllTextAsync(file.Path.LocalPath, text);

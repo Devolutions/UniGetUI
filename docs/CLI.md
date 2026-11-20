@@ -493,10 +493,10 @@ for each manager across restarts, in `ManagerHealth.json` in its data folder:
 | Field | Meaning |
 | --- | --- |
 | `state` | `loading` (still starting), `unknown` (nothing listed yet), `healthy`, `failing`, `malfunctioning`, `not-found` or `disabled`. |
-| `needsAttention` | `true` when the app shows its health banner: a malfunction, or a listing that failed at least twice in a row with its last failure in the past 24 hours. For WinGet, Apt, Dnf and Pacman a single failed installed listing is enough. |
+| `needsAttention` | `true` when the app shows its health banner: a malfunction, or a listing that failed at least twice in a row with its last failure in the past 24 hours. For WinGet, Apt, Dnf and Pacman a single failed installed listing is enough, unless it timed out. A listing that keeps timing out needs attention only if no listing of that manager has succeeded since its failures began, so a manager that is only slow while the network comes up is not reported. |
 | `failingListing` | `search`, `installed` or `updates`: the listing that failed most recently, or `installed` for a malfunction. |
 | `reason`, `consecutiveFailures` | The failing listing's last error and how many times in a row it failed. |
-| `search`, `installed`, `updates` | Per listing: `lastSuccessUtc`, `lastFailureUtc`, `lastFailureReason`, `lastFailureWasTimeout`, `consecutiveFailures`, `lastPackageCount`, `lastFastRepairUtc`, `lastFastRepairReason` (a first attempt that failed and was retried) and `recentDurationsMs` (the last ten). |
+| `search`, `installed`, `updates` | Per listing: `lastSuccessUtc`, `lastFailureUtc`, `lastFailureReason`, `lastFailureWasTimeout` (the failure, or the first attempt it retried, timed out), `consecutiveFailures`, `failureStreakStartUtc` (when the current run of failures began), `lastPackageCount`, `lastFastRepairUtc`, `lastFastRepairReason` (a first attempt that failed and was retried) and `recentDurationsMs` (the last ten). |
 
 A manager is `malfunctioning` when it is ready, its installed listing succeeded and returned no package
 at all, and a working installation of it always lists something (WinGet, Apt, Dnf and Pacman). The
@@ -594,6 +594,8 @@ Windows only. A folder rule names the subfolder of the current user's Start Menu
 | `bundle remove` | `--id <package-id>` | `--manager <id>`, `--source <source>`, `--version <version>`, `--scope <scope>`, `--pre-release`, `--selection <mode>` | Removes matching package entries from the bundle. |
 | `bundle install` | None | `--include-installed true\|false`, `--elevated true\|false`, `--interactive true\|false`, `--skip-hash true\|false` | Installs the bundle through UniGetUI’s shared operation pipeline. |
 
+An explicitly requested scope on a bundle entry is used for its installation while other inherited options continue to follow manager defaults.
+
 ### Packages
 
 | Command | Required options | Optional options | Notes |
@@ -615,6 +617,8 @@ Windows only. A folder rule names the subfolder of the current user's Start Menu
 | `package ignored remove` | `--id <package-id>` | `--manager <id>`, `--version <version>`, `--source <source>` | Removes an ignored-update rule. |
 | `package update-all` | None | `--manager <id>`, `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Queues an update for every available update and returns their operation ids. With `--wait true`, waits for all of them (default timeout 3600 seconds) and exits with `1` if any did not succeed or the wait timed out. Works in headless sessions. |
 | `package update-manager` | `--manager <id>` | `--wait true\|false`, `--timeout <seconds>`, `--delay <seconds>` | Same as `package update-all --manager <id>`. |
+
+For package operations, `--scope` accepts `user` or `local` and `machine` or `global` case-insensitively; these labels are manager-relative and do not establish operating-system ownership.
 
 ## Headless behavior
 

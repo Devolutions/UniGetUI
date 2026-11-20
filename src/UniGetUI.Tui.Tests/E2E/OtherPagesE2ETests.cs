@@ -6,9 +6,11 @@ using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Serializable;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageOperations;
 using UniGetUI.Tui.Infrastructure;
 using UniGetUI.Tui.Views.Dialogs;
@@ -64,6 +66,58 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await Type("i");
         await WaitForOperationsToFinishAsync();
         NAssert.That(InstalledVersion("Winget", "Proseware.Archiver"), Is.EqualTo("24.08"));
+    }
+
+    [Test]
+    public async Task Bundles_InstallUsesExplicitScopeWithManagerDefaults()
+    {
+        await ResetAsync(TuiPageIds.Bundles);
+        var manager = TuiEngine.FindManager("Winget")!;
+        var imported = new ImportedPackage(
+            new SerializablePackage
+            {
+                Name = "Proseware Archiver",
+                Id = "Proseware.Archiver",
+                Version = "24.08",
+                InstallationOptions = new InstallOptions
+                {
+                    InstallationScope = PackageScope.Machine,
+                    BundleScopeIsExplicit = true,
+                },
+            },
+            manager,
+            manager.DefaultSource
+        );
+        bool retain = Settings.Get(Settings.K.MaintainSuccessfulInstalls);
+        var defaults = InstallOptionsFactory.LoadForManager(manager);
+        try
+        {
+            Settings.Set(Settings.K.MaintainSuccessfulInstalls, true);
+            InstallOptionsFactory.SaveForManager(
+                new InstallOptions { InstallationScope = PackageScope.User },
+                manager
+            );
+            await (await OnUi(() => TuiBundleService.AddPackagesAsync([imported])));
+            await WaitForTextAsync("Proseware Archiver");
+            await EnterPage();
+            await Type("i");
+            await WaitUntilAsync(
+                () => TuiOperationRegistry.Snapshot().OfType<InstallPackageOperation>()
+                    .Any(op => op.Package.Id == imported.Id),
+                "the bundle install to start"
+            );
+            await WaitForOperationsToFinishAsync();
+            var operation = await OnUi(() => TuiOperationRegistry.Snapshot()
+                .OfType<InstallPackageOperation>().Single(op => op.Package.Id == imported.Id));
+            NAssert.That(operation.Options.InstallationScope, Is.EqualTo(PackageScope.Machine));
+            NAssert.That(operation.Status, Is.EqualTo(OperationStatus.Succeeded));
+        }
+        finally
+        {
+            Settings.Set(Settings.K.MaintainSuccessfulInstalls, retain);
+            InstallOptionsFactory.SaveForManager(defaults, manager);
+            await OnUi(TuiOperationRegistry.Reset);
+        }
     }
 
     [Test]

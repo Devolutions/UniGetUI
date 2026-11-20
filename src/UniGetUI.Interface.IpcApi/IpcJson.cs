@@ -140,6 +140,7 @@ internal static class IpcHttpResponseJsonExtensions
 [JsonSerializable(typeof(IReadOnlyList<string>))]
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(IReadOnlyList<IpcManagerInfo>))]
+[JsonSerializable(typeof(IReadOnlyList<IpcRemoteManagerInfo>))]
 [JsonSerializable(typeof(IReadOnlyList<IpcSourceInfo>))]
 [JsonSerializable(typeof(IReadOnlyList<IpcSettingInfo>))]
 [JsonSerializable(typeof(IReadOnlyList<IpcSecureSettingInfo>))]

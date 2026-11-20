@@ -50,7 +50,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
                 if (e.Data is null)
                     return;
                 string line = e.Data.Trim();
-                var lineType = LineType.Error;
+                var lineType = LineType.StandardError;
                 if (line.Length < 6 || line.Contains("Waiting for another install..."))
                     lineType = LineType.ProgressIndicator;
 
@@ -247,7 +247,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
         {
             if (line.Item2 is LineType.VerboseDetails && line.Item1 == "-----------------------")
                 output.Clear();
-            if (line.Item2 is LineType.Error or LineType.Information)
+            if (line.Item2 is LineType.Error or LineType.StandardError or LineType.Information)
                 output.Add(line.Item1);
         }
 

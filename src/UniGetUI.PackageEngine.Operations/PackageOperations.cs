@@ -104,6 +104,7 @@ namespace UniGetUI.PackageEngine.Operations
         }
         internal bool IsReinstallStep { get; init; }
         public bool FailedBecauseApplicationRunning { get; private set; }
+        public bool FailedBecauseUpdateNotSupported { get; private set; }
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
         private readonly List<string> _brokerKillBeforeOperationAdded = [];
@@ -781,7 +782,7 @@ namespace UniGetUI.PackageEngine.Operations
             var capturedOutput = new List<string>();
             _brokerStreamedOutput = capturedOutput;
             var stdout = new StreamedOutputLineBuffer(this, LineType.Information, capturedOutput);
-            var stderr = new StreamedOutputLineBuffer(this, LineType.Error, capturedOutput);
+            var stderr = new StreamedOutputLineBuffer(this, LineType.StandardError, capturedOutput);
 
             await using (channel.ConfigureAwait(false))
             {
@@ -1229,6 +1230,7 @@ namespace UniGetUI.PackageEngine.Operations
             );
 
             FailedBecauseApplicationRunning = false;
+            FailedBecauseUpdateNotSupported = false;
             Metadata.FailureTitle = _genericFailureTitle;
             Metadata.FailureMessage = _genericFailureMessage;
             if (veredict is OperationVeredict.Failure)
@@ -1245,7 +1247,11 @@ namespace UniGetUI.PackageEngine.Operations
                 )
                     Metadata.FailureMessage = explanation;
                 if (CommandRole is OperationType.Update)
+                {
                     ExplainNotApplicableUpdate(Output, ReturnCode);
+                    FailedBecauseUpdateNotSupported =
+                        Package.Manager.OperationHelper.UpdateWasRefusedByPublisher(Output, ReturnCode);
+                }
                 ExplainInstallerHashMismatch(ReturnCode);
                 ExplainApplicationCurrentlyRunning(Output, ReturnCode);
                 ExplainFileInUse(Output);
@@ -1469,6 +1475,12 @@ namespace UniGetUI.PackageEngine.Operations
 #endif
         }
 
+        public static bool CanIgnoreUpdatesAfterFailure(PackageOperation operation) =>
+            operation.FailedBecauseUpdateNotSupported;
+
+        public static bool IsWorthRetryingInBulk(AbstractOperation operation) =>
+            operation is not PackageOperation { FailedBecauseUpdateNotSupported: true };
+
         private void ExplainInstallerHashMismatch(int returnCode)
         {
 #if WINDOWS
@@ -1554,25 +1566,57 @@ namespace UniGetUI.PackageEngine.Operations
                         .ToArray()
                 );
 
+                // Never adopt a copy installed in a different scope than the one this operation targets,
+                // resolved with the same precedence the manager helpers use
+                string? effectiveScope = Package.OverridenOptions.Scope ?? Options.InstallationScope;
+                string? targetScope = string.IsNullOrWhiteSpace(effectiveScope)
+                    ? null
+                    : effectiveScope.ToLowerInvariant();
+
+                // IsSamePackageAs keys on the display name, which can alias distinct canonical sources
+                if (Package.Manager.Capabilities.InstalledPackagesKeepTheirSource)
+                {
+                    installedMatches = installedMatches
+                        .Where(candidate => candidate.Source.Name == Package.Source.Name)
+                        .ToArray();
+                }
+                if (targetScope is not null && Package.Manager.Capabilities.ReportsReliableInstalledScope)
+                {
+                    installedMatches = installedMatches
+                        .Where(candidate =>
+                            candidate.NormalizedReportedScope is null
+                            || candidate.NormalizedReportedScope == targetScope)
+                        .ToArray();
+                }
+
                 if (installedMatches.Length > 0)
                 {
                     if (!string.IsNullOrWhiteSpace(fallbackVersion))
                     {
-                        var exactMatch = installedMatches.FirstOrDefault(candidate =>
-                            candidate.VersionString.Equals(
-                                fallbackVersion,
-                                StringComparison.OrdinalIgnoreCase
-                            )
-                        );
-                        if (exactMatch is not null)
+                        var exactMatches = installedMatches
+                            .Where(candidate =>
+                                candidate.VersionString.Equals(
+                                    fallbackVersion,
+                                    StringComparison.OrdinalIgnoreCase
+                                ))
+                            .ToArray();
+                        if (exactMatches.Length > 0)
                         {
-                            return exactMatch;
+                            return SpansSeveralScopes(exactMatches)
+                                ? CreateSyntheticInstalledPackage(fallbackVersion)
+                                : exactMatches[0];
                         }
 
                         if (preferFallbackVersionWhenMissing)
                         {
                             return CreateSyntheticInstalledPackage(fallbackVersion);
                         }
+                    }
+
+                    // Without a known target scope, copies in several scopes cannot be told apart
+                    if (SpansSeveralScopes(installedMatches))
+                    {
+                        return CreateSyntheticInstalledPackage(fallbackVersion);
                     }
 
                     return installedMatches
@@ -1590,6 +1634,9 @@ namespace UniGetUI.PackageEngine.Operations
 
             return CreateSyntheticInstalledPackage(fallbackVersion);
         }
+
+        private static bool SpansSeveralScopes(IEnumerable<IPackage> packages) =>
+            packages.Select(p => p.NormalizedReportedScope).Distinct().Count() > 1;
 
         private IPackage CreateSyntheticInstalledPackage(string version)
         {

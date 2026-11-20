@@ -267,13 +267,13 @@ public class PackageBundlesPage : AbstractPackagesPage
         bool? interactive = null,
         bool? skiphash = null)
     {
-        var toInstall = new List<Package>();
+        var toInstall = new List<(ImportedPackage Imported, Package Registered)>();
         foreach (var package in packages)
         {
             if (package is ImportedPackage imported)
             {
                 Logger.ImportantInfo($"Registering package {imported.Id} from manager {imported.Source.AsString}");
-                toInstall.Add(await imported.RegisterAndGetPackageAsync());
+                toInstall.Add((imported, await imported.RegisterAndGetPackageAsync()));
             }
             else
             {
@@ -281,10 +281,10 @@ public class PackageBundlesPage : AbstractPackagesPage
             }
         }
 
-        foreach (var pkg in toInstall)
+        foreach (var (imported, pkg) in toInstall)
         {
-            var opts = await InstallOptionsFactory.LoadApplicableAsync(
-                pkg, elevated: elevated, interactive: interactive, no_integrity: skiphash);
+            var opts = await imported.LoadOptionsForInstallationAsync(
+                pkg, elevated: elevated, interactive: interactive, noIntegrity: skiphash);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Install)) continue;
             var op = new InstallPackageOperation(pkg, opts);
             op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.FROM_BUNDLE);
@@ -346,7 +346,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     {
         if (GetMainWindow() is not { } win) return;
 
-        var files = await win.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await NativePickerTracker.Track(win.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             AllowMultiple = false,
             FileTypeFilter =
@@ -354,7 +354,7 @@ public class PackageBundlesPage : AbstractPackagesPage
                 new FilePickerFileType("Package bundles") { Patterns = ["*.ubundle", "*.json", "*.yaml", "*.xml"] },
                 new FilePickerFileType("All files")       { Patterns = ["*"] },
             ],
-        });
+        }));
 
         if (files is not [{ } file]) return;
         var path = file.TryGetLocalPath();
@@ -367,7 +367,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     {
         if (GetMainWindow() is not { } win) return;
 
-        var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await NativePickerTracker.Track(win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = CoreTools.Translate("Package bundle") + ".ubundle",
             FileTypeChoices =
@@ -375,7 +375,7 @@ public class PackageBundlesPage : AbstractPackagesPage
                 new FilePickerFileType("UniGetUI Bundle") { Patterns = ["*.ubundle"] },
                 new FilePickerFileType("JSON")            { Patterns = ["*.json"] },
             ],
-        });
+        }));
 
         if (file is null) return;
         var path = file.TryGetLocalPath();
@@ -535,14 +535,14 @@ public class PackageBundlesPage : AbstractPackagesPage
             if (GetMainWindow() is not { } win) return;
 
             string defaultName = CoreTools.Translate("Install script") + ".ps1";
-            var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var file = await NativePickerTracker.Track(win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 SuggestedFileName = defaultName,
                 FileTypeChoices =
                 [
                     new FilePickerFileType(CoreTools.Translate("PowerShell script")) { Patterns = ["*.ps1"] },
                 ],
-            });
+            }));
 
             var path = file?.TryGetLocalPath();
             if (path is null) return;

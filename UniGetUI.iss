@@ -268,12 +268,40 @@ begin
     Result := '';
 end;
 
+procedure RemoveLegacyStartMenuShortcut(const StartMenu: String);
+var
+    ShortcutPath: String;
+    Shell, Shortcut: Variant;
+begin
+    ShortcutPath := AddBackslash(ExpandConstant(StartMenu)) + '{#MyAppName}.lnk';
+    if not FileExists(ShortcutPath) then
+        Exit;
+    try
+        Shell := CreateOleObject('WScript.Shell');
+        Shortcut := Shell.CreateShortcut(ShortcutPath);
+        if CompareText(Shortcut.TargetPath, ExpandConstant('{app}\{#MyAppExeName}')) = 0 then
+        begin
+            if not DeleteFile(ShortcutPath) then
+                Log('Could not delete the legacy Start menu shortcut ' + ShortcutPath);
+        end
+        else
+            Log('Keeping ' + ShortcutPath + ', which points to another installation');
+    except
+        Log('Could not inspect the legacy Start menu shortcut ' + ShortcutPath + ': ' + GetExceptionMessage);
+    end;
+end;
+
 // Clear the marker once the copy is done, before the post-install launch.
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
     if CurStep = ssPostInstall then
     begin
         RemoveUpdateMarker;
+        if WizardIsTaskSelected('regularinstall') then
+        begin
+            RemoveLegacyStartMenuShortcut('{userstartmenu}');
+            RemoveLegacyStartMenuShortcut('{commonstartmenu}');
+        end;
         // Portable installs must never inspect or modify PATH/ownership, even
         // when installing over a directory previously used by a regular install.
         if WizardIsTaskSelected('regularinstall') then
@@ -483,7 +511,7 @@ Source: "InstallerExtras\ForceUniGetUIPortable"; DestDir: "{app}"; Tasks: portab
 
 
 [Icons]
-Name: "{autostartmenu}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "Devolutions.UniGetUI"; Tasks: regularinstall\startmenuicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "Devolutions.UniGetUI"; Tasks: regularinstall\startmenuicon
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: regularinstall\desktopicon; Check: not CmdLineParamExists('/NoDesktopShortcut')
 
 [Run]

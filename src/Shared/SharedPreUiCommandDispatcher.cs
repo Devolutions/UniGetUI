@@ -394,17 +394,34 @@ internal static class SharedPreUiCommandDispatcher
 
     public static int MigrateWingetUIToUniGetUI()
     {
+        string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        string commonDesktop = Environment.GetFolderPath(
+            Environment.SpecialFolder.CommonDesktopDirectory
+        );
+
+        return MigrateWingetUIShortcuts(
+            [
+                (desktop, desktop),
+                (
+                    Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                    Environment.GetFolderPath(Environment.SpecialFolder.Programs)
+                ),
+                (commonDesktop, commonDesktop),
+                (
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms)
+                ),
+            ]
+        );
+    }
+
+    internal static int MigrateWingetUIShortcuts(
+        IReadOnlyList<(string Source, string Destination)> folders
+    )
+    {
         try
         {
-            string[] basePaths =
-            [
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
-            ];
-
-            foreach (string path in basePaths)
+            foreach ((string path, string destination) in folders)
             {
                 foreach (
                     string oldWingetUIIcon in new[]
@@ -419,7 +436,7 @@ internal static class SharedPreUiCommandDispatcher
                     try
                     {
                         string oldFile = Path.Join(path, oldWingetUIIcon);
-                        string newFile = Path.Join(path, "UniGetUI.lnk");
+                        string newFile = Path.Join(destination, "UniGetUI.lnk");
                         if (!File.Exists(oldFile))
                         {
                             continue;

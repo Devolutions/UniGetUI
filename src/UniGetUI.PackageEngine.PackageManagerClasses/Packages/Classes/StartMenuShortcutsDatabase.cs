@@ -19,6 +19,7 @@ public static class StartMenuShortcutsDatabase
     private const int MinimumMatchLength = 3;
     private const int ContainmentMatchLength = 6;
     private const string PendingShortcutsKey = "PendingStartMenuShortcuts";
+    private const string OwnShortcutName = "UniGetUI.lnk";
 
     private static readonly string[] ShortcutExtensions = [".lnk", ".url"];
 
@@ -93,7 +94,27 @@ public static class StartMenuShortcutsDatabase
     public static bool IsManagedShortcutPath(string shortcutPath)
     {
         return GetShortcutRoots()
-            .Any(root => IsUnder(root, shortcutPath) && !LeavesTheStartMenu(root, shortcutPath));
+            .Any(root =>
+                IsUnder(root, shortcutPath)
+                && !LeavesTheStartMenu(root, shortcutPath)
+                && !IsOwnShortcut(root, shortcutPath)
+            );
+    }
+
+    private static bool IsOwnShortcut(string root, string path)
+    {
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(path),
+                Path.Combine(Path.GetFullPath(root), OwnShortcutName),
+                StringComparison.OrdinalIgnoreCase
+            );
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private static bool LeavesTheStartMenu(string root, string path)
@@ -164,7 +185,9 @@ public static class StartMenuShortcutsDatabase
                 foreach (string pattern in ShortcutPatterns)
                 {
                     shortcuts.AddRange(
-                        Directory.EnumerateFiles(root, pattern, ShortcutEnumeration)
+                        Directory
+                            .EnumerateFiles(root, pattern, ShortcutEnumeration)
+                            .Where(shortcut => !IsOwnShortcut(root, shortcut))
                     );
                 }
             }

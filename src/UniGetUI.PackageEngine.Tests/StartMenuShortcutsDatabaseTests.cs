@@ -110,6 +110,28 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
         Assert.DoesNotContain(ignored, shortcuts);
     }
 
+    [Fact]
+    public void UniGetUIsOwnShortcutIsNeverManaged()
+    {
+        string userOwn = CreateShortcut(_userPrograms, "UniGetUI.lnk");
+        string commonOwn = CreateShortcut(_commonPrograms, "UniGetUI.lnk");
+        string nested = CreateShortcut(Path.Combine(_userPrograms, "Tools"), "UniGetUI.lnk");
+        StartMenuShortcutsDatabase.SetStatus(userOwn, StartMenuShortcutsDatabase.Status.Delete);
+
+        var shortcuts = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
+
+        Assert.DoesNotContain(userOwn, shortcuts);
+        Assert.DoesNotContain(commonOwn, shortcuts);
+        Assert.Contains(nested, shortcuts);
+        Assert.False(StartMenuShortcutsDatabase.IsManagedShortcutPath(userOwn));
+        Assert.False(StartMenuShortcutsDatabase.IsManagedShortcutPath(commonOwn));
+        Assert.True(StartMenuShortcutsDatabase.IsManagedShortcutPath(nested));
+
+        StartMenuShortcutsDatabase.HandleNewShortcuts(BuildPackage("UniGetUI", "UniGetUI"), []);
+
+        Assert.True(File.Exists(userOwn));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

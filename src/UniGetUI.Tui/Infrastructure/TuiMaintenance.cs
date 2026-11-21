@@ -41,10 +41,12 @@ internal static class TuiMaintenanceScheduler
         if (UpgradablePackagesLoader.Instance is { } loader)
         {
             _updatesWereLoaded |= loader.IsLoaded;
-            loader.FinishedLoading += (_, _) =>
+            loader.FinishedLoading += (_, e) =>
             {
                 _updatesWereLoaded = true;
-                RecordUpdateLoad(DateTime.Now);
+                // A remote rescan only lists; it must not claim a check that would make auto-install due.
+                if (!e.ListingOnly)
+                    RecordUpdateLoad(DateTime.Now);
             };
         }
 
@@ -241,7 +243,7 @@ internal static class TuiMaintenanceScheduler
     private static async Task ReloadUpdatesAsync()
     {
         var loader = UpgradablePackagesLoader.Instance;
-        if (loader.IsLoading) await loader.WaitForCurrentLoadAsync();
+        if (loader.IsLoading && !loader.LoadIsListingOnly) await loader.WaitForCurrentLoadAsync();
         else await loader.ReloadPackages();
         if (loader.LastLoadReportedFailures)
             throw new InvalidOperationException("The update check reported failures, see the log for details");

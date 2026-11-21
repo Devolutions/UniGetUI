@@ -771,6 +771,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             public bool Skipped;
             public Exception? FastRepairCause;
             public Exception? Failure;
+            public Exception? Incomplete;
         }
 
         private IReadOnlyList<IPackage> TrackListing(
@@ -780,6 +781,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         )
         {
             ListingOutcome outcome = new() { Started = Stopwatch.GetTimestamp() };
+            using var tracking = PackageListingScope.TrackFailures(error =>
+                Interlocked.CompareExchange(ref outcome.Incomplete, error, null)
+            );
             long start = Stopwatch.GetTimestamp();
             IReadOnlyList<IPackage> packages = listing(outcome);
             if (!outcome.Skipped && outcome.Failure is null && WasStoppedSince(outcome.Started))
@@ -793,7 +797,19 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 else if (kind is ManagerListingKind.Updates)
                     LastUpdatesListingFailed = true;
             }
-            failed = outcome.Failure is not null;
+            if (outcome.Incomplete is { } incomplete)
+            {
+                Logger.Warn($"Manager {Name} returned an incomplete {kind} listing: {incomplete.Message}");
+                outcome.Failure ??= incomplete;
+            }
+            // A skipped inventory listing did not list anything, so it cannot count as listed.
+            failed =
+                outcome.Failure is not null
+                || (outcome.Skipped && kind is ManagerListingKind.Installed or ManagerListingKind.Updates);
+            if (kind is ManagerListingKind.Installed)
+                LastInstalledListingFailed = failed;
+            else if (kind is ManagerListingKind.Updates)
+                LastUpdatesListingFailed = failed;
 
             if (!outcome.Skipped)
             {
@@ -992,6 +1008,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     !SecondAttempt
                     && !WasStoppedSince(outcome.Started)
                     && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                    && !PackageListingScope.IsListingOnly
                 )
                 {
                     Logger.Warn(
@@ -1018,13 +1035,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         /// </summary>
         public bool LastUpdatesListingFailed { get; private set; }
 
-        public IReadOnlyList<IPackage> GetAvailableUpdates()
+        public IReadOnlyList<IPackage> GetAvailableUpdates() => GetAvailableUpdates(out _);
+
+        public IReadOnlyList<IPackage> GetAvailableUpdates(out bool failed)
         {
             LastUpdatesListingFailed = false;
             return TrackListing(
                 ManagerListingKind.Updates,
                 outcome => _getAvailableUpdates(false, outcome),
-                out _
+                out failed
             );
         }
 
@@ -1047,7 +1066,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
             try
             {
-                if (!SecondAttempt)
+                // Nobody may be present during a listing-only scan, so it must not change the
+                // manager itself or a working tree, only a catalogue.
+                if (
+                    !SecondAttempt
+                    && (!PackageListingScope.IsListingOnly || IndexRefreshUpdatesOnlyCatalogues)
+                )
                 {
                     RefreshPackageIndexesSafely();
                 }
@@ -1068,6 +1092,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     !SecondAttempt
                     && !WasStoppedSince(outcome.Started)
                     && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                    && !PackageListingScope.IsListingOnly
                 )
                 {
                     Logger.Warn(
@@ -1102,13 +1127,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public void InvalidateInstalledPackages() =>
             Interlocked.Increment(ref _installedPackagesGeneration);
 
-        public IReadOnlyList<IPackage> GetInstalledPackages()
+        public IReadOnlyList<IPackage> GetInstalledPackages() => GetInstalledPackages(out _);
+
+        public IReadOnlyList<IPackage> GetInstalledPackages(out bool failed)
         {
             LastInstalledListingFailed = false;
             return TrackListing(
                 ManagerListingKind.Installed,
                 outcome => _getInstalledPackages(false, outcome),
-                out _
+                out failed
             );
         }
 
@@ -1147,6 +1174,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     !SecondAttempt
                     && !WasStoppedSince(outcome.Started)
                     && (RetryListingTasksOnTimeout || e is not TimeoutException)
+                    // A listing-only scan reports the failure rather than repairing the manager.
+                    && !PackageListingScope.IsListingOnly
                 )
                 {
                     Logger.Warn(
@@ -1194,6 +1223,14 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         /// Refreshes the Package Manager sources/indexes
         /// Each manager MUST implement this method.
         /// </summary>
+        /// <summary>
+        /// Whether <see cref="RefreshPackageIndexes"/> only updates the manager's package catalogues.
+        /// A manager whose refresh also updates the manager itself or a working tree (for example
+        /// <c>scoop update</c>, <c>brew update</c> or a <c>git pull</c>) leaves this false, and its
+        /// refresh is skipped in listing-only scans.
+        /// </summary>
+        protected virtual bool IndexRefreshUpdatesOnlyCatalogues => false;
+
         public virtual void RefreshPackageIndexes()
         {
             Logger.Debug($"Manager {Name} has not implemented RefreshPackageIndexes");

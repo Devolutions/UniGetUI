@@ -124,6 +124,70 @@ public sealed class PowerShell7ManagerTests : IDisposable
         Assert.Equal("Pester", package.Id);
     }
 
+    [Fact]
+    public void MalformedPackageRowsKeepOtherRowsNormallyButFailListingOnly()
+    {
+        var manager = new PowerShell7();
+        string[] output =
+        [
+            "##SCOPE:AllUsers##",
+            "First\t1.0\tPSGallery",
+            "Broken\t1.0",
+            "Last\t1.0\tPSGallery",
+        ];
+        List<Exception> failures = [];
+
+        using (PackageListingScope.TrackFailures(failures.Add))
+            Assert.Equal(["First", "Last"], PowerShell7.ParseInstalledPackages(output, manager).Select(package => package.Id));
+        Assert.IsType<InvalidDataException>(Assert.Single(failures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidDataException>(() => PowerShell7.ParseInstalledPackages(output, manager));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InstalledListingPreservesNormalNonTerminatingErrorsButStopsInListingOnly(bool listingOnly)
+    {
+        using var scope = listingOnly ? PackageListingScope.EnterListingOnly() : null;
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+        process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-NonInteractive");
+        process.StartInfo.ArgumentList.Add("-Command");
+        process.StartInfo.ArgumentList.Add(
+            "function Get-InstalledPSResource { param($Scope)"
+            + " if ($Scope -eq 'AllUsers') {"
+            + " [pscustomobject]@{Name='Before';Version='1.0';Repository='PSGallery'};"
+            + " Write-Error 'unreadable resource';"
+            + " [pscustomobject]@{Name='After';Version='1.0';Repository='PSGallery'}"
+            + " } else { [pscustomobject]@{Name='Current';Version='1.0';Repository='PSGallery'} } };"
+            + PowerShell7.InstalledListingCommand
+        );
+
+        process.Start();
+        var stderr = process.StandardError.ReadToEndAsync();
+        string output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+
+        Assert.NotEqual(0, process.ExitCode);
+        Assert.Contains("unreadable resource", stderr.GetAwaiter().GetResult());
+        var packages = PowerShell7.ParseInstalledPackages(output.Split('\n'), new PowerShell7());
+        Assert.Contains(packages, p => p.Id == "Before");
+        Assert.Equal(!listingOnly, packages.Any(p => p.Id == "After"));
+        Assert.Equal(!listingOnly, packages.Any(p => p.Id == "Current"));
+    }
+
     // Regression for https://github.com/Devolutions/UniGetUI/issues/5110:
     // a scope explicitly chosen in the options dialog must override the auto-detected
     // install scope, otherwise the command never changes for an installed module.

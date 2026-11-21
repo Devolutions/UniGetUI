@@ -83,6 +83,8 @@ public sealed class MacPkg : PackageManager
     protected override void _loadManagerVersion(out string version) =>
         version = $"macOS {Environment.OSVersion.Version}";
 
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => true;
+
     public override void RefreshPackageIndexes()
     {
         PkgFeed.ForgetCachedIndexes();
@@ -106,6 +108,7 @@ public sealed class MacPkg : PackageManager
             catch (Exception ex)
             {
                 Logger.Warn($"Could not list the package feed {source.Name} at {source.Url}: {ex.Message}");
+                UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(ex);
             }
         }
         return result;
@@ -163,6 +166,8 @@ public sealed class MacPkg : PackageManager
     // software installed by other means) are not this manager's to show.
     // Installed and Offered are in one version domain (the receipt's, or the app's) so they compare; the
     // feed's own version stays on Item, for finding the package to install.
+    // A strict listing fails on an unreadable feed or receipt store instead of reporting what they
+    // would have shown as not installed.
     internal IReadOnlyList<(IManagerSource Source, PkgFeedItem Item, string Installed, string Offered, bool HasUpdate)> ListInstalled()
     {
         var latest = ListLatest();
@@ -176,6 +181,7 @@ public sealed class MacPkg : PackageManager
         {
             // Without receipts, packages are still recognized by their apps, as disk images always are.
             Logger.Warn($"Could not read the installer package receipts ({ex.Message}); recognizing installed apps by their bundles only.");
+            UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(ex);
             receipts = new Dictionary<string, string>();
         }
         var seen = new HashSet<string>(StringComparer.Ordinal);

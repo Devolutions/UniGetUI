@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -21,6 +22,41 @@ public sealed class BunManagerTests
     private sealed class TestableBun : Bun
     {
         public IReadOnlyList<Package> GetAvailableUpdatesUnsafe() => base.GetAvailableUpdates_UnSafe();
+    }
+
+    [Theory]
+    [InlineData(0, "", null, false)]
+    [InlineData(1, "error: missing lockfile", null, false)]
+    [InlineData(1, "error: access denied", null, true)]
+    [InlineData(17, "error: missing lockfile", null, true)]
+    [InlineData(1, "error: missing lockfile", "bun.lock", true)]
+    [InlineData(1, "error: missing lockfile", "bun.lockb", true)]
+    public void ListingOnlyAcceptsTheExpectedMissingLockfileFailure(
+        int exitCode, string error, string? lockfile, bool failed)
+    {
+        string directory = Path.Combine(AppContext.BaseDirectory, nameof(BunManagerTests), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            if (lockfile is not null)
+                File.WriteAllText(Path.Combine(directory, lockfile), "");
+            var manager = new Bun();
+            List<Exception> failures = [];
+
+            using (PackageListingScope.TrackFailures(failures.Add))
+                manager.ThrowIfListingFailed(exitCode, error, directory);
+            Assert.Equal(failed ? 1 : 0, failures.Count);
+
+            using var scope = PackageListingScope.EnterListingOnly();
+            if (failed)
+                Assert.Throws<InvalidOperationException>(() => manager.ThrowIfListingFailed(exitCode, error, directory));
+            else
+                manager.ThrowIfListingFailed(exitCode, error, directory);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     /// <summary>

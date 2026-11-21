@@ -25,7 +25,7 @@ public static class BrokerClientFactory
         };
     }
 
-    private static string GetEffectiveUser()
+    internal static string GetEffectiveUser()
     {
         return string.IsNullOrWhiteSpace(Environment.UserDomainName)
             ? Environment.UserName

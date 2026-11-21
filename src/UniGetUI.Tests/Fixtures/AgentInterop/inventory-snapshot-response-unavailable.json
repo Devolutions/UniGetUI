@@ -1,0 +1,9 @@
+{
+  "kind": "Response",
+  "id": "11111111-2222-3333-4444-555555555555",
+  "ok": false,
+  "error": {
+    "code": "Failed",
+    "message": "No completed package scan covers every enabled package manager."
+  }
+}

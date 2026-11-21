@@ -447,14 +447,28 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return packages;
         }
 
+        // The update check starts from the installed list, so an installed listing that failed
+        // must fail the update check too instead of reporting that nothing can be updated.
+        private IReadOnlyList<IPackage> GetInstalledPackagesForUpdates()
+        {
+            var installed = GetInstalledPackages(out bool failed);
+            if (failed)
+            {
+                var failure = new InvalidOperationException(
+                    $"{Name} could not list its installed packages, so its updates cannot be checked."
+                );
+                UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+                PackageListingScope.ReportIncomplete(failure);
+            }
+            return installed;
+        }
+
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
             int errors = 0;
             var logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
 
-            var installedPackages = TaskRecycler<IReadOnlyList<IPackage>>.RunOrAttach(
-                GetInstalledPackages
-            );
+            var installedPackages = GetInstalledPackagesForUpdates();
             var Packages = new List<Package>();
 
             Dictionary<IManagerSource, List<IPackage>> sourceMapping = new();
@@ -659,15 +673,19 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             logger.Error(error);
                         requestErrors += lookup.Errors.Count;
 
-                        if (lookup.NewestEntry is not null)
-                            packages.AddRange(Parse(lookup.NewestEntry));
-                        else if (lookup.UnreadableEntries > 0 && !lookup.Listed)
+                        if (lookup.UnreadableEntries > 0)
+                        {
                             logger.Log(
                                 $"Source {source.Name} answered for {package.Id} with "
                                     + $"{lookup.UnreadableEntries} entries whose id or version could not be "
                                     + $"read. Response began with: {lookup.Excerpt}"
                             );
-                        else if (!lookup.Listed && lookup.Errors.Count is 0)
+                            PackageListingScope.ReportIncomplete(new InvalidDataException(
+                                $"Source {source.Name} returned unreadable versions of {package.Id}."));
+                        }
+                        if (lookup.NewestEntry is not null)
+                            packages.AddRange(Parse(lookup.NewestEntry));
+                        else if (!lookup.Listed && lookup.Errors.Count is 0 && lookup.UnreadableEntries is 0)
                             notListed.Add(package.Id);
                     }
 
@@ -714,6 +732,9 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 }
 
                 errors += requestErrors;
+                if (requestErrors > 0)
+                    PackageListingScope.ReportIncomplete(new InvalidOperationException(
+                        $"{requestErrors} requests failed while listing updates from {source.Name}."));
             }
             catch (Exception ex)
             {
@@ -721,6 +742,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     $"Source {source.Name} on manager {source.Manager.Name} failed to load updates info with exception"
                 );
                 logger.Error(ex);
+                errors++;
+                PackageListingScope.ReportIncomplete(ex);
             }
 
             return packages;
@@ -1083,6 +1106,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     $"Could not resolve the NuGet V3 service index for source {source.Name} "
                         + $"at Url={source.Url} on manager {Name}"
                 );
+                PackageListingScope.ReportIncomplete(new InvalidDataException(
+                    $"Could not resolve the NuGet V3 service index for source {source.Name}."));
                 return null;
             }
 
@@ -1133,6 +1158,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 );
                 if (failure.Value is { } exception)
                     logger.Error(exception);
+                PackageListingScope.ReportIncomplete(failure.Value ?? new InvalidDataException(
+                    $"Failed to check updates for {installed[failure.Key].Id} on source {source.Name}."));
             }
 
             errors = failures.Count;
@@ -1266,11 +1293,14 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             var packages = new List<Package>();
             foreach (Match match in V2Entry.Matches(searchResults))
             {
-                if (
-                    ReadV2Id(match.Value) is not { } id
-                    || ReadV2Version(match.Value) is not { } new_version
-                    || !packageIdVersion.TryGetValue(id.ToLowerInvariant(), out string? installedVersion)
-                )
+                if (ReadV2Id(match.Value) is not { } id || ReadV2Version(match.Value) is not { } new_version)
+                {
+                    var failure = new InvalidDataException($"Source {source.Name} returned a package entry without an id or version.");
+                    UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+                    PackageListingScope.ReportIncomplete(failure);
+                    continue;
+                }
+                if (!packageIdVersion.TryGetValue(id.ToLowerInvariant(), out string? installedVersion))
                     continue;
 
                 logger?.Log($"Found package {id} version {new_version} on source {source.Name}");
@@ -1291,15 +1321,30 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return packages;
         }
 
-        protected sealed override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
-            TaskRecycler<IReadOnlyList<Package>>.RunOrAttach(
-                ListInstalledPackagesForGeneration,
-                InstalledPackagesGeneration
-            );
+        private sealed record InstalledListing(IReadOnlyList<Package> Packages, Exception? Failure);
 
-        private IReadOnlyList<Package> ListInstalledPackagesForGeneration(
-            long installedPackagesGeneration
-        ) => _getInstalledPackages_UnSafe();
+        protected sealed override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
+        {
+            var listing = TaskRecycler<InstalledListing>.RunOrAttach(
+                ListInstalledPackagesForGeneration,
+                (InstalledPackagesGeneration, PackageListingScope.IsListingOnly)
+            );
+            if (listing.Failure is { } failure)
+                PackageListingScope.ReportIncomplete(failure);
+            return listing.Packages;
+        }
+
+        private InstalledListing ListInstalledPackagesForGeneration(
+            (long Generation, bool ListingOnly) _
+        )
+        {
+            Exception? failure = null;
+            using var tracking = PackageListingScope.TrackFailures(error =>
+                Interlocked.CompareExchange(ref failure, error, null)
+            );
+            var packages = _getInstalledPackages_UnSafe();
+            return new(packages, failure);
+        }
 
         protected abstract IReadOnlyList<Package> _getInstalledPackages_UnSafe();
     }

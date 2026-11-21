@@ -28,11 +28,31 @@ public sealed class InstallerFeedSource : ManagerSource
 /// </summary>
 public sealed class InstallerFeedSourceHelper : ReadOnlySourceHelper
 {
+    private sealed record SourceListing(IReadOnlyList<IManagerSource> Sources, Exception? Failure);
+
     public InstallerFeedSourceHelper(IPackageManager manager)
         : base(manager, "Package feeds are declared in the software catalog.") { }
 
     /// <summary>Drops the briefly cached feed list, so the next listing reads the catalog again.</summary>
-    public void ForgetSources() => TaskRecycler<IReadOnlyList<IManagerSource>>.RemoveFromCache(_getSources);
+    public void ForgetSources() => TaskRecycler<SourceListing>.RemoveFromCache(ReadSources);
+
+    public override IReadOnlyList<IManagerSource> GetSources()
+    {
+        var listing = PackageListingScope.IsListingOnly
+            ? ReadSources()
+            : TaskRecycler<SourceListing>.RunOrAttach(ReadSources, 15);
+        if (listing.Failure is not null)
+            PackageListingScope.ReportIncomplete(listing.Failure);
+        return listing.Sources;
+    }
+
+    private SourceListing ReadSources()
+    {
+        Exception? failure = null;
+        using var scope = PackageListingScope.TrackFailures(error =>
+            Interlocked.CompareExchange(ref failure, error, null));
+        return new SourceListing(base._getSources(), failure);
+    }
 
     protected override IReadOnlyList<IManagerSource> GetSources_UnSafe() =>
         CatalogFeeds.Load()

@@ -90,6 +90,18 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public IReadOnlyList<IPackage> GetAvailableUpdates();
 
+        /// <summary>
+        /// Lists the available updates and reports, for this call only, whether the listing failed
+        /// or did not run. Unlike <see cref="LastUpdatesListingFailed"/>, another listing running
+        /// at the same time cannot change the result.
+        /// </summary>
+        public IReadOnlyList<IPackage> GetAvailableUpdates(out bool failed)
+        {
+            var packages = GetAvailableUpdates();
+            failed = LastUpdatesListingFailed;
+            return packages;
+        }
+
         public bool LastUpdatesListingFailed { get; }
 
         public bool LastInstalledListingFailed { get; }
@@ -99,6 +111,17 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// This method is fail-safe and will return an empty array if an error occurs.
         /// </summary>
         public IReadOnlyList<IPackage> GetInstalledPackages();
+
+        /// <summary>
+        /// Lists the installed packages and reports, for this call only, whether the listing failed
+        /// or did not run; see <see cref="GetAvailableUpdates(out bool)"/>.
+        /// </summary>
+        public IReadOnlyList<IPackage> GetInstalledPackages(out bool failed)
+        {
+            var packages = GetInstalledPackages();
+            failed = LastInstalledListingFailed;
+            return packages;
+        }
 
         public long InstalledPackagesGeneration { get; }
 

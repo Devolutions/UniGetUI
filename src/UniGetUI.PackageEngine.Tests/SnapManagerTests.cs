@@ -385,4 +385,31 @@ public sealed class SnapManagerTests : IDisposable
 
         Assert.Empty(versions);
     }
+
+    private sealed class ListingSnap : Snap
+    {
+        public IReadOnlyList<Package> ListInstalled() => GetInstalledPackages_UnSafe();
+
+        public IReadOnlyList<Package> ListUpdates() => GetAvailableUpdates_UnSafe();
+    }
+
+    [Fact]
+    public void AFailingSnapListingIsAFailedListingRatherThanAnEmptyOne()
+    {
+        var snap = new ListingSnap
+        {
+            Status = new UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers.ManagerStatus
+            {
+                Found = true,
+                ExecutablePath = FailingCommandScript.Create(_testRoot, 1, "cannot communicate with server"),
+                ExecutableCallArgs = "",
+            },
+        };
+
+        Assert.Empty(snap.ListInstalled());
+        Assert.Empty(snap.ListUpdates());
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidOperationException>(snap.ListInstalled);
+        Assert.Throws<InvalidOperationException>(snap.ListUpdates);
+    }
 }

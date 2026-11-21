@@ -246,10 +246,24 @@ public partial class Homebrew : PackageManager
             packages.Add(new Package(CoreTools.FormatAsName(id), id, version, source, this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
         return packages;
+    }
+
+    private void ThrowIfListingFailed(int exitCode, string error)
+    {
+        if (exitCode != 0)
+        {
+            var failure = new InvalidOperationException(
+                $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+            );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     // "brew outdated --verbose" prints a different comparison operator per package type:
@@ -261,7 +275,16 @@ public partial class Homebrew : PackageManager
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
-        IReadOnlyList<IPackage> installed = GetInstalledPackages();
+        // Sources (formula or cask) come from the installed list, so it must have succeeded.
+        IReadOnlyList<IPackage> installed = GetInstalledPackages(out bool installedFailed);
+        if (installedFailed)
+        {
+            var failure = new InvalidOperationException(
+                $"{Name} could not list its installed packages, so its updates cannot be checked."
+            );
+            Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
 
         using var p = new Process { StartInfo = MakeBrewStartInfo("outdated --verbose") };
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
@@ -275,9 +298,11 @@ public partial class Homebrew : PackageManager
             lines.Add(line);
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
 
         return ParseAvailableUpdates(lines, installed);
     }

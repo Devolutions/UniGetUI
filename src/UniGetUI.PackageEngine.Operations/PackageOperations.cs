@@ -1664,7 +1664,14 @@ namespace UniGetUI.PackageEngine.Operations
         {
             List<InnerOperation> l = new();
             if (preReq is not null)
-                l.Add(new(preReq, true));
+                l.Add(
+                    new(
+                        preReq,
+                        mustSucceed: true,
+                        skipOnceSucceeded: role is OperationType.Install
+                            && preReq is UninstallPackageOperation
+                    )
+                );
 
             // For brokered operations the kill/pre/post actions are owned by the broker:
             // they are carried in the broker request so that policy is evaluated before
@@ -1734,7 +1741,7 @@ namespace UniGetUI.PackageEngine.Operations
             bool uninstallIsScheduled = Role is OperationType.Update
                 ? _uninstallBeforeReinstall is { Status: not OperationStatus.Succeeded }
                     && !IsKnownToBeUninstalled(Package)
-                : _uninstallPrerequisite is not null;
+                : _uninstallPrerequisite is { Status: not OperationStatus.Succeeded };
             if (!uninstallIsScheduled || IsBrokerEligible(Package))
                 return null;
 

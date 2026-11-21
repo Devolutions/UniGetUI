@@ -131,9 +131,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
             return true;
         }
 
-        protected override bool DidManagerReportFailure(IPackageManager manager)
-            => manager.LastUpdatesListingFailed;
-
         protected virtual TimeSpan InstalledListingWaitLimit => TimeSpan.FromMinutes(2);
 
         protected override async Task WaitBeforeLoadingFromManagerAsync(IPackageManager manager)
@@ -159,6 +156,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
             return manager.GetAvailableUpdates();
+        }
+
+        protected override IReadOnlyList<IPackage> LoadPackagesFromManager(
+            IPackageManager manager,
+            out bool failed
+        )
+        {
+            return manager.GetAvailableUpdates(out failed);
         }
 
         private readonly ConcurrentDictionary<long, SemaphoreSlim> _resolutionGates = new();

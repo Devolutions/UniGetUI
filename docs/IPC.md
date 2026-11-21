@@ -74,10 +74,51 @@ When the client **does** receive an explicit override:
 On Windows, an unelevated GUI session separately attempts to register with the local Devolutions Agent service.
 Before sending registration data, UniGetUI verifies that the pipe server is the running Agent service in session 0.
 This connection is separate from the local IPC API and remains active when that API is disabled.
-The registration connection answers `ListManagers`, reports installed packages, updates, sources, and version requests as unavailable, and rejects package operations without starting them.
-Its `ListManagers` items carry only a fixed set of fields, with `executablePath` and `executableArguments` empty and `health` at its unknown default, so a field added to the local manager endpoint is not sent to the Agent.
+The registration connection answers `GetInventorySnapshot` and `RescanInventory`, and runs `ExecutePackageOperation` through the Agent's package broker.
 After a lost connection it retries with a growing delay, which starts over only when the lost session had stayed registered for at least 30 seconds.
-Unavailable remote operations never fall back to local package execution.
+
+### Inventory snapshot
+
+`GetInventorySnapshot` returns a copy of the last completed installed-package scan; it never starts a scan or refresh and never reads the pending-reboot or manager-health stores.
+It fails unless that scan completed for every enabled and installed manager, so a snapshot is never partial.
+A normal user Reload can still display partial rows when a listing command fails or some output cannot be parsed, without those diagnostics causing repair or another listing attempt.
+That call is recorded as incomplete, so its scan cannot supply a remote snapshot even though the UI keeps its rows.
+`completedAt` is that scan's completion time.
+`updateCompletedAt`, `updates` and each row's `newVersion` come from the last completed update scan, and only when it also covers every expected manager; otherwise `updateCompletedAt` is null and `updates` is empty.
+Installations of one package that differ in reported scope are separate rows, and an update reporting a scope applies only to the row with that scope; an update without a scope applies only when exactly one installation matches.
+`sourceName` is always empty.
+Its `managers` items carry only a fixed set of fields, with `executablePath` and `executableArguments` empty and `health` at its unknown default, so a field added to the local manager endpoint is not sent to the Agent.
+Source entries with unsafe or ambiguous names are omitted, and source URLs are never sent.
+Safely reportable sources observed in either completed scan remain available when their manager is disabled, but its package rows are omitted and operations naming it are refused.
+
+### Inventory rescan
+
+`RescanInventory` takes empty arguments and reloads the installed-package and available-update lists; the Agent sends it after a remote operation finishes, then asks for a snapshot.
+The scan that answers starts after the request arrived: a load already running is waited out rather than joined, and requests that arrive while a scan is queued share it.
+UniGetUI answers `ok:true` with an empty `result` once both scans have completed for every expected manager and been published, and `Failed` otherwise.
+A remote rescan is the user's Reload minus recovery (Cargo), repair (`AttemptFastRepair`), automatic install or update of packages, and extension update checks.
+In this listing-only mode, command failures and parse errors fail the listing rather than keeping partial rows; PowerShell 7 also treats module-listing errors as terminating.
+Listing-only WinGet and Scoop calls bypass their short-lived installed-list caches, so a rescan immediately after an operation reads the changed installation state.
+Normal, listing-only and silent reloads arbitrate their start atomically within each loader.
+The package-index refresh a Reload performs runs only for managers whose refresh updates a catalogue and nothing else (WinGet, Apt, Pacman, Dnf, Flatpak, Snap, and the installer feeds), and is skipped for any manager whose refresh updates the manager itself or a working tree (Scoop, Homebrew, vcpkg).
+Managers that have no index refresh (Pip, npm, Bun, .NET Tool, PowerShell, PowerShell 7, Cargo, Chocolatey) are unaffected.
+When an interrupted UniGetUI Cargo installation still needs recovery, the Cargo listing is refused and the rescan fails; the log then contains `Remote rescan: Cargo listing refused because an interrupted UniGetUI Cargo installation needs recovery`, and reloading packages once in UniGetUI recovers it.
+
+While registered with an Agent, UniGetUI also reloads its installed-package list every 15 minutes in the same listing-only mode, so changes made on the machine by other means reach the inventory unasked.
+A tick is skipped while a load is running or a rescan is queued, and there is no such timer while UniGetUI is not registered.
+
+### Remote package operations
+
+`ExecutePackageOperation` installs, updates or uninstalls one package with an Agent-issued grant, sent once to the broker's grant route (`/v1/package-operations/execute-grant`) with the exact request the grant binds.
+It rejects unknown or duplicate operation arguments before submission.
+It does not depend on the **Delegate package operations to the Devolutions Agent broker** setting (Settings → Administrator), which is the user's opt-in for local self-service through the broker; whether the machine accepts remote operations is the Agent's own configuration.
+It runs only for a manager the broker supports; Chocolatey is refused.
+WinGet runs in the requested user or machine scope, every other manager in user scope; a machine-scope request for another manager is refused.
+Update and uninstall act on the installation named by manager, package ID and the row's `reportedScope`; when the manager cannot select a scope from that value, the last completed installed scan, the copy the Agent chose the row from, must hold exactly one installation with that manager and package ID, checked immediately before submission, so a load running meanwhile does not block the operation.
+Install needs a source; update uses the named source or the manager's default; uninstall uses none.
+Once the grant may have reached the broker, the result is `Unknown`, whatever the broker answered, because a response frame alone does not prove the operation's outcome.
+A request refused before anything is sent is `Failed`.
+UniGetUI never retries a grant, never falls back to local package execution, and never sends a grant to another endpoint.
 
 ## Authentication
 

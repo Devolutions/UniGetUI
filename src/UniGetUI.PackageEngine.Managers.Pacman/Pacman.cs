@@ -110,6 +110,8 @@ public class Pacman : PackageManager
 
     // ── Index refresh ──────────────────────────────────────────────────────
 
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => true;
+
     public override void RefreshPackageIndexes()
     {
         using var p = new Process
@@ -200,6 +202,7 @@ public class Pacman : PackageManager
                 CreateNoWindow = true,
             },
         };
+        UseNeutralLocale(p.StartInfo);
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages, p);
         p.Start();
 
@@ -219,9 +222,12 @@ public class Pacman : PackageManager
                 this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
-        logger.Close(p.ExitCode);
+        int exitCode = ListingExitCode(p.ExitCode, packages.Count, error);
+        logger.Close(exitCode);
+        ThrowIfListingFailed(exitCode, error);
         return packages;
     }
 
@@ -241,6 +247,7 @@ public class Pacman : PackageManager
                 CreateNoWindow = true,
             },
         };
+        UseNeutralLocale(p.StartInfo);
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
         p.Start();
 
@@ -261,10 +268,42 @@ public class Pacman : PackageManager
                 this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         // pacman -Qu exits 1 when there are no upgradable packages — not an error
-        logger.Close(p.ExitCode == 1 && packages.Count == 0 ? 0 : p.ExitCode);
+        int exitCode = ListingExitCode(p.ExitCode, packages.Count, error);
+        logger.Close(exitCode);
+        ThrowIfListingFailed(exitCode, error);
         return packages;
+    }
+
+    // pacman -Q exits 1 when nothing matches; with no results and only warnings on stderr that
+    // is an empty listing, anything else is a failure.
+    internal static int ListingExitCode(int exitCode, int resultCount, string stderr)
+    {
+        bool onlyWarnings = stderr
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .All(line => line.StartsWith("warning:", StringComparison.OrdinalIgnoreCase));
+        return exitCode == 1 && resultCount == 0 && onlyWarnings ? 0 : exitCode;
+    }
+
+    private void ThrowIfListingFailed(int exitCode, string error)
+    {
+        if (exitCode != 0)
+        {
+            var failure = new InvalidOperationException(
+                $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+            );
+            UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
+    }
+
+    private static void UseNeutralLocale(ProcessStartInfo startInfo)
+    {
+        startInfo.Environment["LANG"] = "C";
+        startInfo.Environment["LC_ALL"] = "C";
+        startInfo.Environment.Remove("LANGUAGE");
     }
 }

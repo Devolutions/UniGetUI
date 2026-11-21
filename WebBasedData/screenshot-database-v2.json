@@ -7913,6 +7913,13 @@
       "icon": "",
       "images": []
     },
+    "cloudflare-warp": {
+      "icon": "https://i.postimg.cc/7Y3pjnfV/warp-logo.png",
+      "images": [
+        "https://i.postimg.cc/PLMYyVTX/1.png",
+        "https://i.postimg.cc/R3TKdp4C/2.png"
+      ]
+    },
     "cloudflarespeedtest": {
       "icon": "",
       "images": []
@@ -24728,6 +24735,18 @@
     },
     "makerlapse": {
       "icon": "",
+      "images": []
+    },
+    "makuflash": {
+      "icon": "https://adderly.top/icons/3.png",
+      "images": []
+    },
+    "makutweaker": {
+      "icon": "https://adderly.top/icons/1.png",
+      "images": []
+    },
+    "makutyper": {
+      "icon": "https://adderly.top/icons/2.png",
       "images": []
     },
     "malden": {
@@ -42067,19 +42086,19 @@
       "images": []
     },
     "telegram": {
-      "icon": "https://community.chocolatey.org/content/packageimages/telegram.install.4.6.5.png",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "telegram-downloader": {
-      "icon": "",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "telegramdesktop": {
-      "icon": "https://i.imgur.com/at0VmW2.png",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "telegramdesktop-beta": {
-      "icon": "",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "teleport": {
@@ -50608,6 +50627,12 @@
         "https://i.postimg.cc/L40ZfDp8/nl-Rywj-YEux.png",
         "https://i.postimg.cc/6Q08QLcw/Scfmnn-Mo48.png",
         "https://i.postimg.cc/HxkV8cvM/u-ARCBXBW1-L.png"
+      ]
+    },
+    "yandex-telemost": {
+      "icon": "https://i.postimg.cc/pLxptCkH/00c7c372-29e3-41e5-b4a1-8941c144e1e3.png",
+      "images": [
+        "https://i.postimg.cc/wBCCSfcR/SCR-20260921-jvxm.png"
       ]
     },
     "yanknote": {

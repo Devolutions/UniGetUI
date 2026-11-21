@@ -14,6 +14,7 @@ using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PacmanManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.Managers.SnapManager;
+using UniGetUI.PackageEngine.Managers.UvManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.Serializable;
@@ -50,6 +51,7 @@ public class ReinstallOnUpdateManagerTests
             { nameof(Dnf), false },
             { nameof(Snap), false },
             { nameof(MacPkg), false },
+            { nameof(Uv), false },
         };
 #if WINDOWS
         data.Add(nameof(WinGet), true);
@@ -79,6 +81,7 @@ public class ReinstallOnUpdateManagerTests
             nameof(Dnf) => new Dnf(),
             nameof(Snap) => new Snap(),
             nameof(MacPkg) => new MacPkg(),
+            nameof(Uv) => new Uv(),
 #if WINDOWS
             nameof(WinGet) => new WinGet(),
             nameof(Scoop) => new Scoop(),

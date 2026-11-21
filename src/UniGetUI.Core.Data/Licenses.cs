@@ -23,6 +23,7 @@ namespace UniGetUI.Core.Data
             { "npm", "Artistic License 2.0" },
             { "Pip", "MIT" },
             { "parse_pip_search", "MIT" },
+            { "Uv", "Apache v2" },
             { "PowerShell Gallery", "Unknown" },
             { ".NET SDK", "MIT" },
             { "Cargo", "MIT" },
@@ -86,6 +87,7 @@ namespace UniGetUI.Core.Data
                     "https://github.com/marticliment/parseable_pip_search/blob/master/LICENSE.md"
                 )
             },
+            { "Uv", new Uri("https://github.com/astral-sh/uv/blob/main/LICENSE-APACHE") },
             { ".NET SDK", new Uri("https://github.com/dotnet/sdk/blob/main/LICENSE.TXT") },
             { "PowerShell Gallery", new Uri("https://www.powershellgallery.com/") },
             { "Cargo", new Uri("https://github.com/rust-lang/cargo/blob/master/LICENSE-MIT") },
@@ -130,6 +132,7 @@ namespace UniGetUI.Core.Data
                 "parse_pip_search",
                 new Uri("https://github.com/marticliment/parseable_pip_search/")
             },
+            { "Uv", new Uri("https://github.com/astral-sh/uv/") },
             { ".NET SDK", new Uri("https://dotnet.microsoft.com/") },
             { "PowerShell Gallery", new Uri("https://www.powershellgallery.com/") },
             { "Cargo", new Uri("https://github.com/rust-lang/cargo") },

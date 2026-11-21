@@ -6,6 +6,7 @@ using UniGetUI.Core.Tools.Tests;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.Generic.PyPI;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
@@ -523,7 +524,7 @@ public sealed class PipManagerTests : IDisposable
             }
             """);
 
-        Assert.Equal(["requests", "café", "pytest"], Pip.ParseSimpleIndexProjectNames(json));
+        Assert.Equal(["requests", "café", "pytest"], PyPIIndexClient.ParseSimpleIndexProjectNames(json));
     }
 
     [Theory]
@@ -532,18 +533,18 @@ public sealed class PipManagerTests : IDisposable
     [InlineData("{\"projects\": {\"name\": \"x\"}}")]
     public void SimpleIndexParserRejectsAnIndexWithoutProjects(string json)
     {
-        Assert.Throws<InvalidDataException>(() => Pip.ParseSimpleIndexProjectNames(json));
+        Assert.Throws<InvalidDataException>(() => PyPIIndexClient.ParseSimpleIndexProjectNames(json));
     }
 
     [Fact]
     public void SearchHelpersParseSimpleIndexAndRankPrefixMatchesFirst()
     {
-        var names = Pip.ParseSimpleIndexProjectNames(
+        var names = PyPIIndexClient.ParseSimpleIndexProjectNames(
 
             PackageEngineFixtureFiles.ReadAllText(Path.Combine("Pip", "simple-index.json"))
         );
 
-        var matches = Pip.SelectSearchMatches("req", names);
+        var matches = PyPIIndexClient.SelectSearchMatches("req", names);
 
         Assert.Equal(
             ["req", "requests", "requestium", "requests-cache", "django-reqtools"],

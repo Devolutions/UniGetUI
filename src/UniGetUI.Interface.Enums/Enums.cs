@@ -96,6 +96,7 @@ namespace UniGetUI.Interface.Enums
         Skills = '\uE94C',
         Xcode = '\uE94D',
         Drivers = '\uE94E',
+        Uv = '\uE94F',
     }
 
     public class NotificationArguments

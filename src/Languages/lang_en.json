@@ -3105,5 +3105,12 @@
   "{0} (revision {1})": "{0} (revision {1})",
   "More information": "More information",
   "Graphical interface for your package managers": "Graphical interface for your package managers",
-  "Show UniGetUI in the applications menu": "Show UniGetUI in the applications menu"
+  "Show UniGetUI in the applications menu": "Show UniGetUI in the applications menu",
+  "Astral's uv tool runner. Installs Python command-line tools into isolated tool environments<br>Contains: <b>Python CLI tools</b>": "Astral's uv tool runner. Installs Python command-line tools into isolated tool environments<br>Contains: <b>Python CLI tools</b>",
+  "Python": "Python",
+  "Python interpreter:": "Python interpreter:",
+  "Python source:": "Python source:",
+  "Do not download Python interpreters": "Do not download Python interpreters",
+  "uv-managed Python": "uv-managed Python",
+  "system Python": "system Python"
 }

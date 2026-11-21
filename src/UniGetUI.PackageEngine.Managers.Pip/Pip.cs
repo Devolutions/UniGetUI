@@ -17,6 +17,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Managers.Generic.PyPI;
 using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.PackageEngine.Managers.PipManager
@@ -129,263 +130,6 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 + $"@{proxyUri.AbsoluteUri.Replace($"{proxyUri.Scheme}://", "")}";
         }
 
-        // In-memory cache of all PyPI package names, shared across searches. The index is close
-        // to a million names (tens of MB once loaded), so it is only kept while searches are
-        // being made: it is dropped after MemoryCacheIdleLifetime without one, and read back from
-        // the file cache by the next search.
-        private static string[]? _cachedNames;
-        private static DateTime _cacheTimestamp = DateTime.MinValue;
-        private static readonly object _cacheLock = new();
-        internal static TimeSpan MemoryCacheIdleLifetime { get; set; } = TimeSpan.FromMinutes(2);
-        private static long _cacheUseStamp;
-        internal static bool IsIndexHeldInMemory
-        {
-            get { lock (_cacheLock) return _cachedNames is not null; }
-        }
-        private const int CacheMaxAgeHours = 24;
-        private const int MaxSearchResults = 20;
-
-        // Shared HTTP client and bounded concurrency for version fetches
-        private static readonly HttpClient _httpClient = CreateSharedHttpClient();
-        private static readonly SemaphoreSlim _versionFetchSemaphore = new(6, 6);
-
-        private static HttpClient CreateSharedHttpClient()
-        {
-            var client = new HttpClient(CoreTools.GenericHttpClientParameters);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            return client;
-        }
-
-        protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
-        {
-            INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
-            try
-            {
-                string[] allNames = GetOrRefreshIndex(logger);
-
-                string[] matches = SelectSearchMatches(query, allNames);
-
-                logger.Log($"Matched {matches.Length} packages for query '{query}'");
-
-                // Fetch latest version for each match in parallel, bounded to 6 concurrent requests
-                var versionTasks = matches
-                    .Select(FetchLatestVersionAsync)
-                    .ToArray();
-                Task.WhenAll(versionTasks).GetAwaiter().GetResult();
-
-                List<Package> packages = [];
-                for (int i = 0; i < matches.Length; i++)
-                {
-                    string version = versionTasks[i].Result ?? "latest";
-                    packages.Add(new Package(
-                        CoreTools.FormatAsName(matches[i]),
-                        matches[i],
-                        version,
-                        DefaultSource,
-                        this,
-                        new(PackageScope.Global)
-                    ));
-                }
-
-                logger.Close(0);
-                return packages;
-            }
-            catch (Exception e)
-            {
-                logger.Error(e);
-                logger.Close(1);
-                throw;
-            }
-        }
-
-        private static string IndexCacheFile =>
-            Path.Join(CoreData.UniGetUICacheDirectory_Data, "pip_simple_index.cache");
-
-        private static bool IsIndexFileFresh(string cacheFile) =>
-            File.Exists(cacheFile)
-            && (DateTime.Now - File.GetLastWriteTime(cacheFile)).TotalHours < CacheMaxAgeHours;
-
-        private static string[] GetOrRefreshIndex(INativeTaskLogger logger)
-        {
-            // A use starts here: a release scheduled by an earlier search must not drop the
-            // index this search is about to read.
-            lock (_cacheLock) { _cacheUseStamp++; }
-            try
-            {
-                return GetOrRefreshIndexCore(logger);
-            }
-            finally
-            {
-                ScheduleIndexRelease();
-            }
-        }
-
-        // Drops the in-memory index once no search has used it for MemoryCacheIdleLifetime.
-        // The use stamp is only changed and compared under _cacheLock, so a release that has
-        // been overtaken by a newer use can never clear the index.
-        internal static void ScheduleIndexRelease()
-        {
-            long stamp;
-            lock (_cacheLock) { stamp = ++_cacheUseStamp; }
-            TimeSpan lifetime = MemoryCacheIdleLifetime;
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(lifetime).ConfigureAwait(false);
-                lock (_cacheLock)
-                {
-                    if (stamp == _cacheUseStamp)
-                        _cachedNames = null;
-                }
-            });
-        }
-
-        private static string[] GetOrRefreshIndexCore(INativeTaskLogger logger)
-        {
-            lock (_cacheLock)
-            {
-                if (_cachedNames is not null && (DateTime.Now - _cacheTimestamp).TotalHours < CacheMaxAgeHours)
-                    return _cachedNames;
-            }
-
-            string cacheFile = IndexCacheFile;
-
-            // Use file cache if fresh enough
-            if (IsIndexFileFresh(cacheFile))
-            {
-                logger.Log($"Loading PyPI index from file cache ({File.GetLastWriteTime(cacheFile):g})");
-                string[] cached = File.ReadAllLines(cacheFile);
-                if (cached.Length > 0)
-                {
-                    lock (_cacheLock) { _cachedNames = cached; _cacheTimestamp = File.GetLastWriteTime(cacheFile); }
-                    return cached;
-                }
-                logger.Error("PyPI index file cache was empty, re-downloading...");
-            }
-
-            // Download fresh index
-            logger.Log("Downloading PyPI simple index (one-time ~38 MB download, cached for 24 h)...");
-            using HttpClient client = new(CoreTools.GenericHttpClientParameters);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            client.DefaultRequestHeaders.Add("Accept", "application/vnd.pypi.simple.v1+json");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, "https://pypi.org/simple/");
-            using HttpResponseMessage response = client.Send(request);
-            if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException($"PyPI simple index returned {(int)response.StatusCode} {response.ReasonPhrase}");
-
-            // Parsed straight from the response bytes: as a string plus a JSON document tree the
-            // ~38 MB index transiently cost several hundred MB.
-            byte[] json = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
-            string[] names = ParseSimpleIndexProjectNames(json);
-
-            logger.Log($"Downloaded {names.Length} package names from PyPI");
-
-            // Update memory cache before attempting file write so searches work even if file write fails
-            lock (_cacheLock) { _cachedNames = names; _cacheTimestamp = DateTime.Now; }
-
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-                File.WriteAllLines(cacheFile, names);
-            }
-            catch (Exception e)
-            {
-                logger.Error($"Could not write PyPI index file cache to {cacheFile}: {e.Message}");
-            }
-
-            return names;
-        }
-
-        internal static string[] ParseSimpleIndexProjectNames(string json) =>
-            ParseSimpleIndexProjectNames(Encoding.UTF8.GetBytes(json));
-
-        // Reads {"projects": [{"name": "..."}, ...]} token by token, keeping only the names.
-        internal static string[] ParseSimpleIndexProjectNames(ReadOnlySpan<byte> utf8Json)
-        {
-            List<string> found = [];
-            var reader = new Utf8JsonReader(utf8Json);
-            bool inProjects = false;
-            while (reader.Read())
-            {
-                if (!inProjects)
-                {
-                    if (reader.TokenType is JsonTokenType.PropertyName && reader.CurrentDepth == 1)
-                    {
-                        bool isProjects = reader.ValueTextEquals("projects");
-                        reader.Read();
-                        if (isProjects && reader.TokenType is JsonTokenType.StartArray)
-                            inProjects = true;
-                        else
-                            reader.Skip();
-                    }
-                    continue;
-                }
-
-                if (reader.TokenType is JsonTokenType.EndArray && reader.CurrentDepth == 1)
-                    break;
-
-                if (reader.TokenType is JsonTokenType.PropertyName && reader.CurrentDepth == 3)
-                {
-                    bool isName = reader.ValueTextEquals("name");
-                    reader.Read();
-                    if (isName && reader.TokenType is JsonTokenType.String)
-                    {
-                        string? name = reader.GetString();
-                        if (!string.IsNullOrEmpty(name))
-                            found.Add(name);
-                    }
-                    else
-                    {
-                        reader.Skip();
-                    }
-                }
-            }
-
-            string[] names = found.ToArray();
-
-            if (names.Length == 0)
-                throw new InvalidDataException("PyPI simple index returned 0 packages — response may be malformed");
-
-            return names;
-        }
-
-        internal static string[] SelectSearchMatches(string query, IEnumerable<string> allNames)
-        {
-            string queryLower = query.ToLowerInvariant();
-            return allNames
-                .Where(n => n.Contains(queryLower, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(n => n.StartsWith(queryLower, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(n => n.Length)
-                .Take(MaxSearchResults)
-                .ToArray();
-        }
-
-        private static async Task<string?> FetchLatestVersionAsync(string packageName)
-        {
-            await _versionFetchSemaphore.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                using var request = new HttpRequestMessage(
-                    HttpMethod.Get,
-                    $"https://pypi.org/pypi/{Uri.EscapeDataString(packageName)}/json"
-                );
-                using HttpResponseMessage response = await _httpClient
-                    .SendAsync(request)
-                    .ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return (JsonNode.Parse(json) as JsonObject)?["info"]?["version"]?.GetValue<string>();
-            }
-            catch
-            {
-                return null;
-            }
-            finally
-            {
-                _versionFetchSemaphore.Release();
-            }
-        }
-
         private static readonly ConcurrentDictionary<
             (string Interpreter, string PackageId),
             CachedResolution
@@ -408,6 +152,44 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             return string.Join(" ---> ", parts);
         }
 
+        protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
+        {
+            INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
+            try
+            {
+                string[] matches = PyPIIndexClient.SelectSearchMatches(
+                    query,
+                    PyPIIndexClient.GetProjectNames(logger)
+                );
+
+                logger.Log($"Matched {matches.Length} packages for query '{query}'");
+
+                Dictionary<string, string?> latestVersions = PyPIProjectClient.FetchLatestVersions(matches);
+
+                List<Package> packages = [];
+                for (int i = 0; i < matches.Length; i++)
+                {
+                    string version = latestVersions.GetValueOrDefault(matches[i]) ?? "latest";
+                    packages.Add(new Package(
+                        CoreTools.FormatAsName(matches[i]),
+                        matches[i],
+                        version,
+                        DefaultSource,
+                        this,
+                        new(PackageScope.Global)
+                    ));
+                }
+
+                logger.Close(0);
+                return packages;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e);
+                logger.Close(1);
+                throw;
+            }
+        }
         private readonly object _indexUpdateCheckLock = new();
         private bool _indexUpdateCheckProbed;
         private bool _indexUpdateCheckSupported;
@@ -1476,25 +1258,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 EnvironmentVariableTarget.Process
             );
 
-            // Pre-warm the package name index in the background so the first search doesn't
-            // need to wait for the ~38 MB download inside the search timeout window.
-            Task.Run(() =>
-            {
-                var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
-                try
-                {
-                    // Only the file needs to be ready; a fresh one is not loaded until a search.
-                    if (!IsIndexFileFresh(IndexCacheFile))
-                        GetOrRefreshIndex(logger);
-                    logger.Close(0);
-                }
-                catch (Exception e)
-                {
-                    logger.Error(e);
-                    logger.Close(1);
-                    Logger.Warn($"Pip: background index pre-warm failed: {e.Message}");
-                }
-            });
+            _ = PyPIIndexClient.PreWarmIndexAsync();
         }
     }
 }

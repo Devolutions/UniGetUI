@@ -7,6 +7,7 @@ using UniGetUI.PackageEngine.Managers.DotNetManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
+using UniGetUI.PackageEngine.Managers.UvManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -44,6 +45,7 @@ namespace UniGetUI.PackageEngine
         public static readonly Npm? Npm = Create(() => new Npm());
         public static readonly Bun? Bun = Create(() => new Bun());
         public static readonly Pip? Pip = Create(() => new Pip());
+        public static readonly Uv? Uv = Create(() => new Uv());
         public static readonly DotNet? DotNet = Create(() => new DotNet());
         public static readonly PowerShell7? PowerShell7 = Create(() => new PowerShell7());
 #if WINDOWS
@@ -109,7 +111,7 @@ namespace UniGetUI.PackageEngine
 
         private static IPackageManager[] CreateManagers()
         {
-            List<IPackageManager?> candidates = [Npm, Bun, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
+            List<IPackageManager?> candidates = [Npm, Bun, Pip, Uv, Cargo, Vcpkg, DotNet, PowerShell7];
 #if WINDOWS
             candidates.InsertRange(0, [WinGet, WinInstaller, Scoop, Chocolatey]);
             candidates.Add(PowerShell);

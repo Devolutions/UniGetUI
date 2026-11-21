@@ -53,6 +53,7 @@ macOS, the first terminal emulator UniGetUI finds on Linux).
 | [PowerShell 5.x](#powershell-5x) | Yes | | |
 | [PowerShell 7.x](#powershell-7x) | Yes | Yes | Yes |
 | [Pip](#pip) | Yes | Yes | Yes |
+| [Uv](#uv) | Yes | Yes | Yes |
 | [Npm](#npm) | Yes | Yes | Yes |
 | [Bun](#bun) | Yes | Yes | Yes |
 | [.NET Tool](#net-tool) | Yes | Yes | Yes |
@@ -163,6 +164,22 @@ settings. Checking one that is not managed by default requires the administrator
 allows changing package manager executables.
 
 Check: `python -m pip --version` (or `python3 -m pip --version`)
+
+## Uv
+
+Install uv, Astral's Python tool environment manager:
+
+- **Windows:** `winget install --exact --id astral-sh.uv`
+- **macOS:** `brew install uv`
+- **Linux:** `curl -LsSf https://astral.sh/uv/install.sh | sh` or the package of your
+  distribution.
+
+UniGetUI finds `uv` on `PATH` and runs every command as `uv tool <verb>`. uv installs Python
+command-line tools into isolated tool environments, one per tool, and expects its own executable
+directory on `PATH`; if `uv tool install` reports a missing executable directory, run
+`uv tool update-shell` or log out and back in.
+
+Check: `uv --version`
 
 ## Npm
 

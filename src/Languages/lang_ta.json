@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (திருத்தம் {1})",
   "More information": "மேலும் தகவல்",
   "Graphical interface for your package managers": "உங்கள் தொகுப்பு நிர்வாகிகளுக்கான வரைகலை இடைமுகம்",
-  "Show UniGetUI in the applications menu": "செயலிகள் பட்டியலில் UniGetUI-ஐக் காட்டு"
+  "Show UniGetUI in the applications menu": "செயலிகள் பட்டியலில் UniGetUI-ஐக் காட்டு",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "{1} இல் {0}வது PreOperation ஏற்கனவே வெற்றியடைந்தது, அது தவிர்க்கப்படுகிறது"
 }

@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (redaktsioon {1})",
   "More information": "Lisateave",
   "Graphical interface for your package managers": "Graafiline kasutajaliides sinu paketihalduritele",
-  "Show UniGetUI in the applications menu": "Kuva UniGetUI rakenduste menüüs"
+  "Show UniGetUI in the applications menu": "Kuva UniGetUI rakenduste menüüs",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Eeltoiming {0}/{1} õnnestus juba, jäetakse vahele"
 }

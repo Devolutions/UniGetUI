@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (revisie {1})",
   "More information": "Meer informatie",
   "Graphical interface for your package managers": "Grafische interface voor je pakketbeheerders",
-  "Show UniGetUI in the applications menu": "UniGetUI weergeven in het toepassingenmenu"
+  "Show UniGetUI in the applications menu": "UniGetUI weergeven in het toepassingenmenu",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Voorbewerking {0} van {1} is al geslaagd; wordt overgeslagen"
 }

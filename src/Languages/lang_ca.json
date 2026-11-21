@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (revisió {1})",
   "More information": "Més informació",
   "Graphical interface for your package managers": "Interfície gràfica per als vostres gestors de paquets",
-  "Show UniGetUI in the applications menu": "Mostra UniGetUI al menú d'aplicacions"
+  "Show UniGetUI in the applications menu": "Mostra UniGetUI al menú d'aplicacions",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "L'operació prèvia {0} de {1} ja s'ha completat correctament; s'omet."
 }

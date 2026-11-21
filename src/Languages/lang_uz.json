@@ -3106,5 +3106,6 @@
     "{0} (revision {1})": "{0} (tahrir {1})",
     "More information": "Qo‘shimcha ma’lumot",
     "Graphical interface for your package managers": "Paket menejerlaringiz uchun grafik interfeys",
-    "Show UniGetUI in the applications menu": "UniGetUI'ni ilovalar menyusida ko‘rsatish"
+    "Show UniGetUI in the applications menu": "UniGetUI'ni ilovalar menyusida ko‘rsatish",
+    "PreOperation {0} out of {1} already succeeded, skipping it": "{1} tadan {0}-amaldan oldingi jarayon allaqachon muvaffaqiyatli yakunlangan, o‘tkazib yuboriladi"
 }

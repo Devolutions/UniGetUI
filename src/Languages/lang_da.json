@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (revision {1})",
   "More information": "Flere oplysninger",
   "Graphical interface for your package managers": "Grafisk brugerflade til dine pakkehåndteringer",
-  "Show UniGetUI in the applications menu": "Vis UniGetUI i programmenuen"
+  "Show UniGetUI in the applications menu": "Vis UniGetUI i programmenuen",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "PreOperation {0} ud af {1} er allerede fuldført, springes over"
 }

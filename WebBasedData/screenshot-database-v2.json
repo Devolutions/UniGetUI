@@ -18278,6 +18278,10 @@
       "icon": "https://community.chocolatey.org/content/packageimages/Halite.0.4.0.4.png",
       "images": []
     },
+    "halloy": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/halloy-192.png",
+      "images": []
+    },
     "halo": {
       "icon": "",
       "images": []

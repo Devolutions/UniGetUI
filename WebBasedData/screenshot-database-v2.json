@@ -1125,6 +1125,20 @@
       "icon": "https://community.chocolatey.org/content/packageimages/adobe-connect.2020.1.5.png",
       "images": []
     },
+    "adobe-acrobat-pro": {
+      "icon": "https://www.adobe.com/dc-shared/assets/images/product-icons/svg/acrobat-pro.svg",
+      "images": [
+        "https://i.postimg.cc/hvRv215m/Snimok-ekrana-2026-11-22-005924.png",
+        "https://i.postimg.cc/fyQy8frY/Snimok-ekrana-2026-11-22-010011.png"
+      ]
+    },
+    "adobe-acrobat-pro-64-bit": {
+      "icon": "https://www.adobe.com/dc-shared/assets/images/product-icons/svg/acrobat-pro.svg",
+      "images": [
+        "https://i.postimg.cc/hvRv215m/Snimok-ekrana-2026-11-22-005924.png",
+        "https://i.postimg.cc/fyQy8frY/Snimok-ekrana-2026-11-22-010011.png"
+      ]
+    },
     "adobe-dnc": {
       "icon": "https://community.chocolatey.org/content/packageimages/adobe-dnc.15.2.png",
       "images": []
@@ -8317,6 +8331,10 @@
     },
     "commitmonitor": {
       "icon": "https://community.chocolatey.org/content/packageimages/commitmonitor.1.11.2.1123.png",
+      "images": []
+    },
+    "communicationplatform-max": {
+      "icon": "https://i.postimg.cc/VLK8ZFSX/Logotip-MAX-svg.png",
       "images": []
     },
     "communicator": {
@@ -19968,7 +19986,7 @@
       "images": []
     },
     "imo-messenger": {
-      "icon": "",
+      "icon": "https://i.postimg.cc/DztpYSdW/image.png",
       "images": []
     },
     "implay": {
@@ -45521,7 +45539,7 @@
       "images": []
     },
     "viber": {
-      "icon": "https://i.imgur.com/NNuAkJi.png",
+      "icon": "https://i.postimg.cc/5NFpY4wL/unnamed.jpg",
       "images": []
     },
     "vibrance-gui": {
@@ -48171,19 +48189,19 @@
       "images": []
     },
     "whatsapp": {
-      "icon": "https://i.postimg.cc/jjzdZ4GZ/WhatsApp.png",
+      "icon": "https://i.postimg.cc/JnDKNM92/apps-8453-13655054093851568-4a371b72-2ce8-4bdb-9d83-be49894d3fa0.png",
       "images": []
     },
     "whatsapp-beta": {
-      "icon": "https://i.postimg.cc/jjzdZ4GZ/WhatsApp.png",
+      "icon": "https://i.postimg.cc/JnDKNM92/apps-8453-13655054093851568-4a371b72-2ce8-4bdb-9d83-be49894d3fa0.png",
       "images": []
     },
     "whatsappdesktop": {
-      "icon": "https://i.postimg.cc/jjzdZ4GZ/WhatsApp.png",
+      "icon": "https://i.postimg.cc/JnDKNM92/apps-8453-13655054093851568-4a371b72-2ce8-4bdb-9d83-be49894d3fa0.png",
       "images": []
     },
     "whatsapptray": {
-      "icon": "https://community.chocolatey.org/content/packageimages/whatsapptray.1.9.0.png",
+      "icon": "https://i.postimg.cc/Z5mTXqjh/tray.png",
       "images": []
     },
     "which": {

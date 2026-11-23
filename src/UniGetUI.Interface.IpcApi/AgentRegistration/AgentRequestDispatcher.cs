@@ -1,5 +1,8 @@
 using System.Buffers;
+using System.Globalization;
 using System.Text.Json;
+using Devolutions.Now.Policy.Api;
+using UniGetUI.PackageEngine.AgentBroker;
 
 namespace UniGetUI.Interface.AgentRegistration;
 
@@ -15,11 +18,17 @@ internal sealed class AgentRequestDispatcher
     private const string BusyMessage = "UniGetUI is busy; try again later.";
     private const string FailedMessage = "The request could not be completed.";
     private const string InventoryUnavailableMessage =
-        "Remote package inventory is not available in this UniGetUI build.";
-    private const string VersionsUnavailableMessage =
-        "Remote version lookup is not available in this UniGetUI build.";
-    private const string OperationUnavailableMessage =
-        "Remote package operations are not available in this build; nothing was started.";
+        "No completed package scan covers every enabled package manager.";
+    private const string RescanFailedMessage =
+        "The package rescan did not complete for every enabled package manager.";
+    private const string ScopeNotAllowedMessage =
+        "This manager cannot run the operation in the requested scope; nothing was started.";
+    private const string ManagerDisabledMessage =
+        "This package manager is disabled in UniGetUI on this machine; nothing was started.";
+    private const string RowNotIdentifiedMessage =
+        "The installation could not be identified in the installed package list; nothing was started.";
+    private const string NotSentMessage =
+        "The operation could not be submitted to the Devolutions Agent; nothing was started.";
 
     private readonly IAgentRegistrationBackend _backend;
 
@@ -33,7 +42,12 @@ internal sealed class AgentRequestDispatcher
         && Guid.TryParseExact(value, "D", out Guid guid)
         && string.Equals(guid.ToString("D"), value, StringComparison.Ordinal);
 
-    public byte[] Handle(string id, string? command, JsonElement arguments)
+    public async Task<byte[]> HandleAsync(
+        string id,
+        string? command,
+        JsonElement arguments,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -47,23 +61,15 @@ internal sealed class AgentRequestDispatcher
 
             byte[] response = command switch
             {
-                // Held back until the source representation and an isolated, complete snapshot
-                // exist; failing closed beats an empty list that looks like a successful scan.
-                "ListInstalledPackages" or "ListPackageUpdates" or "ListSources" => Error(
-                    id,
-                    "Failed",
-                    InventoryUnavailableMessage
-                ),
-                "ListManagers" => Ok(
-                    id,
-                    writer => JsonSerializer.Serialize(
-                        writer,
-                        _backend.ListManagers(),
-                        IpcJson.GetTypeInfo<IReadOnlyList<IpcRemoteManagerInfo>>()
+                "GetInventorySnapshot" => GetInventorySnapshot(id),
+                "ExecutePackageOperation" => await ExecutePackageOperationAsync(
+                        id,
+                        arguments,
+                        cancellationToken
                     )
-                ),
-                "GetPackageVersions" => GetPackageVersions(id, arguments),
-                "ExecutePackageOperation" => ExecutePackageOperation(id, arguments),
+                    .ConfigureAwait(false),
+                "RescanInventory" => await RescanInventoryAsync(id, cancellationToken)
+                    .ConfigureAwait(false),
                 _ => Error(id, "UnsupportedCommand", UnsupportedMessage),
             };
 
@@ -82,46 +88,144 @@ internal sealed class AgentRequestDispatcher
     public static byte[] InvalidArguments(string id) =>
         Error(id, "InvalidArguments", InvalidMessage);
 
-    private static byte[] GetPackageVersions(string id, JsonElement args)
+    /// <summary>Starts a listing-only reload of the installed packages unless a load is already running.</summary>
+    public void RefreshInstalledInventory()
     {
-        if (
-            !TryGetString(args, "manager", out string manager)
-            || !TryGetString(args, "sourceName", out string sourceName)
-            || !TryGetString(args, "packageId", out string packageId)
-            || manager.Length == 0
-            || sourceName.Length == 0
-            || packageId.Length == 0
-        )
+        try
         {
-            return Error(id, "InvalidArguments", InvalidMessage);
+            _backend.RefreshInstalledInventory();
         }
-
-        return Error(id, "Failed", VersionsUnavailableMessage);
+        catch (Exception) { }
     }
 
-    private static byte[] ExecutePackageOperation(string id, JsonElement args)
+    private async Task<byte[]> RescanInventoryAsync(string id, CancellationToken cancellationToken)
+    {
+        bool rescanned = await _backend.RescanInventoryAsync(cancellationToken).ConfigureAwait(false);
+        return rescanned
+            ? Ok(
+                id,
+                writer =>
+                {
+                    writer.WriteStartObject();
+                    writer.WriteEndObject();
+                }
+            )
+            : Error(id, "Failed", RescanFailedMessage);
+    }
+
+    private byte[] GetInventorySnapshot(string id)
+    {
+        RemoteInventorySnapshot? snapshot = _backend.TryGetInventorySnapshot();
+        if (snapshot is null)
+        {
+            return Error(id, "Failed", InventoryUnavailableMessage);
+        }
+
+        return Ok(
+            id,
+            writer =>
+            {
+                writer.WriteStartObject();
+                writer.WriteString("completedAt", FormatUtc(snapshot.CompletedUtc));
+                if (snapshot.UpdateCompletedUtc is DateTime updateCompleted)
+                {
+                    writer.WriteString("updateCompletedAt", FormatUtc(updateCompleted));
+                }
+                else
+                {
+                    writer.WriteNull("updateCompletedAt");
+                }
+
+                writer.WritePropertyName("managers");
+                JsonSerializer.Serialize(
+                    writer,
+                    snapshot.Managers,
+                    IpcJson.GetTypeInfo<IReadOnlyList<IpcRemoteManagerInfo>>()
+                );
+                writer.WritePropertyName("sources");
+                JsonSerializer.Serialize(
+                    writer,
+                    snapshot.Sources,
+                    IpcJson.GetTypeInfo<IReadOnlyList<IpcSourceInfo>>()
+                );
+                WritePackages(writer, "installedPackages", snapshot.InstalledPackages);
+                WritePackages(
+                    writer,
+                    "updates",
+                    snapshot.UpdateCompletedUtc is null ? [] : snapshot.Updates
+                );
+                writer.WriteEndObject();
+            }
+        );
+    }
+
+    internal static string FormatUtc(DateTime value) =>
+        DateTime
+            .SpecifyKind(
+                value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value,
+                DateTimeKind.Utc
+            )
+            .ToString("yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'", CultureInfo.InvariantCulture);
+
+    // systemRestartPending is left out: remote requests never read the pending-reboot store.
+    private static void WritePackages(
+        Utf8JsonWriter writer,
+        string name,
+        IReadOnlyList<IpcPackageInfo> packages
+    )
+    {
+        writer.WriteStartArray(name);
+        foreach (IpcPackageInfo package in packages)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("name", package.Name.Length == 0 ? package.Id : package.Name);
+            writer.WriteString("id", package.Id);
+            writer.WriteString("version", package.Version);
+            writer.WriteString("newVersion", package.NewVersion);
+            writer.WriteString("source", package.Source);
+            // A package's loaded source is assigned rather than observed, so its canonical name is unproven.
+            writer.WriteString("sourceName", "");
+            writer.WriteString("manager", package.Manager);
+            if (package.ReportedScope is null)
+            {
+                writer.WriteNull("reportedScope");
+            }
+            else
+            {
+                writer.WriteString("reportedScope", package.ReportedScope);
+            }
+
+            writer.WriteBoolean("isUpgradable", package.IsUpgradable);
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndArray();
+    }
+
+    private async Task<byte[]> ExecutePackageOperationAsync(
+        string id,
+        JsonElement args,
+        CancellationToken cancellationToken
+    )
     {
         if (
-            !TryGetString(args, "operationId", out string operationId)
+            !HasOnlyOperationArguments(args)
+            || !TryGetString(args, "operationId", out string operationId)
             || !IsLowercaseUuid(operationId)
             || !TryGetString(args, "brokerRequestId", out string brokerRequestId)
             || !IsLowercaseUuid(brokerRequestId)
-            || !TryGetString(args, "operation", out string operation)
-            || operation is not ("Install" or "Update" or "Uninstall")
-            || !TryGetString(args, "manager", out string manager)
+            || !TryGetString(args, "operation", out string operationText)
+            || !TryParseOperation(operationText, out Operation operation)
+            || !TryGetString(args, "manager", out string managerText)
             || !TryGetString(args, "sourceName", out string sourceName)
             || !TryGetString(args, "packageId", out string packageId)
-            || manager.Length == 0
-            || (operation == "Install" && sourceName.Length == 0)
-            || (operation == "Uninstall" && sourceName.Length != 0)
             || packageId.Length == 0
-            || !TryGetString(args, "version", out _, required: false)
-            || !TryGetString(args, "scope", out string scope, required: false)
-            || !(
-                scope.Length == 0
-                || scope.Equals("User", StringComparison.OrdinalIgnoreCase)
-                || scope.Equals("Machine", StringComparison.OrdinalIgnoreCase)
-            )
+            || (operation is Operation.Install && sourceName.Length == 0)
+            || (operation is Operation.Uninstall && sourceName.Length != 0)
+            || !TryGetString(args, "version", out string version, required: false)
+            || !TryGetString(args, "scope", out string scopeText)
+            || !TryParseScope(scopeText, out Scope scope)
+            || !TryGetReportedScope(args, operation, out string? reportedScope)
             || !TryGetString(args, "grant", out string grant)
             || !IsValidGrant(grant)
         )
@@ -129,18 +233,125 @@ internal sealed class AgentRequestDispatcher
             return Error(id, "InvalidArguments", InvalidMessage);
         }
 
-        // The installed SDK has no grant-execute API, and remote work must never fall back to
-        // the legacy broker route or local execution, so a valid request is reported unstarted.
-        return Ok(
+        // Chocolatey and unknown managers are refused, as by the Agent.
+        if (!RemoteGrantRequestBuilder.TryParseManager(managerText, out ManagerName manager))
+        {
+            return Error(id, "InvalidArguments", InvalidMessage);
+        }
+
+        string? managerId = _backend.FindManagerId(manager);
+        if (managerId is null)
+        {
+            return Error(id, "InvalidArguments", InvalidMessage);
+        }
+
+        // The user turned this manager off on this machine; nothing is started for it.
+        if (!_backend.IsManagerEnabled(managerId))
+        {
+            return OperationResult(id, "Failed", ManagerDisabledMessage);
+        }
+
+        if (
+            sourceName.Length != 0
+            && _backend.ResolveSource(managerId, sourceName) is not RemoteSourceResolution.Resolved
+        )
+        {
+            return Error(id, "InvalidArguments", InvalidMessage);
+        }
+
+        RemoteGrantPlan? plan = RemoteGrantRequestBuilder.Plan(
+            new RemoteGrantOperation(
+                brokerRequestId,
+                operation,
+                manager,
+                sourceName,
+                packageId,
+                version,
+                scope,
+                reportedScope
+            )
+        );
+        if (plan is null)
+        {
+            return OperationResult(id, "Failed", ScopeNotAllowedMessage);
+        }
+
+        // Checked last, so the list the decision rests on is as fresh as it can be.
+        if (
+            plan.RequiresUniqueInstalledRow
+            && !_backend.IsOnlyInstalledRow(managerId, packageId, reportedScope ?? "")
+        )
+        {
+            return OperationResult(id, "Failed", RowNotIdentifiedMessage);
+        }
+
+        RemoteGrantDelivery delivery = await _backend
+            .SubmitGrantAsync(plan, grant, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Once the grant may have left, nothing UniGetUI holds proves the outcome.
+        return delivery is RemoteGrantDelivery.NotSent
+            ? OperationResult(id, "Failed", NotSentMessage)
+            : OperationResult(id, "Unknown", "");
+    }
+
+    private static byte[] OperationResult(string id, string status, string error) =>
+        Ok(
             id,
             writer =>
             {
                 writer.WriteStartObject();
-                writer.WriteString("status", "Failed");
-                writer.WriteString("error", OperationUnavailableMessage);
+                writer.WriteString("status", status);
+                writer.WriteString("error", error);
                 writer.WriteEndObject();
             }
         );
+
+    private static bool TryParseOperation(string text, out Operation operation)
+    {
+        operation = text switch
+        {
+            "Install" => Operation.Install,
+            "Update" => Operation.Update,
+            "Uninstall" => Operation.Uninstall,
+            _ => (Operation)(-1),
+        };
+        return operation is Operation.Install or Operation.Update or Operation.Uninstall;
+    }
+
+    private static bool TryParseScope(string text, out Scope scope)
+    {
+        scope = text switch
+        {
+            "User" => Scope.User,
+            "Machine" => Scope.Machine,
+            _ => (Scope)(-1),
+        };
+        return scope is Scope.User or Scope.Machine;
+    }
+
+    /// <summary>Required (possibly empty) for update and uninstall, and absent for install.</summary>
+    private static bool TryGetReportedScope(
+        JsonElement args,
+        Operation operation,
+        out string? reportedScope
+    )
+    {
+        reportedScope = null;
+        bool present = args.ValueKind == JsonValueKind.Object
+            && args.TryGetProperty("reportedScope", out _);
+        if (operation is Operation.Install)
+        {
+            return !present;
+        }
+
+        if (!present || !TryGetString(args, "reportedScope", out string value))
+        {
+            return false;
+        }
+
+        reportedScope = value;
+        return true;
     }
 
     private static bool IsValidGrant(string grant)
@@ -156,6 +367,24 @@ internal sealed class AgentRequestDispatcher
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    private static bool HasOnlyOperationArguments(JsonElement args)
+    {
+        if (args.ValueKind != JsonValueKind.Object)
+            return false;
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in args.EnumerateObject())
+        {
+            if (property.Name is not (
+                "operationId" or "brokerRequestId" or "operation" or "manager" or "sourceName"
+                or "packageId" or "version" or "scope" or "reportedScope" or "grant")
+                || !seen.Add(property.Name))
+                return false;
         }
 
         return true;

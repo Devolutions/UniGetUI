@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (پێداچوونەوە {1})",
   "More information": "زانیاریی زیاتر",
   "Graphical interface for your package managers": "ڕووکاری گرافیکی بۆ بەڕێوەبەرەکانی پاکێجەکانت",
-  "Show UniGetUI in the applications menu": "UniGetUI لە پێڕستی ئەپەکان پیشان بدە"
+  "Show UniGetUI in the applications menu": "UniGetUI لە پێڕستی ئەپەکان پیشان بدە",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "کرداری پێشەکی {0} لە {1} پێشتر سەرکەوتوو بووە، بۆیە دەیپەڕێنین."
 }

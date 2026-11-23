@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (versio {1})",
   "More information": "Lisätietoja",
   "Graphical interface for your package managers": "Graafinen käyttöliittymä paketinhallinnoillesi",
-  "Show UniGetUI in the applications menu": "Näytä UniGetUI sovellusvalikossa"
+  "Show UniGetUI in the applications menu": "Näytä UniGetUI sovellusvalikossa",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Esitoiminto {0}/{1} onnistui jo, ohitetaan se"
 }

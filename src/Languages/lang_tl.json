@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (rebisyon {1})",
   "More information": "Higit pang impormasyon",
   "Graphical interface for your package managers": "Graphical interface para sa iyong mga package manager",
-  "Show UniGetUI in the applications menu": "Ipakita ang UniGetUI sa menu ng mga application"
+  "Show UniGetUI in the applications menu": "Ipakita ang UniGetUI sa menu ng mga application",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Matagumpay nang naisagawa ang PreOperation {0} sa {1}; nilalaktawan ito"
 }

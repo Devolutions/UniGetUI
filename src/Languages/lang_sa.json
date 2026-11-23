@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (पुनरीक्षणम् {1})",
   "More information": "अधिकं विवरणम्",
   "Graphical interface for your package managers": "भवतः पुटक-प्रबन्धकानां आलेख्य-अन्तरफलकम्",
-  "Show UniGetUI in the applications menu": "applications सूच्यां UniGetUI दर्शयतु"
+  "Show UniGetUI in the applications menu": "applications सूच्यां UniGetUI दर्शयतु",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "पूर्वक्रियायाः {0}/{1} कार्याणि पूर्वमेव सम्पन्नानि; अतः सा वर्ज्यते।"
 }

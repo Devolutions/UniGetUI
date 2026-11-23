@@ -81,6 +81,8 @@ public sealed class WinInstaller : PackageManager
     protected override void _loadManagerVersion(out string version) =>
         version = $"Windows {Environment.OSVersion.Version}";
 
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => true;
+
     public override void RefreshPackageIndexes()
     {
         WinFeed.ForgetCachedIndexes();
@@ -102,6 +104,7 @@ public sealed class WinInstaller : PackageManager
             catch (Exception ex)
             {
                 Logger.Warn($"Could not list the package feed {source.Name} at {source.Url}: {ex.Message}");
+                UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(ex);
             }
         }
         return result;
@@ -147,6 +150,8 @@ public sealed class WinInstaller : PackageManager
 
     internal sealed record InstalledItem(IManagerSource Source, WinFeedItem Item, ArpEntry Entry, string Installed, bool HasUpdate);
 
+    // A feed that cannot be read (and has no last known listing) hides what it installed, so the
+    // installed and update listings fail instead of reporting those packages as gone.
     internal IReadOnlyList<InstalledItem> ListInstalled()
     {
         var latest = ListLatest();

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.PackageEngine.Interfaces;
 
 namespace UniGetUI.PackageEngine.Managers.InstallerFeeds;
 
@@ -25,13 +26,16 @@ public static class CatalogFeeds
     {
         try
         {
-            if (!File.Exists(path))
-                return [];
             return Parse(File.ReadAllBytes(path));
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return [];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
             Logger.Warn($"Could not read the package feeds of the software catalog at {path}: {ex.Message}");
+            PackageListingScope.ReportIncomplete(ex);
             return [];
         }
     }

@@ -1,4 +1,5 @@
 #if WINDOWS
+using System.Diagnostics;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
 using UniGetUI.PackageEngine.Serializable;
@@ -7,6 +8,68 @@ namespace UniGetUI.PackageEngine.Tests;
 
 public sealed class PowerShellManagerTests
 {
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 1)]
+    public void InstalledListingRetainsRowsButReportsNonTerminatingErrors(bool emitError, int expectedExit)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+        process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-NonInteractive");
+        process.StartInfo.ArgumentList.Add("-Command");
+        process.StartInfo.ArgumentList.Add(
+            "function Get-InstalledModule {"
+            + " [pscustomobject]@{Name='Before';Version='1.0';Repository='PSGallery'};"
+            + (emitError ? " Write-Error 'unreadable module';" : "")
+            + " [pscustomobject]@{Name='After';Version='1.0';Repository='PSGallery'} };"
+            + PowerShell.InstalledListingCommand
+        );
+        process.Start();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
+        string output = process.StandardOutput.ReadToEnd();
+        Assert.True(process.WaitForExit(10000));
+        Assert.Equal(expectedExit, process.ExitCode);
+        Assert.Equal(emitError, stderr.GetAwaiter().GetResult().Contains("unreadable module"));
+        Assert.Equal(["Before", "After"],
+            PowerShell.ParseInstalledPackages(output.Split('\n'), new PowerShell()).Select(package => package.Id));
+    }
+
+    [Fact]
+    public void InstalledListingAcceptsNoInstalledModules()
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+        process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-NonInteractive");
+        process.StartInfo.ArgumentList.Add("-Command");
+        process.StartInfo.ArgumentList.Add("function Get-InstalledModule {};" + PowerShell.InstalledListingCommand);
+        process.Start();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
+        Assert.Equal("", process.StandardOutput.ReadToEnd());
+        Assert.True(process.WaitForExit(10000));
+        Assert.Equal(0, process.ExitCode);
+        Assert.Equal("", stderr.GetAwaiter().GetResult());
+    }
+
     [Fact]
     public void ParseSources_KeepsLocalAndUncRepositoryLocations()
     {

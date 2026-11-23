@@ -225,7 +225,11 @@ public partial class Cargo : PackageManager
     }
 
     private IReadOnlyList<Package> GetPackages(LoggableTaskType taskType) =>
-        GetPackages(TaskRecycler<List<CargoListEntry>>.RunOrAttach(GetInstalledCommandOutput, 15), taskType);
+        GetPackages(
+            PackageListingScope.IsListingOnly
+                ? ListInstalledWithoutRecovery()
+                : TaskRecycler<List<CargoListEntry>>.RunOrAttach(GetInstalledCommandOutput, 15),
+            taskType);
 
     internal IReadOnlyList<Package> GetPackages(
         IEnumerable<CargoListEntry> entries,
@@ -280,9 +284,30 @@ public partial class Cargo : PackageManager
 
     private List<CargoListEntry> GetInstalledCommandOutput()
     {
-        List<string> stdout = [];
         CargoInstallTracker.RecoverAsync(CargoConfiguration.GetRoot(), CancellationToken.None)
             .GetAwaiter().GetResult();
+        return RunInstallList();
+    }
+
+    // Recovery rolls files back, so a listing-only scan fails instead of listing a half-installed state.
+    internal List<CargoListEntry> ListInstalledWithoutRecovery()
+    {
+        if (CargoInstallTracker.HasInterruptedTransactionAsync(CargoConfiguration.GetRoot(), CancellationToken.None)
+            .GetAwaiter().GetResult())
+        {
+            Logger.Warn(
+                "Remote rescan: Cargo listing refused because an interrupted UniGetUI Cargo installation "
+                    + "needs recovery; reload packages in UniGetUI once to recover it"
+            );
+            throw new InvalidOperationException(
+                "An interrupted Cargo installation needs recovery, which a listing-only scan does not run.");
+        }
+        return RunInstallList();
+    }
+
+    private List<CargoListEntry> RunInstallList()
+    {
+        List<string> stdout = [];
         using Process p = GetProcess(Status.ExecutablePath, "install --list");
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.OtherTask, p);
         p.Start();

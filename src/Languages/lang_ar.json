@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (المراجعة {1})",
   "More information": "مزيد من المعلومات",
   "Graphical interface for your package managers": "واجهة رسومية لمديري الحزم لديك",
-  "Show UniGetUI in the applications menu": "إظهار UniGetUI في قائمة التطبيقات"
+  "Show UniGetUI in the applications menu": "إظهار UniGetUI في قائمة التطبيقات",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "نجحت العملية التمهيدية {0} من أصل {1} بالفعل، لذا سيتم تخطيها"
 }

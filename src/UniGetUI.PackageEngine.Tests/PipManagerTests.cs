@@ -3,8 +3,11 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Tests;
+using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.PipManager;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -280,6 +283,136 @@ public sealed class PipManagerTests : IDisposable
     private sealed class ScriptedPip(IReadOnlyList<string> candidates) : Pip
     {
         public override IReadOnlyList<string> FindCandidateExecutableFiles() => candidates;
+    }
+
+    private sealed class ListingPip : Pip
+    {
+        public IReadOnlyList<Package> ListInstalled() => GetInstalledPackages_UnSafe();
+
+        public IReadOnlyList<Package> ListUpdates() => GetAvailableUpdates_UnSafe();
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void PipListingsOverrideConfiguredFormatOnlyForListingOnly(bool updates, bool listingOnly)
+    {
+        string argumentsFile = Path.Combine(_testRoot, "arguments.txt");
+        string executable = FailingCommandScript.Create(
+            _testRoot, 0, "", "Package Version Latest Type", "------- ------- ------ -----", "pip 24.0 25.0 wheel");
+        string script = File.ReadAllText(executable);
+        script = OperatingSystem.IsWindows()
+            ? script.Replace("@echo off", $"@echo off\r\necho %* > \"{argumentsFile}\"")
+            : script.Replace("#!/bin/sh", $"#!/bin/sh\nprintf '%s\\n' \"$@\" > '{argumentsFile}'");
+        File.WriteAllText(executable, script);
+        var manager = new ListingPip
+        {
+            Status = new ManagerStatus { Found = true, ExecutablePath = executable, ExecutableCallArgs = "" },
+        };
+
+        using var scope = listingOnly ? PackageListingScope.EnterListingOnly() : null;
+        Assert.Single(updates ? manager.ListUpdates() : manager.ListInstalled());
+        string expected = updates ? "list --outdated" : "list";
+        if (listingOnly)
+            expected += " --format=columns";
+        string actual = string.Join(" ", File.ReadAllText(argumentsFile).Split(
+            (char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        Assert.Equal(expected, actual);
+    }
+
+    [Theory]
+    [InlineData("requests==2.31.0")]
+    [InlineData("""[{"name":"requests","version":"2.31.0"}]""")]
+    [InlineData("Package Version")]
+    [InlineData("Package Version\nrequests 2.31.0")]
+    public void UnsupportedPipListingOutputIsIncomplete(string output)
+    {
+        var manager = new Pip();
+        List<Exception> failures = [];
+        using (PackageListingScope.TrackFailures(failures.Add))
+            Assert.Empty(Pip.ParseInstalledPackages(output.Split('\n'), manager.DefaultSource, manager));
+        Assert.IsType<InvalidDataException>(Assert.Single(failures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidDataException>(() =>
+            Pip.ParseInstalledPackages(output.Split('\n'), manager.DefaultSource, manager));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MalformedPipRowsKeepOtherRowsNormallyButFailListingOnly(bool updates)
+    {
+        var manager = new Pip();
+        string[] output =
+        [
+            "Package Version Latest Type", "------- ------- ------ -----",
+            "first 1.0 2.0 wheel", updates ? "broken 1.0" : "broken", "last 1.0 2.0 wheel",
+        ];
+        IReadOnlyList<Package> Parse() => updates
+            ? Pip.ParseAvailableUpdates(output, manager.DefaultSource, manager)
+            : Pip.ParseInstalledPackages(output, manager.DefaultSource, manager);
+        List<Exception> failures = [];
+        using (PackageListingScope.TrackFailures(failures.Add))
+            Assert.Equal(["first", "last"], Parse().Select(package => package.Id));
+        Assert.IsType<InvalidDataException>(Assert.Single(failures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidDataException>(Parse);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("[notice] A new release of pip is available\n")]
+    [InlineData("Package Version\n------- -------\n\n[notice] A new release of pip is available")]
+    public void EmptyPipListingsAndKnownNoiseRemainComplete(string output)
+    {
+        var manager = new Pip();
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Empty(Pip.ParseInstalledPackages(output.Split('\n'), manager.DefaultSource, manager));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SupportedPipTablesWithKnownNoiseRemainComplete(bool updates)
+    {
+        var manager = new Pip();
+        using var scope = PackageListingScope.EnterListingOnly();
+        var packages = updates
+            ? Pip.ParseAvailableUpdates(
+                File.ReadLines(PackageEngineFixtureFiles.GetPath(Path.Combine("Pip", "outdated-list.txt"))),
+                manager.DefaultSource, manager)
+            : Pip.ParseInstalledPackages(
+                File.ReadLines(PackageEngineFixtureFiles.GetPath(Path.Combine("Pip", "installed-list.txt"))),
+                manager.DefaultSource, manager);
+        Assert.Equal(["requests", "django-reqtools"], packages.Select(package => package.Id));
+    }
+
+    [Fact]
+    public void AFailingPipListIsAFailedListingRatherThanAnEmptyOne()
+    {
+        var pip = new ListingPip
+        {
+            Status = new ManagerStatus
+            {
+                Found = true,
+                ExecutablePath = FailingCommandScript.Create(
+                    _testRoot, 17, "broken environment",
+                    "Package Version Latest Type", "------- ------- ------ -----", "pip 24.0 25.0 wheel"),
+                ExecutableCallArgs = "",
+            },
+        };
+
+        Assert.Equal("pip", Assert.Single(pip.ListInstalled()).Id);
+        Assert.Equal("pip", Assert.Single(pip.ListUpdates()).Id);
+        using var scope = UniGetUI.PackageEngine.Interfaces.PackageListingScope.EnterListingOnly();
+        var installed = Assert.Throws<InvalidOperationException>(pip.ListInstalled);
+        Assert.Contains("17", installed.Message);
+        Assert.Contains("broken environment", installed.Message);
+        Assert.Throws<InvalidOperationException>(pip.ListUpdates);
     }
 
     [Theory]
@@ -898,6 +1031,42 @@ public sealed class PipManagerTests : IDisposable
         Assert.False(second.Failed);
         Assert.Equal("1.0.0", second.Version);
         Assert.Contains("connection reset", second.Error);
+    }
+
+    [Theory]
+    [InlineData("{")]
+    [InlineData("""{"files":[]}""")]
+    public async Task MalformedIndexJsonReportsIncompleteNormallyAndFailsListingOnly(string json)
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+        using HttpClient client = new(new IndexJsonHandler(json));
+        List<Exception> failures = [];
+
+        using (PackageListingScope.TrackFailures(failures.Add))
+        {
+            var resolution = await Pip.ResolveLatestVersionAsync(
+                client, "pip-5764-malformed-index", interpreter, CancellationToken.None);
+            Assert.True(resolution.Failed);
+            Assert.Null(resolution.Version);
+        }
+        Exception failure = Assert.Single(failures);
+        Assert.True(failure is System.Text.Json.JsonException or InvalidDataException);
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        var strictFailure = await Assert.ThrowsAnyAsync<Exception>(() =>
+            Pip.ResolveLatestVersionAsync(client, "pip-5764-malformed-index", interpreter, CancellationToken.None));
+        Assert.Equal(failure.GetType(), strictFailure.GetType());
+    }
+
+    private sealed class IndexJsonHandler(string json) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        ) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent(json),
+        });
     }
 
     private sealed class CachedThenFailingHandler : HttpMessageHandler

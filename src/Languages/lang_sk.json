@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (revízia {1})",
   "More information": "Ďalšie informácie",
   "Graphical interface for your package managers": "Grafické rozhranie pre správcov vašich balíkov",
-  "Show UniGetUI in the applications menu": "Zobraziť UniGetUI v ponuke aplikácií"
+  "Show UniGetUI in the applications menu": "Zobraziť UniGetUI v ponuke aplikácií",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Predbežná operácia {0} z {1} už bola úspešne dokončená, preskakuje sa."
 }

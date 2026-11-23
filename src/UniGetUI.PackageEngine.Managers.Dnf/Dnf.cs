@@ -107,6 +107,8 @@ public class Dnf : PackageManager
 
     // ── Index refresh ──────────────────────────────────────────────────────
 
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => true;
+
     public override void RefreshPackageIndexes()
     {
         using var p = new Process
@@ -197,6 +199,8 @@ public class Dnf : PackageManager
                 CreateNoWindow = true,
             },
         };
+        p.StartInfo.Environment["LANG"] = "C";
+        p.StartInfo.Environment["LC_ALL"] = "C";
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages, p);
         p.Start();
 
@@ -220,9 +224,11 @@ public class Dnf : PackageManager
                 this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error, packages.Count);
         return packages;
     }
 
@@ -242,6 +248,8 @@ public class Dnf : PackageManager
                 CreateNoWindow = true,
             },
         };
+        p.StartInfo.Environment["LANG"] = "C";
+        p.StartInfo.Environment["LC_ALL"] = "C";
         // Build lookup before starting the process — reading from its pipe
         // while a second process runs risks filling the pipe buffer and deadlocking.
         Dictionary<string, string> installed = [];
@@ -273,10 +281,33 @@ public class Dnf : PackageManager
                 this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error, packages.Count);
         return packages;
+    }
+
+    // `dnf list` exits 1 with "No matching packages to list" when there is nothing to list.
+    internal static bool IsListingFailure(int exitCode, string error, int parsedCount) =>
+        exitCode != 0
+        && !(
+            exitCode == 1
+            && parsedCount == 0
+            && error.Contains("No matching packages", StringComparison.OrdinalIgnoreCase)
+        );
+
+    private void ThrowIfListingFailed(int exitCode, string error, int parsedCount)
+    {
+        if (IsListingFailure(exitCode, error, parsedCount))
+        {
+            var failure = new InvalidOperationException(
+                $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+            );
+            UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+            PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

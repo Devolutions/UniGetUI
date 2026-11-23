@@ -95,7 +95,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     FileName = Status.ExecutablePath,
                     Arguments =
                         Status.ExecutableCallArgs
-                        + " \"Get-InstalledModule | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository }\"",
+                        + " \"" + InstalledListingCommand + "\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
@@ -119,12 +119,25 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 outputLines.Add(line);
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            string error = p.StandardError.ReadToEnd();
+            logger.AddToStdErr(error);
             p.WaitForExit();
             logger.Close(p.ExitCode);
+            if (p.ExitCode != 0)
+            {
+                var failure = new InvalidOperationException(
+                    $"{Name} exited with code {p.ExitCode} while listing packages: {error.Trim()}"
+                );
+                Logger.Warn(failure.Message);
+                UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(failure);
+            }
 
             return ParseInstalledPackages(outputLines, this);
         }
+
+        internal const string InstalledListingCommand =
+            "$Error.Clear(); Get-InstalledModule | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository };"
+            + " if ($Error.Count -gt 0) { exit 1 }";
 
         protected override bool UseSubstringSearch => true;
 

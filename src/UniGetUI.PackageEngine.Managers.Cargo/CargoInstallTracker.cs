@@ -74,9 +74,24 @@ internal static class CargoInstallTracker
         return arguments;
     }
 
+    internal static bool HasPendingTransaction(string root) =>
+        Directory.Exists(Path.Join(root, TransactionDirectory));
+
+    /// <summary>
+    /// Whether an interrupted installation left a transaction behind. An installation in progress
+    /// holds the tracking lock with its transaction open, so it is waited out rather than reported.
+    /// </summary>
+    internal static async Task<bool> HasInterruptedTransactionAsync(string root, CancellationToken cancellationToken)
+    {
+        if (!HasPendingTransaction(root))
+            return false;
+        using var metadata = await CargoTrackingLock.AcquireAsync(root, cancellationToken);
+        return HasPendingTransaction(root);
+    }
+
     internal static async Task RecoverAsync(string root, CancellationToken cancellationToken)
     {
-        if (!Directory.Exists(Path.Join(root, TransactionDirectory)))
+        if (!HasPendingTransaction(root))
             return;
         using var metadata = await CargoTrackingLock.AcquireAsync(root, cancellationToken);
         Recover(root, metadata);

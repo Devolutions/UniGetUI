@@ -6,6 +6,7 @@ using UniGetUI.PackageEngine.Managers.Choco;
 using UniGetUI.PackageEngine.Managers.ChocolateyManager;
 using UniGetUI.PackageEngine.Classes.Manager.Providers;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
@@ -967,6 +968,60 @@ public sealed class ChocolateyManagerTests : IDisposable
     private static string[] ReadFixtureLines(string relativePath)
     {
         return PackageEngineFixtureFiles.ReadAllText(relativePath).Replace("\r\n", "\n").Split('\n');
+    }
+
+    private sealed class ListingChocolatey : Chocolatey
+    {
+        public IReadOnlyList<Package> ListInstalled() => _getInstalledPackages_UnSafe();
+
+        public IReadOnlyList<Package> ListUpdates() => GetAvailableUpdates_UnSafe();
+    }
+
+    [Fact]
+    public void MalformedUpdateRowsKeepOtherRowsNormallyButFailListingOnly()
+    {
+        var manager = new Chocolatey();
+        string[] output = ["first|1.0|2.0|false", "broken|1.0", "last|1.0|2.0|false"];
+        List<Exception> failures = [];
+
+        using (PackageListingScope.TrackFailures(failures.Add))
+            Assert.Equal(["first", "last"], manager.ParseAvailableUpdates(output).Select(package => package.Id));
+        Assert.IsType<InvalidDataException>(Assert.Single(failures));
+
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidDataException>(() => manager.ParseAvailableUpdates(output));
+    }
+
+    private ListingChocolatey ChocolateyRunning(int exitCode, string stderr, params string[] stdout) =>
+        new()
+        {
+            Status = new ManagerStatus
+            {
+                Found = true,
+                ExecutablePath = FailingCommandScript.Create(_testRoot, exitCode, stderr, stdout),
+                ExecutableCallArgs = "",
+            },
+        };
+
+    [Fact]
+    public void AFailingChocoListingIsAFailedListingRatherThanAnEmptyOne()
+    {
+        var choco = ChocolateyRunning(1, "choco is broken", "git 2.45.0", "git|2.45.0|2.46.0|false");
+
+        Assert.Equal("git", Assert.Single(choco.ListInstalled()).Id);
+        Assert.Equal("git", Assert.Single(choco.ListUpdates()).Id);
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Contains("choco is broken", Assert.Throws<InvalidOperationException>(choco.ListInstalled).Message);
+        Assert.Throws<InvalidOperationException>(choco.ListUpdates);
+    }
+
+    [Fact]
+    public void ChocoEnhancedExitCodeTwoIsASuccessfulListing()
+    {
+        var choco = ChocolateyRunning(2, "");
+
+        Assert.Empty(choco.ListInstalled());
+        Assert.Empty(choco.ListUpdates());
     }
 }
 #endif

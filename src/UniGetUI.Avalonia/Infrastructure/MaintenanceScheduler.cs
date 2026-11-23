@@ -213,10 +213,12 @@ internal static class MaintenanceScheduler
             return;
 
         _updatesWereLoaded |= loader.IsLoaded;
-        loader.FinishedLoading += (_, _) =>
+        loader.FinishedLoading += (_, e) =>
         {
             _updatesWereLoaded = true;
-            RecordUpdateLoad(DateTime.Now);
+            // A remote rescan only lists; it must not claim a check that would make auto-install due.
+            if (!e.ListingOnly)
+                RecordUpdateLoad(DateTime.Now);
         };
     }
 
@@ -338,7 +340,7 @@ internal static class MaintenanceScheduler
         if (UpgradablePackagesLoader.Instance is not { } loader)
             return;
 
-        if (loader.IsLoading)
+        if (loader.IsLoading && !loader.LoadIsListingOnly)
             await loader.WaitForCurrentLoadAsync();
         else
             await loader.ReloadPackages();

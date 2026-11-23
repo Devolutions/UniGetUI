@@ -101,6 +101,8 @@ public partial class Snap : PackageManager
         p.WaitForExit();
     }
 
+    protected override bool IndexRefreshUpdatesOnlyCatalogues => true;
+
     public override void RefreshPackageIndexes()
     {
         using var p = new Process
@@ -182,11 +184,25 @@ public partial class Snap : PackageManager
             outputLines.Add(line);
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
 
         return ParseInstalledPackages(outputLines, DefaultSource, this);
+    }
+
+    private void ThrowIfListingFailed(int exitCode, string error)
+    {
+        if (exitCode != 0)
+        {
+            var failure = new InvalidOperationException(
+                $"{Name} exited with code {exitCode} while listing packages: {error.Trim()}"
+            );
+            UniGetUI.Core.Logging.Logger.Warn(failure.Message);
+            UniGetUI.PackageEngine.Interfaces.PackageListingScope.ReportIncomplete(failure);
+        }
     }
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
@@ -217,9 +233,11 @@ public partial class Snap : PackageManager
             outputLines.Add(line);
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        string error = p.StandardError.ReadToEnd();
+        logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
+        ThrowIfListingFailed(p.ExitCode, error);
 
         return ParseAvailableUpdates(outputLines, DefaultSource, this, GetInstalledPackages_UnSafe());
     }

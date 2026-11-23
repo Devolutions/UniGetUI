@@ -706,7 +706,28 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 return null;
             }
 
-            return newest.GetApplicableInstaller(Factory.CreateInstallOptions()) is null ? null : newest;
+            PackageInstallerInfo? installer = newest.GetApplicableInstaller(Factory.CreateInstallOptions());
+            if (installer is null)
+                return null;
+
+            if (
+                UpgradesInstalledProduct(
+                    new InstalledProduct(
+                        NativeWinGetCollection.Copy(installed.ProductCodes),
+                        () => ReadInstalledScope(installed)
+                    ),
+                    new NewestProduct(NativeWinGetCollection.Copy(newest.ProductCodes), installer.Scope)
+                )
+            )
+            {
+                logger.Log(
+                    $"Not listing {DescribePackage(nativePackage)} as an update that needs a reinstall: its newest version {newest.Version} "
+                        + "installs the same Windows Installer product in the same scope, so uninstalling it first is not needed"
+                );
+                return null;
+            }
+
+            return newest;
         }
         catch (Exception ex) when (!PackageListingScope.IsListingOnly)
         {
@@ -734,6 +755,42 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     internal static bool IsSamePackage(string? listedId, string? newestId) =>
         !string.IsNullOrWhiteSpace(listedId)
         && string.Equals(listedId, newestId, StringComparison.OrdinalIgnoreCase);
+
+    internal sealed record InstalledProduct(IReadOnlyList<string> ProductCodes, Func<string?> ReadScope);
+
+    internal sealed record NewestProduct(IReadOnlyList<string> ProductCodes, PackageInstallerScope Scope);
+
+    internal static bool UpgradesInstalledProduct(InstalledProduct installed, NewestProduct newest)
+    {
+        string[] newestCodes = [.. newest.ProductCodes.Where(code => !string.IsNullOrWhiteSpace(code))];
+        if (
+            newestCodes.Length == 0
+            || !newestCodes.All(code => installed.ProductCodes.Contains(code, StringComparer.OrdinalIgnoreCase))
+        )
+            return false;
+
+        string? expectedScope = newest.Scope switch
+        {
+            PackageInstallerScope.User => "User",
+            PackageInstallerScope.System => "System",
+            _ => null,
+        };
+        return expectedScope is not null
+            && string.Equals(installed.ReadScope(), expectedScope, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ReadInstalledScope(PackageVersionInfo installed)
+    {
+        try
+        {
+            return installed.GetMetadata(PackageVersionMetadataField.InstalledScope);
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Could not read the installed scope of {installed.Id}: {ex.Message}");
+            return null;
+        }
+    }
 
     internal static bool IsNewerVersion(IPackageManager manager, string? installedVersion, string? newestVersion) =>
         !WinGetPkgOperationHelper.IsUnknownVersion(installedVersion)

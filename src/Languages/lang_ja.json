@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0}（リビジョン{1}）",
   "More information": "詳細情報",
   "Graphical interface for your package managers": "パッケージマネージャー用のグラフィカルインターフェイス",
-  "Show UniGetUI in the applications menu": "アプリケーションメニューにUniGetUIを表示"
+  "Show UniGetUI in the applications menu": "アプリケーションメニューにUniGetUIを表示",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "PreOperation {1}件中{0}件目はすでに成功しているため、スキップします"
 }

@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (revisi {1})",
   "More information": "Informasi selengkapnya",
   "Graphical interface for your package managers": "Antarmuka grafis untuk pengelola paket Anda",
-  "Show UniGetUI in the applications menu": "Tampilkan UniGetUI di menu aplikasi"
+  "Show UniGetUI in the applications menu": "Tampilkan UniGetUI di menu aplikasi",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "PreOperation {0} dari {1} sudah berhasil, dilewati"
 }

@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (bản sửa đổi {1})",
   "More information": "Thông tin khác",
   "Graphical interface for your package managers": "Giao diện đồ họa cho các trình quản lý gói của bạn",
-  "Show UniGetUI in the applications menu": "Hiển thị UniGetUI trong menu ứng dụng"
+  "Show UniGetUI in the applications menu": "Hiển thị UniGetUI trong menu ứng dụng",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Thao tác trước {0} trên tổng số {1} đã thành công, bỏ qua thao tác này"
 }

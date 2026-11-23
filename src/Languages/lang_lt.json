@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (peržiūra {1})",
   "More information": "Daugiau informacijos",
   "Graphical interface for your package managers": "Grafinė sąsaja jūsų paketų tvarkytuvėms",
-  "Show UniGetUI in the applications menu": "Rodyti UniGetUI programų meniu"
+  "Show UniGetUI in the applications menu": "Rodyti UniGetUI programų meniu",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Parengiamoji operacija {0} iš {1} jau pavyko, todėl ji praleidžiama"
 }

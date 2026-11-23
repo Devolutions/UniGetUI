@@ -24352,6 +24352,10 @@
       "icon": "",
       "images": []
     },
+    "loyalsoldier-geoip": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/loyalsoldier-geoip-alt.png",
+      "images": []
+    },
     "lpsolve-ide": {
       "icon": "https://community.chocolatey.org/content/packageimages/lpsolve-ide.5.5.2.11.png",
       "images": []
@@ -35343,6 +35347,14 @@
     },
     "realesrgan-ncnn-vulkan": {
       "icon": "",
+      "images": []
+    },
+    "realitlscanner": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/realitlscanner-192.png",
+      "images": []
+    },
+    "realitlscanner-gui": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/realitlscanner-gui-192.png",
       "images": []
     },
     "realpopup": {

@@ -343,6 +343,23 @@ internal static class AutoUpdaterHelpers
         return true;
     }
 
+    // A macOS bundle declares only major.minor.patch, without the pre-release label of its release.
+    internal static bool BundleVersionMatchesRelease(string? bundleVersion, string? releaseVersion)
+    {
+        if (
+            !TryExtractNormalizedCoreVersion(bundleVersion, out Version? bundle, out string? bundlePreRelease)
+            || bundlePreRelease is not null
+            || !TryExtractNormalizedCoreVersion(releaseVersion, out Version? release, out _)
+        )
+        {
+            return false;
+        }
+
+        return bundle!.Major == release!.Major
+            && bundle.Minor == release.Minor
+            && Math.Max(bundle.Build, 0) == Math.Max(release.Build, 0);
+    }
+
     internal static bool IsDefaultDevVersion(string? rawVersion)
     {
         if (string.IsNullOrWhiteSpace(rawVersion))

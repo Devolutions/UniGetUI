@@ -29,45 +29,81 @@
 
             <TextBlock Text="{Binding LicensesIntro}"
                        FontSize="14"
-                       TextWrapping="Wrap"
-                       Margin="0,0,0,8"/>
+                       TextWrapping="Wrap"/>
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding ComponentCountText}"
+                           IsVisible="{Binding HasLicenses}"
+                           FontSize="14"
+                           Opacity="0.75"
+                           VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0"
+                           Text="{Binding MissingNoticesText}"
+                           IsVisible="{Binding !HasLicenses}"
+                           FontSize="14"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Command="{Binding OpenNoticesFileCommand}"
+                        IsVisible="{Binding CanOpenNoticesFile}"
+                        Content="{t:Translate Open the full notices file}"/>
+            </Grid>
 
             <ItemsControl ItemsSource="{Binding Licenses}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:LibraryLicense">
-                        <Grid ColumnDefinitions="140,*,240"
-                              Margin="0,2">
-                            <TextBlock Grid.Column="0"
-                                       Text="{Binding Name}"
-                                       FontSize="14"
-                                       VerticalAlignment="Center"/>
-                            <Button Grid.Column="1"
-                                    Tag="{Binding LicenseURL}"
-                                    Click="LicenseButton_Click"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Padding="4,0"
-                                    HorizontalAlignment="Center"
-                                    automation:AutomationProperties.Name="{Binding License}">
-                                <TextBlock Classes="hyperlink"
+                    <DataTemplate x:DataType="vm:ThirdPartyComponentItem">
+                        <StackPanel Orientation="Vertical" Margin="0,2">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" MinHeight="32">
+                                <TextBlock Grid.Column="0"
                                            FontSize="14"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                    <Run Text=" "/>
+                                    <Run Text="{Binding Version}"/>
+                                </TextBlock>
+                                <TextBlock Grid.Column="1"
                                            Text="{Binding License}"
-                                           automation:AutomationProperties.AccessibilityView="Raw"/>
-                            </Button>
-                            <Button Grid.Column="2"
-                                    Tag="{Binding HomepageUrl}"
-                                    Click="HomepageButton_Click"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Padding="4,0"
-                                    HorizontalAlignment="Right"
-                                    automation:AutomationProperties.Name="{Binding HomepageText}">
-                                <TextBlock Classes="hyperlink"
                                            FontSize="14"
-                                           Text="{Binding HomepageText}"
-                                           automation:AutomationProperties.AccessibilityView="Raw"/>
-                            </Button>
-                        </Grid>
+                                           MaxWidth="260"
+                                           Margin="12,0"
+                                           Opacity="0.75"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTip.Tip="{Binding License}"/>
+                                <Button Grid.Column="2"
+                                        Command="{Binding OpenSourceCommand}"
+                                        IsVisible="{Binding HasSource}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="4,0"
+                                        ToolTip.Tip="{Binding SourceUrl}"
+                                        automation:AutomationProperties.Name="{t:Translate Source}">
+                                    <TextBlock Classes="hyperlink"
+                                               FontSize="14"
+                                               Text="{t:Translate Source}"
+                                               automation:AutomationProperties.AccessibilityView="Raw"/>
+                                </Button>
+                                <Button Grid.Column="3"
+                                        Command="{Binding ToggleLicenseCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="4,0"
+                                        automation:AutomationProperties.Name="{Binding ToggleText}">
+                                    <TextBlock Classes="hyperlink"
+                                               FontSize="14"
+                                               Text="{Binding ToggleText}"
+                                               automation:AutomationProperties.AccessibilityView="Raw"/>
+                                </Button>
+                            </Grid>
+                            <SelectableTextBlock Text="{Binding ExpandedText}"
+                                                 IsVisible="{Binding IsExpanded}"
+                                                 FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                                                 FontSize="12"
+                                                 TextWrapping="Wrap"
+                                                 Margin="8,4,8,12"/>
+                        </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

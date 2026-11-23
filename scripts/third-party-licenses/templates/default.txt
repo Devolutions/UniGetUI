@@ -1,0 +1,21 @@
+Third-party notices for {{app_name}} {{app_version}}
+
+This file lists the third-party components distributed with {{app_name}}
+and their licenses. Attribution notices shared by several components
+appear once in the ATTRIBUTION NOTICES section at the end of this file
+and are referenced by label. To report a missing or incorrect notice,
+contact legal@devolutions.net.
+
+{{#packages}}
+------------------------------------------------------------
+Component : {{name}} {{version}}
+Source    : {{source}}
+License   : {{license}}
+
+{{copyright}}
+
+License:
+{{license_text}}{{notice}}
+{{/packages}}
+------------------------------------------------------------
+{{notices}}

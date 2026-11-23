@@ -317,6 +317,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Content Include="ThirdPartyNotices\THIRD-PARTY-NOTICES.*" Link="%(Filename)%(Extension)"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <AvaloniaResource Include="..\SharedAssets\Assets\Symbols\*.svg" Link="Assets\Symbols\%(Filename)%(Extension)" />
 
         <AvaloniaResource Include="..\SharedAssets\icon.ico" Link="Assets\icon.ico" />

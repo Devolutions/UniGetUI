@@ -1,0 +1,17 @@
+{
+  "description": "Licenses a component may ship under. Any license not listed here is reported as LicenseNotAllowed.",
+  "allowed": [
+    "MIT",
+    "Apache-2.0",
+    "BSD-1-Clause",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "BSL-1.0",
+    "Zlib",
+    "Unlicense",
+    "MS-PL",
+    "PostgreSQL"
+  ]
+}

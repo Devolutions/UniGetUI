@@ -1,0 +1,35 @@
+{
+  "components": [
+    {
+      "name": "Microsoft.Security.Extensions",
+      "version": "1.4.0",
+      "license": "MIT",
+      "source": "https://www.nuget.org/packages/Microsoft.Security.Extensions",
+      "website": "https://aka.ms/getfilesiginforedist",
+      "copyright": "Copyright (c) Microsoft Corporation"
+    },
+    {
+      "name": "Microsoft.WindowsPackageManager.InProcCom",
+      "versionFromPackageReference": "Microsoft.WindowsPackageManager.InProcCom",
+      "license": "MIT",
+      "source": "https://github.com/microsoft/winget-cli",
+      "website": "https://www.nuget.org/packages/Microsoft.WindowsPackageManager.InProcCom",
+      "copyright": "Copyright (c) Microsoft Corporation"
+    },
+    {
+      "name": "Inno Setup",
+      "version": "6",
+      "license": "LicenseRef-InnoSetup",
+      "source": "https://github.com/jrsoftware/issrc",
+      "website": "https://jrsoftware.org/isinfo.php"
+    },
+    {
+      "name": "InnoDependencyInstaller",
+      "version": "unversioned",
+      "license": "CPOL-1.02",
+      "source": "https://github.com/DomGries/InnoDependencyInstaller",
+      "copyright": "Copyright (c) 2009-2024 DomGries (https://github.com/DomGries)",
+      "repositoryCommit": "b2d53de2966d8869e7cefacf2ee0fcc8e42347f2"
+    }
+  ]
+}

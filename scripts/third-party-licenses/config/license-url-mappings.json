@@ -1,0 +1,38 @@
+{
+  "exact": {
+    "https://licenses.nuget.org/MIT": "MIT",
+    "https://licenses.nuget.org/Apache-2.0": "Apache-2.0",
+    "https://licenses.nuget.org/BSD-2-Clause": "BSD-2-Clause",
+    "https://licenses.nuget.org/BSD-3-Clause": "BSD-3-Clause",
+    "https://licenses.nuget.org/MS-PL": "MS-PL",
+    "https://licenses.nuget.org/ISC": "ISC",
+    "https://licenses.nuget.org/Unlicense": "Unlicense",
+    "https://licenses.nuget.org/MPL-2.0": "MPL-2.0",
+    "https://licenses.nuget.org/BSL-1.0": "BSL-1.0",
+    "https://licenses.nuget.org/Zlib": "Zlib",
+    "https://opensource.org/licenses/MIT": "MIT",
+    "https://www.apache.org/licenses/LICENSE-2.0": "Apache-2.0",
+    "http://go.microsoft.com/fwlink/?linkid=833178": "MIT",
+    "https://raw.githubusercontent.com/Microsoft/dotnet/master/LICENSE": "MIT",
+    "https://github.com/dotnet/standard/blob/master/LICENSE.TXT": "MIT",
+    "https://github.com/dotnet/corefx/blob/master/LICENSE.TXT": "MIT",
+    "https://www.bouncycastle.org/csharp/licence.html": "MIT",
+    "https://github.com/KoenZomers/OneDriveAPI/blob/master/LICENSE.md": "EPL-1.0",
+    "http://go.microsoft.com/fwlink/?LinkId=329770": "LicenseRef-ms-net-library",
+    "https://github.com/PingmanTools/websocket-sharp/blob/master/LICENSE.txt": "MIT",
+    "https://github.com/flamencist/Core.System.Configuration.Install/blob/master/license.md": "MIT",
+    "https://raw.githubusercontent.com/huysentruitw/pem-utils/master/LICENSE": "Apache-2.0",
+    "https://github.com/BcryptNet/bcrypt.net/blob/main/licence.txt": "MIT",
+    "https://github.com/mcintyre321/OneOf/blob/master/licence.md": "MIT",
+    "https://www.microsoft.com/web/webpi/eula/net_library_eula_enu.htm": "https://dotnet.microsoft.com/en-us/dotnet_library_license.htm",
+    "https://raw.github.com/developerforce/Force.com-Toolkit-for-NET/master/LICENSE": "BSD-3-Clause",
+    "https://github.com/PowerShell/PowerShell/blob/master/LICENSE.txt": "MIT",
+    "https://github.com/dazinator/DotNet.Glob/blob/master/LICENSE": "MIT"
+  },
+  "contains": {
+    "mit-license": "MIT",
+    "apache": "Apache-2.0",
+    "mpl-2.0": "MPL-2.0",
+    "mozilla.org/MPL": "MPL-2.0"
+  }
+}

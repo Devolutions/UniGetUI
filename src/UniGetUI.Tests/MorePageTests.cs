@@ -231,6 +231,25 @@ public sealed class MorePageTests : IDisposable
     }
 
     [Fact]
+    public async Task ARequestCancelledBeforeItStartsNeverNavigates()
+    {
+        var coalescer = new NavigationCoalescer();
+        int started = 0;
+        Task<bool> Navigate(CancellationToken _)
+        {
+            started++;
+            return Task.FromResult(true);
+        }
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => coalescer.RunAsync(PageType.More, true, Navigate, new CancellationToken(canceled: true)));
+        Assert.Equal(0, started);
+
+        Assert.True(await coalescer.RunAsync(PageType.More, true, Navigate));
+        Assert.Equal(1, started);
+    }
+
+    [Fact]
     public async Task CancellingOneCallerLeavesTheSharedNavigationRunningForTheOthers()
     {
         var coalescer = new NavigationCoalescer();

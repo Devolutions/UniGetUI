@@ -13,6 +13,8 @@ internal sealed class NavigationCoalescer
         Func<CancellationToken, Task<bool>> navigate,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         Navigation navigation;
         bool start = false;
         lock (_lock)

@@ -37,11 +37,11 @@ public static class MacUpdateTargetResolver
         /usr/bin/open -na "$target"
         """;
 
-    // Runs as root for a bundle the user cannot replace ($1=target, $2=archive, $3=SHA-256, $4=pid).
-    // Installs only from a root-owned copy of the archive, re-hashed, so the user's staging is never trusted.
+    // Runs as root for a bundle the user cannot replace ($1=target, $2=archive, $3=SHA-256, $4=pid,
+    // $5=code signing requirement). Installs only a root-owned, re-hashed and re-verified copy.
     public const string ElevatedSwapScript = """
         set -e
-        target="$1"; archive="$2"; expected="$3"; pid="$4"
+        target="$1"; archive="$2"; expected="$3"; pid="$4"; requirement="$5"
         work="$(/usr/bin/mktemp -d /private/tmp/unigetui-update.XXXXXX)"
         trap 'rm -rf "$work"' EXIT
         /bin/cp "$archive" "$work/update.tar.gz"
@@ -53,9 +53,12 @@ public static class MacUpdateTargetResolver
         /bin/mkdir "$work/x"
         /usr/bin/tar -xzf "$work/update.tar.gz" -C "$work/x"
         newapp="$work/x/UniGetUI.app"
-        [ -d "$newapp" ] || newapp="$(/usr/bin/find "$work/x" -type d -name UniGetUI.app -prune -print | /usr/bin/head -n 1)"
-        if [ -z "$newapp" ] || [ ! -d "$newapp" ]; then
+        if [ -L "$newapp" ] || [ ! -d "$newapp" ]; then
           echo "The update archive does not contain UniGetUI.app." >&2
+          exit 1
+        fi
+        if [ -z "$requirement" ] || ! /usr/bin/codesign --verify --deep --strict -R="$requirement" "$newapp"; then
+          echo "The update is not signed by a trusted developer." >&2
           exit 1
         fi
         rm -rf "$target.old"

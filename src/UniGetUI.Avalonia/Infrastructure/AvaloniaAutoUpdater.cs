@@ -964,7 +964,7 @@ internal static partial class AvaloniaAutoUpdater
                 }
 
                 LogUpdateInfo("Installing update — launching installer.");
-                await LaunchInstallerAsync(installerPath, installerHash, handoff, installingInBackground);
+                await LaunchInstallerAsync(installerPath, installerHash, versionName, handoff, installingInBackground);
                 if (!installingInBackground)
                     return true;
 
@@ -1053,12 +1053,13 @@ internal static partial class AvaloniaAutoUpdater
     private static async Task LaunchInstallerAsync(
         string installerLocation,
         string installerHash,
+        string versionName,
         TaskCompletionSource handoff,
         bool launchInBackground = false)
     {
         if (OperatingSystem.IsMacOS())
         {
-            await LaunchMacInstallerAsync(installerLocation, installerHash);
+            await LaunchMacInstallerAsync(installerLocation, installerHash, versionName);
             return;
         }
 
@@ -1184,7 +1185,7 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     [SupportedOSPlatform("macos")]
-    private static async Task LaunchMacInstallerAsync(string installerLocation, string installerHash)
+    private static async Task LaunchMacInstallerAsync(string installerLocation, string installerHash, string expectedVersion)
     {
         LogUpdateInfo($"Applying macOS update from archive: {installerLocation}");
 
@@ -1220,13 +1221,9 @@ internal static partial class AvaloniaAutoUpdater
             return;
         }
 
-        // Locate the UniGetUI.app bundle inside the extracted archive.
-        string topLevelApp = Path.Join(stagingDir, "UniGetUI.app");
-        string? newApp = Directory.Exists(topLevelApp)
-            ? topLevelApp
-            : Directory.EnumerateDirectories(stagingDir, "UniGetUI.app", SearchOption.AllDirectories).FirstOrDefault();
-
-        if (newApp is null || !Directory.Exists(newApp))
+        // Only the top-level bundle counts: the elevated swap re-extracts the archive and must pick the same one.
+        string newApp = Path.Join(stagingDir, "UniGetUI.app");
+        if (!Directory.Exists(newApp) || new DirectoryInfo(newApp).LinkTarget is not null)
         {
             LogUpdateError($"Could not find UniGetUI.app inside the extracted archive at {stagingDir}.");
             RaiseStatus(
@@ -1241,7 +1238,7 @@ internal static partial class AvaloniaAutoUpdater
         }
 
         // Verify the embedded app is signed by Devolutions before trusting it.
-        if (!VerifyMacAppSignature(newApp))
+        if (!await Task.Run(() => VerifyMacAppSignature(newApp)))
         {
             LogUpdateError("The extracted app failed signature validation. Aborting update.");
             RaiseStatus(
@@ -1252,6 +1249,22 @@ internal static partial class AvaloniaAutoUpdater
                 actionButtonText: CoreTools.Translate("View log"),
                 actionButtonAction: OpenUpdateLog);
             MarkAttemptFinished("extracted app signature invalid");
+            return;
+        }
+
+        // A genuine but older release would otherwise pass: the bundle must be the release that was offered.
+        string? bundleVersion = await Task.Run(() => MacAppSignature.ReadShortVersion(newApp));
+        if (!AutoUpdaterHelpers.BundleVersionMatchesRelease(bundleVersion, expectedVersion))
+        {
+            LogUpdateError($"The extracted app is version {bundleVersion ?? "(unknown)"}, not {expectedVersion}. Aborting update.");
+            RaiseStatus(
+                CoreTools.Translate("The installer authenticity could not be verified."),
+                CoreTools.Translate("The update process has been aborted."),
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("extracted app version mismatch");
             return;
         }
 
@@ -1332,7 +1345,8 @@ internal static partial class AvaloniaAutoUpdater
             CoreTools.QuoteForPosixShell(target),
             CoreTools.QuoteForPosixShell(archive),
             CoreTools.QuoteForPosixShell(expectedHash.ToLowerInvariant()),
-            pid);
+            pid,
+            CoreTools.QuoteForPosixShell(MacAppSignature.Requirement(DEVOLUTIONS_MAC_DEVELOPER_IDS)));
 
         bool swapped;
         // Keeps a Quit from exiting on its handoff timeout while the user still has the prompt open.
@@ -1989,84 +2003,14 @@ internal static partial class AvaloniaAutoUpdater
     [SupportedOSPlatform("macos")]
     private static bool VerifyMacAppSignature(string appBundlePath)
     {
-        if (DEVOLUTIONS_MAC_DEVELOPER_IDS.Length == 0)
+        if (MacAppSignature.Verify(appBundlePath, MacAppSignature.Requirement(DEVOLUTIONS_MAC_DEVELOPER_IDS), out string problem))
         {
-            LogUpdateWarn(
-                "No Devolutions macOS Developer Team IDs configured — skipping .app signature validation."
-            );
+            LogUpdateDebug("Extracted app is signed by a trusted Developer Team ID.");
             return true;
         }
 
-        // IMPORTANT: `codesign --verify` (with or without --deep/--strict) cannot be used
-        // as a gate here. The published self-contained .NET bundle contains nested managed
-        // assemblies that are not individually code-signed, so --verify reports "code
-        // object is not signed at all" even for a perfectly legitimate, Developer-ID-signed
-        // bundle (and `spctl` likewise rejects it). Integrity and authenticity are already
-        // guaranteed by the SHA256 hash, which is checked against productinfo.json fetched
-        // over HTTPS from a trusted host. Here we additionally read the bundle's Team
-        // Identifier as a best-effort signer check: a *mismatch* is treated as tampering
-        // and blocks the update; an absent/unreadable signature only warns and defers to
-        // the verified download hash.
-        try
-        {
-            using Process info = new()
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "/usr/bin/codesign",
-                    ArgumentList = { "-dv", "--verbose=4", appBundlePath },
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                },
-            };
-            info.Start();
-            // codesign prints the signing metadata to stderr, but read both streams
-            // concurrently so a full pipe on one stream can never deadlock the updater.
-            Task<string> stderrTask = info.StandardError.ReadToEndAsync();
-            Task<string> stdoutTask = info.StandardOutput.ReadToEndAsync();
-            info.WaitForExit();
-            string metadata = stderrTask.GetAwaiter().GetResult() + stdoutTask.GetAwaiter().GetResult();
-
-            if (info.ExitCode != 0)
-            {
-                LogUpdateWarn("Could not read the extracted app's code signature; relying on the verified download hash.");
-                return true;
-            }
-
-            string? teamId = null;
-            foreach (string rawLine in metadata.Split('\n'))
-            {
-                string line = rawLine.Trim();
-                if (line.StartsWith("TeamIdentifier=", StringComparison.OrdinalIgnoreCase))
-                {
-                    teamId = line["TeamIdentifier=".Length..].Trim();
-                    break;
-                }
-            }
-
-            if (string.IsNullOrEmpty(teamId) || teamId.Equals("not set", StringComparison.OrdinalIgnoreCase))
-            {
-                LogUpdateWarn("Extracted app has no Team Identifier; relying on the verified download hash.");
-                return true;
-            }
-
-            if (DEVOLUTIONS_MAC_DEVELOPER_IDS.Contains(teamId, StringComparer.OrdinalIgnoreCase))
-            {
-                LogUpdateDebug($"Extracted app is signed by trusted Developer Team ID {teamId}.");
-                return true;
-            }
-
-            LogUpdateWarn($"Extracted app is signed by an untrusted Team Identifier '{teamId}'. Aborting update.");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            LogUpdateWarn("Could not validate the extracted app signature via codesign; relying on the verified download hash.");
-            LogUpdateWarn(ex);
-            return true;
-        }
+        LogUpdateWarn($"Extracted app failed signature validation: {problem}");
+        return false;
     }
 
     // ------------------------------------------------------------------ download

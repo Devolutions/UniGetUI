@@ -152,30 +152,48 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
-    public void NativeWinGetHelperSearchesEmptyQueryThroughCatalogDefaultSelector()
+    public void NativeWinGetHelperSearchesEmptyQueryThroughCli()
     {
-        var request = Assert.Single(NativeWinGetHelper.GetSearchRequests(""));
+        var manager = new TestableWinGet();
+        var expectedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .Build();
+        List<string> cliQueries = [];
+        var cliHelper = new TestWinGetManagerHelper
+        {
+            FindPackagesHandler = query =>
+            {
+                cliQueries.Add(query);
+                return [expectedPackage];
+            },
+        };
+        var helper = new NativeWinGetHelper(
+            manager,
+            systemCliHelperFactory: _ => cliHelper,
+            skipInitialization: true,
+            localPackagesProvider: null
+        );
 
-        Assert.Equal(Microsoft.Management.Deployment.PackageMatchField.CatalogDefault, request.Field);
-        Assert.True(request.IsSelector);
-        Assert.Equal((uint)SearchLimits.MaxEmptyQueryResultsPerSource, request.ResultLimit);
+        var packages = helper.FindPackages_UnSafe("");
+
+        Assert.Equal([""], cliQueries);
+        PackageAssert.Matches(Assert.Single(packages), "Contoso Tool", "Contoso.Tool", "1.2.3");
     }
 
     [Fact]
     public void NativeWinGetHelperSearchesQueryByNameIdAndMonikerFilters()
     {
-        var requests = NativeWinGetHelper.GetSearchRequests("contoso");
-
         Assert.Equal(
             [
                 Microsoft.Management.Deployment.PackageMatchField.Name,
                 Microsoft.Management.Deployment.PackageMatchField.Id,
                 Microsoft.Management.Deployment.PackageMatchField.Moniker,
             ],
-            requests.Select(request => request.Field)
+            NativeWinGetHelper.SearchFields
         );
-        Assert.All(requests, request => Assert.False(request.IsSelector));
-        Assert.All(requests, request => Assert.Null(request.ResultLimit));
     }
 
     [Fact]

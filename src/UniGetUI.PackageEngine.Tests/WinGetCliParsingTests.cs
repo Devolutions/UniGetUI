@@ -2,6 +2,7 @@
 using UniGetUI.Core.Data;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
@@ -588,6 +589,46 @@ public sealed class WinGetCliParsingTests : IDisposable
         );
 
         Assert.Equal(["msstore", "winget", "Private Feed"], names);
+    }
+
+    [Fact]
+    public void BrowseSearchUsesExportedSourcesWhenTheExportSucceeds()
+    {
+        var manager = new WinGet();
+        IManagerSource exported = manager.SourcesHelper.Factory.GetSourceOrDefault("Winget-Repo");
+        bool askedForKnownSources = false;
+
+        IReadOnlyList<IManagerSource> sources = WinGetCliHelper.ChooseBrowseSources(
+            0,
+            [exported],
+            () =>
+            {
+                askedForKnownSources = true;
+                return [];
+            }
+        );
+
+        Assert.Equal([exported], sources);
+        Assert.False(askedForKnownSources);
+    }
+
+    [Theory]
+    [InlineData(unchecked((int)0xC000001D), 1)]
+    [InlineData(unchecked((int)0x8A15000F), 0)]
+    [InlineData(0, 0)]
+    public void BrowseSearchFallsBackToKnownSourcesWhenTheExportFails(int exitCode, int exportedCount)
+    {
+        var manager = new WinGet();
+        IManagerSource known = manager.SourcesHelper.Factory.GetSourceOrDefault("Winget-Repo");
+        IManagerSource partial = manager.SourcesHelper.Factory.GetSourceOrDefault("winget");
+
+        IReadOnlyList<IManagerSource> sources = WinGetCliHelper.ChooseBrowseSources(
+            exitCode,
+            [.. Enumerable.Repeat(partial, exportedCount)],
+            () => [known]
+        );
+
+        Assert.Equal([known], sources);
     }
 
     [Fact]

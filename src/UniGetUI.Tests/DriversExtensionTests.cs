@@ -82,6 +82,8 @@ public sealed class DriversExtensionTests : IDisposable
 
         CoreSettings.Set(CoreSettings.K.EnableDrivers, true);
         sidebar.SetExtensionEnabled(PageType.Drivers, true);
+        Assert.Equal([PageType.Drivers], sidebar.MorePages);
+        sidebar.PinPageToSidebar(PageType.Drivers);
         Assert.Contains(PageType.Drivers, sidebar.NavigationPages);
         PageType[] order = [.. sidebar.NavigationPages.Reverse()];
         sidebar.ReorderNavigationPages(order);

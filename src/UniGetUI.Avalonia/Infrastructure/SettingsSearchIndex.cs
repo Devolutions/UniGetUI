@@ -57,7 +57,7 @@ public static class SettingsSearchIndex
         new("Application theme:", ["appearance", "theme", "dark", "light", "mica"], typeof(Interface_P), "ThemeSelector"),
         new("UniGetUI startup page:", ["startup page", "default page", "home page", "landing page"], typeof(Interface_P), "StartupPageSelector"),
         new("Navigation menu:", ["sidebar", "nav menu", "navigation", "layout", "docked", "overlay"], typeof(Interface_P), "NavMenuModeSelector"),
-        new("Navigation menu order", ["sidebar", "nav menu", "navigation", "order", "reorder", "drag", "tabs", "pages", "shortcuts"], typeof(Interface_P), "NavigationOrderCard"),
+        new("Navigation menu order", ["sidebar", "nav menu", "navigation", "order", "reorder", "drag", "tabs", "pages", "shortcuts", "more", "pin"], typeof(Interface_P), "NavigationOrderCard"),
         new("Automatically switch to software rendering when Windows has no hardware GPU", ["rendering", "gpu", "software rendering"], typeof(Interface_P), "InterfaceRenderingCard"),
         new("Keep UniGetUI running in the background when its window is closed", ["system tray", "background", "minimize to tray", "close", "quit"], typeof(Interface_P), "DisableSystemTrayCard"),
         new("Show the UniGetUI icon in the system tray", ["system tray", "tray icon", "hide icon", "notification area"], typeof(Interface_P), "SystemTrayIconCard"),

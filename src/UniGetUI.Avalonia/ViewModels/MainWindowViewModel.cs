@@ -55,6 +55,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private ManagerLogsPage? ManagerLogPage;
     private OperationHistoryPage? OperationHistoryPage;
     private ManagerHealthPage? _managerHealthPage;
+    private MorePage? _morePage;
     private HelpPage? HelpPage;
     private ReleaseNotesPage? ReleaseNotesPage;
 
@@ -64,6 +65,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public PageType CurrentPage_t => _currentPage;
     private readonly List<PageType> NavigationHistory = new();
     private readonly SemaphoreSlim _navigationSemaphore = new(1, 1);
+    private readonly NavigationCoalescer _navigationCoalescer = new();
 
     [ObservableProperty]
     private object? _currentPageContent;
@@ -592,6 +594,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Sidebar.BundlesBadgeVisible = BundlesPage.HasUnsavedChanges;
 
         Sidebar.NavigationRequested += (_, pageType) => NavigateTo(pageType);
+        Sidebar.ExtensionsRequested += (_, _) => OpenSettingsPage(typeof(ExtensionsHomepage));
 
         AvaloniaAutoUpdater.UpdateAvailable += (version, userAsked) => Dispatcher.UIThread.Post(() =>
         {
@@ -1032,12 +1035,13 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.ManagerHealth => _managerHealthPage ??= new ManagerHealthPage(),
             PageType.Help => HelpPage ??= new HelpPage(),
             PageType.ReleaseNotes => ReleaseNotesPage ??= new ReleaseNotesPage(),
+            PageType.More => _morePage ??= new MorePage { DataContext = Sidebar },
             PageType.Null => throw new InvalidOperationException("Page type is Null"),
             _ => throw new InvalidDataException($"Unknown page type {type}"),
         };
 
     /// <summary>
-    /// The navigation pages in sidebar order: Ctrl/Cmd+1, +2, … follow it (the More menu takes the
+    /// The navigation pages in sidebar order: Ctrl/Cmd+1, +2, … follow it (the More page takes the
     /// next number), and so does the previous/next page cycle.
     /// </summary>
     internal static PageType[] GetShortcutPages(IEnumerable<PageType> navigationPages)
@@ -1049,11 +1053,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
     internal static PageType GetPreviousPage(PageType type, PageType[] pages) => Step(type, pages, -1);
 
-    // Pages outside the sidebar order (logs, help, …) step to Discover.
+    // Pages outside the sidebar order (logs, help, the More page, …) step to Discover while it is in the
+    // sidebar, else to the first or last sidebar page.
     private static PageType Step(PageType type, PageType[] pages, int direction)
     {
         int index = Array.IndexOf(pages, type);
-        return index < 0 ? PageType.Discover : pages[(index + direction + pages.Length) % pages.Length];
+        if (index >= 0)
+            return pages[(index + direction + pages.Length) % pages.Length];
+        if (pages.Contains(PageType.Discover))
+            return PageType.Discover;
+        return direction > 0 ? pages[0] : pages[^1];
     }
 
     public void NavigateTo(PageType newPage_t, bool toHistory = true) =>
@@ -1115,6 +1124,15 @@ public partial class MainWindowViewModel : ViewModelBase
             return true;
         }
 
+        return await _navigationCoalescer.RunAsync(
+            newPage_t,
+            toHistory,
+            token => NavigateGuardedAsync(newPage_t, toHistory, token),
+            cancellationToken);
+    }
+
+    private async Task<bool> NavigateGuardedAsync(PageType newPage_t, bool toHistory, CancellationToken cancellationToken)
+    {
         await _navigationSemaphore.WaitAsync(cancellationToken);
         try
         {
@@ -1189,30 +1207,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private static string GetPageAnnouncement(PageType pageType) => pageType switch
-    {
-        PageType.Discover => CoreTools.Translate("Discover Packages"),
-        PageType.Updates => CoreTools.Translate("Software Updates"),
-        PageType.Installed => CoreTools.Translate("Installed Packages"),
-        PageType.Bundles => CoreTools.Translate("Package Bundles"),
-        PageType.Catalog => CoreTools.Translate("Software Catalog"),
-        PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
-        PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
-        PageType.AgentSkills => CoreTools.Translate("Agent Skills"),
-        PageType.Drivers => CoreTools.Translate("Drivers"),
-#if UNIGETUI_XCODE_EXTENSION
-        PageType.Xcode => CoreTools.Translate("Xcode"),
-#endif
-        PageType.Settings => CoreTools.Translate("Settings"),
-        PageType.Managers => CoreTools.Translate("Package Managers"),
-        PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),
-        PageType.ManagerLog => CoreTools.Translate("Package Manager logs"),
-        PageType.OperationHistory => CoreTools.Translate("Operation history"),
-        PageType.ManagerHealth => CoreTools.Translate("Manager health"),
-        PageType.Help => CoreTools.Translate("Help"),
-        PageType.ReleaseNotes => CoreTools.Translate("Release notes"),
-        _ => CoreTools.Translate("UniGetUI"),
-    };
+    private static string GetPageAnnouncement(PageType pageType)
+        => PageTitles.For(pageType) ?? CoreTools.Translate("UniGetUI");
 
     /// <summary>Opens the Catalog Editor on a new catalog file, for the Software Catalog's New catalog actions.</summary>
     public async Task StartNewCatalogAsync()

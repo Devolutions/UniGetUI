@@ -151,10 +151,13 @@ public sealed class XcodeTests : IDisposable
             Assert.DoesNotContain(navList.Items.OfType<ListBoxItem>(), item => Equals(item.Tag, "Xcode"));
 
             sidebar.XcodeEnabled = true;
+            Assert.Equal([PageType.Xcode], sidebar.MorePages);
+            sidebar.PinPageToSidebar(PageType.Xcode);
             Assert.Equal(PageType.Xcode, sidebar.NavigationPages.Last());
             ListBoxItem xcodeItem = Assert.Single(navList.Items.OfType<ListBoxItem>(), item => Equals(item.Tag, "Xcode"));
 
             sidebar.GitRepositoriesEnabled = true;
+            sidebar.PinPageToSidebar(PageType.GitRepositories, sidebar.NavigationPages.Length - 1);
             Assert.Equal([PageType.GitRepositories, PageType.Xcode], sidebar.NavigationPages.TakeLast(2).ToArray());
 
             Panel panel = Assert.IsType<Panel>(xcodeItem.Content);

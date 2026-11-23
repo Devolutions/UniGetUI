@@ -3105,5 +3105,17 @@
   "{0} (revision {1})": "{0} (revision {1})",
   "More information": "More information",
   "Graphical interface for your package managers": "Graphical interface for your package managers",
-  "Show UniGetUI in the applications menu": "Show UniGetUI in the applications menu"
+  "Show UniGetUI in the applications menu": "Show UniGetUI in the applications menu",
+  "Move to the More page": "Move to the More page",
+  "{0} moved to the More page": "{0} moved to the More page",
+  "Pin to the navigation menu": "Pin to the navigation menu",
+  "{0} pinned to the navigation menu": "{0} pinned to the navigation menu",
+  "Pages": "Pages",
+  "Tools": "Tools",
+  "Drag a page from the navigation menu onto More, or right-click it, to keep it here instead.": "Drag a page from the navigation menu onto More, or right-click it, to keep it here instead.",
+  "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Drag a page onto More, or right-click it, to move it to the More page. Keyboard shortcuts follow the navigation menu order. Reset also brings every page back to the navigation menu.": "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Drag a page onto More, or right-click it, to move it to the More page. Keyboard shortcuts follow the navigation menu order. Reset also brings every page back to the navigation menu.",
+  "Add more pages": "Add more pages",
+  "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.",
+  "Keep the navigation menu short": "Keep the navigation menu short",
+  "Browse extensions": "Browse extensions"
 }

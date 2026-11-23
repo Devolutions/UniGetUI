@@ -1,0 +1,129 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.MorePage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:DataType="vm:SidebarViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.more-tile">
+            <Setter Property="Width" Value="168"/>
+            <Setter Property="Height" Value="104"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Button.more-tile:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        </Style>
+        <Style Selector="Button.more-tile.dragging">
+            <Setter Property="Opacity" Value="0.35"/>
+        </Style>
+        <Style Selector="Border#PageDropZone.drop-active">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.more-section">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,16,0,8"/>
+        </Style>
+        <Style Selector="#MoreFooter Button">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer x:Name="PageScroller" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,12,24,24">
+            <TextBlock Text="{t:Translate More}"
+                       FontSize="28" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display"/>
+
+            <TextBlock x:Name="PagesHeader" Classes="more-section" Text="{t:Translate Pages}"/>
+            <Border x:Name="PageDropZone" Margin="-8,0" Padding="8,8,0,0" CornerRadius="8" BorderThickness="1"
+                    BorderBrush="Transparent" Background="Transparent">
+                <StackPanel>
+                    <Border x:Name="EmptyPagesCard"
+                            Margin="0,8,8,8"
+                            Padding="16"
+                            CornerRadius="8"
+                            BorderThickness="1"
+                            Background="{DynamicResource SettingsCardBackground}"
+                            BorderBrush="{DynamicResource AppBorderBrush}">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/extensions.svg"
+                                              Width="32" Height="32" VerticalAlignment="Center"
+                                              automation:AutomationProperties.AccessibilityView="Raw"/>
+                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock x:Name="EmptyPagesTitle" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="EmptyPagesText" FontSize="12" Opacity="0.7" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button x:Name="BrowseExtensionsButton"
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding OpenExtensionsCommand}"
+                                    Content="{t:Translate Browse extensions}"/>
+                        </Grid>
+                    </Border>
+                    <Panel>
+                        <WrapPanel x:Name="PageTiles"
+                                   automation:AutomationProperties.Name="{t:Translate Pages}"/>
+                        <Canvas IsHitTestVisible="False">
+                            <Border x:Name="PageDropIndicator" Width="3" CornerRadius="1.5" IsVisible="False"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}"/>
+                        </Canvas>
+                    </Panel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Classes="more-section" Text="{t:Translate Tools}"/>
+            <WrapPanel x:Name="ToolTiles"
+                       automation:AutomationProperties.Name="{t:Translate Tools}"/>
+
+            <Border x:Name="MoreFooter"
+                    Margin="0,16,0,0"
+                    Padding="0,12,0,0"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,1,0,0">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/info_round.svg" Width="16" Height="16"
+                                          VerticalAlignment="Center"
+                                          automation:AutomationProperties.AccessibilityView="Raw"/>
+                        <TextBlock Text="{Binding VersionLabel}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Command="{Binding CheckForUpdatesCommand}"
+                            automation:AutomationProperties.Name="{Binding CheckForUpdatesLabel}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg" Width="16" Height="16"
+                                              VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding CheckForUpdatesLabel}" VerticalAlignment="Center"/>
+                            <Ellipse Width="8" Height="8"
+                                     Fill="{DynamicResource AccentFillColorDefaultBrush}"
+                                     IsVisible="{Binding SelfUpdateBadgeVisible}"
+                                     VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2"
+                            Command="{Binding RequestNavigationCommand}"
+                            CommandParameter="Quit"
+                            automation:AutomationProperties.Name="{t:Translate Quit UniGetUI}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/close_round.svg" Width="16" Height="16"
+                                              VerticalAlignment="Center"/>
+                            <TextBlock Text="{t:Translate Quit UniGetUI}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

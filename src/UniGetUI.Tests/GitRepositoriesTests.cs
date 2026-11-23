@@ -100,12 +100,12 @@ public sealed class GitRepositoriesTests : IDisposable
         Assert.DoesNotContain(PageType.GitRepositories, sidebar.NavigationPages);
 
         sidebar.GitRepositoriesEnabled = true;
-        Assert.Contains(PageType.GitRepositories, sidebar.NavigationPages);
+        Assert.Contains(PageType.GitRepositories, sidebar.MorePages);
 
         sidebar.GitRepositoriesBadgeCount = 3;
         sidebar.GitRepositoriesIsLoading = true;
         sidebar.GitRepositoriesEnabled = false;
-        Assert.DoesNotContain(PageType.GitRepositories, sidebar.NavigationPages);
+        Assert.DoesNotContain(PageType.GitRepositories, sidebar.MorePages);
         Assert.False(sidebar.GitRepositoriesBadgeVisible);
         Assert.False(sidebar.GitRepositoriesIsLoading);
     }, CancellationToken.None);

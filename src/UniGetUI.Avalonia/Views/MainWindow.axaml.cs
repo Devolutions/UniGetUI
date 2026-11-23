@@ -52,6 +52,7 @@ public enum PageType
     AgentSkills,
     Xcode,
     Drivers,
+    More,
 }
 
 public partial class MainWindow : Window
@@ -485,15 +486,8 @@ public partial class MainWindow : Window
         {
             var pages = ViewModel.ShortcutPages;
             int index = e.Key - Key.D1;
-            if (index == pages.Length)
-            {
-                ShowMoreMenu();
-            }
-            else
-            {
-                _focusSidebarSelectionOnNextPageChange = true;
-                ViewModel.NavigateTo(pages[index]);
-            }
+            _focusSidebarSelectionOnNextPageChange = true;
+            ViewModel.NavigateTo(index == pages.Length ? PageType.More : pages[index]);
             e.Handled = true;
         }
         else if (isCtrl && !isShift && (e.Key == Key.D || (OperatingSystem.IsMacOS() && e.Key == Key.I)))
@@ -538,14 +532,6 @@ public partial class MainWindow : Window
 
         _focusSidebarSelectionOnNextPageChange = false;
         Dispatcher.UIThread.Post(() => ActiveSidebar()?.FocusSelectedItem(), DispatcherPriority.Background);
-    }
-
-    private void ShowMoreMenu()
-    {
-        if (!ViewModel.Sidebar.RailVisible && !ViewModel.Sidebar.NavDockVisible && !ViewModel.Sidebar.OverlayActive)
-            ViewModel.Sidebar.IsPaneOpen = true;
-
-        Dispatcher.UIThread.Post(() => ActiveSidebar()?.ShowMoreFlyout(), DispatcherPriority.Background);
     }
 
     private SidebarView? ActiveSidebar()

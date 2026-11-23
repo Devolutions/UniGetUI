@@ -69,7 +69,7 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         UpdateSystemTrayCards();
 
         NavigationOrderCard.Description = CoreTools.Translate(
-            "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Keyboard shortcuts follow the same order.",
+            "Drag the pages in the navigation menu, or press {0} on a focused page, to reorder them. Drag a page onto More, or right-click it, to move it to the More page. Keyboard shortcuts follow the navigation menu order. Reset also brings every page back to the navigation menu.",
             OperatingSystem.IsMacOS() ? "Option+Up/Down" : "Alt+Up/Down");
         NavigationOrderCard.Click += (_, _) => MainWindow.Instance?.ResetNavigationOrder();
     }

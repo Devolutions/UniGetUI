@@ -60,6 +60,8 @@ public sealed class AgentSkillsExtensionTests
         using var fixture = new AgentSkillsSettingsTestFixture();
         var sidebar = new SidebarViewModel();
         sidebar.SetExtensionEnabled(PageType.AgentSkills, true);
+        Assert.Equal([PageType.AgentSkills], sidebar.MorePages);
+        sidebar.PinPageToSidebar(PageType.AgentSkills);
         Assert.Contains(PageType.AgentSkills, sidebar.NavigationPages);
         var order = sidebar.NavigationPages.Reverse().ToArray();
         sidebar.ReorderNavigationPages(order);

@@ -788,7 +788,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         string? expectedScope = newest.Scope switch
         {
             PackageInstallerScope.User => "User",
-            PackageInstallerScope.System => "Machine",
+            PackageInstallerScope.System => "System",
             _ => null,
         };
         return expectedScope is not null

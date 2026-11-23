@@ -166,8 +166,8 @@ public sealed class WinGetManagerTests : IDisposable
         );
 
     [Theory]
-    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.System)]
-    [InlineData("machine", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("System", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("system", Microsoft.Management.Deployment.PackageInstallerScope.System)]
     [InlineData("User", Microsoft.Management.Deployment.PackageInstallerScope.User)]
     public void ReinstallOnlyUpdateIsNotListedWhenTheNewestVersionInstallsTheInstalledProduct(
         string installedScope,
@@ -185,12 +185,13 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Theory]
-    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.User)]
+    [InlineData("System", Microsoft.Management.Deployment.PackageInstallerScope.User)]
     [InlineData("User", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.System)]
     [InlineData("", Microsoft.Management.Deployment.PackageInstallerScope.System)]
     [InlineData("Unknown", Microsoft.Management.Deployment.PackageInstallerScope.System)]
     [InlineData(null, Microsoft.Management.Deployment.PackageInstallerScope.System)]
-    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.Unknown)]
+    [InlineData("System", Microsoft.Management.Deployment.PackageInstallerScope.Unknown)]
     public void ReinstallOnlyUpdateIsListedWhenTheScopeChangesOrCannotBeCompared(
         string? installedScope,
         Microsoft.Management.Deployment.PackageInstallerScope newestScope
@@ -207,7 +208,7 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(
             UpgradesInstalledProduct(
                 ["Audacity_is1"],
-                "Machine",
+                "System",
                 [OtherProductCode],
                 Microsoft.Management.Deployment.PackageInstallerScope.System
             )
@@ -220,7 +221,7 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(
             UpgradesInstalledProduct(
                 [QuickenProductCode],
-                "Machine",
+                "System",
                 [QuickenProductCode, OtherProductCode],
                 Microsoft.Management.Deployment.PackageInstallerScope.System
             )
@@ -233,7 +234,7 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.True(
             UpgradesInstalledProduct(
                 [QuickenProductCode, OtherProductCode],
-                "Machine",
+                "System",
                 [QuickenProductCode],
                 Microsoft.Management.Deployment.PackageInstallerScope.System
             )
@@ -241,7 +242,7 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(
             UpgradesInstalledProduct(
                 [QuickenProductCode],
-                "Machine",
+                "System",
                 [QuickenProductCode, OtherProductCode],
                 Microsoft.Management.Deployment.PackageInstallerScope.System
             )
@@ -257,7 +258,7 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(
             UpgradesInstalledProduct(
                 ["", " ", QuickenProductCode],
-                "Machine",
+                "System",
                 newestCode is null ? [] : [newestCode],
                 Microsoft.Management.Deployment.PackageInstallerScope.System
             )
@@ -274,7 +275,7 @@ public sealed class WinGetManagerTests : IDisposable
                 () =>
                 {
                     scopeRead = true;
-                    return "Machine";
+                    return "System";
                 }
             ),
             new NativeWinGetHelper.NewestProduct(

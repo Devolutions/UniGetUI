@@ -151,6 +151,142 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    private const string QuickenProductCode = "{62D93E3E-2F8E-42BD-9343-896F4F0031D3}";
+    private const string OtherProductCode = "{11111111-1111-1111-1111-111111111111}";
+
+    private static bool UpgradesInstalledProduct(
+        string[] installedCodes,
+        string? installedScope,
+        string[] newestCodes,
+        Microsoft.Management.Deployment.PackageInstallerScope newestScope
+    ) =>
+        NativeWinGetHelper.UpgradesInstalledProduct(
+            new NativeWinGetHelper.InstalledProduct(installedCodes, () => installedScope),
+            new NativeWinGetHelper.NewestProduct(newestCodes, newestScope)
+        );
+
+    [Theory]
+    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("machine", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("User", Microsoft.Management.Deployment.PackageInstallerScope.User)]
+    public void ReinstallOnlyUpdateIsNotListedWhenTheNewestVersionInstallsTheInstalledProduct(
+        string installedScope,
+        Microsoft.Management.Deployment.PackageInstallerScope newestScope
+    )
+    {
+        Assert.True(
+            UpgradesInstalledProduct(
+                [QuickenProductCode, "Quicken"],
+                installedScope,
+                [QuickenProductCode.ToLowerInvariant()],
+                newestScope
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.User)]
+    [InlineData("User", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("Unknown", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData(null, Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.Unknown)]
+    public void ReinstallOnlyUpdateIsListedWhenTheScopeChangesOrCannotBeCompared(
+        string? installedScope,
+        Microsoft.Management.Deployment.PackageInstallerScope newestScope
+    )
+    {
+        Assert.False(
+            UpgradesInstalledProduct([QuickenProductCode], installedScope, [QuickenProductCode], newestScope)
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsListedWhenTheProductChanges()
+    {
+        Assert.False(
+            UpgradesInstalledProduct(
+                ["Audacity_is1"],
+                "Machine",
+                [OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsListedWhenAnotherInstallerOfTheNewestVersionInstallsADifferentProduct()
+    {
+        Assert.False(
+            UpgradesInstalledProduct(
+                [QuickenProductCode],
+                "Machine",
+                [QuickenProductCode, OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateComparesTheNewestCodesAgainstTheInstalledOnes()
+    {
+        Assert.True(
+            UpgradesInstalledProduct(
+                [QuickenProductCode, OtherProductCode],
+                "Machine",
+                [QuickenProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+        Assert.False(
+            UpgradesInstalledProduct(
+                [QuickenProductCode],
+                "Machine",
+                [QuickenProductCode, OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void ReinstallOnlyUpdateIsListedWhenTheNewestVersionDeclaresNoProductCode(string? newestCode)
+    {
+        Assert.False(
+            UpgradesInstalledProduct(
+                ["", " ", QuickenProductCode],
+                "Machine",
+                newestCode is null ? [] : [newestCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateReadsTheInstalledScopeOnlyWhenTheProductMatches()
+    {
+        bool scopeRead = false;
+        bool upgrades = NativeWinGetHelper.UpgradesInstalledProduct(
+            new NativeWinGetHelper.InstalledProduct(
+                ["Audacity_is1"],
+                () =>
+                {
+                    scopeRead = true;
+                    return "Machine";
+                }
+            ),
+            new NativeWinGetHelper.NewestProduct(
+                [OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+
+        Assert.False(upgrades);
+        Assert.False(scopeRead);
+    }
+
     [Fact]
     public void NativeWinGetHelperSearchesEmptyQueryThroughCatalogDefaultSelector()
     {

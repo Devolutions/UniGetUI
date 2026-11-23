@@ -1127,7 +1127,7 @@ public partial class MainWindowViewModel : ViewModelBase
         return await _navigationCoalescer.RunAsync(
             newPage_t,
             toHistory,
-            () => NavigateGuardedAsync(newPage_t, toHistory, cancellationToken),
+            token => NavigateGuardedAsync(newPage_t, toHistory, token),
             cancellationToken);
     }
 

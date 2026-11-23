@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Themes.Fluent;
@@ -184,7 +185,7 @@ public sealed class MorePageTests : IDisposable
         var coalescer = new NavigationCoalescer();
         var pending = new TaskCompletionSource<bool>();
         int started = 0;
-        Task<bool> Navigate()
+        Task<bool> Navigate(CancellationToken _)
         {
             started++;
             return pending.Task;
@@ -210,21 +211,110 @@ public sealed class MorePageTests : IDisposable
     }
 
     [Fact]
-    public async Task AJoinedRequestStopsWaitingWhenItsOwnTokenIsCancelled()
+    public async Task ARequestForAnotherPageInBetweenDoesNotSplitTheSharedNavigation()
+    {
+        var coalescer = new NavigationCoalescer();
+        var more = new TaskCompletionSource<bool>();
+        var updates = new TaskCompletionSource<bool>();
+        var started = new List<PageType>();
+
+        Task<bool> first = coalescer.RunAsync(PageType.More, true, _ => { started.Add(PageType.More); return more.Task; });
+        Task<bool> between = coalescer.RunAsync(PageType.Updates, true, _ => { started.Add(PageType.Updates); return updates.Task; });
+        Task<bool> again = coalescer.RunAsync(PageType.More, true, _ => { started.Add(PageType.More); return more.Task; });
+
+        Assert.Equal([PageType.More, PageType.Updates], started);
+        more.SetResult(false);
+        updates.SetResult(true);
+        Assert.False(await first);
+        Assert.False(await again);
+        Assert.True(await between);
+    }
+
+    [Fact]
+    public async Task CancellingOneCallerLeavesTheSharedNavigationRunningForTheOthers()
     {
         var coalescer = new NavigationCoalescer();
         var pending = new TaskCompletionSource<bool>();
-        using var cancellation = new CancellationTokenSource();
-        Task<bool> first = coalescer.RunAsync(PageType.More, true, () => pending.Task);
-        Task<bool> joined = coalescer.RunAsync(PageType.More, true, () => pending.Task, cancellation.Token);
+        CancellationToken shared = default;
+        using var firstCancellation = new CancellationTokenSource();
+        using var joinedCancellation = new CancellationTokenSource();
+        Task<bool> first = coalescer.RunAsync(PageType.More, true, token => { shared = token; return pending.Task; }, firstCancellation.Token);
+        Task<bool> joined = coalescer.RunAsync(PageType.More, true, _ => pending.Task, joinedCancellation.Token);
 
-        cancellation.Cancel();
+        firstCancellation.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => joined);
-        Assert.False(first.IsCompleted);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        Assert.False(shared.IsCancellationRequested);
+        Assert.False(joined.IsCompleted);
         pending.SetResult(true);
-        Assert.True(await first);
+        Assert.True(await joined);
     }
+
+    [Fact]
+    public async Task TheSharedNavigationIsCancelledOnceEveryCallerHasCancelled()
+    {
+        var coalescer = new NavigationCoalescer();
+        var pending = new TaskCompletionSource<bool>();
+        CancellationToken shared = default;
+        using var firstCancellation = new CancellationTokenSource();
+        using var joinedCancellation = new CancellationTokenSource();
+        Task<bool> first = coalescer.RunAsync(PageType.More, true, token => { shared = token; return pending.Task; }, firstCancellation.Token);
+        Task<bool> joined = coalescer.RunAsync(PageType.More, true, _ => pending.Task, joinedCancellation.Token);
+
+        firstCancellation.Cancel();
+        Assert.False(shared.IsCancellationRequested);
+        joinedCancellation.Cancel();
+
+        Assert.True(shared.IsCancellationRequested);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => joined);
+
+        int started = 0;
+        Task<bool> retry = coalescer.RunAsync(PageType.More, true, _ => { started++; return Task.FromResult(true); });
+        Assert.Equal(1, started);
+        Assert.True(await retry);
+        pending.SetResult(true);
+    }
+
+    [Fact]
+    public Task AnInvisibleSidebarThatIgnoresTheMouseIsNotADropTarget() => _session.Dispatch(() =>
+    {
+        var vm = new SidebarViewModel();
+        var page = new MorePage { DataContext = vm };
+        var hiddenPane = new SidebarView { DataContext = vm, Width = 250, HorizontalAlignment = HorizontalAlignment.Left, Opacity = 0, IsHitTestVisible = false };
+        var panel = new Panel();
+        panel.Children.Add(page);
+        panel.Children.Add(hiddenPane);
+        var window = Show(panel, 1000);
+        Point overPane = new(100, 300);
+
+        Assert.Null(NavigationDropTargets.At(window, overPane, page));
+
+        hiddenPane.IsHitTestVisible = true;
+        Assert.Same(hiddenPane, NavigationDropTargets.At(window, overPane, page));
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task AStraightHorizontalDragFromTheSidebarStillReachesTheMorePage() => _session.Dispatch(() =>
+    {
+        var vm = new SidebarViewModel();
+        var sidebar = new SidebarView { DataContext = vm };
+        var page = new MorePage { DataContext = vm };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("300,*") };
+        Grid.SetColumn(page, 1);
+        grid.Children.Add(sidebar);
+        grid.Children.Add(page);
+        var window = Show(grid, 1000);
+        var requests = new List<PageType>();
+        vm.NavigationRequested += (_, target) => requests.Add(target);
+        ListBoxItem installed = Item(sidebar.FindControl<ListBox>("NavListBox")!, "Installed");
+        Point start = installed.TranslatePoint(new Point(20, installed.Bounds.Height / 2d), window)!.Value;
+
+        Drag(window, start, start + new Point(500, 0));
+
+        Assert.Equal([PageType.Installed], vm.MorePages);
+        Assert.Empty(requests);
+    }, CancellationToken.None);
 
     [Fact]
     public void AnExtensionAlreadyOnStaysInTheSidebar()

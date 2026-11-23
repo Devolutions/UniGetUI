@@ -232,7 +232,8 @@ public partial class SidebarView : BaseView<SidebarViewModel>, INavigationDropTa
         if (_dragCandidate is null)
             return;
 
-        double offset = e.GetPosition(DragSurface).Y - _dragStart.Y;
+        Vector moved = e.GetPosition(DragSurface) - _dragStart;
+        double offset = moved.Y;
         if (!_isDragging)
         {
             if (!e.GetCurrentPoint(NavListBox).Properties.IsLeftButtonPressed)
@@ -240,7 +241,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>, INavigationDropTa
                 AbandonPointerPress();
                 return;
             }
-            if (Math.Abs(offset) < DragThreshold || !BeginDrag(_dragCandidate))
+            if ((Math.Abs(moved.X) < DragThreshold && Math.Abs(moved.Y) < DragThreshold) || !BeginDrag(_dragCandidate))
                 return;
             _dragPointer = e.Pointer;
             e.Pointer.Capture(NavListBox);

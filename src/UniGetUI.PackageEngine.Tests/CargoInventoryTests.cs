@@ -93,6 +93,56 @@ public sealed class CargoInventoryTests : IDisposable
         Assert.Equal(["/api/v1/crates/public-tool"], server.RequestPaths);
     }
 
+    [Fact]
+    public void UpdateDiscoverySkipsCratesDeletedFromCratesIoAndStillReturnsOtherUpdates()
+    {
+        using var server = new TestHttpServer(request =>
+            request.Url?.AbsolutePath == "/api/v1/crates/public-tool"
+                ? (200, """
+                    {
+                      "crate": {
+                        "name": "public-tool",
+                        "max_stable_version": "1.1.0",
+                        "max_version": "1.1.0",
+                        "newest_version": "1.1.0"
+                      },
+                      "versions": [
+                        {"num":"1.1.0","checksum":"fixture","dl_path":"/source","yanked":false}
+                      ]
+                    }
+                    """, "application/json")
+                : (404, """{"errors":[{"detail":"crate `deleted-tool` does not exist"}]}""", "application/json"));
+        CratesIOClient.InvalidateCache();
+        CratesIOClient.TEST_ApiUrlOverride = server.BaseUri.AbsoluteUri.TrimEnd('/') + "/api/v1";
+        var entries = Cargo.ParseInstallList(
+        [
+            "deleted-tool v0.6.1:",
+            "    deleted-tool",
+            "public-tool v1.0.0:",
+            "    public-tool",
+        ]);
+
+        var update = Assert.Single(new Cargo().GetPackages(entries, LoggableTaskType.ListUpdates));
+
+        Assert.Equal("public-tool", update.Id);
+        Assert.Equal("1.1.0", update.NewVersionString);
+        Assert.Equal(["/api/v1/crates/deleted-tool", "/api/v1/crates/public-tool"], server.RequestPaths);
+    }
+
+    [Fact]
+    public void UpdateDiscoveryStillFailsWhenCratesIoIsUnavailable()
+    {
+        using var server = new TestHttpServer(_ => (503, "Service Unavailable", "text/plain"));
+        CratesIOClient.InvalidateCache();
+        CratesIOClient.TEST_ApiUrlOverride = server.BaseUri.AbsoluteUri.TrimEnd('/') + "/api/v1";
+        var entries = Cargo.ParseInstallList(["public-tool v1.0.0:", "    public-tool"]);
+
+        var error = Assert.Throws<HttpRequestException>(() =>
+            new Cargo().GetPackages(entries, LoggableTaskType.ListUpdates));
+
+        Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, error.StatusCode);
+    }
+
     [Theory]
     [InlineData("git")]
     [InlineData("registry-index")]

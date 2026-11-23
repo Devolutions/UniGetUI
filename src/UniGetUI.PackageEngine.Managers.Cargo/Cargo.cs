@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using UniGetUI.Core.Classes;
@@ -261,7 +262,16 @@ public partial class Cargo : PackageManager
                     Logger.Debug($"Skipping crates.io update detection for {entry.Id} from {entry.SourceDescription}.");
                     continue;
                 }
-                var (_, manifest) = CratesIOClient.GetManifest(entry.Id);
+                CargoManifest manifest;
+                try
+                {
+                    manifest = CratesIOClient.GetManifest(entry.Id).Item2;
+                }
+                catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
+                {
+                    Logger.Warn($"Skipping update detection for {entry.Id}: crates.io no longer has this crate.");
+                    continue;
+                }
                 if (CratesIOClient.SelectUpdate(manifest, entry.InstalledVersion) is { } update)
                     Packages.Add(
                         new Package(

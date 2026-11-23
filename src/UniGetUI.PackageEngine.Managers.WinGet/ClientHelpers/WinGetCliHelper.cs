@@ -316,7 +316,30 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
         return SearchPackages(query, null, MAX_SEARCH_RESULTS);
     }
 
-    private List<IManagerSource> GetSourcesForBrowse()
+    private IReadOnlyList<IManagerSource> GetSourcesForBrowse()
+    {
+        var (exitCode, exported) = ExportSources();
+        return ChooseBrowseSources(exitCode, exported, Manager.SourcesHelper.GetSources);
+    }
+
+    internal static IReadOnlyList<IManagerSource> ChooseBrowseSources(
+        int exportExitCode,
+        IReadOnlyList<IManagerSource> exported,
+        Func<IReadOnlyList<IManagerSource>> knownSources
+    )
+    {
+        if (exportExitCode == 0 && exported.Count > 0)
+        {
+            return exported;
+        }
+
+        Logger.Warn(
+            $"winget source export returned {exported.Count} sources with exit code 0x{exportExitCode:X8}; searching the sources UniGetUI already knows instead."
+        );
+        return knownSources();
+    }
+
+    private (int ExitCode, List<IManagerSource> Sources) ExportSources()
     {
         using var _cliLock = WinGet.AcquireCliLock();
         List<IManagerSource> sources = [];
@@ -354,7 +377,7 @@ internal sealed partial class WinGetCliHelper : IWinGetManagerHelper
         logger.AddToStdErr(p.StandardError.ReadToEnd());
         p.WaitForExit();
         logger.Close(p.ExitCode);
-        return sources;
+        return (p.ExitCode, sources);
     }
 
     internal static IEnumerable<string> ParseExportedSourceNames(IEnumerable<string> outputLines)

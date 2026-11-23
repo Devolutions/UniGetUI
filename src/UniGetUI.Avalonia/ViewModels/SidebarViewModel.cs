@@ -28,7 +28,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     partial void OnGitRepositoriesEnabledChanged(bool value)
     {
-        NavigationPages = GetNavigationPages(gitRepositoriesEnabled: value);
+        RefreshNavigationPages();
         if (value) return;
         GitRepositoriesBadgeCount = 0;
         GitRepositoriesIsLoading = false;
@@ -41,7 +41,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     partial void OnXcodeEnabledChanged(bool value)
     {
-        NavigationPages = GetNavigationPages(xcodeEnabled: value);
+        RefreshNavigationPages();
         if (value) return;
         XcodeBadgeCount = 0;
         XcodeIsLoading = false;
@@ -53,37 +53,60 @@ public partial class SidebarViewModel : ViewModelBase
 
     partial void OnDriversEnabledChanged(bool value)
     {
-        NavigationPages = GetNavigationPages(driversEnabled: value);
+        RefreshNavigationPages();
         if (value) return;
         DriversBadgeCount = 0;
         DriversIsLoading = false;
     }
 
-    private PageType[] GetNavigationPages(
-        bool? gitRepositoriesEnabled = null,
-        bool? agentSkillsEnabled = null,
-        bool? xcodeEnabled = null,
-        bool? driversEnabled = null) =>
+    private PageType[] GetNavigationPages() =>
 #if UNIGETUI_XCODE_EXTENSION
-        NavigationPageOrder.Get(
-            SoftwareCatalogEnabled,
-            gitRepositoriesEnabled ?? GitRepositoriesEnabled,
-            agentSkillsEnabled ?? AgentSkillsEnabled,
-            xcodeEnabled ?? XcodeEnabled,
-            driversEnabled ?? DriversEnabled);
+        NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled, XcodeEnabled, DriversEnabled);
 #else
-        NavigationPageOrder.Get(
-            SoftwareCatalogEnabled,
-            gitRepositoriesEnabled ?? GitRepositoriesEnabled,
-            agentSkillsEnabled ?? AgentSkillsEnabled,
-            driversEnabled: driversEnabled ?? DriversEnabled);
+        NavigationPageOrder.Get(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled, driversEnabled: DriversEnabled);
 #endif
+
+    private PageType[] GetMorePages() =>
+#if UNIGETUI_XCODE_EXTENSION
+        NavigationPageOrder.GetMore(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled, XcodeEnabled, DriversEnabled);
+#else
+        NavigationPageOrder.GetMore(SoftwareCatalogEnabled, GitRepositoriesEnabled, AgentSkillsEnabled, driversEnabled: DriversEnabled);
+#endif
+
+    public static readonly HashSet<string> ExtensionEnabledProperties =
+    [
+        nameof(GitRepositoriesEnabled),
+        nameof(AgentSkillsEnabled),
+        nameof(DriversEnabled),
+#if UNIGETUI_XCODE_EXTENSION
+        nameof(XcodeEnabled),
+#endif
+    ];
+
+    public bool IsExtensionEnabled(PageType page) => EnabledExtensionPages().Contains(page);
+
+    private IEnumerable<PageType> EnabledExtensionPages()
+    {
+        if (GitRepositoriesEnabled) yield return PageType.GitRepositories;
+        if (AgentSkillsEnabled) yield return PageType.AgentSkills;
+        if (DriversEnabled) yield return PageType.Drivers;
+#if UNIGETUI_XCODE_EXTENSION
+        if (XcodeEnabled) yield return PageType.Xcode;
+#endif
+    }
+
+    private void RefreshNavigationPages()
+    {
+        NavigationPageOrder.PlaceNewlyEnabledExtensions(EnabledExtensionPages());
+        MorePages = GetMorePages();
+        NavigationPages = GetNavigationPages();
+    }
 
     [ObservableProperty]
     private bool _agentSkillsEnabled = Settings.Get(Settings.K.EnableAgentSkills);
 
     partial void OnAgentSkillsEnabledChanged(bool value)
-        => NavigationPages = GetNavigationPages(agentSkillsEnabled: value);
+        => RefreshNavigationPages();
 
     public void SetExtensionEnabled(PageType page, bool enabled)
     {
@@ -98,16 +121,50 @@ public partial class SidebarViewModel : ViewModelBase
     [ObservableProperty]
     private PageType[] _navigationPages;
 
+    [ObservableProperty]
+    private PageType[] _morePages;
+
+    public static readonly PageType[] MoreToolPages =
+    [
+        PageType.OwnLog,
+        PageType.ManagerLog,
+        PageType.OperationHistory,
+        PageType.ManagerHealth,
+        PageType.ReleaseNotes,
+        PageType.Help,
+    ];
+
+    public bool IsReachedFromMore(PageType page)
+        => page == PageType.More || MorePages.Contains(page) || MoreToolPages.Contains(page);
+
     public void ReorderNavigationPages(IReadOnlyList<PageType> pages)
     {
         NavigationPageOrder.Save(pages);
-        NavigationPages = GetNavigationPages();
+        RefreshNavigationPages();
+    }
+
+    public void ReorderMorePages(IReadOnlyList<PageType> pages)
+    {
+        NavigationPageOrder.SaveMore(pages);
+        RefreshNavigationPages();
+    }
+
+    public void MovePageToMore(PageType page, int? index = null)
+    {
+        NavigationPageOrder.MoveToMore(page, MorePages, index);
+        RefreshNavigationPages();
+    }
+
+    public void PinPageToSidebar(PageType page, int? index = null)
+    {
+        NavigationPageOrder.MoveToSidebar(page, NavigationPages, index ?? NavigationPages.Length);
+        RefreshNavigationPages();
     }
 
     public void ResetNavigationPages()
     {
         NavigationPageOrder.Reset();
-        NavigationPages = GetNavigationPages();
+        RefreshNavigationPages();
     }
 
     // ─── Badge properties ─────────────────────────────────────────────────────
@@ -164,6 +221,51 @@ public partial class SidebarViewModel : ViewModelBase
 #endif
 
     // When the count changes, sync the badge visibility
+    public static readonly HashSet<string> BadgeProperties =
+    [
+        nameof(UpdatesBadgeVisible),
+        nameof(UpdatesBadgeText),
+        nameof(BundlesBadgeVisible),
+        nameof(GitRepositoriesBadgeVisible),
+        nameof(GitRepositoriesBadgeText),
+        nameof(DriversBadgeVisible),
+        nameof(DriversBadgeText),
+#if UNIGETUI_XCODE_EXTENSION
+        nameof(XcodeBadgeVisible),
+        nameof(XcodeBadgeText),
+#endif
+    ];
+
+    public (bool Visible, string Text) BadgeFor(PageType page) => page switch
+    {
+        PageType.Updates => (UpdatesBadgeVisible, UpdatesBadgeText),
+        PageType.Bundles => (BundlesBadgeVisible, ""),
+        PageType.GitRepositories => (GitRepositoriesBadgeVisible, GitRepositoriesBadgeText),
+        PageType.Drivers => (DriversBadgeVisible, DriversBadgeText),
+#if UNIGETUI_XCODE_EXTENSION
+        PageType.Xcode => (XcodeBadgeVisible, XcodeBadgeText),
+#endif
+        _ => (false, ""),
+    };
+
+    private bool _moreBadgeVisible;
+
+    public bool MoreBadgeVisible => _moreBadgeVisible;
+
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName is not (nameof(MorePages) or nameof(SelfUpdateBadgeVisible))
+            && (e.PropertyName is not { } name || !BadgeProperties.Contains(name)))
+            return;
+
+        bool visible = SelfUpdateBadgeVisible || MorePages.Any(page => BadgeFor(page).Visible);
+        if (visible == _moreBadgeVisible)
+            return;
+        _moreBadgeVisible = visible;
+        base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(MoreBadgeVisible)));
+    }
+
     partial void OnUpdatesBadgeCountChanged(int value) =>
         UpdatesBadgeVisible = value > 0;
 
@@ -221,6 +323,8 @@ public partial class SidebarViewModel : ViewModelBase
 
     public SidebarViewModel()
     {
+        NavigationPageOrder.PlaceNewlyEnabledExtensions(EnabledExtensionPages());
+        _morePages = GetMorePages();
         _navigationPages = GetNavigationPages();
         _wasDocked = Docked;
         _isPaneOpen = Docked && !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
@@ -264,6 +368,11 @@ public partial class SidebarViewModel : ViewModelBase
 
     // ─── Navigation ──────────────────────────────────────────────────────────
     public event EventHandler<PageType>? NavigationRequested;
+
+    public event EventHandler? ExtensionsRequested;
+
+    [RelayCommand]
+    private void OpenExtensions() => ExtensionsRequested?.Invoke(this, EventArgs.Empty);
 
     public string VersionLabel { get; } =
         CoreTools.Translate("UniGetUI Version {0} by Devolutions", CoreData.VersionName);

@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using AvaloniaEdit;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Tools;
 
@@ -105,7 +106,8 @@ public partial class MainWindow
     // Settings is reached from the application menu (⌘,), so the View menu skips it.
     private NativeMenuItem[] CreateMacPageItems()
         => ViewModel.ShortcutPages
-            .Select((page, index) => (page, key: Key.D1 + index))
+            .Append(PageType.More)
+            .Select((page, index) => (page, key: index < 9 ? Key.D1 + index : (Key?)null))
             .Where(p => p.page != PageType.Settings)
             .Select(p => Item(PageMenuTitle(p.page), ViewModel.Sidebar.RequestNavigationCommand, p.page.ToString(), p.key))
             .ToArray();
@@ -180,23 +182,8 @@ public partial class MainWindow
         }, key, extraModifiers, enabled: () => _menuTextBox is { } textBox ? canTextBox(textBox)
             : _menuEditor is { } editor && canEditor(editor));
 
-    private static string PageMenuTitle(PageType page) => page switch
-    {
-        PageType.Catalog => CoreTools.Translate("Software Catalog"),
-        PageType.Discover => CoreTools.Translate("Discover Packages"),
-        PageType.Updates => CoreTools.Translate("Software Updates"),
-        PageType.Installed => CoreTools.Translate("Installed Packages"),
-        PageType.Bundles => CoreTools.Translate("Package Bundles"),
-        PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
-        PageType.GitRepositories => CoreTools.Translate("Git Repositories"),
-        PageType.AgentSkills => CoreTools.Translate("Agent Skills"),
-        PageType.Drivers => CoreTools.Translate("Drivers"),
-#if UNIGETUI_XCODE_EXTENSION
-        PageType.Xcode => CoreTools.Translate("Xcode"),
-#endif
-        PageType.Managers => CoreTools.Translate("Package Managers"),
-        _ => CoreTools.Translate("Settings"),
-    };
+    private static string PageMenuTitle(PageType page)
+        => PageTitles.For(page) ?? CoreTools.Translate("Settings");
 
     private NativeMenuItem Submenu(string header, params NativeMenuItemBase[] items)
     {

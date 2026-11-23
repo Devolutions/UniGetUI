@@ -16,14 +16,14 @@ using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
 
-public partial class SidebarView : BaseView<SidebarViewModel>
+public partial class SidebarView : BaseView<SidebarViewModel>, INavigationDropTarget
 {
     private bool _lastNavItemSelectionWasAuto;
-    private bool _isMoreFlyoutOpen;
     private CancellationTokenSource? _pillAnimationCancellation;
     private int _pillAnimationVersion;
 
@@ -45,6 +45,12 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private int _dragFromIndex;
     private int _dragTargetIndex;
     private bool _dragHadFocus;
+    private bool _dragOverMore;
+    private INavigationDropTarget? _dropTarget;
+    private int? _dropTargetIndex;
+    private DragGhost? _dragGhost;
+    private Point _lastDragPoint;
+    private EdgeAutoScroller? _autoScroller;
     private TopLevel? _dragTopLevel;
     private IPointer? _dragPointer;
     private SidebarViewModel? _subscribedViewModel;
@@ -75,9 +81,22 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         set => SetValue(ShowLabelsProperty, value);
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == ShowLabelsProperty && NavListBox is not null)
+            ApplyScrollBarVisibility();
+    }
+
+    private void ApplyScrollBarVisibility()
+        => ScrollViewer.SetVerticalScrollBarVisibility(
+            NavListBox,
+            ShowLabels ? ScrollBarVisibility.Auto : ScrollBarVisibility.Hidden);
+
     public SidebarView()
     {
         InitializeComponent();
+        ApplyScrollBarVisibility();
 #if UNIGETUI_XCODE_EXTENSION
         (XcodeNavBtn, _xcodeBadge, _xcodeBadgeText, _xcodeProgress) = CreateXcodeNavButton();
 #endif
@@ -92,22 +111,13 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         SidebarLayout.SizeChanged += (_, _) => QueueSelectionPillUpdate(animate: false);
 
         MoreNavBtn.AddHandler(KeyDownEvent, MoreNavBtn_KeyDown, RoutingStrategies.Tunnel);
+        AttachMoveToMoreMenus();
 
         NavListBox.AddHandler(PointerPressedEvent, NavListBox_PointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         NavListBox.AddHandler(PointerMovedEvent, NavListBox_PointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
         NavListBox.AddHandler(PointerReleasedEvent, NavListBox_PointerReleased, RoutingStrategies.Tunnel, handledEventsToo: true);
         NavListBox.AddHandler(KeyDownEvent, NavListBox_KeyDown, RoutingStrategies.Tunnel);
         NavListBox.PointerCaptureLost += (_, _) => EndDrag(commit: false);
-
-        if (FlyoutBase.GetAttachedFlyout(MoreNavBtn) is { } moreFlyout)
-        {
-            moreFlyout.Opened += (_, _) => _isMoreFlyoutOpen = true;
-            moreFlyout.Closed += (_, _) =>
-            {
-                _isMoreFlyoutOpen = false;
-                SyncListBoxSelection(ViewModel?.SelectedPageType ?? PageType.Null);
-            };
-        }
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -199,6 +209,13 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     {
         _dragCandidate = null;
         _pendingPointerNavigation = null;
+        if (e.GetCurrentPoint(NavListBox).Properties.IsRightButtonPressed
+            && (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { } pressed
+            && NavListBox.Items.Contains(pressed))
+        {
+            e.Handled = true;
+            return;
+        }
         if (!e.GetCurrentPoint(NavListBox).Properties.IsLeftButtonPressed
             || (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not { } item
             || !NavListBox.Items.Contains(item))
@@ -215,7 +232,8 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         if (_dragCandidate is null)
             return;
 
-        double offset = e.GetPosition(DragSurface).Y - _dragStart.Y;
+        Vector moved = e.GetPosition(DragSurface) - _dragStart;
+        double offset = moved.Y;
         if (!_isDragging)
         {
             if (!e.GetCurrentPoint(NavListBox).Properties.IsLeftButtonPressed)
@@ -223,15 +241,58 @@ public partial class SidebarView : BaseView<SidebarViewModel>
                 AbandonPointerPress();
                 return;
             }
-            if (Math.Abs(offset) < DragThreshold || !BeginDrag(_dragCandidate))
+            if ((Math.Abs(moved.X) < DragThreshold && Math.Abs(moved.Y) < DragThreshold) || !BeginDrag(_dragCandidate))
                 return;
             _dragPointer = e.Pointer;
             e.Pointer.Capture(NavListBox);
         }
 
-        UpdateDrag(offset);
+        TrackDropOnMorePage(e);
+        UpdateDrag(offset, _dropTargetIndex is null && IsOverMoreButton(e));
         e.Handled = true;
     }
+
+    private void TrackDropOnMorePage(PointerEventArgs e)
+    {
+        if (_dragTopLevel is null)
+            return;
+
+        _lastDragPoint = e.GetPosition(_dragTopLevel);
+        RefreshMorePageTarget();
+        _autoScroller ??= new EdgeAutoScroller(RefreshMorePageTarget);
+        _autoScroller.Update(_dropTarget?.DropScrollViewer, _dragTopLevel, _lastDragPoint);
+
+        if (_dropTargetIndex is null)
+        {
+            RemoveDragGhost();
+            return;
+        }
+
+        if (_dragGhost is null && PageFor(_dragItems[_dragFromIndex]) is { } page)
+            _dragGhost = DragGhost.Show(this, MorePage.CreateDragGhost(page, this, MorePage.TileSize), new Point(24, 24));
+        _dragGhost?.Move(e);
+    }
+
+    private void RefreshMorePageTarget()
+    {
+        if (!_isDragging || _dragTopLevel is null)
+            return;
+
+        INavigationDropTarget? target = NavigationDropTargets.At(_dragTopLevel, _lastDragPoint, this) as MorePage;
+        if (!ReferenceEquals(target, _dropTarget))
+            _dropTarget?.EndExternalDrop();
+        _dropTarget = target;
+        _dropTargetIndex = target?.UpdateExternalDrop(_lastDragPoint);
+    }
+
+    private void RemoveDragGhost()
+    {
+        _dragGhost?.Remove();
+        _dragGhost = null;
+    }
+
+    private bool IsOverMoreButton(PointerEventArgs e)
+        => MoreNavBtn.IsEffectivelyVisible && new Rect(MoreNavBtn.Bounds.Size).Contains(e.GetPosition(MoreNavBtn));
 
     private void NavListBox_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
@@ -246,7 +307,8 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             return;
         }
 
-        UpdateDrag(e.GetPosition(DragSurface).Y - _dragStart.Y);
+        TrackDropOnMorePage(e);
+        UpdateDrag(e.GetPosition(DragSurface).Y - _dragStart.Y, _dropTargetIndex is null && IsOverMoreButton(e));
         EndDrag(commit: true);
         e.Pointer.Capture(null);
         e.Handled = true;
@@ -266,7 +328,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             }
             tops[i] = position.Y;
         }
-        if (from < 0 || items.Length < 2)
+        if (from < 0)
         {
             _dragCandidate = null;
             return false;
@@ -295,6 +357,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         _isDragging = true;
         _dragTargetIndex = _dragFromIndex;
+        _dragOverMore = false;
         DiscardPendingPointerNavigation();
         _dragHadFocus = item.IsKeyboardFocusWithin;
         _dragTopLevel = TopLevel.GetTopLevel(this);
@@ -306,12 +369,29 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         return true;
     }
 
-    private void UpdateDrag(double offset)
+    private void UpdateDrag(double offset, bool overMore)
     {
         ListBoxItem dragged = _dragItems[_dragFromIndex];
         double fromTop = _dragTops[_dragFromIndex];
         offset = Math.Clamp(offset, _dragTops[0] - fromTop, _dragTops[^1] - fromTop);
         ((TranslateTransform)dragged.RenderTransform!).Y = offset;
+
+        _dragOverMore = overMore;
+        MoreNavBtn.Classes.Set("drop-target", overMore);
+        bool leavingSidebar = _dropTargetIndex is not null;
+        dragged.Opacity = leavingSidebar ? 0.35 : 0.85;
+        if (leavingSidebar)
+            ((TranslateTransform)dragged.RenderTransform!).Y = 0d;
+        if (overMore || leavingSidebar)
+        {
+            _dragTargetIndex = _dragFromIndex;
+            for (int i = 0; i < _dragItems.Length; i++)
+            {
+                if (i != _dragFromIndex)
+                    ((TranslateTransform)_dragItems[i].RenderTransform!).Y = 0d;
+            }
+            return;
+        }
 
         double draggedCenter = fromTop + offset + (dragged.Bounds.Height / 2d);
         int target = 0;
@@ -368,8 +448,14 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         int from = _dragFromIndex;
         int target = _dragTargetIndex;
         ListBoxItem dragged = _dragItems[from];
+        bool toMore = _dragOverMore;
+        int? morePageIndex = _dropTargetIndex;
 
         ResetDragVisuals();
+        if (commit && morePageIndex is { } index && MoveNavItemToMore(dragged, index))
+            return;
+        if (commit && toMore && MoveNavItemToMore(dragged))
+            return;
         if (!commit || target == from || !MoveNavItem(dragged, target - from, _dragHadFocus ? NavigationMethod.Pointer : null))
             QueueSelectionPillUpdate(animate: false);
     }
@@ -422,8 +508,87 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         return true;
     }
 
+    private bool MoveNavItemToMore(ListBoxItem item, int? index = null)
+    {
+        if (ViewModel is not { } vm || PageFor(item) is not { } page || !NavigationPageOrder.IsMovable(page))
+            return false;
+
+        vm.MovePageToMore(page, index);
+        AccessibilityAnnouncementService.Announce(CoreTools.Translate(
+            "{0} moved to the More page",
+            AutomationProperties.GetName(item) ?? page.ToString()));
+        return true;
+    }
+
+    private void AttachMoveToMoreMenus()
+    {
+        foreach (PageType page in Enum.GetValues<PageType>().Where(NavigationPageOrder.IsMovable))
+        {
+            if (NavButtonFor(page) is not { } button)
+                continue;
+
+            var move = new MenuItem { Header = CoreTools.Translate("Move to the More page") };
+            move.Click += (_, _) => MoveNavItemToMore(button, null);
+            button.ContextMenu = new ContextMenu { Items = { move } };
+        }
+    }
+
+    private static PageType? PageFor(ListBoxItem item)
+        => item.Tag is string tag && Enum.TryParse(tag, out PageType page) ? page : null;
+
+    public int? UpdateExternalDrop(Point pointInTopLevel)
+    {
+        if (TopLevel.GetTopLevel(this) is not { } topLevel
+            || !IsEffectivelyVisible
+            || topLevel.TranslatePoint(pointInTopLevel, NavListBox) is not { } inList
+            || !new Rect(NavListBox.Bounds.Size).Contains(inList))
+        {
+            EndExternalDrop();
+            return null;
+        }
+
+        ListBoxItem[] items = NavListBox.Items.OfType<ListBoxItem>().ToArray();
+        int index = 0;
+        foreach (var item in items)
+        {
+            if (item.TranslatePoint(new Point(0, item.Bounds.Height / 2d), NavListBox) is { } center && center.Y < inList.Y)
+                index++;
+        }
+
+        double x = 8d;
+        double width = Math.Max(0d, NavListBox.Bounds.Width - 16d);
+        double y;
+        if (items.Length == 0)
+            y = NavListBox.TranslatePoint(new Point(0, NavListBox.Padding.Top), SidebarLayout)?.Y ?? 0d;
+        else if (index < items.Length)
+            y = (items[index].TranslatePoint(default, SidebarLayout)?.Y ?? 0d) - items[index].Margin.Top - 1d;
+        else
+            y = (items[^1].TranslatePoint(new Point(0, items[^1].Bounds.Height), SidebarLayout)?.Y ?? 0d) + items[^1].Margin.Bottom - 1d;
+        if (items.Length > 0 && items[0].TranslatePoint(default, SidebarLayout) is { } first)
+        {
+            x = first.X + 4d;
+            width = Math.Max(0d, items[0].Bounds.Width - 8d);
+        }
+
+        Canvas.SetLeft(ExternalDropIndicator, x);
+        Canvas.SetTop(ExternalDropIndicator, y);
+        ExternalDropIndicator.Width = width;
+        ExternalDropIndicator.IsVisible = true;
+        return index;
+    }
+
+    public void EndExternalDrop() => ExternalDropIndicator.IsVisible = false;
+
+    public ScrollViewer? DropScrollViewer => NavListBox.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+
     private void ResetDragVisuals()
     {
+        MoreNavBtn.Classes.Set("drop-target", false);
+        _autoScroller?.Stop();
+        _dropTarget?.EndExternalDrop();
+        _dropTarget = null;
+        _dropTargetIndex = null;
+        RemoveDragGhost();
         foreach (var item in _dragItems)
         {
             item.RenderTransform = null;
@@ -557,9 +722,6 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
     private void SyncListBoxSelection(PageType page)
     {
-        if (_isMoreFlyoutOpen)
-            return;
-
         // Selection lives in two ListBoxes (main + footer); only one may hold a selection at a time.
         _lastNavItemSelectionWasAuto = true;
         NavListBox.SelectedItem = page switch
@@ -581,6 +743,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         {
             PageType.Settings => SettingsNavBtn,
             PageType.Managers => ManagersNavBtn,
+            _ when ViewModel?.IsReachedFromMore(page) ?? page == PageType.More => MoreNavBtn,
             _ => null,
         };
         _lastNavItemSelectionWasAuto = false;
@@ -597,12 +760,6 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     {
         if (_lastNavItemSelectionWasAuto) return;
         if (selectedItem is not ListBoxItem item || item.Tag is not string tag) return;
-
-        if (tag == "More")
-        {
-            ShowMoreFlyout();
-            return;
-        }
 
         if (!Enum.TryParse<PageType>(tag, out var pageType))
             return;
@@ -629,23 +786,15 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private void SettingsNavBtn_Tapped(object? sender, TappedEventArgs e)
         => _ = _settingsIconSpin.RunAsync(SettingsIcon);
 
-    public void ShowMoreFlyout()
-    {
-        if (_isMoreFlyoutOpen)
-            return;
-
-        // Keep the item selected until the menu closes so its accent pill remains anchored.
-        _isMoreFlyoutOpen = true;
-        QueueSelectionPillUpdate(animate: true, MoreNavBtn);
-        Dispatcher.UIThread.Post(() => FlyoutBase.ShowAttachedFlyout(MoreNavBtn));
-    }
+    private void MoreNavBtn_Tapped(object? sender, TappedEventArgs e)
+        => ViewModel?.RequestNavigation(nameof(PageType.More));
 
     private void MoreNavBtn_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key is not (Key.Space or Key.Enter))
             return;
 
-        ShowMoreFlyout();
+        ViewModel?.RequestNavigation(nameof(PageType.More));
         e.Handled = true;
     }
 

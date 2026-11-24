@@ -45,7 +45,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             var thickness = isFirst ? new Thickness(1) : new Thickness(1, 0, 1, 1);
 
             // ── Status badge (decorative — status surfaced via toggle HelpText) ─
-            var badge = new StatusBadge { HorizontalAlignment = HorizontalAlignment.Center };
+            var badge = new StatusBadge { HorizontalAlignment = HorizontalAlignment.Right };
             AutomationProperties.SetAccessibilityView(badge, AccessibilityView.Raw);
 
             // ── Enable/disable toggle ────────────────────────────────────────
@@ -53,7 +53,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             {
                 OnContent = "",
                 OffContent = "",
-                HorizontalAlignment = HorizontalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             AutomationProperties.SetName(toggle, manager.DisplayName);
@@ -78,6 +78,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             {
                 Orientation = Orientation.Vertical,
                 Spacing = 4,
+                HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             toggleAndBadge.Children.Add(toggle);

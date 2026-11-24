@@ -70,6 +70,93 @@ public sealed class PowerShellManagerTests
         Assert.Equal("", stderr.GetAwaiter().GetResult());
     }
 
+    [PowerShellModuleFact]
+    public async Task InstalledListingIgnoresHandledErrorsFromModuleAutoload()
+    {
+        DirectoryInfo moduleRoot = Directory.CreateTempSubdirectory("unigetui-powershell-");
+        DirectoryInfo moduleDirectory = moduleRoot.CreateSubdirectory("UniGetUITestModules");
+        string modulePath = Path.Combine(moduleDirectory.FullName, "UniGetUITestModules.psm1");
+        try
+        {
+            File.WriteAllText(
+                modulePath,
+                """
+                try { throw 'Optional module initialization failed' } catch {}
+                function Get-InstalledModule {
+                    [pscustomobject]@{Name='Fixture'; Version='1.2.3'; Repository='Local'}
+                }
+                Export-ModuleMember -Function Get-InstalledModule
+                """
+            );
+
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            process.StartInfo.Environment["UNIGETUI_TEST_MODULE_PATH"] = moduleRoot.FullName;
+            process.StartInfo.ArgumentList.Add("-NoProfile");
+            process.StartInfo.ArgumentList.Add("-NonInteractive");
+            process.StartInfo.ArgumentList.Add("-Command");
+            process.StartInfo.ArgumentList.Add(
+                "$env:PSModulePath = $env:UNIGETUI_TEST_MODULE_PATH; " + PowerShell.InstalledListingCommand
+            );
+            process.Start();
+            Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+            Task<string> stderr = process.StandardError.ReadToEndAsync();
+            try
+            {
+                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            finally
+            {
+                if (!process.HasExited)
+                    process.Kill();
+            }
+
+            Assert.Equal(0, process.ExitCode);
+            Assert.Equal("Fixture\t1.2.3\tLocal", (await stdout).Trim());
+            Assert.Equal("", await stderr);
+        }
+        finally
+        {
+            File.Delete(modulePath);
+            moduleDirectory.Delete();
+            moduleRoot.Delete();
+        }
+    }
+
+    private sealed class PowerShellModuleFactAttribute : FactAttribute
+    {
+        public PowerShellModuleFactAttribute()
+        {
+            var startInfo = new ProcessStartInfo("powershell.exe")
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+            };
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-NonInteractive");
+            startInfo.ArgumentList.Add("-Command");
+            startInfo.ArgumentList.Add(
+                "$env:PSModulePath = Join-Path $PSHOME Modules; Get-ExecutionPolicy"
+            );
+            using Process? process = Process.Start(startInfo);
+            if (process is not null
+                && process.WaitForExit(10000)
+                && process.ExitCode == 0
+                && process.StandardOutput.ReadToEnd().Trim() is "Restricted" or "AllSigned")
+                Skip = "The active Windows PowerShell policy disallows the unsigned local test module.";
+        }
+    }
+
     [Fact]
     public void ParseSources_KeepsLocalAndUncRepositoryLocations()
     {

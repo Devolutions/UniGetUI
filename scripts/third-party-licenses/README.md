@@ -63,6 +63,11 @@ texts and NOTICE files come from each crate's own package.
 ./scripts/third-party-licenses/Update-PingetCrates.ps1 -PingetRepository C:\DEV\pinget -Toolchain nightly-x86_64-pc-windows-msvc
 ```
 
+A crate version yanked after pinget was built cannot be resolved by publish time, and the script
+then names it among those the binaries contain; pass it as `-Pin <crate>@<version>` (pinget 0.14.0
+needs `-Pin tokio@1.54.0`). On an arm64 machine use the x64 toolchain as above: the arm64 nightly
+`rustc` fails with `STATUS_ILLEGAL_INSTRUCTION` when asked about the arm64 target.
+
 Run it whenever `Devolutions.Pinget.Cli.Rust` is bumped: the wrapper refuses a crate list made for
 another version. Its license errors are reported by that run, not by the release run that merges it.
 

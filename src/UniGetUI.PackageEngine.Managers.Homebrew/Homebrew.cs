@@ -249,7 +249,7 @@ public partial class Homebrew : PackageManager
         if (result.ExitCode != 0 && typeFlag == "--cask" && !ListingCancellationToken.IsCancellationRequested)
         {
             // brew loads every cask before printing any, so one it cannot load leaves stdout empty.
-            if (TryReadCasksFromCaskroom(result.StdErr, out var fromCaskroom))
+            if (TryReadCasksFromCaskroom(out var fromCaskroom))
             {
                 List<string> broken = ParseBrokenCasks(result.StdErr);
                 _brokenCasks = [.. broken.Where(token => fromCaskroom.Any(cask => cask.Id == token))];
@@ -325,7 +325,7 @@ public partial class Homebrew : PackageManager
         );
     }
 
-    private bool TryReadCasksFromCaskroom(string stderr, out List<(string Id, string Version)> casks)
+    private bool TryReadCasksFromCaskroom(out List<(string Id, string Version)> casks)
     {
         casks = [];
         BrewOutput caskroom = RunBrewListing("--caskroom", LoggableTaskType.ListInstalledPackages);

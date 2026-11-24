@@ -2399,6 +2399,8 @@
   "Delete the package metadata Chocolatey keeps in its local cache.": "Delete the package metadata Chocolatey keeps in its local cache.",
   "Delete the NuGet HTTP cache used to look up .NET tools.": "Delete the NuGet HTTP cache used to look up .NET tools.",
   "Remove old versions and the download cache Homebrew keeps.": "Remove old versions and the download cache Homebrew keeps.",
+  "Uninstall casks Homebrew can no longer find": "Uninstall casks Homebrew can no longer find",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.",
   "Delete the packages Npm keeps in its cache.": "Delete the packages Npm keeps in its cache.",
   "Delete the wheels and downloads Pip keeps in its cache.": "Delete the wheels and downloads Pip keeps in its cache.",
   "Download and install Scoop. Requires administrator rights.": "Download and install Scoop. Requires administrator rights.",

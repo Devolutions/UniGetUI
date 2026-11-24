@@ -38,7 +38,30 @@ public partial class Homebrew : PackageManager
             Description = CoreTools.Translate("Remove old versions and the download cache Homebrew keeps."),
             RunAsync = () => RunMaintenanceCommandAsync(Status.ExecutablePath, WithCallArguments("cleanup -s")),
         };
+
+        IReadOnlyList<string> broken = BrokenCasks;
+        if (broken.Count > 0)
+        {
+            yield return new ManagerMaintenanceAction
+            {
+                Id = "uninstall-broken-casks",
+                Title = CoreTools.Translate("Uninstall casks Homebrew can no longer find"),
+                Description = CoreTools.Translate(
+                    "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.",
+                    string.Join(", ", broken)
+                ),
+                RunAsync = () => RunMaintenanceCommandAsync(
+                    Status.ExecutablePath,
+                    WithCallArguments($"uninstall --cask {string.Join(' ', broken)}")
+                ),
+            };
+        }
     }
+
+    // Installed casks brew could not load during the last cask listing; set by ListInstalledByType.
+    private volatile IReadOnlyList<string> _brokenCasks = [];
+
+    internal IReadOnlyList<string> BrokenCasks => _brokenCasks;
 
     // Standard Homebrew installation paths, in priority order
     private static readonly string[] BREW_PATHS =
@@ -169,13 +192,7 @@ public partial class Homebrew : PackageManager
 
     public override void RefreshPackageIndexes()
     {
-        using var p = new Process { StartInfo = MakeBrewStartInfo("update") };
-        IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.RefreshIndexes, p);
-        p.Start();
-        logger.AddToStdOut(p.StandardOutput.ReadToEnd());
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
-        p.WaitForExit();
-        logger.Close(p.ExitCode);
+        RunBrewListing("update", LoggableTaskType.RefreshIndexes);
     }
 
     // ── Package listing ────────────────────────────────────────────────────
@@ -188,14 +205,8 @@ public partial class Homebrew : PackageManager
         IManagerSource caskSource = SourcesHelper.Factory.GetSourceOrDefault("Homebrew Cask");
         IManagerSource currentSection = formulaeSource;
 
-        using var p = new Process { StartInfo = MakeBrewStartInfo($"search {query}") };
-        IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
-        p.Start();
-
-        string? line;
-        while ((line = p.StandardOutput.ReadLine()) is not null)
+        foreach (var line in RunBrewListing($"search {query}", LoggableTaskType.FindPackages).StdOut)
         {
-            logger.AddToStdOut(line);
             if (line.StartsWith("==> Formulae")) { currentSection = formulaeSource; continue; }
             if (line.StartsWith("==> Casks")) { currentSection = caskSource; continue; }
 
@@ -212,9 +223,6 @@ public partial class Homebrew : PackageManager
             }
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
-        p.WaitForExit();
-        logger.Close(p.ExitCode);
         return packages;
     }
 
@@ -235,11 +243,19 @@ public partial class Homebrew : PackageManager
         );
         List<(string Id, string Version)> entries = ParseListVersionsOutput(result.StdOut);
 
+        if (typeFlag == "--cask" && result.ExitCode == 0)
+            _brokenCasks = [];
+
         if (result.ExitCode != 0 && typeFlag == "--cask" && !ListingCancellationToken.IsCancellationRequested)
         {
             // brew loads every cask before printing any, so one it cannot load leaves stdout empty.
             if (TryReadCasksFromCaskroom(result.StdErr, out var fromCaskroom))
+            {
+                List<string> broken = ParseBrokenCasks(result.StdErr);
+                _brokenCasks = [.. broken.Where(token => fromCaskroom.Any(cask => cask.Id == token))];
+                LogCaskListingRecovered(result.StdErr, broken, listedAny: entries.Count > 0);
                 return ToPackages(MergeInstalledEntries(entries, fromCaskroom), source);
+            }
         }
 
         ThrowIfListingFailed(result.ExitCode, result.StdErr);
@@ -287,11 +303,27 @@ public partial class Homebrew : PackageManager
     }
 
     // e.g. "Error: Cask 'powershell' is unavailable: No Cask with this name exists."
-    [GeneratedRegex(@"^Error: Cask '([^']+)'", RegexOptions.Multiline)]
+    // Tokens are restricted to Homebrew's charset, since they are passed back to `brew uninstall`.
+    [GeneratedRegex(@"^Error: Cask '([a-z0-9][a-z0-9@._+-]*)'", RegexOptions.Multiline)]
     private static partial Regex CaskErrorRegex();
 
     internal static List<string> ParseBrokenCasks(string stderr) =>
         [.. CaskErrorRegex().Matches(stderr).Select(m => m.Groups[1].Value).Distinct(StringComparer.Ordinal)];
+
+    private static void LogCaskListingRecovered(string stderr, List<string> broken, bool listedAny)
+    {
+        string error = stderr.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("Error:"))
+            ?? stderr.Trim().Split('\n')[0].Trim();
+        string what = listedAny ? "listed only some casks" : "listed no cask";
+        Logger.Warn(
+            broken.Count > 0
+                ? $"Homebrew cannot load the installed cask(s) {string.Join(", ", broken)}, so `brew list --cask "
+                    + $"--versions` failed and {what} ({error}). Installed casks were read from the Caskroom instead; "
+                    + "uninstalling the cask(s) from the Manager Health page fixes this."
+                : $"`brew list --cask --versions` failed and {what} ({error}). Installed casks were read from the "
+                    + "Caskroom instead."
+        );
+    }
 
     private bool TryReadCasksFromCaskroom(string stderr, out List<(string Id, string Version)> casks)
     {
@@ -311,15 +343,6 @@ public partial class Homebrew : PackageManager
             return false;
         }
 
-        List<string> broken = ParseBrokenCasks(stderr);
-        Logger.Warn(
-            broken.Count > 0
-                ? $"Homebrew cannot load the installed cask(s) {string.Join(", ", broken)} (\"{stderr.Trim()}\"), so "
-                    + "`brew list --cask --versions` listed no cask. Installed casks were read from the Caskroom "
-                    + "instead. Reinstalling or uninstalling the cask(s) with brew fixes this."
-                : $"`brew list --cask --versions` failed (\"{stderr.Trim()}\"). Installed casks were read from "
-                    + "the Caskroom instead."
-        );
         return true;
     }
 

@@ -191,6 +191,13 @@ public sealed class HomebrewManagerTests : IDisposable
             installed.Select(p => $"{p.Id} {p.VersionString}")
         );
         Assert.Equal("Homebrew Cask", installed[1].Source.Name);
+        // The broken cask is offered for removal on the Manager Health page, by name.
+        Assert.Equal(["powershell"], brew.BrokenCasks);
+        ManagerMaintenanceAction action = Assert.Single(
+            brew.ExtraActions(),
+            a => a.Id == "uninstall-broken-casks"
+        );
+        Assert.Contains("powershell", action.Description);
         // Recovered listings are complete, so a remote rescan must not fail on them.
         using var scope = PackageListingScope.EnterListingOnly();
         Assert.Equal(3, brew.ListInstalled().Count);
@@ -202,6 +209,8 @@ public sealed class HomebrewManagerTests : IDisposable
         var brew = new ListingHomebrew(FakeBrew(caskroomExitCode: 1, Path.Combine(_testRoot, "missing")));
 
         Assert.Equal(["wget"], brew.ListInstalled().Select(p => p.Id));
+        Assert.Empty(brew.BrokenCasks);
+        Assert.DoesNotContain(brew.ExtraActions(), a => a.Id == "uninstall-broken-casks");
         using var scope = PackageListingScope.EnterListingOnly();
         Assert.Throws<InvalidOperationException>(brew.ListInstalled);
     }
@@ -240,6 +249,8 @@ public sealed class HomebrewManagerTests : IDisposable
             )
         );
         Assert.Empty(Homebrew.ParseBrokenCasks("Error: Another active Homebrew process is already in progress."));
+        // Tokens go back to `brew uninstall`, so anything outside Homebrew's token charset is ignored.
+        Assert.Empty(Homebrew.ParseBrokenCasks("Error: Cask 'x; rm -rf ~' is unavailable"));
     }
 
     [Fact]
@@ -267,6 +278,8 @@ public sealed class HomebrewManagerTests : IDisposable
         }
 
         public IReadOnlyList<Package> ListInstalled() => GetInstalledPackages_UnSafe();
+
+        public IEnumerable<ManagerMaintenanceAction> ExtraActions() => GetExtraMaintenanceActions();
     }
 
     private static void CreateCask(string caskroom, string token, string version, string timestamp, string ext)
@@ -285,11 +298,18 @@ public sealed class HomebrewManagerTests : IDisposable
             string path = Path.Combine(_testRoot, $"brew-{Guid.NewGuid():N}.cmd");
             File.WriteAllLines(path,
             [
+                // Labels instead of ( ) blocks, so a ")" in the test path cannot end a block early.
                 "@echo off",
-                $"if \"%1\"==\"--caskroom\" (echo {caskroom}& exit /b {caskroomExitCode})",
-                $"if \"%2\"==\"--cask\" (echo {UnavailableCaskError} 1>&2& exit /b 1)",
+                "if \"%1\"==\"--caskroom\" goto caskroom",
+                "if \"%2\"==\"--cask\" goto cask",
                 "echo wget 1.25.0",
                 "exit /b 0",
+                ":caskroom",
+                $"echo({EscapeBatch(caskroom)}",
+                $"exit /b {caskroomExitCode}",
+                ":cask",
+                $"echo({UnavailableCaskError} 1>&2",
+                "exit /b 1",
             ]);
             return path;
         }
@@ -305,6 +325,10 @@ public sealed class HomebrewManagerTests : IDisposable
         File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         return script;
     }
+
+    private static string EscapeBatch(string value) =>
+        value.Replace("^", "^^").Replace("%", "%%").Replace("&", "^&")
+            .Replace("|", "^|").Replace("<", "^<").Replace(">", "^>");
 
     private static string[] ReadFixtureLines(string relativePath)
     {

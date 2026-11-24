@@ -171,6 +171,141 @@ public sealed class HomebrewManagerTests : IDisposable
         Assert.Equal(remove, string.Join(' ', manager.SourcesHelper.GetRemoveSourceParameters(source)));
     }
 
+    private const string UnavailableCaskError =
+        "Error: Cask 'powershell' is unavailable: No Cask with this name exists.";
+
+    // A cask renamed or removed upstream makes `brew list --cask --versions` exit 1 before it prints
+    // any cask, which used to empty the installed casks and fail the update check.
+    [Fact]
+    public void AnUnavailableCaskDoesNotHideTheOtherInstalledCasks()
+    {
+        string caskroom = Path.Combine(_testRoot, "Caskroom");
+        CreateCask(caskroom, "firefox", "152.0.5", "20260101000000.000", "json");
+        CreateCask(caskroom, "powershell", "7.4.6", "20250101000000.000", "rb");
+        var brew = new ListingHomebrew(FakeBrew(caskroomExitCode: 0, caskroom));
+
+        IReadOnlyList<Package> installed = brew.ListInstalled();
+
+        Assert.Equal(
+            ["wget 1.25.0", "firefox 152.0.5", "powershell 7.4.6"],
+            installed.Select(p => $"{p.Id} {p.VersionString}")
+        );
+        Assert.Equal("Homebrew Cask", installed[1].Source.Name);
+        // Recovered listings are complete, so a remote rescan must not fail on them.
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Equal(3, brew.ListInstalled().Count);
+    }
+
+    [Fact]
+    public void ACaskListingThatCannotBeRecoveredIsStillAFailedListing()
+    {
+        var brew = new ListingHomebrew(FakeBrew(caskroomExitCode: 1, Path.Combine(_testRoot, "missing")));
+
+        Assert.Equal(["wget"], brew.ListInstalled().Select(p => p.Id));
+        using var scope = PackageListingScope.EnterListingOnly();
+        Assert.Throws<InvalidOperationException>(brew.ListInstalled);
+    }
+
+    [Fact]
+    public void TheCaskroomIsReadLikeHomebrewReadsIt()
+    {
+        string caskroom = Path.Combine(_testRoot, "Caskroom");
+        // The newest timestamp wins across versions, as in Caskroom.cask_installed_version.
+        CreateCask(caskroom, "firefox", "151.0", "20260101000000.000", "json");
+        CreateCask(caskroom, "firefox", "152.0.5", "20260201000000.000", "json");
+        CreateCask(caskroom, "iterm2", "3.5.0", "20250101000000.000", "rb");
+        // A half-removed cask whose newest install has no caskfile is not installed.
+        CreateCask(caskroom, "broken", "1.0", "20240101000000.000", "json");
+        Directory.CreateDirectory(Path.Combine(caskroom, "broken", ".metadata", "2.0", "20250101000000.000"));
+        Directory.CreateDirectory(Path.Combine(caskroom, "no-metadata"));
+        File.WriteAllText(Path.Combine(caskroom, ".DS_Store"), "");
+        if (!OperatingSystem.IsWindows())
+            Directory.CreateSymbolicLink(Path.Combine(caskroom, "iterm"), Path.Combine(caskroom, "iterm2"));
+
+        Assert.Equal(
+            [("firefox", "152.0.5"), ("iterm2", "3.5.0")],
+            Homebrew.ReadInstalledCasks(caskroom)
+        );
+    }
+
+    [Fact]
+    public void BrokenCasksAreNamedFromBrewsErrors()
+    {
+        Assert.Equal(
+            ["powershell", "old-app"],
+            Homebrew.ParseBrokenCasks(
+                $"Warning: something\n{UnavailableCaskError}\n"
+                    + "Error: Cask 'old-app' definition is invalid: bad\n"
+                    + UnavailableCaskError
+            )
+        );
+        Assert.Empty(Homebrew.ParseBrokenCasks("Error: Another active Homebrew process is already in progress."));
+    }
+
+    [Fact]
+    public void ListedVersionsWinOverTheCaskroom()
+    {
+        Assert.Equal(
+            [("firefox", "152.0.5"), ("iterm2", "3.5.0")],
+            Homebrew.MergeInstalledEntries(
+                Homebrew.ParseListVersionsOutput(["firefox 152.0.5", "", "garbage"]),
+                [("firefox", "151.0"), ("iterm2", "3.5.0")]
+            )
+        );
+    }
+
+    private sealed class ListingHomebrew : Homebrew
+    {
+        public ListingHomebrew(string executable)
+        {
+            Status = new UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers.ManagerStatus
+            {
+                Found = true,
+                ExecutablePath = executable,
+                ExecutableCallArgs = "",
+            };
+        }
+
+        public IReadOnlyList<Package> ListInstalled() => GetInstalledPackages_UnSafe();
+    }
+
+    private static void CreateCask(string caskroom, string token, string version, string timestamp, string ext)
+    {
+        string casks = Path.Combine(caskroom, token, ".metadata", version, timestamp, "Casks");
+        Directory.CreateDirectory(casks);
+        Directory.CreateDirectory(Path.Combine(caskroom, token, version));
+        File.WriteAllText(Path.Combine(casks, $"{token}.{ext}"), "");
+    }
+
+    // Answers like Homebrew 7 with an unavailable cask installed: formulae list fine, casks fail.
+    private string FakeBrew(int caskroomExitCode, string caskroom)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            string path = Path.Combine(_testRoot, $"brew-{Guid.NewGuid():N}.cmd");
+            File.WriteAllLines(path,
+            [
+                "@echo off",
+                $"if \"%1\"==\"--caskroom\" (echo {caskroom}& exit /b {caskroomExitCode})",
+                $"if \"%2\"==\"--cask\" (echo {UnavailableCaskError} 1>&2& exit /b 1)",
+                "echo wget 1.25.0",
+                "exit /b 0",
+            ]);
+            return path;
+        }
+
+        string script = Path.Combine(_testRoot, $"brew-{Guid.NewGuid():N}.sh");
+        File.WriteAllLines(script,
+        [
+            "#!/bin/sh",
+            $"if [ \"$1\" = --caskroom ]; then echo '{caskroom}'; exit {caskroomExitCode}; fi",
+            $"if [ \"$2\" = --cask ]; then echo \"{UnavailableCaskError}\" >&2; exit 1; fi",
+            "echo 'wget 1.25.0'",
+        ]);
+        File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        return script;
+    }
+
     private static string[] ReadFixtureLines(string relativePath)
     {
         return PackageEngineFixtureFiles.ReadAllText(relativePath).Replace("\r\n", "\n").Split('\n');

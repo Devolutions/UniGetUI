@@ -32,14 +32,14 @@ public sealed partial class ExtensionsHomepage : UserControl, ISettingsPage
             bool isFirst = i == 0;
             bool isLast = i == extensions.Count - 1;
 
-            var badge = new StatusBadge { HorizontalAlignment = HorizontalAlignment.Center };
+            var badge = new StatusBadge { HorizontalAlignment = HorizontalAlignment.Right };
             AutomationProperties.SetAccessibilityView(badge, AccessibilityView.Raw);
 
             var toggle = new ToggleSwitch
             {
                 OnContent = "",
                 OffContent = "",
-                HorizontalAlignment = HorizontalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             toggle.IsCheckedChanged += (_, _) =>
@@ -54,6 +54,7 @@ public sealed partial class ExtensionsHomepage : UserControl, ISettingsPage
             {
                 Orientation = Orientation.Vertical,
                 Spacing = 4,
+                HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             toggleAndBadge.Children.Add(toggle);

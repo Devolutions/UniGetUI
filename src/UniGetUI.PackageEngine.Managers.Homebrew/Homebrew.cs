@@ -38,7 +38,30 @@ public partial class Homebrew : PackageManager
             Description = CoreTools.Translate("Remove old versions and the download cache Homebrew keeps."),
             RunAsync = () => RunMaintenanceCommandAsync(Status.ExecutablePath, WithCallArguments("cleanup -s")),
         };
+
+        IReadOnlyList<string> broken = BrokenCasks;
+        if (broken.Count > 0)
+        {
+            yield return new ManagerMaintenanceAction
+            {
+                Id = "uninstall-broken-casks",
+                Title = CoreTools.Translate("Uninstall casks Homebrew can no longer find"),
+                Description = CoreTools.Translate(
+                    "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.",
+                    string.Join(", ", broken)
+                ),
+                RunAsync = () => RunMaintenanceCommandAsync(
+                    Status.ExecutablePath,
+                    WithCallArguments($"uninstall --cask {string.Join(' ', broken)}")
+                ),
+            };
+        }
     }
+
+    // Installed casks brew could not load during the last cask listing; set by ListInstalledByType.
+    private volatile IReadOnlyList<string> _brokenCasks = [];
+
+    internal IReadOnlyList<string> BrokenCasks => _brokenCasks;
 
     // Standard Homebrew installation paths, in priority order
     private static readonly string[] BREW_PATHS =
@@ -169,13 +192,7 @@ public partial class Homebrew : PackageManager
 
     public override void RefreshPackageIndexes()
     {
-        using var p = new Process { StartInfo = MakeBrewStartInfo("update") };
-        IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.RefreshIndexes, p);
-        p.Start();
-        logger.AddToStdOut(p.StandardOutput.ReadToEnd());
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
-        p.WaitForExit();
-        logger.Close(p.ExitCode);
+        RunBrewListing("update", LoggableTaskType.RefreshIndexes);
     }
 
     // ── Package listing ────────────────────────────────────────────────────
@@ -188,14 +205,8 @@ public partial class Homebrew : PackageManager
         IManagerSource caskSource = SourcesHelper.Factory.GetSourceOrDefault("Homebrew Cask");
         IManagerSource currentSection = formulaeSource;
 
-        using var p = new Process { StartInfo = MakeBrewStartInfo($"search {query}") };
-        IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
-        p.Start();
-
-        string? line;
-        while ((line = p.StandardOutput.ReadLine()) is not null)
+        foreach (var line in RunBrewListing($"search {query}", LoggableTaskType.FindPackages).StdOut)
         {
-            logger.AddToStdOut(line);
             if (line.StartsWith("==> Formulae")) { currentSection = formulaeSource; continue; }
             if (line.StartsWith("==> Casks")) { currentSection = caskSource; continue; }
 
@@ -212,9 +223,6 @@ public partial class Homebrew : PackageManager
             }
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
-        p.WaitForExit();
-        logger.Close(p.ExitCode);
         return packages;
     }
 
@@ -228,30 +236,164 @@ public partial class Homebrew : PackageManager
 
     private IReadOnlyList<Package> ListInstalledByType(string typeFlag, string sourceName)
     {
-        var packages = new List<Package>();
         IManagerSource source = SourcesHelper.Factory.GetSourceOrDefault(sourceName);
+        BrewOutput result = RunBrewListing(
+            $"list {typeFlag} --versions",
+            LoggableTaskType.ListInstalledPackages
+        );
+        List<(string Id, string Version)> entries = ParseListVersionsOutput(result.StdOut);
 
-        using var p = new Process { StartInfo = MakeBrewStartInfo($"list {typeFlag} --versions") };
-        IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages, p);
+        if (typeFlag == "--cask" && result.ExitCode == 0)
+            _brokenCasks = [];
+
+        if (result.ExitCode != 0 && typeFlag == "--cask" && !ListingCancellationToken.IsCancellationRequested)
+        {
+            // brew loads every cask before printing any, so one it cannot load leaves stdout empty.
+            if (TryReadCasksFromCaskroom(out var fromCaskroom))
+            {
+                List<string> broken = ParseBrokenCasks(result.StdErr);
+                _brokenCasks = [.. broken.Where(token => fromCaskroom.Any(cask => cask.Id == token))];
+                LogCaskListingRecovered(result.StdErr, broken, listedAny: entries.Count > 0);
+                return ToPackages(MergeInstalledEntries(entries, fromCaskroom), source);
+            }
+        }
+
+        ThrowIfListingFailed(result.ExitCode, result.StdErr);
+        return ToPackages(entries, source);
+    }
+
+    private List<Package> ToPackages(IEnumerable<(string Id, string Version)> entries, IManagerSource source) =>
+        [.. entries.Select(e => new Package(CoreTools.FormatAsName(e.Id), e.Id, e.Version, source, this))];
+
+    private readonly record struct BrewOutput(List<string> StdOut, string StdErr, int ExitCode);
+
+    private BrewOutput RunBrewListing(string arguments, LoggableTaskType taskType)
+    {
+        using var p = new Process { StartInfo = MakeBrewStartInfo(arguments) };
+        IProcessTaskLogger logger = TaskLogger.CreateNew(taskType, p);
         p.Start();
+        // Drain stderr concurrently so a chatty stderr cannot fill its pipe and stall brew.
+        Task<string> stderr = p.StandardError.ReadToEndAsync();
 
+        var lines = new List<string>();
         string? line;
         while ((line = p.StandardOutput.ReadLine()) is not null)
         {
             logger.AddToStdOut(line);
-            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 2) continue;
-            var id = parts[0].Trim();
-            var version = parts[1].Trim();
-            packages.Add(new Package(CoreTools.FormatAsName(id), id, version, source, this));
+            lines.Add(line);
         }
 
-        string error = p.StandardError.ReadToEnd();
+        string error = stderr.GetAwaiter().GetResult();
         logger.AddToStdErr(error);
         p.WaitForExit();
         logger.Close(p.ExitCode);
-        ThrowIfListingFailed(p.ExitCode, error);
-        return packages;
+        return new BrewOutput(lines, error, p.ExitCode);
+    }
+
+    internal static List<(string Id, string Version)> ParseListVersionsOutput(IEnumerable<string> lines)
+    {
+        var entries = new List<(string, string)>();
+        foreach (var line in lines)
+        {
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) continue;
+            entries.Add((parts[0].Trim(), parts[1].Trim()));
+        }
+        return entries;
+    }
+
+    // e.g. "Error: Cask 'powershell' is unavailable: No Cask with this name exists."
+    // Tokens are restricted to Homebrew's charset, since they are passed back to `brew uninstall`.
+    [GeneratedRegex(@"^Error: Cask '([a-z0-9][a-z0-9@._+-]*)'", RegexOptions.Multiline)]
+    private static partial Regex CaskErrorRegex();
+
+    internal static List<string> ParseBrokenCasks(string stderr) =>
+        [.. CaskErrorRegex().Matches(stderr).Select(m => m.Groups[1].Value).Distinct(StringComparer.Ordinal)];
+
+    private static void LogCaskListingRecovered(string stderr, List<string> broken, bool listedAny)
+    {
+        string error = stderr.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("Error:"))
+            ?? stderr.Trim().Split('\n')[0].Trim();
+        string what = listedAny ? "listed only some casks" : "listed no cask";
+        Logger.Warn(
+            broken.Count > 0
+                ? $"Homebrew cannot load the installed cask(s) {string.Join(", ", broken)}, so `brew list --cask "
+                    + $"--versions` failed and {what} ({error}). Installed casks were read from the Caskroom instead; "
+                    + "uninstalling the cask(s) from the Manager Health page fixes this."
+                : $"`brew list --cask --versions` failed and {what} ({error}). Installed casks were read from the "
+                    + "Caskroom instead."
+        );
+    }
+
+    private bool TryReadCasksFromCaskroom(out List<(string Id, string Version)> casks)
+    {
+        casks = [];
+        BrewOutput caskroom = RunBrewListing("--caskroom", LoggableTaskType.ListInstalledPackages);
+        string path = caskroom.StdOut.FirstOrDefault(l => l.Trim().Length > 0)?.Trim() ?? "";
+        if (caskroom.ExitCode != 0 || path.Length == 0 || !Directory.Exists(path))
+            return false;
+
+        try
+        {
+            casks = ReadInstalledCasks(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Logger.Warn($"Could not read the Homebrew Caskroom at {path}: {ex.Message}");
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Lists installed casks and their versions from the Caskroom the way Homebrew does
+    /// (Caskroom.cask_installed_version), without loading any cask definition.
+    /// </summary>
+    internal static List<(string Id, string Version)> ReadInstalledCasks(string caskroomPath)
+    {
+        var tokens = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var dir in new DirectoryInfo(caskroomPath).EnumerateDirectories())
+        {
+            // A cask renamed upstream may leave its old token as a symlink to the new one.
+            FileSystemInfo? target = dir.LinkTarget is null ? null : dir.ResolveLinkTarget(returnFinalTarget: true);
+            tokens.Add(target?.Name ?? dir.Name);
+        }
+
+        var casks = new List<(string, string)>();
+        foreach (var token in tokens)
+        {
+            var caskDir = new DirectoryInfo(Path.Combine(caskroomPath, token));
+            if (!caskDir.Exists || caskDir.LinkTarget is not null) continue;
+
+            var metadata = new DirectoryInfo(Path.Combine(caskDir.FullName, ".metadata"));
+            if (!metadata.Exists) continue;
+
+            // The newest install is the timestamp directory with the greatest name, across versions.
+            DirectoryInfo? latest = metadata
+                .EnumerateDirectories()
+                .SelectMany(version => version.EnumerateDirectories())
+                .MaxBy(timestamp => timestamp.Name, StringComparer.Ordinal);
+            if (latest is null) continue;
+
+            string casksDir = Path.Combine(latest.FullName, "Casks");
+            if (!File.Exists(Path.Combine(casksDir, token + ".json"))
+                && !File.Exists(Path.Combine(casksDir, token + ".rb")))
+                continue;
+
+            casks.Add((token, latest.Parent!.Name));
+        }
+        return casks;
+    }
+
+    internal static List<(string Id, string Version)> MergeInstalledEntries(
+        IEnumerable<(string Id, string Version)> listed,
+        IEnumerable<(string Id, string Version)> fromCaskroom)
+    {
+        var merged = listed.ToList();
+        var seen = new HashSet<string>(merged.Select(e => e.Id), StringComparer.Ordinal);
+        merged.AddRange(fromCaskroom.Where(e => seen.Add(e.Id)));
+        return merged;
     }
 
     private void ThrowIfListingFailed(int exitCode, string error)
@@ -286,25 +428,10 @@ public partial class Homebrew : PackageManager
             PackageListingScope.ReportIncomplete(failure);
         }
 
-        using var p = new Process { StartInfo = MakeBrewStartInfo("outdated --verbose") };
-        IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
-        p.Start();
+        BrewOutput result = RunBrewListing("outdated --verbose", LoggableTaskType.ListUpdates);
+        ThrowIfListingFailed(result.ExitCode, result.StdErr);
 
-        var lines = new List<string>();
-        string? line;
-        while ((line = p.StandardOutput.ReadLine()) is not null)
-        {
-            logger.AddToStdOut(line);
-            lines.Add(line);
-        }
-
-        string error = p.StandardError.ReadToEnd();
-        logger.AddToStdErr(error);
-        p.WaitForExit();
-        logger.Close(p.ExitCode);
-        ThrowIfListingFailed(p.ExitCode, error);
-
-        return ParseAvailableUpdates(lines, installed);
+        return ParseAvailableUpdates(result.StdOut, installed);
     }
 
     internal IReadOnlyList<Package> ParseAvailableUpdates(

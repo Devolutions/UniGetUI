@@ -187,20 +187,27 @@ public partial class ManagerHealthRowViewModel : ObservableObject
                 Listings.Add(listing);
         }
 
-        var actions = Manager.GetMaintenanceActions();
-        for (int index = Actions.Count - 1; index >= 0; index--)
+        SyncActions(Actions, Manager.GetMaintenanceActions(), action => () => _owner.RunActionAsync(Manager, action));
+    }
+
+    internal static void SyncActions(
+        ObservableCollection<ManagerHealthActionViewModel> rows,
+        IReadOnlyList<ManagerMaintenanceAction> actions,
+        Func<ManagerMaintenanceAction, Func<Task>> run)
+    {
+        for (int index = rows.Count - 1; index >= 0; index--)
         {
-            if (actions.All(action => action.Id != Actions[index].Id))
-                Actions.RemoveAt(index);
+            if (actions.All(action => action.Id != rows[index].Id))
+                rows.RemoveAt(index);
         }
 
         for (int index = 0; index < actions.Count; index++)
         {
             var action = actions[index];
             int existing = -1;
-            for (int candidate = 0; candidate < Actions.Count; candidate++)
+            for (int candidate = 0; candidate < rows.Count; candidate++)
             {
-                if (Actions[candidate].Id == action.Id)
+                if (rows[candidate].Id == action.Id)
                 {
                     existing = candidate;
                     break;
@@ -208,9 +215,17 @@ public partial class ManagerHealthRowViewModel : ObservableObject
             }
 
             if (existing < 0)
-                Actions.Insert(index, new ManagerHealthActionViewModel(action, () => _owner.RunActionAsync(Manager, action)));
-            else if (existing != index)
-                Actions.Move(existing, index);
+            {
+                rows.Insert(index, new ManagerHealthActionViewModel(action, run(action)));
+                continue;
+            }
+
+            // An action whose text changed targets something else now (e.g. other broken casks):
+            // rebuild it so the confirmation and the command come from the same snapshot.
+            if (rows[existing].Title != action.Title || rows[existing].Description != action.Description)
+                rows[existing] = new ManagerHealthActionViewModel(action, run(action));
+            if (existing != index)
+                rows.Move(existing, index);
         }
     }
 }

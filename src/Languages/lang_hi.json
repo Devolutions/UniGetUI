@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (संशोधन {1})",
   "More information": "अधिक जानकारी",
   "Graphical interface for your package managers": "आपके पैकेज मैनेजर के लिए ग्राफ़िकल इंटरफ़ेस",
-  "Show UniGetUI in the applications menu": "ऐप्लिकेशन मेनू में UniGetUI दिखाएँ"
+  "Show UniGetUI in the applications menu": "ऐप्लिकेशन मेनू में UniGetUI दिखाएँ",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "{1} में से प्री-ऑपरेशन {0} पहले ही सफल हो चुका है, इसे छोड़ा जा रहा है"
 }

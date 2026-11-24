@@ -17,3 +17,12 @@ public sealed class WindowsTheoryAttribute : TheoryAttribute
             Skip = "Runs on Windows only";
     }
 }
+
+public sealed class MacOSFactAttribute : FactAttribute
+{
+    public MacOSFactAttribute()
+    {
+        if (!OperatingSystem.IsMacOS())
+            Skip = "Runs on macOS only";
+    }
+}

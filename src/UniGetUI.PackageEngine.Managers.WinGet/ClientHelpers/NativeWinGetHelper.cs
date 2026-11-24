@@ -185,21 +185,12 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         Logger.Info($"WinGet activation mode selected: {ActivationMode} | Source: {ActivationSource}");
     }
 
-    internal readonly record struct NativeSearchRequest(
-        PackageMatchField Field,
-        bool IsSelector,
-        uint? ResultLimit
-    );
-
-    internal static IReadOnlyList<NativeSearchRequest> GetSearchRequests(string query) =>
-        query.Length == 0
-            ? [new(PackageMatchField.CatalogDefault, true, (uint)SearchLimits.MaxEmptyQueryResultsPerSource)]
-            :
-            [
-                new(PackageMatchField.Name, false, null),
-                new(PackageMatchField.Id, false, null),
-                new(PackageMatchField.Moniker, false, null),
-            ];
+    internal static readonly IReadOnlyList<PackageMatchField> SearchFields =
+    [
+        PackageMatchField.Name,
+        PackageMatchField.Id,
+        PackageMatchField.Moniker,
+    ];
 
     internal readonly record struct NativeSearchMatchId(string CatalogName, string? Id);
 
@@ -299,6 +290,11 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
+        if (query.Length == 0)
+        {
+            return _systemCliHelperFactory(Manager).FindPackages_UnSafe(query);
+        }
+
         List<Package> packages = [];
         INativeTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.FindPackages);
         Dictionary<
@@ -321,29 +317,17 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             ConnectResult result = CatalogReference.Connect();
             if (result.Status == ConnectResultStatus.Ok)
             {
-                foreach (NativeSearchRequest request in GetSearchRequests(query))
+                foreach (PackageMatchField field in SearchFields)
                 {
                     FindPackagesOptions PackageFilters = Factory.CreateFindPackagesOptions();
 
                     logger.Log("Generating filters...");
                     // Name filter
                     PackageMatchFilter FilterName = Factory.CreatePackageMatchFilter();
-                    FilterName.Field = request.Field;
+                    FilterName.Field = field;
                     FilterName.Value = query;
                     FilterName.Option = PackageFieldMatchOption.ContainsCaseInsensitive;
-                    if (request.IsSelector)
-                    {
-                        PackageFilters.Selectors.Add(FilterName);
-                    }
-                    else
-                    {
-                        PackageFilters.Filters.Add(FilterName);
-                    }
-
-                    if (request.ResultLimit is { } limit)
-                    {
-                        PackageFilters.ResultLimit = limit;
-                    }
+                    PackageFilters.Filters.Add(FilterName);
 
                     try
                     {
@@ -354,7 +338,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                         task.Start();
 
                         // Add task to list
-                        FindPackageTasks.Add((CatalogReference, request.Field), task);
+                        FindPackageTasks.Add((CatalogReference, field), task);
                     }
                     catch (Exception e)
                     {
@@ -722,7 +706,28 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 return null;
             }
 
-            return newest.GetApplicableInstaller(Factory.CreateInstallOptions()) is null ? null : newest;
+            PackageInstallerInfo? installer = newest.GetApplicableInstaller(Factory.CreateInstallOptions());
+            if (installer is null)
+                return null;
+
+            if (
+                UpgradesInstalledProduct(
+                    new InstalledProduct(
+                        NativeWinGetCollection.Copy(installed.ProductCodes),
+                        () => ReadInstalledScope(installed)
+                    ),
+                    new NewestProduct(NativeWinGetCollection.Copy(newest.ProductCodes), installer.Scope)
+                )
+            )
+            {
+                logger.Log(
+                    $"Not listing {DescribePackage(nativePackage)} as an update that needs a reinstall: its newest version {newest.Version} "
+                        + "installs the same Windows Installer product in the same scope, so uninstalling it first is not needed"
+                );
+                return null;
+            }
+
+            return newest;
         }
         catch (Exception ex) when (!PackageListingScope.IsListingOnly)
         {
@@ -750,6 +755,42 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     internal static bool IsSamePackage(string? listedId, string? newestId) =>
         !string.IsNullOrWhiteSpace(listedId)
         && string.Equals(listedId, newestId, StringComparison.OrdinalIgnoreCase);
+
+    internal sealed record InstalledProduct(IReadOnlyList<string> ProductCodes, Func<string?> ReadScope);
+
+    internal sealed record NewestProduct(IReadOnlyList<string> ProductCodes, PackageInstallerScope Scope);
+
+    internal static bool UpgradesInstalledProduct(InstalledProduct installed, NewestProduct newest)
+    {
+        string[] newestCodes = [.. newest.ProductCodes.Where(code => !string.IsNullOrWhiteSpace(code))];
+        if (
+            newestCodes.Length == 0
+            || !newestCodes.All(code => installed.ProductCodes.Contains(code, StringComparer.OrdinalIgnoreCase))
+        )
+            return false;
+
+        string? expectedScope = newest.Scope switch
+        {
+            PackageInstallerScope.User => "User",
+            PackageInstallerScope.System => "System",
+            _ => null,
+        };
+        return expectedScope is not null
+            && string.Equals(installed.ReadScope(), expectedScope, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ReadInstalledScope(PackageVersionInfo installed)
+    {
+        try
+        {
+            return installed.GetMetadata(PackageVersionMetadataField.InstalledScope);
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Could not read the installed scope of {installed.Id}: {ex.Message}");
+            return null;
+        }
+    }
 
     internal static bool IsNewerVersion(IPackageManager manager, string? installedVersion, string? newestVersion) =>
         !WinGetPkgOperationHelper.IsUnknownVersion(installedVersion)

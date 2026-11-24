@@ -151,31 +151,186 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
-    [Fact]
-    public void NativeWinGetHelperSearchesEmptyQueryThroughCatalogDefaultSelector()
-    {
-        var request = Assert.Single(NativeWinGetHelper.GetSearchRequests(""));
+    private const string QuickenProductCode = "{62D93E3E-2F8E-42BD-9343-896F4F0031D3}";
+    private const string OtherProductCode = "{11111111-1111-1111-1111-111111111111}";
 
-        Assert.Equal(Microsoft.Management.Deployment.PackageMatchField.CatalogDefault, request.Field);
-        Assert.True(request.IsSelector);
-        Assert.Equal((uint)SearchLimits.MaxEmptyQueryResultsPerSource, request.ResultLimit);
+    private static bool UpgradesInstalledProduct(
+        string[] installedCodes,
+        string? installedScope,
+        string[] newestCodes,
+        Microsoft.Management.Deployment.PackageInstallerScope newestScope
+    ) =>
+        NativeWinGetHelper.UpgradesInstalledProduct(
+            new NativeWinGetHelper.InstalledProduct(installedCodes, () => installedScope),
+            new NativeWinGetHelper.NewestProduct(newestCodes, newestScope)
+        );
+
+    [Theory]
+    [InlineData("System", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("system", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("User", Microsoft.Management.Deployment.PackageInstallerScope.User)]
+    public void ReinstallOnlyUpdateIsNotListedWhenTheNewestVersionInstallsTheInstalledProduct(
+        string installedScope,
+        Microsoft.Management.Deployment.PackageInstallerScope newestScope
+    )
+    {
+        Assert.True(
+            UpgradesInstalledProduct(
+                [QuickenProductCode, "Quicken"],
+                installedScope,
+                [QuickenProductCode.ToLowerInvariant()],
+                newestScope
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData("System", Microsoft.Management.Deployment.PackageInstallerScope.User)]
+    [InlineData("User", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("Machine", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("Unknown", Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData(null, Microsoft.Management.Deployment.PackageInstallerScope.System)]
+    [InlineData("System", Microsoft.Management.Deployment.PackageInstallerScope.Unknown)]
+    public void ReinstallOnlyUpdateIsListedWhenTheScopeChangesOrCannotBeCompared(
+        string? installedScope,
+        Microsoft.Management.Deployment.PackageInstallerScope newestScope
+    )
+    {
+        Assert.False(
+            UpgradesInstalledProduct([QuickenProductCode], installedScope, [QuickenProductCode], newestScope)
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsListedWhenTheProductChanges()
+    {
+        Assert.False(
+            UpgradesInstalledProduct(
+                ["Audacity_is1"],
+                "System",
+                [OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsListedWhenAnotherInstallerOfTheNewestVersionInstallsADifferentProduct()
+    {
+        Assert.False(
+            UpgradesInstalledProduct(
+                [QuickenProductCode],
+                "System",
+                [QuickenProductCode, OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateComparesTheNewestCodesAgainstTheInstalledOnes()
+    {
+        Assert.True(
+            UpgradesInstalledProduct(
+                [QuickenProductCode, OtherProductCode],
+                "System",
+                [QuickenProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+        Assert.False(
+            UpgradesInstalledProduct(
+                [QuickenProductCode],
+                "System",
+                [QuickenProductCode, OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void ReinstallOnlyUpdateIsListedWhenTheNewestVersionDeclaresNoProductCode(string? newestCode)
+    {
+        Assert.False(
+            UpgradesInstalledProduct(
+                ["", " ", QuickenProductCode],
+                "System",
+                newestCode is null ? [] : [newestCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateReadsTheInstalledScopeOnlyWhenTheProductMatches()
+    {
+        bool scopeRead = false;
+        bool upgrades = NativeWinGetHelper.UpgradesInstalledProduct(
+            new NativeWinGetHelper.InstalledProduct(
+                ["Audacity_is1"],
+                () =>
+                {
+                    scopeRead = true;
+                    return "System";
+                }
+            ),
+            new NativeWinGetHelper.NewestProduct(
+                [OtherProductCode],
+                Microsoft.Management.Deployment.PackageInstallerScope.System
+            )
+        );
+
+        Assert.False(upgrades);
+        Assert.False(scopeRead);
+    }
+
+    [Fact]
+    public void NativeWinGetHelperSearchesEmptyQueryThroughCli()
+    {
+        var manager = new TestableWinGet();
+        var expectedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .Build();
+        List<string> cliQueries = [];
+        var cliHelper = new TestWinGetManagerHelper
+        {
+            FindPackagesHandler = query =>
+            {
+                cliQueries.Add(query);
+                return [expectedPackage];
+            },
+        };
+        var helper = new NativeWinGetHelper(
+            manager,
+            systemCliHelperFactory: _ => cliHelper,
+            skipInitialization: true,
+            localPackagesProvider: null
+        );
+
+        var packages = helper.FindPackages_UnSafe("");
+
+        Assert.Equal([""], cliQueries);
+        PackageAssert.Matches(Assert.Single(packages), "Contoso Tool", "Contoso.Tool", "1.2.3");
     }
 
     [Fact]
     public void NativeWinGetHelperSearchesQueryByNameIdAndMonikerFilters()
     {
-        var requests = NativeWinGetHelper.GetSearchRequests("contoso");
-
         Assert.Equal(
             [
                 Microsoft.Management.Deployment.PackageMatchField.Name,
                 Microsoft.Management.Deployment.PackageMatchField.Id,
                 Microsoft.Management.Deployment.PackageMatchField.Moniker,
             ],
-            requests.Select(request => request.Field)
+            NativeWinGetHelper.SearchFields
         );
-        Assert.All(requests, request => Assert.False(request.IsSelector));
-        Assert.All(requests, request => Assert.Null(request.ResultLimit));
     }
 
     [Fact]

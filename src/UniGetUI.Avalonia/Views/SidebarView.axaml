@@ -13,6 +13,14 @@
              x:DataType="vm:SidebarViewModel"
              MinWidth="64">
 
+    <UserControl.Styles>
+        <Style Selector="ListBoxItem.nav-item.drop-target /template/ ContentPresenter#ContentHost">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+    </UserControl.Styles>
+
     <Grid x:Name="SidebarLayout" RowDefinitions="*,Auto">
 
         <!-- Main nav items -->
@@ -288,8 +296,8 @@
                     </Grid>
                 </ListBoxItem>
 
-                <!-- More is kept selected while its flyout is open so its navigation pill remains visible. -->
                 <ListBoxItem x:Name="MoreNavBtn" Tag="More" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                             Tapped="MoreNavBtn_Tapped"
                              automation:AutomationProperties.Name="{t:Translate More}"
                              ToolTip.Tip="{t:Translate More}">
                     <Panel>
@@ -303,60 +311,11 @@
                                 CornerRadius="5"
                                 Width="10"
                                 Height="10"
-                                IsVisible="{Binding SelfUpdateBadgeVisible}"
+                                IsVisible="{Binding MoreBadgeVisible}"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
                                 Margin="28,7,0,0"/>
                     </Panel>
-                    <FlyoutBase.AttachedFlyout>
-                        <MenuFlyout Placement="RightEdgeAlignedTop">
-                        <MenuItem Header="{t:Translate UniGetUI Log}" Command="{Binding RequestNavigationCommand}" CommandParameter="OwnLog">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/buggy.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="{t:Translate Package Manager logs}" Command="{Binding RequestNavigationCommand}" CommandParameter="ManagerLog">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/console.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="{t:Translate Operation history}" Command="{Binding RequestNavigationCommand}" CommandParameter="OperationHistory">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/history.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="{t:Translate Manager health}" Command="{Binding RequestNavigationCommand}" CommandParameter="ManagerHealth">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package_managers.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="{Binding VersionLabel}" IsEnabled="False">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/info_round.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="{t:Translate Release notes}" Command="{Binding RequestNavigationCommand}" CommandParameter="ReleaseNotes">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/megaphone.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Command="{Binding CheckForUpdatesCommand}"
-                                  automation:AutomationProperties.Name="{Binding CheckForUpdatesLabel}">
-                            <MenuItem.Header>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="{Binding CheckForUpdatesLabel}" VerticalAlignment="Center"/>
-                                    <Ellipse Width="8"
-                                             Height="8"
-                                             Fill="{DynamicResource AccentFillColorDefaultBrush}"
-                                             IsVisible="{Binding SelfUpdateBadgeVisible}"
-                                             VerticalAlignment="Center"
-                                             Margin="0,4,0,0"/>
-                                </StackPanel>
-                            </MenuItem.Header>
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="{t:Translate Help}" Command="{Binding RequestNavigationCommand}" CommandParameter="Help">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/help.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="{t:Translate About}" Command="{Binding RequestNavigationCommand}" CommandParameter="About">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/info_round.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="{t:Translate Quit UniGetUI}" Command="{Binding RequestNavigationCommand}" CommandParameter="Quit">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/close_round.svg" Width="16" Height="16"/></MenuItem.Icon>
-                        </MenuItem>
-                        </MenuFlyout>
-                    </FlyoutBase.AttachedFlyout>
                 </ListBoxItem>
 
             </ListBox>
@@ -366,6 +325,11 @@
         <!-- One shared indicator moves between items so selection changes use WinUI's
              leading/trailing-edge stretch instead of fading separate item indicators. -->
         <Canvas Grid.RowSpan="2" IsHitTestVisible="False">
+            <Border x:Name="ExternalDropIndicator"
+                    Height="2"
+                    CornerRadius="1"
+                    IsVisible="False"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}"/>
             <!-- Fixed-radius caps preserve the original pill silhouette while the rectangular
                  stem stretches between them using render transforms only. -->
             <Panel x:Name="NavigationSelectionPill"

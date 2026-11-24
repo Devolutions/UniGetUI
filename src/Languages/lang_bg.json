@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (ревизия {1})",
   "More information": "Повече информация",
   "Graphical interface for your package managers": "Графичен интерфейс за вашите мениджъри на пакети",
-  "Show UniGetUI in the applications menu": "Показване на UniGetUI в менюто с приложения"
+  "Show UniGetUI in the applications menu": "Показване на UniGetUI в менюто с приложения",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "Предварителна операция {0} от {1} вече е изпълнена успешно, пропуска се"
 }

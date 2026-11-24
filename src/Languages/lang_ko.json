@@ -3107,5 +3107,6 @@
   "{0} (revision {1})": "{0} (수정 버전 {1})",
   "More information": "자세히 알아보기",
   "Graphical interface for your package managers": "패키지 관리자를 위한 그래픽 인터페이스",
-  "Show UniGetUI in the applications menu": "애플리케이션 메뉴에 UniGetUI 표시"
+  "Show UniGetUI in the applications menu": "애플리케이션 메뉴에 UniGetUI 표시",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "사전 작업 {1}개 중 {0}개가 이미 성공하여 건너뜁니다"
 }

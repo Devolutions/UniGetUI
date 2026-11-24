@@ -1125,6 +1125,20 @@
       "icon": "https://community.chocolatey.org/content/packageimages/adobe-connect.2020.1.5.png",
       "images": []
     },
+    "adobe-acrobat-pro": {
+      "icon": "https://www.adobe.com/dc-shared/assets/images/product-icons/svg/acrobat-pro.svg",
+      "images": [
+        "https://i.postimg.cc/hvRv215m/Snimok-ekrana-2026-11-22-005924.png",
+        "https://i.postimg.cc/fyQy8frY/Snimok-ekrana-2026-11-22-010011.png"
+      ]
+    },
+    "adobe-acrobat-pro-64-bit": {
+      "icon": "https://www.adobe.com/dc-shared/assets/images/product-icons/svg/acrobat-pro.svg",
+      "images": [
+        "https://i.postimg.cc/hvRv215m/Snimok-ekrana-2026-11-22-005924.png",
+        "https://i.postimg.cc/fyQy8frY/Snimok-ekrana-2026-11-22-010011.png"
+      ]
+    },
     "adobe-dnc": {
       "icon": "https://community.chocolatey.org/content/packageimages/adobe-dnc.15.2.png",
       "images": []
@@ -7913,6 +7927,13 @@
       "icon": "",
       "images": []
     },
+    "cloudflare-warp": {
+      "icon": "https://i.postimg.cc/7Y3pjnfV/warp-logo.png",
+      "images": [
+        "https://i.postimg.cc/PLMYyVTX/1.png",
+        "https://i.postimg.cc/R3TKdp4C/2.png"
+      ]
+    },
     "cloudflarespeedtest": {
       "icon": "",
       "images": []
@@ -8310,6 +8331,10 @@
     },
     "commitmonitor": {
       "icon": "https://community.chocolatey.org/content/packageimages/commitmonitor.1.11.2.1123.png",
+      "images": []
+    },
+    "communicationplatform-max": {
+      "icon": "https://i.postimg.cc/VLK8ZFSX/Logotip-MAX-svg.png",
       "images": []
     },
     "communicator": {
@@ -18278,6 +18303,10 @@
       "icon": "https://community.chocolatey.org/content/packageimages/Halite.0.4.0.4.png",
       "images": []
     },
+    "halloy": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/halloy-192.png",
+      "images": []
+    },
     "halo": {
       "icon": "",
       "images": []
@@ -19961,7 +19990,7 @@
       "images": []
     },
     "imo-messenger": {
-      "icon": "",
+      "icon": "https://i.postimg.cc/DztpYSdW/image.png",
       "images": []
     },
     "implay": {
@@ -24352,6 +24381,10 @@
       "icon": "",
       "images": []
     },
+    "loyalsoldier-geoip": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/loyalsoldier-geoip-alt.png",
+      "images": []
+    },
     "lpsolve-ide": {
       "icon": "https://community.chocolatey.org/content/packageimages/lpsolve-ide.5.5.2.11.png",
       "images": []
@@ -24728,6 +24761,18 @@
     },
     "makerlapse": {
       "icon": "",
+      "images": []
+    },
+    "makuflash": {
+      "icon": "https://adderly.top/icons/3.png",
+      "images": []
+    },
+    "makutweaker": {
+      "icon": "https://adderly.top/icons/1.png",
+      "images": []
+    },
+    "makutyper": {
+      "icon": "https://adderly.top/icons/2.png",
       "images": []
     },
     "malden": {
@@ -35345,6 +35390,14 @@
       "icon": "",
       "images": []
     },
+    "realitlscanner": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/realitlscanner-192.png",
+      "images": []
+    },
+    "realitlscanner-gui": {
+      "icon": "https://raw.githubusercontent.com/Gesugao-san/scoop-bucket/main/icons/realitlscanner-gui-192.png",
+      "images": []
+    },
     "realpopup": {
       "icon": "https://community.chocolatey.org/content/packageimages/realpopup.11.1.png",
       "images": []
@@ -42067,19 +42120,19 @@
       "images": []
     },
     "telegram": {
-      "icon": "https://community.chocolatey.org/content/packageimages/telegram.install.4.6.5.png",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "telegram-downloader": {
-      "icon": "",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "telegramdesktop": {
-      "icon": "https://i.imgur.com/at0VmW2.png",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "telegramdesktop-beta": {
-      "icon": "",
+      "icon": "https://i.postimg.cc/t41FY2WT/Telegram-2019-Logo-svg.png",
       "images": []
     },
     "teleport": {
@@ -45502,7 +45555,7 @@
       "images": []
     },
     "viber": {
-      "icon": "https://i.imgur.com/NNuAkJi.png",
+      "icon": "https://i.postimg.cc/5NFpY4wL/unnamed.jpg",
       "images": []
     },
     "vibrance-gui": {
@@ -48152,19 +48205,19 @@
       "images": []
     },
     "whatsapp": {
-      "icon": "https://i.postimg.cc/jjzdZ4GZ/WhatsApp.png",
+      "icon": "https://i.postimg.cc/JnDKNM92/apps-8453-13655054093851568-4a371b72-2ce8-4bdb-9d83-be49894d3fa0.png",
       "images": []
     },
     "whatsapp-beta": {
-      "icon": "https://i.postimg.cc/jjzdZ4GZ/WhatsApp.png",
+      "icon": "https://i.postimg.cc/JnDKNM92/apps-8453-13655054093851568-4a371b72-2ce8-4bdb-9d83-be49894d3fa0.png",
       "images": []
     },
     "whatsappdesktop": {
-      "icon": "https://i.postimg.cc/jjzdZ4GZ/WhatsApp.png",
+      "icon": "https://i.postimg.cc/JnDKNM92/apps-8453-13655054093851568-4a371b72-2ce8-4bdb-9d83-be49894d3fa0.png",
       "images": []
     },
     "whatsapptray": {
-      "icon": "https://community.chocolatey.org/content/packageimages/whatsapptray.1.9.0.png",
+      "icon": "https://i.postimg.cc/Z5mTXqjh/tray.png",
       "images": []
     },
     "which": {
@@ -50608,6 +50661,12 @@
         "https://i.postimg.cc/L40ZfDp8/nl-Rywj-YEux.png",
         "https://i.postimg.cc/6Q08QLcw/Scfmnn-Mo48.png",
         "https://i.postimg.cc/HxkV8cvM/u-ARCBXBW1-L.png"
+      ]
+    },
+    "yandex-telemost": {
+      "icon": "https://i.postimg.cc/pLxptCkH/00c7c372-29e3-41e5-b4a1-8941c144e1e3.png",
+      "images": [
+        "https://i.postimg.cc/wBCCSfcR/SCR-20260921-jvxm.png"
       ]
     },
     "yanknote": {

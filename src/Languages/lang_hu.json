@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (revízió: {1})",
   "More information": "További információ",
   "Graphical interface for your package managers": "Grafikus felület a csomagkezelőkhöz",
-  "Show UniGetUI in the applications menu": "A UniGetUI megjelenítése az alkalmazások menüben"
+  "Show UniGetUI in the applications menu": "A UniGetUI megjelenítése az alkalmazások menüben",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "A(z) {0}/{1}. előművelet már sikerült, kihagyjuk."
 }

@@ -304,6 +304,36 @@ jobs:
             Write-Host ("Removed {0} oversized PDBs above {1:N2} MiB ({2:N2} MiB total)." -f $PdbsToRemove.Count, ($MaxShippedPdbSizeBytes / 1MB), ($RemovedPdbBytes / 1MB))
           }
 
+      - name: Generate third-party notices
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/generate-third-party-notices.ps1 `
+            -PublishDir unigetui_bin `
+            -RuntimeIdentifier 'win-${{ matrix.platform }}' `
+            -Version '${{ needs.preflight.outputs.package-version }}'
+
+      - name: Require third-party notices
+        shell: pwsh
+        run: |
+          foreach ($File in 'THIRD-PARTY-NOTICES.txt', 'THIRD-PARTY-NOTICES.json') {
+            if (-not (Test-Path -LiteralPath "unigetui_bin/$File" -PathType Leaf)) {
+              throw "$File was not generated into unigetui_bin."
+            }
+          }
+
+      - name: Upload third-party notices
+        if: matrix.platform == 'x64'
+        uses: actions/upload-artifact@v7
+        with:
+          name: third-party-notices
+          if-no-files-found: error
+          path: |
+            unigetui_bin/THIRD-PARTY-NOTICES.txt
+            unigetui_bin/THIRD-PARTY-NOTICES.json
+
       - name: Code-sign binaries
         if: ${{ fromJSON(needs.preflight.outputs.dry-run) == false }}
         shell: pwsh
@@ -635,6 +665,26 @@ jobs:
           chmod +x $Launcher
           ./scripts/check-linux-glibc.ps1 -Path "bin/${{ matrix.name }}" -MaxVersion '${{ env.LINUX_GLIBC_BASELINE }}'
 
+      - name: Generate third-party notices
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/generate-third-party-notices.ps1 `
+            -PublishDir 'bin/${{ matrix.name }}' `
+            -RuntimeIdentifier '${{ matrix.runtime }}' `
+            -Version '${{ needs.preflight.outputs.package-version }}'
+
+      - name: Require third-party notices
+        shell: pwsh
+        run: |
+          foreach ($File in 'THIRD-PARTY-NOTICES.txt', 'THIRD-PARTY-NOTICES.json') {
+            if (-not (Test-Path -LiteralPath "bin/${{ matrix.name }}/$File" -PathType Leaf)) {
+              throw "$File was not generated into bin/${{ matrix.name }}."
+            }
+          }
+
       - name: Install macOS packaging tools
         if: runner.os == 'macOS'
         run: brew install create-dmg
@@ -709,7 +759,19 @@ jobs:
             codesign --force --sign - "${APP_BUNDLE}"
           fi
 
-          COPYFILE_DISABLE=1 tar -czf "output/UniGetUI.${{ matrix.name }}.tar.gz" "${APP_BUNDLE}"
+          # Keep extended attributes: the signatures of the non-code files in Contents/MacOS live there,
+          # and the self-updater verifies the whole extracted bundle.
+          /usr/bin/tar -czf "output/UniGetUI.${{ matrix.name }}.tar.gz" "${APP_BUNDLE}"
+
+          if [ "$DRY_RUN" = "false" ]; then
+            # Check the archive as the self-updater will (MacAppSignature.Requirement in UniGetUI.Avalonia).
+            CHECK_DIR="$(mktemp -d)"
+            /usr/bin/tar -xzf "output/UniGetUI.${{ matrix.name }}.tar.gz" -C "$CHECK_DIR"
+            codesign --verify --deep --strict \
+              -R='anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and (certificate leaf[subject.OU] = "N592S9ASDB")' \
+              "$CHECK_DIR/UniGetUI.app"
+            rm -rf "$CHECK_DIR"
+          fi
 
           create-dmg \
             --volname "UniGetUI" \
@@ -834,6 +896,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: output
+          pattern: UniGetUI-*
 
       - name: Add legacy installer filename
         shell: pwsh
@@ -1009,6 +1072,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: output
+          pattern: UniGetUI-*
 
       - name: Generate consolidated size report
         shell: pwsh
@@ -1048,3 +1112,73 @@ jobs:
         with:
           name: UniGetUI-size-report
           path: output/sizes.md
+
+  commit-third-party-notices:
+    name: Commit third-party notices
+    runs-on: ubuntu-latest
+    needs: [preflight, publish]
+    if: ${{ fromJSON(needs.preflight.outputs.dry-run) == false && fromJSON(needs.preflight.outputs.is-prerelease) == false }}
+    environment: ${{ needs.preflight.outputs.package-env }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+
+      - name: Download third-party notices
+        uses: actions/download-artifact@v8
+        with:
+          name: third-party-notices
+          path: notices
+
+      - name: Open a pull request when a component changed
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:GH_TOKEN)) {
+            throw 'DEVOLUTIONSBOT_TOKEN is not available to this job; pull requests opened with GITHUB_TOKEN would never run CI.'
+          }
+
+          $Target = 'src/UniGetUI.Avalonia/ThirdPartyNotices'
+          $ReleaseVersion = '${{ needs.preflight.outputs.release-version }}'
+
+          function Get-ComponentsKey([string] $Path) {
+            if (-not (Test-Path -LiteralPath $Path)) { return '' }
+            $Document = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+            $Document.PSObject.Properties.Remove('appVersion')
+            return $Document | ConvertTo-Json -Depth 10 -Compress
+          }
+
+          if ((Get-ComponentsKey "$Target/THIRD-PARTY-NOTICES.json") -eq (Get-ComponentsKey 'notices/THIRD-PARTY-NOTICES.json')) {
+            Write-Host 'No third-party component changed since the committed notices.'
+            return
+          }
+
+          New-Item -ItemType Directory -Force -Path $Target | Out-Null
+          Copy-Item -Path 'notices/THIRD-PARTY-NOTICES.txt', 'notices/THIRD-PARTY-NOTICES.json' -Destination $Target -Force
+
+          $Branch = "ci/third-party-notices-$ReleaseVersion"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c $Branch
+          git add -- $Target
+          git commit -m "Update third-party notices for $ReleaseVersion"
+          if ($LASTEXITCODE -ne 0) { throw 'git commit failed' }
+          git push --force origin "HEAD:refs/heads/$Branch"
+          if ($LASTEXITCODE -ne 0) { throw 'git push failed' }
+
+          $Existing = gh pr list --head $Branch --state open --json url --jq '.[0].url'
+          if ($LASTEXITCODE -ne 0) { throw 'gh pr list failed' }
+          if ($Existing) {
+            Write-Host "Updated the existing pull request: $Existing"
+            return
+          }
+
+          gh pr create --base '${{ github.ref_name }}' --head $Branch `
+            --title "Update third-party notices for $ReleaseVersion" `
+            --body "THIRD-PARTY-NOTICES.txt and .json as generated by the $ReleaseVersion release (win-x64). Development builds ship this copy; release builds generate their own."
+          if ($LASTEXITCODE -ne 0) { throw 'gh pr create failed' }

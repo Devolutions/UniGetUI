@@ -3111,5 +3111,6 @@
   "{0} (revision {1})": "{0} (بازبینی {1})",
   "More information": "اطلاعات بیشتر",
   "Graphical interface for your package managers": "رابط گرافیکی برای مدیران بسته شما",
-  "Show UniGetUI in the applications menu": "نمایش UniGetUI در فهرست برنامه‌ها"
+  "Show UniGetUI in the applications menu": "نمایش UniGetUI در فهرست برنامه‌ها",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "عملیات پیشین {0} از {1} قبلاً با موفقیت انجام شده است؛ از آن صرف‌نظر می‌شود"
 }

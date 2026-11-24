@@ -3112,5 +3112,6 @@
   "{0} (revision {1})": "{0} (修訂版本 {1})",
   "More information": "更多資訊",
   "Graphical interface for your package managers": "套件管理員的圖形介面",
-  "Show UniGetUI in the applications menu": "在應用程式選單中顯示 UniGetUI"
+  "Show UniGetUI in the applications menu": "在應用程式選單中顯示 UniGetUI",
+  "PreOperation {0} out of {1} already succeeded, skipping it": "PreOperation {0}/{1} 已成功，略過此項"
 }

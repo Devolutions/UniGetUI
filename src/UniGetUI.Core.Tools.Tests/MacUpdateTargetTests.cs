@@ -401,7 +401,7 @@ public class MacSwapScriptTests
         Assert.False(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
     }
 
-    [MacOSFact]
+    [MacOSNonRootFact]
     [SupportedOSPlatform("macos")]
     public void SwapScript_SetsThePreviousVersionAsideWhenALeftoverBackupCannotBeDeleted()
     {
@@ -436,6 +436,38 @@ public class MacSwapScriptTests
         Assert.DoesNotContain(box.Root, box.Log());
     }
 
+    [MacOSNonRootFact]
+    [SupportedOSPlatform("macos")]
+    public void SwapScript_KeepsTheInstalledVersionWhenNoBackupNameIsAvailable()
+    {
+        using MacSwapSandbox box = new();
+        box.LockStaleBackup();
+        box.FakeCommand("mktemp", "exit 1");
+
+        box.Run();
+
+        Assert.Equal(box.Target, box.WaitForLaunch());
+        Assert.Equal("old", box.InstalledVersion());
+        Assert.True(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
+        Assert.Contains("Update swap failed while choosing where to set the installed version aside: no unused name was available", box.Log());
+    }
+
+    [MacOSFact]
+    [SupportedOSPlatform("macos")]
+    public void SwapScript_StartsThePreviousVersionFromItsBackupWhenTheRollbackFails()
+    {
+        using MacSwapSandbox box = new();
+        box.FailMvWhen("\"$2\" = \"$TARGET\"");
+
+        box.Run();
+
+        Assert.Equal(box.Target + ".old", box.WaitForLaunch());
+        Assert.False(Directory.Exists(box.Target));
+        Assert.True(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
+        Assert.Contains($"restoring the previous version, which was left in {Shown}.old: Permission denied", box.Log());
+        Assert.DoesNotContain(box.Root, box.Log());
+    }
+
     [SupportedOSPlatform("macos")]
     private sealed class MacSwapSandbox : IDisposable
     {
@@ -453,12 +485,16 @@ public class MacSwapScriptTests
         {
             foreach ((string dir, string version) in new[] { (Target, "old"), (NewApp, "new") })
             {
-                Directory.CreateDirectory(dir);
+                Directory.CreateDirectory(Path.Join(dir, "Contents", "MacOS"));
                 File.WriteAllText(Path.Join(dir, "version"), version);
+                string exe = Path.Join(dir, "Contents", "MacOS", "UniGetUI");
+                File.WriteAllText(exe, "#!/bin/sh\necho \"${0%/Contents/MacOS/UniGetUI}\" > \"$LAUNCHED\"\n");
+                File.SetUnixFileMode(exe, Executable);
             }
 
             File.WriteAllText(LogPath, "Target version: 2026.1.0\n");
-            File.WriteAllText(FakeOpen, "#!/bin/sh\necho \"$1\" > \"$LAUNCHED\"\n");
+            // Like LaunchServices, the stub refuses a bundle whose name does not end in .app.
+            File.WriteAllText(FakeOpen, "#!/bin/sh\ncase \"$1\" in *.app) echo \"$1\" > \"$LAUNCHED\" ;; *) exit 1 ;; esac\n");
             File.SetUnixFileMode(FakeOpen, Executable);
         }
 
@@ -472,17 +508,19 @@ public class MacSwapScriptTests
             return stale;
         }
 
-        public void FailMvWhen(string condition)
+        public void FailMvWhen(string condition) =>
+            FakeCommand(
+                "mv",
+                $"if [ {condition} ]; then echo \"mv: rename $1 to $2: Permission denied\" >&2; exit 1; fi\n"
+                + "exec /bin/mv \"$@\"");
+
+        public void FakeCommand(string name, string body)
         {
             _fakeBin = Path.Join(Root, "bin");
             Directory.CreateDirectory(_fakeBin);
-            string fakeMv = Path.Join(_fakeBin, "mv");
-            File.WriteAllText(
-                fakeMv,
-                "#!/bin/sh\n"
-                + $"if [ {condition} ]; then echo \"mv: rename $1 to $2: Permission denied\" >&2; exit 1; fi\n"
-                + "exec /bin/mv \"$@\"\n");
-            File.SetUnixFileMode(fakeMv, Executable);
+            string fake = Path.Join(_fakeBin, name);
+            File.WriteAllText(fake, "#!/bin/sh\n" + body + "\n");
+            File.SetUnixFileMode(fake, Executable);
         }
 
         public string InstalledVersion() => File.ReadAllText(Path.Join(Target, "version"));

@@ -27,10 +27,13 @@ public static class MacUpdateTargetResolver
         rm -rf "$backup" 2>/dev/null
         if [ -e "$backup" ] || [ -L "$backup" ]; then
           printf 'Update swap could not delete %s.old, so the previous version is set aside under another name\n' "$shown" >> "$log"
-          backup="$(mktemp -d "$target.old.XXXXXX")" && rmdir "$backup"
+          backup="$(mktemp -d "$target.old.XXXXXX")" && rmdir "$backup" || backup=""
         fi
         run="$target"
-        if err=$(LC_ALL=C mv "$target" "$backup" 2>&1); then
+        if [ -z "$backup" ]; then
+          reason "choosing where to set the installed version aside" "no unused name was available"
+          printf '\n%s %s\n' "$marker" "$shown" >> "$log"
+        elif err=$(LC_ALL=C mv "$target" "$backup" 2>&1); then
           if err=$(LC_ALL=C mv "$newapp" "$target" 2>&1); then
             xattr -dr com.apple.quarantine "$target" 2>/dev/null
             rm -rf "$backup"
@@ -47,7 +50,8 @@ public static class MacUpdateTargetResolver
           reason "moving the installed version aside" "$err"
           printf '\n%s %s\n' "$marker" "$shown" >> "$log"
         fi
-        /usr/bin/open -na "$run"
+        # A backup has no .app name, so LaunchServices would not open it: start its executable instead.
+        if [ "$run" = "$target" ]; then /usr/bin/open -na "$target"; else "$run/Contents/MacOS/UniGetUI" >/dev/null 2>&1 & fi
         """;
 
     // Runs as root for a bundle the user cannot replace ($1=target, $2=archive, $3=SHA-256, $4=pid,

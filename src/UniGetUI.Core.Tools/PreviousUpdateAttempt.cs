@@ -14,19 +14,34 @@ public sealed class PreviousUpdateAttempt(string logPath, string copyPath)
 
     public string CopyPath { get; } = copyPath;
 
+    // False when the copy could not be written, so an older copy must not be shown in its place.
+    public bool CopyWritten { get; private set; }
+
+    // A failed read is not remembered, so a later call can still capture the attempt.
     public UpdateAttemptSnapshot? Capture()
     {
         lock (_lock)
         {
             if (_captured)
                 return _snapshot;
+
+            if (File.Exists(logPath))
+                _snapshot = new UpdateAttemptSnapshot(File.ReadAllText(logPath), File.GetLastWriteTime(logPath));
             _captured = true;
 
-            if (!File.Exists(logPath))
-                return null;
+            if (_snapshot is not null)
+            {
+                try
+                {
+                    File.WriteAllText(CopyPath, _snapshot.Content);
+                    CopyWritten = true;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // The snapshot is still usable; View log then falls back to the live log.
+                }
+            }
 
-            _snapshot = new UpdateAttemptSnapshot(File.ReadAllText(logPath), File.GetLastWriteTime(logPath));
-            File.WriteAllText(CopyPath, _snapshot.Content);
             return _snapshot;
         }
     }

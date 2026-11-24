@@ -361,7 +361,7 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     private static void OpenPreviousUpdateLog() =>
-        OpenLogFile(File.Exists(_previousAttempt.CopyPath) ? _previousAttempt.CopyPath : _updateLogPath);
+        OpenLogFile(_previousAttempt.CopyWritten ? _previousAttempt.CopyPath : _updateLogPath);
 
     private static void OpenUpdateLog()
     {

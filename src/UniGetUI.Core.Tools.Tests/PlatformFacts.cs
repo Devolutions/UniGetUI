@@ -46,3 +46,34 @@ public sealed class MacOSFactAttribute : FactAttribute
         }
     }
 }
+
+// Root ignores file permissions, so a test that relies on a read-only folder cannot run as root.
+public sealed class UnixNonRootFactAttribute : FactAttribute
+{
+    public UnixNonRootFactAttribute()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Skip = "Runs on Linux and macOS only";
+        }
+        else if (Environment.UserName == "root")
+        {
+            Skip = "Cannot run as root, which ignores file permissions";
+        }
+    }
+}
+
+public sealed class MacOSNonRootFactAttribute : FactAttribute
+{
+    public MacOSNonRootFactAttribute()
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            Skip = "Runs on macOS only";
+        }
+        else if (Environment.UserName == "root")
+        {
+            Skip = "Cannot run as root, which ignores file permissions";
+        }
+    }
+}

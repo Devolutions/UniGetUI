@@ -20,6 +20,7 @@ public class PreviousUpdateAttemptTests
             Assert.NotNull(first);
             Assert.Same(first, second);
             Assert.Contains("=== Swap failed:", second.Content);
+            Assert.True(previous.CopyWritten);
             Assert.Equal(first.Content, File.ReadAllText(copy));
         }
         finally
@@ -40,6 +41,28 @@ public class PreviousUpdateAttemptTests
             Assert.Null(previous.Capture());
             File.WriteAllText(log, "=== UniGetUI update attempt started ===\n");
             Assert.Null(previous.Capture());
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Capture_StillReturnsTheSnapshotWhenTheCopyCannotBeWritten()
+    {
+        string root = Directory.CreateTempSubdirectory("unigetui-previous-attempt-").FullName;
+        try
+        {
+            string log = Path.Join(root, "last-update-attempt.log");
+            File.WriteAllText(log, "=== Swap failed: /Applications/UniGetUI.app\n");
+            var previous = new PreviousUpdateAttempt(log, Path.Join(root, "missing-folder", "previous-update-attempt.log"));
+
+            UpdateAttemptSnapshot? snapshot = previous.Capture();
+
+            Assert.NotNull(snapshot);
+            Assert.Contains("=== Swap failed:", snapshot.Content);
+            Assert.False(previous.CopyWritten);
         }
         finally
         {

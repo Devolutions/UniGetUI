@@ -346,7 +346,7 @@ public class LinuxSwapScriptTests
         Assert.DoesNotContain(box.Root, box.Log());
     }
 
-    [UnixFact]
+    [UnixNonRootFact]
     [UnsupportedOSPlatform("windows")]
     public void SwapScript_SetsThePreviousVersionAsideWhenALeftoverBackupCannotBeDeleted()
     {

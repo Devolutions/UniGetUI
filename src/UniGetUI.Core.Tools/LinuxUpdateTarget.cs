@@ -39,10 +39,13 @@ public static class LinuxUpdateTargetResolver
         rm -rf "$backup" 2>/dev/null
         if [ -e "$backup" ] || [ -L "$backup" ]; then
           printf 'Update swap could not delete %s.old, so the previous version is set aside under another name\n' "$shown" >> "$log"
-          backup="$(mktemp -d "$dir.old.XXXXXX")" && rmdir "$backup"
+          backup="$(mktemp -d "$dir.old.XXXXXX")" && rmdir "$backup" || backup=""
         fi
         run="$dir/$exe"
-        if err=$(LC_ALL=C mv "$dir" "$backup" 2>&1); then
+        if [ -z "$backup" ]; then
+          reason "choosing where to set the installed version aside" "no unused name was available"
+          printf '\n%s %s\n' "$marker" "$shown" >> "$log"
+        elif err=$(LC_ALL=C mv "$dir" "$backup" 2>&1); then
           if err=$(LC_ALL=C mv "$newroot" "$dir" 2>&1); then
             chmod +x "$dir/$exe" 2>/dev/null
             rm -rf "$backup"

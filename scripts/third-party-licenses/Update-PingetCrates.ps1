@@ -10,6 +10,8 @@ param(
 
     [string[]] $Targets = @('x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc'),
 
+    [string[]] $Pin = @(),
+
     [string] $OutputPath = (Join-Path $PSScriptRoot 'config/pinget-crates.json')
 )
 
@@ -53,6 +55,12 @@ try
     {
         Write-Host "Resolving pinget $Version crates as published before $publishTime"
         Invoke-Native cargo @("+$Toolchain", 'generate-lockfile', '-Zunstable-options', '--publish-time', $publishTime, '--quiet') | Out-Null
+        foreach ($crate in $Pin)
+        {
+            if ($crate -notmatch '^([A-Za-z0-9_\-]+)@(\S+)$') { throw "-Pin expects <crate>@<version>, got '$crate'." }
+            Write-Host "Pinning $($Matches[1]) to $($Matches[2])"
+            Invoke-Native cargo @("+$Toolchain", 'update', '-p', $Matches[1], '--precise', $Matches[2], '-Zunstable-options', '--quiet') | Out-Null
+        }
 
         $shipped = [Collections.Generic.HashSet[string]]::new()
         foreach ($target in $Targets)

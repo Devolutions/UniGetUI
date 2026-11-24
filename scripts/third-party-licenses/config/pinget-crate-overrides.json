@@ -6,6 +6,5 @@
   "lzma-rust2": { "copyright": "Copyright (c) Nils Hasenbanck and the lzma-rust contributors" },
   "pack1": { "copyright": "Copyright (c) Lokathor" },
   "pin-project-lite": { "copyright": "Copyright (c) Taiki Endo" },
-  "ppmd-rust": { "copyright": "Copyright 2026 The ppmd-rust authors" },
-  "serde_json": { "copyright": "Copyright (c) Erick Tryzelaar, David Tolnay" }
+  "ppmd-rust": { "copyright": "Copyright 2026 The ppmd-rust authors" }
 }

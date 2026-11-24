@@ -35,14 +35,11 @@
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         <Setter Property="MaxLines" Value="1"/>
     </Style>
-    <Style Selector="Button.item-title">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
+    <Style Selector="TextBlock.item-title">
         <Setter Property="Padding" Value="0,2"/>
         <Setter Property="MinHeight" Value="24"/>
-        <Setter Property="HorizontalAlignment" Value="Left"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
     </Style>
     <Style Selector="Border.item-status">

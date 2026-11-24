@@ -85,7 +85,7 @@ public partial class AgentSkillsPage : UserControl
             if (_viewModel.SelectedItem is { } selected)
             {
                 LibraryList.ScrollIntoView(selected);
-                LibraryList.ContainerFromItem(selected)?.GetVisualDescendants().OfType<Button>().FirstOrDefault()?.Focus();
+                LibraryList.ContainerFromItem(selected)?.Focus();
             }
             else LibrarySearch.Focus();
         }, DispatcherPriority.Loaded);
@@ -140,6 +140,13 @@ public partial class AgentSkillsPage : UserControl
             && (visual is Button || visual.GetVisualAncestors().OfType<Button>().Any())) return;
         e.Handled = true;
         _viewModel.OpenLibraryItemCommand.Execute(_viewModel.SelectedItem);
+    }
+
+    private void LibraryListTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is not Visual source || source.FindAncestorOfType<Button>(includeSelf: true) is not null
+            || source.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not { DataContext: AgentLibraryItem item }) return;
+        _viewModel.OpenLibraryItemCommand.Execute(item);
     }
 
     private void BackClicked(object? sender, RoutedEventArgs e) => _viewModel.BackCommand.Execute(null);

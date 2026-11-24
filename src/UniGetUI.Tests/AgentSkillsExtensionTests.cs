@@ -1277,7 +1277,7 @@ public sealed class AgentSkillsExtensionTests
         Assert.Same(selected, vm.SelectedItem);
         Assert.Equal(("review-20", "contoso/skills"), (vm.SelectedItem!.Skill!.Id, vm.SelectedItem.Source));
         Assert.InRange(Math.Abs(scroll.Offset.Y - offset.Y), 0, 1);
-        Assert.True(list.ContainerFromItem(vm.SelectedItem)!.GetVisualDescendants().OfType<Button>().First().IsFocused);
+        Assert.True(list.ContainerFromItem(vm.SelectedItem)!.IsFocused);
         Assert.Equal(readsBeforeDetails, backend.InstalledReads);
         Assert.Empty(backend.InstallCalls);
         return true;
@@ -1583,6 +1583,76 @@ public sealed class AgentSkillsExtensionTests
         return true;
     }, CancellationToken.None);
 
+    [Fact]
+    public Task ClickingAnywhereOnALibraryRowExceptItsActionsOpensDetails() => _session.Dispatch<bool>(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var backend = new RecordingBackend();
+        backend.Installed.Add(backend.Tracked());
+        var vm = CreateInstallViewModel(backend);
+        vm.LibraryView = AgentLibraryView.Installed;
+        await vm.RefreshCommand.ExecuteAsync(null);
+        var page = new AgentSkillsPage(vm);
+        using var host = new AgentSkillsSettingsTestWindow(page, 1000, height: 700);
+        host.Pump();
+        host.Pump();
+        var provider = vm.AgentPlugins.Providers.Single(item => item.Name == "GitHub Copilot");
+        var available = new AgentPluginItem("available@awesome-copilot", "", "1", false, false);
+        var enabled = new AgentPluginItem("enabled@awesome-copilot", "", "1", true, true);
+        var disabled = new AgentPluginItem("disabled@awesome-copilot", "", "1", true, false);
+        AgentLibraryItem[] items =
+        [
+            new("available", available.Name, "", AgentLibraryItemType.Plugin, "awesome-copilot", available.Status,
+                provider.Name, false, false, true, false, null, available, provider),
+            new("enabled", enabled.Name, "", AgentLibraryItemType.Plugin, "awesome-copilot", enabled.Status,
+                provider.Name, true, true, false, true, null, enabled, provider),
+            new("disabled", disabled.Name, "", AgentLibraryItemType.Plugin, "awesome-copilot", disabled.Status,
+                provider.Name, true, false, false, false, null, disabled, provider),
+        ];
+        var review = Assert.Single(vm.Items);
+        foreach (var item in items) vm.Items.Add(item);
+        host.Pump();
+        var list = page.FindControl<ListBox>("LibraryList")!;
+
+        WrapPanel Actions(AgentLibraryItem item) => Assert.Single(
+            Assert.IsType<ListBoxItem>(list.ContainerFromItem(item)).GetVisualDescendants().OfType<WrapPanel>(),
+            panel => panel.Classes.Contains("row-actions"));
+
+        void Click(Visual target, Point at)
+        {
+            host.Pump();
+            var point = target.TranslatePoint(at, host.Window)!.Value;
+            host.Window.MouseDown(point, MouseButton.Left);
+            host.Window.MouseUp(point, MouseButton.Left);
+            host.Pump();
+        }
+
+        (AgentLibraryItem Item, string Label)[] expected =
+            [(items[0], "Install"), (items[1], "Update"), (items[1], "Disable"), (items[2], "Enable")];
+        Assert.Equal(["Install", "Update", "Disable", "Enable"], items.SelectMany(item =>
+            Actions(item).Children.OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => (string?)button.Content)));
+        foreach (var (item, label) in expected)
+        {
+            var button = Assert.Single(Actions(item).Children.OfType<Button>(),
+                candidate => candidate.IsEffectivelyVisible && label.Equals(candidate.Content));
+            Assert.True(button.IsEffectivelyEnabled, label);
+            object? clicked = null;
+            button.Command = new CommunityToolkit.Mvvm.Input.RelayCommand<object?>(parameter => clicked = parameter);
+            Click(button, new Point(button.Bounds.Width / 2, button.Bounds.Height / 2));
+            Assert.Same(item, clicked);
+            Assert.False(vm.ShowDetails, label);
+            Assert.Equal([review, .. items], vm.Items);
+        }
+
+        var reviewRow = Assert.IsType<ListBoxItem>(list.ContainerFromItem(review));
+        var badge = reviewRow.GetVisualDescendants().OfType<Border>().First(border => border.Classes.Contains("item-status"));
+        Click(badge, new Point(badge.Bounds.Width / 2, badge.Bounds.Height / 2));
+        Assert.True(vm.ShowDetails);
+        Assert.Same(review, vm.SelectedItem);
+        vm.Stop();
+        return true;
+    }, CancellationToken.None);
+
     [Theory]
     [InlineData(700, false)]
     [InlineData(1200, false)]
@@ -1611,7 +1681,7 @@ public sealed class AgentSkillsExtensionTests
             new("long", new string('n', 200), "", AgentLibraryItemType.Plugin, new string('s', 200), enabled.Status,
                 provider.Name, true, false, false, true, null, enabled, provider),
         ];
-        vm.Items.Clear();
+        var review = Assert.Single(vm.Items);
         foreach (var item in items) vm.Items.Add(item);
         host.Pump();
         var list = page.FindControl<ListBox>("LibraryList")!;
@@ -1621,7 +1691,7 @@ public sealed class AgentSkillsExtensionTests
             var container = Assert.IsType<ListBoxItem>(list.ContainerFromItem(item));
             var row = Assert.Single(container.GetVisualDescendants().OfType<Grid>(), grid => grid.Classes.Contains("library-row"));
             var metadata = Assert.Single(row.GetVisualDescendants().OfType<Grid>(), grid => grid.Classes.Contains("row-metadata"));
-            var title = Assert.Single(row.GetVisualDescendants().OfType<Button>(), button => button.Classes.Contains("item-title"));
+            var title = Assert.Single(row.GetVisualDescendants().OfType<TextBlock>(), text => text.Classes.Contains("item-title"));
             var description = Assert.Single(row.GetVisualDescendants().OfType<TextBlock>(), text => text.Classes.Contains("description"));
             Assert.False(description.IsEffectivelyVisible);
             Assert.InRange(container.Bounds.Height, 50, 84);

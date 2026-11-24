@@ -126,18 +126,13 @@
                 <Border Grid.Row="2" Classes="library-surface" IsVisible="{Binding IsLibraryView}">
                     <Panel>
                         <ListBox x:Name="LibraryList" Classes="library" ItemsSource="{Binding Items}"
-                                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}" KeyDown="LibraryListKeyDown"
+                                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}" KeyDown="LibraryListKeyDown" Tapped="LibraryListTapped"
                                  automation:AutomationProperties.Name="{t:Translate Agent library}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:AgentLibraryItem">
                                     <Grid Classes="library-row" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">
-                                            <Button Classes="item-title" HorizontalAlignment="Stretch"
-                                                    ToolTip.Tip="{Binding Name}"
-                                                    Command="{Binding $parent[ListBox].((vm:AgentSkillsViewModel)DataContext).OpenLibraryItemCommand}"
-                                                    CommandParameter="{Binding}">
-                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                            </Button>
+                                            <TextBlock Classes="item-title" Text="{Binding Name}" ToolTip.Tip="{Binding Name}"/>
                                             <TextBlock Classes="description" Text="{Binding Description}" IsVisible="{Binding HasDescription}"/>
                                             <Grid Classes="row-metadata" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
                                                 <Border Classes="item-status"><TextBlock Text="{Binding TypeLabel}"/></Border>

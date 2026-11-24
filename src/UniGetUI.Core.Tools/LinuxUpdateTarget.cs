@@ -29,23 +29,32 @@ public static class LinuxUpdateTargetResolver
 {
     // Positional args: $1=pid, $2=install dir, $3=new tree, $4=executable name,
     // $5=update log, $6=failure marker, $7=redacted install dir.
+    // A leftover .old this user cannot delete (one owned by root) gets a unique backup name instead.
     public const string SwapScript = """
         pid="$1"; dir="$2"; newroot="$3"; exe="$4"; log="$5"; marker="$6"; shown="$7"
         reason() { printf 'Update swap failed while %s: %s\n' "$1" "${2##*: }" >> "$log"; }
         i=0
         while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
-        rm -rf "$dir.old"
+        backup="$dir.old"
+        rm -rf "$backup" 2>/dev/null
+        if [ -e "$backup" ] || [ -L "$backup" ]; then
+          printf 'Update swap could not delete %s.old, so the previous version is set aside under another name\n' "$shown" >> "$log"
+          backup="$(mktemp -d "$dir.old.XXXXXX")" && rmdir "$backup" || backup=""
+        fi
         run="$dir/$exe"
-        if err=$(LC_ALL=C mv "$dir" "$dir.old" 2>&1); then
+        if [ -z "$backup" ]; then
+          reason "choosing where to set the installed version aside" "no unused name was available"
+          printf '\n%s %s\n' "$marker" "$shown" >> "$log"
+        elif err=$(LC_ALL=C mv "$dir" "$backup" 2>&1); then
           if err=$(LC_ALL=C mv "$newroot" "$dir" 2>&1); then
             chmod +x "$dir/$exe" 2>/dev/null
-            rm -rf "$dir.old"
+            rm -rf "$backup"
           else
             reason "moving the new version into place" "$err"
             rm -rf "$dir"
-            if ! err=$(LC_ALL=C mv "$dir.old" "$dir" 2>&1); then
-              reason "restoring the previous version, which was left in $shown.old" "$err"
-              run="$dir.old/$exe"
+            if ! err=$(LC_ALL=C mv "$backup" "$dir" 2>&1); then
+              reason "restoring the previous version, which was left in $shown${backup#"$dir"}" "$err"
+              run="$backup/$exe"
             fi
             printf '\n%s %s\n' "$marker" "$shown" >> "$log"
           fi

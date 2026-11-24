@@ -346,6 +346,24 @@ public class LinuxSwapScriptTests
         Assert.DoesNotContain(box.Root, box.Log());
     }
 
+    [UnixNonRootFact]
+    [UnsupportedOSPlatform("windows")]
+    public void SwapScript_SetsThePreviousVersionAsideWhenALeftoverBackupCannotBeDeleted()
+    {
+        using SwapSandbox box = new();
+        string stale = box.LockStaleBackup();
+
+        box.Run();
+
+        Assert.Equal(box.Install, box.WaitForLaunch());
+        Assert.Equal("new", box.InstalledVersion());
+        Assert.Equal("stale", File.ReadAllText(Path.Join(stale, "version")));
+        Assert.False(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
+        Assert.Contains($"Update swap could not delete {Shown}.old", box.Log());
+        Assert.DoesNotContain(Directory.GetDirectories(Path.GetDirectoryName(box.Install)!), d => Path.GetFileName(d).StartsWith("unigetui.old.", StringComparison.Ordinal));
+        Assert.DoesNotContain(box.Root, box.Log());
+    }
+
     [UnsupportedOSPlatform("windows")]
     private sealed class SwapSandbox : IDisposable
     {
@@ -386,6 +404,16 @@ public class LinuxSwapScriptTests
                 + "for d in $(echo \"$ORIGINAL_PATH\" | tr ':' ' '); do [ -x \"$d/mv\" ] && exec \"$d/mv\" \"$@\"; done\n"
                 + "exit 127\n");
             File.SetUnixFileMode(fakeMv, Executable);
+        }
+
+        // A read-only folder stands in for the root-owned backup a root install leaves behind.
+        public string LockStaleBackup()
+        {
+            string stale = Install + ".old";
+            Directory.CreateDirectory(stale);
+            File.WriteAllText(Path.Join(stale, "version"), "stale");
+            File.SetUnixFileMode(stale, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            return stale;
         }
 
         public string InstalledVersion() => File.ReadAllText(Path.Join(Install, "version"));
@@ -431,6 +459,11 @@ public class LinuxSwapScriptTests
             return process.Id;
         }
 
-        public void Dispose() => Directory.Delete(Root, recursive: true);
+        public void Dispose()
+        {
+            foreach (string dir in Directory.EnumerateDirectories(Root, "*", SearchOption.AllDirectories))
+                File.SetUnixFileMode(dir, File.GetUnixFileMode(dir) | UnixFileMode.UserWrite);
+            Directory.Delete(Root, recursive: true);
+        }
     }
 }

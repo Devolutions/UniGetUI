@@ -382,3 +382,199 @@ public class MacUpdateTargetTests
         public void Dispose() => Directory.Delete(Root, recursive: true);
     }
 }
+
+public class MacSwapScriptTests
+{
+    private const string Shown = "<bundle>";
+
+    [MacOSFact]
+    [SupportedOSPlatform("macos")]
+    public void SwapScript_ReplacesTheBundleAndOpensTheNewVersion()
+    {
+        using MacSwapSandbox box = new();
+
+        box.Run();
+
+        Assert.Equal(box.Target, box.WaitForLaunch());
+        Assert.Equal("new", box.InstalledVersion());
+        Assert.False(Directory.Exists(box.Target + ".old"));
+        Assert.False(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
+    }
+
+    [MacOSNonRootFact]
+    [SupportedOSPlatform("macos")]
+    public void SwapScript_SetsThePreviousVersionAsideWhenALeftoverBackupCannotBeDeleted()
+    {
+        using MacSwapSandbox box = new();
+        string stale = box.LockStaleBackup();
+
+        box.Run();
+
+        Assert.Equal(box.Target, box.WaitForLaunch());
+        Assert.Equal("new", box.InstalledVersion());
+        Assert.Equal("stale", File.ReadAllText(Path.Join(stale, "version")));
+        Assert.False(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
+        Assert.Contains($"Update swap could not delete {Shown}.old", box.Log());
+        Assert.DoesNotContain(Directory.GetDirectories(Path.GetDirectoryName(box.Target)!), d => Path.GetFileName(d).StartsWith("UniGetUI.app.old.", StringComparison.Ordinal));
+        Assert.DoesNotContain(box.Root, box.Log());
+    }
+
+    [MacOSFact]
+    [SupportedOSPlatform("macos")]
+    public void SwapScript_LogsWhyTheInstalledVersionCouldNotBeMovedAside()
+    {
+        using MacSwapSandbox box = new();
+        box.FailMvWhen("\"$2\" = \"$TARGET.old\"");
+
+        box.Run();
+
+        Assert.Equal(box.Target, box.WaitForLaunch());
+        Assert.Equal("old", box.InstalledVersion());
+        Assert.True(SelfUpdateSwap.TryGetFailure(box.Log(), out string shown));
+        Assert.Equal(Shown, shown);
+        Assert.Contains("Update swap failed while moving the installed version aside: Permission denied", box.Log());
+        Assert.DoesNotContain(box.Root, box.Log());
+    }
+
+    [MacOSNonRootFact]
+    [SupportedOSPlatform("macos")]
+    public void SwapScript_KeepsTheInstalledVersionWhenNoBackupNameIsAvailable()
+    {
+        using MacSwapSandbox box = new();
+        box.LockStaleBackup();
+        box.FakeCommand("mktemp", "exit 1");
+
+        box.Run();
+
+        Assert.Equal(box.Target, box.WaitForLaunch());
+        Assert.Equal("old", box.InstalledVersion());
+        Assert.True(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
+        Assert.Contains("Update swap failed while choosing where to set the installed version aside: no unused name was available", box.Log());
+    }
+
+    [MacOSFact]
+    [SupportedOSPlatform("macos")]
+    public void SwapScript_StartsThePreviousVersionFromItsBackupWhenTheRollbackFails()
+    {
+        using MacSwapSandbox box = new();
+        box.FailMvWhen("\"$2\" = \"$TARGET\"");
+
+        box.Run();
+
+        Assert.Equal(box.Target + ".old", box.WaitForLaunch());
+        Assert.False(Directory.Exists(box.Target));
+        Assert.True(SelfUpdateSwap.TryGetFailure(box.Log(), out _));
+        Assert.Contains($"restoring the previous version, which was left in {Shown}.old: Permission denied", box.Log());
+        Assert.DoesNotContain(box.Root, box.Log());
+    }
+
+    [SupportedOSPlatform("macos")]
+    private sealed class MacSwapSandbox : IDisposable
+    {
+        private const UnixFileMode Executable = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+        private string? _fakeBin;
+
+        public string Root { get; } = Directory.CreateTempSubdirectory("unigetui-mac-swap-").FullName;
+        public string Target => Path.Join(Root, "Applications", "UniGetUI.app");
+        private string NewApp => Path.Join(Root, "staging", "UniGetUI.app");
+        private string LogPath => Path.Join(Root, "last-update-attempt.log");
+        private string LaunchedPath => Path.Join(Root, "launched");
+        private string FakeOpen => Path.Join(Root, "open");
+
+        public MacSwapSandbox()
+        {
+            foreach ((string dir, string version) in new[] { (Target, "old"), (NewApp, "new") })
+            {
+                Directory.CreateDirectory(Path.Join(dir, "Contents", "MacOS"));
+                File.WriteAllText(Path.Join(dir, "version"), version);
+                string exe = Path.Join(dir, "Contents", "MacOS", "UniGetUI");
+                File.WriteAllText(exe, "#!/bin/sh\necho \"${0%/Contents/MacOS/UniGetUI}\" > \"$LAUNCHED\"\n");
+                File.SetUnixFileMode(exe, Executable);
+            }
+
+            File.WriteAllText(LogPath, "Target version: 2026.1.0\n");
+            // Like LaunchServices, the stub refuses a bundle whose name does not end in .app.
+            File.WriteAllText(FakeOpen, "#!/bin/sh\ncase \"$1\" in *.app) echo \"$1\" > \"$LAUNCHED\" ;; *) exit 1 ;; esac\n");
+            File.SetUnixFileMode(FakeOpen, Executable);
+        }
+
+        // A read-only folder stands in for the root-owned backup a .pkg install leaves behind.
+        public string LockStaleBackup()
+        {
+            string stale = Target + ".old";
+            Directory.CreateDirectory(stale);
+            File.WriteAllText(Path.Join(stale, "version"), "stale");
+            File.SetUnixFileMode(stale, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            return stale;
+        }
+
+        public void FailMvWhen(string condition) =>
+            FakeCommand(
+                "mv",
+                $"if [ {condition} ]; then echo \"mv: rename $1 to $2: Permission denied\" >&2; exit 1; fi\n"
+                + "exec /bin/mv \"$@\"");
+
+        public void FakeCommand(string name, string body)
+        {
+            _fakeBin = Path.Join(Root, "bin");
+            Directory.CreateDirectory(_fakeBin);
+            string fake = Path.Join(_fakeBin, name);
+            File.WriteAllText(fake, "#!/bin/sh\n" + body + "\n");
+            File.SetUnixFileMode(fake, Executable);
+        }
+
+        public string InstalledVersion() => File.ReadAllText(Path.Join(Target, "version"));
+
+        public string Log() => File.ReadAllText(LogPath);
+
+        public void Run()
+        {
+            // Nothing is really opened: the script's open call is pointed at a stub that records its argument.
+            const string open = "/usr/bin/open -na ";
+            Assert.Contains(open, MacUpdateTargetResolver.SwapScript);
+            string script = MacUpdateTargetResolver.SwapScript.Replace(open, "\"$OPEN\" ");
+
+            var startInfo = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
+            foreach (string arg in new[]
+                     {
+                         "-c", script, "sh", ExitedProcessId().ToString(),
+                         Target, NewApp, LogPath, SelfUpdateSwap.FailedMarker, Shown,
+                     })
+            {
+                startInfo.ArgumentList.Add(arg);
+            }
+
+            startInfo.Environment["OPEN"] = FakeOpen;
+            startInfo.Environment["TARGET"] = Target;
+            startInfo.Environment["LAUNCHED"] = LaunchedPath;
+            if (_fakeBin is not null)
+            {
+                startInfo.Environment["PATH"] = _fakeBin + ":" + startInfo.Environment["PATH"];
+            }
+
+            using Process process = Process.Start(startInfo)!;
+            process.WaitForExit();
+            Assert.Equal(0, process.ExitCode);
+        }
+
+        public string WaitForLaunch()
+        {
+            Assert.True(SpinWait.SpinUntil(() => File.Exists(LaunchedPath) && new FileInfo(LaunchedPath).Length > 0, TimeSpan.FromSeconds(10)));
+            return File.ReadAllText(LaunchedPath).Trim();
+        }
+
+        private static int ExitedProcessId()
+        {
+            using Process process = Process.Start("/usr/bin/true")!;
+            process.WaitForExit();
+            return process.Id;
+        }
+
+        public void Dispose()
+        {
+            foreach (string dir in Directory.EnumerateDirectories(Root, "*", SearchOption.AllDirectories))
+                File.SetUnixFileMode(dir, File.GetUnixFileMode(dir) | UnixFileMode.UserWrite);
+            Directory.Delete(Root, recursive: true);
+        }
+    }
+}

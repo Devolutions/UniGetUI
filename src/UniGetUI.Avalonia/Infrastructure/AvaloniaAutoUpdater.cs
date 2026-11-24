@@ -135,8 +135,29 @@ internal static partial class AvaloniaAutoUpdater
         "last-update-attempt.log"
     );
 
+    // The update loop starts before the main window runs CheckForOrphanedUpdateAttempt, so the
+    // previous attempt is captured before this run's first reset can overwrite it.
+    private static readonly PreviousUpdateAttempt _previousAttempt = new(
+        _updateLogPath,
+        Path.Combine(AppPaths.ScratchDirectory, "previous-update-attempt.log")
+    );
+
+    private static UpdateAttemptSnapshot? CapturePreviousAttempt()
+    {
+        try
+        {
+            return _previousAttempt.Capture();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not keep the previous update attempt's log: {ex.Message}");
+            return null;
+        }
+    }
+
     private static void ResetUpdateLog(bool manualCheck, bool autoLaunch)
     {
+        CapturePreviousAttempt();
         lock (_updateLogLock)
         {
             _updateLogBuilder = new StringBuilder()
@@ -219,29 +240,19 @@ internal static partial class AvaloniaAutoUpdater
         try
         {
             if (IsDefaultDevVersion(CoreData.VersionName)) return;
-            if (!File.Exists(_updateLogPath)) return;
+            if (CapturePreviousAttempt() is not { } previous) return;
 
-            var info = new FileInfo(_updateLogPath);
-            if ((DateTime.Now - info.LastWriteTime).TotalMinutes > 10)
+            if ((DateTime.Now - previous.WrittenAt).TotalMinutes > 10)
                 return;
 
-            string content = File.ReadAllText(_updateLogPath);
+            string content = previous.Content;
             if (content.Contains(AttemptFinishedMarker))
                 return;
 
             if (SelfUpdateSwap.TryGetFailure(content, out string failedBundle))
             {
                 Logger.Warn($"The previous update could not replace {failedBundle}.");
-                try
-                {
-                    File.AppendAllText(
-                        _updateLogPath,
-                        $"{Environment.NewLine}{AttemptFinishedMarker} bundle swap failed (detected on next launch) at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn($"Could not mark the failed update attempt as finished: {ex.Message}");
-                }
+                MarkPreviousAttemptFinished("bundle swap failed (detected on next launch)");
 
                 RaiseStatus(
                     CoreTools.Translate("The update could not be applied."),
@@ -249,7 +260,7 @@ internal static partial class AvaloniaAutoUpdater
                     InfoBarSeverity.Error,
                     isClosable: true,
                     actionButtonText: CoreTools.Translate("View log"),
-                    actionButtonAction: OpenUpdateLog);
+                    actionButtonAction: OpenPreviousUpdateLog);
                 return;
             }
 
@@ -273,13 +284,7 @@ internal static partial class AvaloniaAutoUpdater
             if (VersionsMatch(targetVer, currentVer))
             {
                 Logger.Info($"Previous update attempt killed mid-flow but install succeeded (running version {currentVer} matches target {targetVer}). Marking as finished.");
-                try
-                {
-                    File.AppendAllText(
-                        _updateLogPath,
-                        $"{Environment.NewLine}{AttemptFinishedMarker} installer succeeded (detected on next launch — running version is {currentVer}) at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
-                }
-                catch { /* swallow */ }
+                MarkPreviousAttemptFinished($"installer succeeded (detected on next launch — running version is {currentVer})");
                 return;
             }
 
@@ -291,7 +296,7 @@ internal static partial class AvaloniaAutoUpdater
                 InfoBarSeverity.Warning,
                 isClosable: true,
                 actionButtonText: CoreTools.Translate("View log"),
-                actionButtonAction: OpenUpdateLog);
+                actionButtonAction: OpenPreviousUpdateLog);
         }
         catch (Exception ex)
         {
@@ -335,15 +340,39 @@ internal static partial class AvaloniaAutoUpdater
         AppendToUpdateLog("DEBUG", message);
     }
 
+    // Marks the previous attempt finished so a later launch does not report it again. Once this run
+    // has reset the log, the previous attempt is no longer on disk to report, so nothing is written.
+    private static void MarkPreviousAttemptFinished(string outcome)
+    {
+        lock (_updateLogLock)
+        {
+            if (_updateLogBuilder is not null) return;
+            try
+            {
+                File.AppendAllText(
+                    _updateLogPath,
+                    $"{Environment.NewLine}{AttemptFinishedMarker} {outcome} at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not mark the previous update attempt as finished: {ex.Message}");
+            }
+        }
+    }
+
+    private static void OpenPreviousUpdateLog() =>
+        OpenLogFile(_previousAttempt.CopyWritten ? _previousAttempt.CopyPath : _updateLogPath);
+
     private static void OpenUpdateLog()
     {
         // The buffer is flushed to disk on every append/reset, so the file should
         // already be current. Only fall back to the full session log if no flow
         // has ever run (button shouldn't appear in that case, but be defensive).
-        string pathToOpen = File.Exists(_updateLogPath)
-            ? _updateLogPath
-            : Logger.GetSessionLogPath();
+        OpenLogFile(File.Exists(_updateLogPath) ? _updateLogPath : Logger.GetSessionLogPath());
+    }
 
+    private static void OpenLogFile(string pathToOpen)
+    {
         try
         {
             Process.Start(new ProcessStartInfo

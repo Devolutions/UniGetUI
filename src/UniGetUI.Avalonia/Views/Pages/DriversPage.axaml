@@ -109,7 +109,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid Margin="8,6,8,8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
+    <Grid Margin="8,6,8,-2" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
         <Grid Grid.Row="0" ColumnDefinitions="80,*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
             <controls:SvgIcon Width="40" Height="40" Margin="0,0,4,0"
                               automation:AutomationProperties.AccessibilityView="Raw"

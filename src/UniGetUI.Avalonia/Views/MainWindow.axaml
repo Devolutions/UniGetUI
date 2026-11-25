@@ -98,6 +98,9 @@
              marks the drag axis. -->
         <Style Selector="GridSplitter.winui-horizontal-splitter">
             <Setter Property="Background" Value="Transparent"/>
+            <!-- Match the visible splitter track to the operation-card width.
+                 OperationsList uses 8 DIPs of horizontal inset. -->
+            <Setter Property="Padding" Value="8,0"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Background" Duration="0:0:0.083"/>
@@ -105,10 +108,8 @@
             </Setter>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <!-- Match the visible splitter track to the operation-card width.
-                         OperationsList uses 8 DIPs of horizontal inset. -->
                     <Border Background="{TemplateBinding Background}"
-                            Margin="8,0"
+                            Margin="{TemplateBinding Padding}"
                             CornerRadius="6">
                         <Border Width="22" Height="4"
                                 CornerRadius="2"

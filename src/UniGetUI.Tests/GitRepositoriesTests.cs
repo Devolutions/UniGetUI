@@ -5,6 +5,7 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
@@ -406,6 +407,66 @@ public sealed class GitRepositoriesTests : IDisposable
             Control busyCell = Cell(repoRow, "git-status-cell");
             ProgressBar progress = busyCell.GetVisualDescendants().OfType<ProgressBar>().Single();
             Assert.True(Right(progress, window) <= Right(busyCell, window) + 0.75);
+        }
+        finally
+        {
+            window.Close();
+            vm.Stop();
+        }
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task DetailsToolbarButtonsMatchTheViewSelectorHeightAndTextLine() => _session.Dispatch(() =>
+    {
+        Application app = Application.Current!;
+        if (!app.Styles.OfType<FluentTheme>().Any())
+            app.Styles.Add(new FluentTheme());
+        if (!app.Styles.OfType<StyleInclude>().Any(s => s.Source?.OriginalString.EndsWith("Styles.Common.axaml") == true))
+        {
+            app.Styles.Add(new StyleInclude(new Uri("avares://UniGetUI/"))
+            {
+                Source = new Uri("avares://UniGetUI/Assets/Styles/Styles.Common.axaml"),
+            });
+        }
+
+        var vm = new GitRepositoriesViewModel(new GitRepositoryService(_git)) { IsGitMissing = true };
+        var repository = new GitRepositoryItemViewModel(Path.Combine(_testRoot, "clone"), null);
+        vm.Repositories.Add(repository);
+        vm.SelectedRepository = repository;
+        var view = new GitRepositoriesPage(vm);
+        var window = new Window { Width = 1000, Height = 700, Content = view };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+
+            static double Top(Control control, Window root) => control.TranslatePoint(default, root)!.Value.Y;
+            static double Middle(Control control, Window root) => Top(control, root) + control.Bounds.Height / 2;
+            TextBlock Text(string text) => view.GetVisualDescendants().OfType<TextBlock>()
+                .Single(block => block.Text == text && block.IsEffectivelyVisible);
+
+            ListBoxItem segment = view.GetVisualDescendants().OfType<ListBoxItem>()
+                .First(item => item.Classes.Contains("segment-item"));
+            ListBox selector = segment.FindAncestorOfType<ListBox>()!;
+            Button reload = Text("Reload").FindAncestorOfType<Button>()!;
+            Button prune = Text("Prune missing").FindAncestorOfType<Button>()!;
+
+            foreach (Button button in new[] { reload, prune })
+            {
+                Assert.InRange(Math.Abs(Top(button, window) - Top(selector, window)), 0, 0.75);
+                Assert.InRange(Math.Abs(button.Bounds.Height - selector.Bounds.Height), 0, 0.75);
+            }
+            Assert.InRange(Math.Abs(Middle(Text("Reload"), window) - Middle(Text("Worktrees"), window)), 0, 1);
+            Assert.InRange(Math.Abs(Middle(Text("Prune missing"), window) - Middle(Text("Worktrees"), window)), 0, 1);
+
+            Border[] cards = [.. view.GetVisualDescendants().OfType<Border>()
+                .Where(border => border.Classes.Contains("git-card"))
+                .OrderBy(border => Top(border, window))];
+            Assert.Equal(2, cards.Length);
+            double gapAbove = Top(selector, window) - (Top(cards[0], window) + cards[0].Bounds.Height);
+            double gapBelow = Top(cards[1], window) - (Top(selector, window) + selector.Bounds.Height);
+            Assert.InRange(Math.Abs(gapAbove - gapBelow), 0, 0.75);
         }
         finally
         {

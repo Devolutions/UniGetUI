@@ -140,7 +140,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         internal const string InstalledListingCommand =
             "$null = Get-Command Get-InstalledModule -ErrorAction Stop;"
             + " $Error.Clear(); Get-InstalledModule | ForEach-Object { $_.Name + [char]9 + $_.Version + [char]9 + $_.Repository };"
-            + " if ($Error.Count -gt 0) { exit 1 }";
+            + " if (@($Error | Where-Object { -not ($_.Exception -is [Management.Automation.ArgumentTransformationMetadataException]"
+            + " -and $_.InvocationInfo.Line -match '^\\s*\\$(Installed|Updated)Date\\s*=\\s*\\$null\\s*$') }).Count -gt 0) { exit 1 }";
 
         protected override bool UseSubstringSearch => true;
 

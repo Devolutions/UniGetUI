@@ -127,5 +127,8 @@ public sealed partial class AgentSkillsSettingsControl : UserControl, ISettingsP
         };
         if (!string.IsNullOrEmpty(error))
             AccessibilityAnnouncementService.Announce(error, AutomationLiveSetting.Assertive);
+        else if (e.PropertyName == nameof(AgentSkillsSettingsViewModel.NotionSummary)
+            && !string.IsNullOrEmpty(_viewModel.NotionSummary))
+            AccessibilityAnnouncementService.Announce(_viewModel.NotionSummary, AutomationLiveSetting.Polite);
     }
 }

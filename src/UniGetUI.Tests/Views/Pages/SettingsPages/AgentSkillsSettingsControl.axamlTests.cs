@@ -435,15 +435,46 @@ public sealed class AgentSkillsSettingsControlTests
                 Assert.True(text.IsEffectivelyVisible);
                 Assert.Equal(AutomationLiveSetting.Assertive, AutomationProperties.GetLiveSetting(text));
             }
-            Assert.Equal(errors, announcements.Select(item => item.Message));
-            Assert.All(announcements, item => Assert.Equal(AutomationLiveSetting.Assertive, item.LiveSetting));
+            Assert.Equal(errors, announcements
+                .Where(item => item.LiveSetting == AutomationLiveSetting.Assertive).Select(item => item.Message));
+            Assert.Equal(["Checking the Notion CLI…", "Could not check the Notion connection."], announcements
+                .Where(item => item.LiveSetting == AutomationLiveSetting.Polite).Select(item => item.Message));
+            Assert.Equal(5, announcements.Count);
             host.Detach();
             announcements.Clear();
             vm.TargetError = "detached target";
             vm.VersionError = "detached version";
             vm.NotionError = "detached notion";
+            vm.NotionSummary = "detached summary";
             host.Pump();
             Assert.Empty(announcements);
+        }
+        finally { AccessibilityAnnouncementService.AnnouncementRequested -= Collect; }
+        return true;
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task ConnectionCheck_AnnouncesTheNotionStatusPolitely() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var service = fixture.Service();
+        service.DefaultStatus = Status(NotionCliState.SignedIn, "Workspace");
+        var vm = new AgentSkillsSettingsViewModel(service);
+        var control = new AgentSkillsSettingsControl(vm);
+        using var host = new AgentSkillsSettingsTestWindow(control);
+        await WhenIdle(vm);
+        host.Pump();
+        var announcements = new List<AccessibilityAnnouncement>();
+        void Collect(object? sender, AccessibilityAnnouncement announcement) => announcements.Add(announcement);
+        AccessibilityAnnouncementService.AnnouncementRequested += Collect;
+        try
+        {
+            var refresh = Named<Button>(control, "RefreshNotionButton");
+            host.Space(refresh);
+            await WhenIdle(vm);
+            host.Pump();
+            Assert.Equal(["Checking the Notion CLI…", "Connected to Workspace, CLI 0.23.9"], announcements.Select(item => item.Message));
+            Assert.All(announcements, item => Assert.Equal(AutomationLiveSetting.Polite, item.LiveSetting));
         }
         finally { AccessibilityAnnouncementService.AnnouncementRequested -= Collect; }
         return true;
@@ -512,6 +543,7 @@ public sealed class AgentSkillsSettingsControlTests
                 Assert.True(checking.Bounds.Height > 0);
             }
             await vm.RefreshAsync(); // A queued refresh must not survive detachment either.
+            announcements.Clear();
             host.Detach();
             string summary = vm.NotionSummary;
             var state = vm.NotionState;
@@ -579,14 +611,19 @@ public sealed class AgentSkillsSettingsControlTests
             Assert.Equal(4, service.StatusReads);
             vm.NotionError = "one attached announcement";
             host.Pump();
-            Assert.Equal(["one attached announcement"], announcements.Select(item => item.Message));
+            Assert.Equal(["one attached announcement"], announcements
+                .Where(item => item.LiveSetting == AutomationLiveSetting.Assertive).Select(item => item.Message));
+            Assert.Equal(["Checking the Notion CLI…", "Connected to Reattached, CLI 0.23.9", "Checking the Notion CLI…", "Connected to Reattached, CLI 0.23.9"],
+                announcements.Where(item => item.LiveSetting == AutomationLiveSetting.Polite).Select(item => item.Message));
+            int attached = announcements.Count;
             host.Detach();
             vm.NotionError = "no detached announcement";
+            vm.NotionSummary = "no detached summary";
             source.Sources.IsLoading = true;
             source.Sources.IsLoading = false;
             host.Pump();
             Assert.Equal(4, service.StatusReads);
-            Assert.Single(announcements);
+            Assert.Equal(attached, announcements.Count);
         }
         finally
         {

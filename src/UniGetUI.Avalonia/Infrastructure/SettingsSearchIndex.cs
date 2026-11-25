@@ -154,9 +154,9 @@ public static class SettingsSearchIndex
         new("Check for new commits automatically", ["git check interval", "fetch"], typeof(GitRepositoriesSettings), "GitCheckIntervalCard"),
         new("Update clones after checking", ["git auto update", "fast-forward", "pull"], typeof(GitRepositoriesSettings), "GitAutoUpdateCard"),
         new("Agent Skills", ["skills", "plugins", "coding agents", "extensions"], typeof(AgentSkillsSettingsControl), null),
-        new("Search skills.sh", ["skills.sh", "skills discovery", "registry"], typeof(AgentSkillsSettingsControl), "SkillsShDiscoveryToggle"),
-        new("Installation targets", ["skills", "agents", "codex", "claude", "copilot"], typeof(AgentSkillsSettingsControl), "TargetModeSelector"),
-        new("Notion integration", ["skills", "notion", "sign in"], typeof(AgentSkillsSettingsControl), "NotionExpander"),
+        new("Search skills.sh", ["skills.sh", "skills discovery", "registry"], typeof(AgentSkillsSettingsControl), "SkillsShDiscoveryCard"),
+        new("Installation targets", ["skills", "agents", "codex", "claude", "copilot"], typeof(AgentSkillsSettingsControl), "TargetModeCard"),
+        new("Notion integration", ["skills", "notion", "sign in"], typeof(AgentSkillsSettingsControl), "NotionCard"),
         new("Enable Drivers", ["drivers", "driver updates", "windows update", "hardware", "optional updates"], typeof(DriversSettings), "DriversCard", WindowsOnly: true),
 #if UNIGETUI_XCODE_EXTENSION
         new("Enable Xcode", ["xcode", "xcodes", "apple", "ios", "macos", "developer tools"], typeof(XcodeSettings), "XcodeCard", MacOnly: true),

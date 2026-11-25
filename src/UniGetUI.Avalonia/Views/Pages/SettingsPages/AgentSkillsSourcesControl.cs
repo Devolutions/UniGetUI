@@ -26,18 +26,33 @@ internal sealed class AgentSkillsSourcesControl : UserControl
     {
         _service = service;
         AutomationProperties.SetName(_address, CoreTools.Translate("Repository or skills index URL"));
+        _address.Classes.Add("search-field-standalone");
+        _add.Classes.Add("accent");
+        _cancel.Classes.Add("secondary-action");
+        _empty.Opacity = 0.7;
+        _empty.VerticalAlignment = VerticalAlignment.Center;
+        _empty.Margin = new Thickness(10, 0);
         var editor = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 8, HorizontalAlignment = HorizontalAlignment.Stretch };
         Grid.SetColumn(_add, 1);
         editor.Children.Add(_address);
         editor.Children.Add(_add);
+        var list = new Border
+        {
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            MinHeight = 60,
+            Padding = new Thickness(4),
+            Child = new Panel { Children = { _rows, _empty } },
+        };
+        list.Bind(Border.BorderBrushProperty, list.GetResourceObservable("SettingsCardBorderBrush"));
         Content = new StackPanel
         {
             Spacing = 8,
             Children =
             {
-                _rows, _empty,
+                list,
                 new TextBlock { Text = CoreTools.Translate("Add a GitHub repository (owner/repo), git URL, HTTPS skills index, or Notion source."),
-                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap },
+                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, FontSize = 12, Opacity = 0.7 },
                 editor, _cancel, _status,
             },
         };
@@ -59,7 +74,8 @@ internal sealed class AgentSkillsSourcesControl : UserControl
         _rows.Children.Clear();
         foreach (var source in AgentSkillsService.GetConfiguredSources())
         {
-            var remove = new Button { Content = CoreTools.Translate("Remove"), Tag = source };
+            var remove = new Button { Content = CoreTools.Translate("Remove"), Tag = source, VerticalAlignment = VerticalAlignment.Center };
+            remove.Classes.Add("secondary-action");
             AutomationProperties.SetName(remove, CoreTools.Translate("Remove {0}", source.Name));
             remove.Click += (_, _) =>
             {
@@ -67,14 +83,19 @@ internal sealed class AgentSkillsSourcesControl : UserControl
                 try { _service.RemoveSource(source); Reload(); SourcesChanged?.Invoke(this, EventArgs.Empty); }
                 catch (Exception ex) { ShowError(ex); }
             };
-            var row = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 12 };
-            Grid.SetColumn(remove, 1);
-            row.Children.Add(new TextBlock
+            var row = new Grid { ColumnDefinitions = new("4,*,Auto"), ColumnSpacing = 10, MinHeight = 32, Margin = new Thickness(0, 2) };
+            var accent = new Border { CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 4) };
+            accent.Bind(Border.BackgroundProperty, accent.GetResourceObservable("AccentFillColorDefaultBrush"));
+            var name = new TextBlock
             {
                 Text = source.InstallSource,
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+            };
+            Grid.SetColumn(name, 1);
+            Grid.SetColumn(remove, 2);
+            row.Children.Add(accent);
+            row.Children.Add(name);
             row.Children.Add(remove);
             _rows.Children.Add(row);
         }

@@ -271,6 +271,7 @@ public sealed class AgentSkillsExtensionTests
         Assert.True(vm.IsSourcesView);
         var control = Assert.IsType<AgentSkillsSourcesControl>(page.FindControl<ContentControl>("SourcesHost")!.Content);
         var input = Assert.Single(control.GetVisualDescendants().OfType<TextBox>());
+        Assert.Contains("search-field-standalone", input.Classes);
         input.Text = "https://skills.contoso.com";
         var added = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         control.SourcesChanged += (_, _) => added.TrySetResult();
@@ -283,7 +284,9 @@ public sealed class AgentSkillsExtensionTests
         Assert.False(vm.NeedsSetup);
         Assert.Single(page.FindControl<Grid>("SourcesWorkspace")!.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Skill sources");
         Assert.Equal("", input.Text);
-        host.Click(Assert.Single(control.GetVisualDescendants().OfType<Button>(), button => Equals(button.Content, "Remove")));
+        var remove = Assert.Single(control.GetVisualDescendants().OfType<Button>(), button => Equals(button.Content, "Remove"));
+        Assert.Contains("secondary-action", remove.Classes);
+        host.Click(remove);
         await AwaitRefreshAsync(vm);
         Assert.Empty(AgentSkillsService.GetConfiguredSources());
         Assert.True(vm.NeedsSetup);

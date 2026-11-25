@@ -57,8 +57,6 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
     private readonly bool _loading = true;
     private bool _active = true;
     private int _generation;
-    private bool _notionExpansionChosen;
-    private bool _autoExpanded;
     private bool _refreshPending;
 
     public ObservableCollection<SkillTargetViewModel> Agents { get; } = [];
@@ -76,8 +74,6 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
     [ObservableProperty] private string _notionError = "";
     [ObservableProperty] private string _notionSummary = CoreTools.Translate("Checking the Notion CLI…");
     [ObservableProperty] private bool _isBusy;
-    [ObservableProperty] private bool _isNotionExpanded;
-    [ObservableProperty] private bool _isAdvancedExpanded;
     [ObservableProperty] private NotionCliState _notionState = NotionCliState.Unknown;
 
     public IReadOnlyList<string> TargetModes { get; }
@@ -94,9 +90,6 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
     public bool ShowInstall => NotionState == NotionCliState.NotInstalled;
     public bool ShowSignIn => NotionState == NotionCliState.SignedOut;
     public bool ShowSignOut => NotionState == NotionCliState.SignedIn;
-    public string VersionSummary => HasVersionError
-        ? CoreTools.Translate("Version needs attention")
-        : SpecificVersion ? VersionText.Trim() : CoreTools.Translate("Latest available");
 
     public AgentSkillsSettingsViewModel(SkillsService manager) : this(new AgentSkillsSettingsService(manager)) { }
 
@@ -206,15 +199,12 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
         if (valid && save)
             valid = _service.SetVersion(version);
         VersionError = valid ? "" : CoreTools.Translate("Enter a valid version number, or choose Latest available.");
-        if (!valid) IsAdvancedExpanded = true;
-        OnPropertyChanged(nameof(VersionSummary));
         OnPropertyChanged(nameof(CanInstall));
     }
 
     partial void OnVersionErrorChanged(string value)
     {
         OnPropertyChanged(nameof(HasVersionError));
-        OnPropertyChanged(nameof(VersionSummary));
         OnPropertyChanged(nameof(CanInstall));
     }
     partial void OnNotionErrorChanged(string value) => OnPropertyChanged(nameof(HasNotionError));
@@ -228,10 +218,6 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowInstall));
         OnPropertyChanged(nameof(ShowSignIn));
         OnPropertyChanged(nameof(ShowSignOut));
-    }
-    partial void OnIsNotionExpandedChanged(bool value)
-    {
-        if (!_autoExpanded) _notionExpansionChosen = true;
     }
 
     public void Activate()
@@ -249,16 +235,6 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
         IsBusy = false;
         OnPropertyChanged(nameof(CanAct));
         OnPropertyChanged(nameof(CanInstall));
-    }
-
-    private void ExpandIfNeeded()
-    {
-        if (_service.HasNotionSources && NotionState != NotionCliState.SignedIn && !_notionExpansionChosen)
-        {
-            _autoExpanded = true;
-            IsNotionExpanded = true;
-            _autoExpanded = false;
-        }
     }
 
     public async Task RefreshAsync()
@@ -324,17 +300,13 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
             NotionSummary = CoreTools.Translate("Could not check the Notion connection.");
             NotionError = ex.Message;
         }
-        ExpandIfNeeded();
     }
 
     public async Task RunNotionActionAsync(Func<Task> action, bool requiresValidVersion = false)
     {
         if (!CanAct) return;
         if (requiresValidVersion && HasVersionError)
-        {
-            IsAdvancedExpanded = true;
             return;
-        }
         int generation = _generation;
         IsBusy = true;
         NotionError = "";
@@ -351,7 +323,6 @@ public partial class AgentSkillsSettingsViewModel : ViewModelBase
             Logger.Warn(ex);
             if (!_active || generation != _generation) return;
             NotionError = CoreTools.Translate("Could not complete the Notion action: {0}", ex.Message);
-            IsNotionExpanded = true;
         }
         finally
         {

@@ -3,8 +3,6 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
-using Avalonia.Input.Raw;
-using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -83,14 +81,10 @@ public sealed class AgentSkillsSettingsControlTests
             Assert.True(toggle.Focusable);
             Assert.True(toggle.IsEffectivelyVisible);
             service.AssertNoHydrationWrites();
-            var discoveryHelp = Assert.Single(control.GetVisualDescendants().OfType<Expander>(),
-                expander => Equals(expander.Header, "How discovery works"));
-            Assert.False(discoveryHelp.IsExpanded);
-            discoveryHelp.IsExpanded = true;
-            host.Pump();
+            Assert.Empty(control.GetVisualDescendants().OfType<Expander>());
             foreach (string help in new[]
             {
-                "Off by default. When enabled, searches of at least two characters also send the search text to skills.sh. No sign-in is required.",
+                "Include the public skills.sh catalog in Discover. Search text is sent to skills.sh; no sign-in is required. Off by default.",
                 "Installing a result saves its source so updates keep working when skills.sh discovery is off. Review skills before installing them.",
             })
             {
@@ -155,31 +149,22 @@ public sealed class AgentSkillsSettingsControlTests
         var control = new AgentSkillsSettingsControl(vm, source.Card);
         using var host = new AgentSkillsSettingsTestWindow(control);
         Assert.Same(source.Card, Named<ContentControl>(control, "SourcesHolder").Content);
-        var sections = Assert.IsType<StackPanel>(control.Content).Children
-            .Where(child => child is Expander || child is TextBlock text && text.Classes.Contains("section-heading"))
-            .Select(child => child is TextBlock text ? text.Text : AutomationProperties.GetName(child)).ToArray();
+        var body = Assert.IsType<StackPanel>(Assert.IsType<ScrollViewer>(control.Content).Content);
+        var sections = body.Children.OfType<TextBlock>()
+            .Where(text => text.Classes.Contains("section-heading")).Select(text => text.Text).ToArray();
         Assert.Equal(["Sources", "Online discovery", "Installation targets", "Notifications", "Notion integration (optional)"], sections);
         Assert.Single(control.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Sources");
-        var cards = Assert.IsType<StackPanel>(control.Content).Children.OfType<Border>().ToArray();
-        Assert.Equal(4, cards.Length);
-        Assert.All(cards, card =>
-        {
-            Assert.Equal(cards[0].Bounds.X, card.Bounds.X);
-            Assert.Equal(cards[0].Bounds.Width, card.Bounds.Width);
-            Assert.True(card.Bounds.Width > 0);
-        });
-        var notion = Named<Expander>(control, "NotionExpander");
-        var advanced = Named<Expander>(control, "AdvancedExpander");
-        Assert.Contains(notion, advanced.GetLogicalAncestors());
-        Assert.Contains(advanced, Named<ComboBox>(control, "VersionPolicySelector").GetLogicalAncestors());
-        Assert.False(advanced.IsExpanded);
-        Assert.DoesNotContain(advanced, control.GetVisualDescendants());
+        Assert.Equal(["SkillsShDiscoveryCard", "TargetModeCard", "NotificationsCard", "NotionCard", "NotionVersionCard"],
+            body.Children.OfType<SettingsCard>().Select(card => card.Name));
+        Assert.Empty(control.GetVisualDescendants().OfType<Expander>());
+        Assert.All(CardSurfaces(body), card => Assert.True(card.Bounds.Width > 0));
+        Assert.Contains(Named<SettingsCard>(control, "NotionVersionCard"),
+            Named<ComboBox>(control, "VersionPolicySelector").GetLogicalAncestors());
         Assert.Empty(control.GetVisualDescendants().OfType<InstallOptionsPanel>());
         Assert.Empty(control.GetVisualDescendants().OfType<CheckboxCard_Dict>());
         Assert.DoesNotContain(control.GetVisualDescendants().OfType<ComboBox>(),
             combo => AutomationProperties.GetName(combo) == "Minimum age for updates");
-        Assert.False(Named<Expander>(control, "NotionExpander").IsExpanded);
-        var summary = Assert.Single(Named<Expander>(control, "NotionExpander").GetVisualDescendants().OfType<TextBlock>(),
+        var summary = Assert.Single(Named<SettingsCard>(control, "NotionCard").GetVisualDescendants().OfType<TextBlock>(),
             text => text.Text == "Not installed. Only Notion sources need this integration.");
         Assert.True(summary.IsEffectivelyVisible);
         Assert.True(summary.Bounds.Height > 0);
@@ -276,7 +261,7 @@ public sealed class AgentSkillsSettingsControlTests
         using var fixture = new AgentSkillsSettingsTestFixture();
         fixture.Seed();
         var service = fixture.Service(true);
-        var vm = new AgentSkillsSettingsViewModel(service) { IsNotionExpanded = true, IsAdvancedExpanded = true };
+        var vm = new AgentSkillsSettingsViewModel(service);
         int installs = 0;
         var control = new AgentSkillsSettingsControl(vm, install: () => { installs++; return Task.CompletedTask; });
         using var host = new AgentSkillsSettingsTestWindow(control);
@@ -306,7 +291,6 @@ public sealed class AgentSkillsSettingsControlTests
         host.EnterText(input, "0.23.9");
         Assert.Equal(["0.23.9"], service.VersionWrites);
         Assert.Equal("0.23.9", service.SavedVersion);
-        Assert.Equal("0.23.9", vm.VersionSummary);
         Assert.False(Named<TextBlock>(control, "VersionErrorText").IsVisible);
         Assert.True(install.IsEnabled);
     }, CancellationToken.None);
@@ -322,7 +306,7 @@ public sealed class AgentSkillsSettingsControlTests
         service.HasNotionSources = true;
         service.DefaultStatus = Status(kind == 0 ? NotionCliState.NotInstalled :
             kind == 1 ? NotionCliState.SignedOut : NotionCliState.SignedIn, "Initial");
-        var vm = new AgentSkillsSettingsViewModel(service) { IsNotionExpanded = true };
+        var vm = new AgentSkillsSettingsViewModel(service);
         var gate = Gate<bool>();
         int callbacks = 0;
         Task Action()
@@ -389,75 +373,20 @@ public sealed class AgentSkillsSettingsControlTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public Task EditVersion_OpensAdvancedAndFocusesCorrectEditor(bool specific) => _session.Dispatch(() =>
+    public Task VersionEditor_IsShownWithoutExpandingAnything(bool invalid) => _session.Dispatch(() =>
     {
         using var fixture = new AgentSkillsSettingsTestFixture();
         var service = fixture.Service();
-        service.StoredVersion = specific ? "invalid pin" : "";
-        var vm = new AgentSkillsSettingsViewModel(service) { IsNotionExpanded = true, IsAdvancedExpanded = false };
-        var control = new AgentSkillsSettingsControl(vm);
-        using var host = new AgentSkillsSettingsTestWindow(control);
-        Assert.False(Named<Expander>(control, "AdvancedExpander").IsExpanded);
-        if (specific) Assert.False(Named<Button>(control, "InstallNotionButton").IsEnabled);
-        host.Space(Named<Button>(control, "EditVersionButton"));
-        Assert.True(vm.IsAdvancedExpanded);
-        Assert.True(vm.IsNotionExpanded);
-        Assert.True(Named<Expander>(control, "NotionExpander").IsExpanded);
-        Assert.True(Named<Expander>(control, "AdvancedExpander").IsExpanded);
-        Assert.True(specific ? Named<TextBox>(control, "VersionInput").IsFocused :
-            Named<ComboBox>(control, "VersionPolicySelector").IsFocused);
-    }, CancellationToken.None);
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public Task VersionEditRequest_ExpandsBothCollapsedSectionsAndFocusesEditor(bool specific) => _session.Dispatch(() =>
-    {
-        using var fixture = new AgentSkillsSettingsTestFixture();
-        var service = fixture.Service();
-        service.StoredVersion = specific ? "0.23.9" : "";
+        service.StoredVersion = invalid ? "invalid pin" : "";
         var vm = new AgentSkillsSettingsViewModel(service);
         var control = new AgentSkillsSettingsControl(vm);
-        Assert.False(vm.IsNotionExpanded);
-        Assert.False(vm.IsAdvancedExpanded);
-        // Exercise the routed edit request before attachment, when both ancestors are collapsed.
-        // Real keyboard activation of the visible edit button is covered separately above.
-        Named<Button>(control, "EditVersionButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         using var host = new AgentSkillsSettingsTestWindow(control);
-        Assert.True(vm.IsNotionExpanded);
-        Assert.True(vm.IsAdvancedExpanded);
-        Assert.True(Named<Expander>(control, "NotionExpander").IsExpanded);
-        Assert.True(Named<Expander>(control, "AdvancedExpander").IsExpanded);
-        Assert.True(specific ? Named<TextBox>(control, "VersionInput").IsFocused :
-            Named<ComboBox>(control, "VersionPolicySelector").IsFocused);
+        Assert.True(Named<ComboBox>(control, "VersionPolicySelector").IsEffectivelyVisible);
+        Assert.Equal(invalid, Named<TextBox>(control, "VersionInput").IsEffectivelyVisible);
+        Assert.Equal(invalid, Named<TextBlock>(control, "VersionErrorText").IsEffectivelyVisible);
+        Assert.Equal(!invalid, Named<Button>(control, "InstallNotionButton").IsEnabled);
+        Assert.Empty(control.GetVisualDescendants().OfType<Expander>());
         service.AssertNoHydrationWrites();
-    }, CancellationToken.None);
-
-    [Fact]
-    public Task DetachedEditVersion_DoesNotApplyPostedFocus() => _session.Dispatch(() =>
-    {
-        using var fixture = new AgentSkillsSettingsTestFixture();
-        var vm = new AgentSkillsSettingsViewModel(fixture.Service()) { IsNotionExpanded = true };
-        var control = new AgentSkillsSettingsControl(vm);
-        using var host = new AgentSkillsSettingsTestWindow(control);
-        var edit = Named<Button>(control, "EditVersionButton");
-        edit.BringIntoView();
-        host.Pump();
-        Assert.True(edit.Focus());
-        host.Window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
-        host.Window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
-        Assert.True(vm.IsAdvancedExpanded);
-        // Detach before running the focus callback posted by the real input handler.
-        host.Scroll.Content = null;
-        var keeper = new TextBox { Text = "New focus owner" };
-        host.Window.Content = keeper;
-        host.Window.UpdateLayout();
-        Assert.True(keeper.Focus());
-        host.Pump();
-        Assert.True(keeper.IsFocused);
-        Assert.False(Named<TextBox>(control, "VersionInput").IsFocused);
-        Assert.False(Named<ComboBox>(control, "VersionPolicySelector").IsFocused);
-        Assert.False(vm.CanAct);
     }, CancellationToken.None);
 
     [Fact]
@@ -466,21 +395,22 @@ public sealed class AgentSkillsSettingsControlTests
         using var fixture = new AgentSkillsSettingsTestFixture();
         fixture.Seed(["detected-a"]);
         var service = fixture.Service(true);
-        var vm = new AgentSkillsSettingsViewModel(service) { IsNotionExpanded = true, IsAdvancedExpanded = true };
+        var vm = new AgentSkillsSettingsViewModel(service);
         var control = new AgentSkillsSettingsControl(vm);
         using var host = new AgentSkillsSettingsTestWindow(control);
         (string Name, string Expected)[] names =
         [
             ("TargetModeSelector", "Installation targets"),
-            ("NotionExpander", "Notion integration (optional)"),
+            ("SkillsShDiscoveryCard", "Search skills.sh"),
+            ("TargetModeCard", "Install for these agents"),
+            ("NotificationsCard", "Notify me about skill updates"),
+            ("NotionVersionCard", "Notion CLI version policy"),
             ("InstallNotionButton", "Install the Notion CLI"),
             ("SignInButton", "Sign in"),
             ("SignOutButton", "Sign out"),
             ("RefreshNotionButton", "Check connection"),
-            ("EditVersionButton", "Notion CLI version policy"),
             ("VersionPolicySelector", "Notion CLI version policy"),
             ("NotificationsToggle", "Notify me about skill updates"),
-            ("AdvancedExpander", "Advanced options"),
             ("VersionInput", "Specific Notion CLI version"),
         ];
         foreach (var (name, expected) in names)
@@ -505,15 +435,46 @@ public sealed class AgentSkillsSettingsControlTests
                 Assert.True(text.IsEffectivelyVisible);
                 Assert.Equal(AutomationLiveSetting.Assertive, AutomationProperties.GetLiveSetting(text));
             }
-            Assert.Equal(errors, announcements.Select(item => item.Message));
-            Assert.All(announcements, item => Assert.Equal(AutomationLiveSetting.Assertive, item.LiveSetting));
+            Assert.Equal(errors, announcements
+                .Where(item => item.LiveSetting == AutomationLiveSetting.Assertive).Select(item => item.Message));
+            Assert.Equal(["Checking the Notion CLI…", "Could not check the Notion connection."], announcements
+                .Where(item => item.LiveSetting == AutomationLiveSetting.Polite).Select(item => item.Message));
+            Assert.Equal(5, announcements.Count);
             host.Detach();
             announcements.Clear();
             vm.TargetError = "detached target";
             vm.VersionError = "detached version";
             vm.NotionError = "detached notion";
+            vm.NotionSummary = "detached summary";
             host.Pump();
             Assert.Empty(announcements);
+        }
+        finally { AccessibilityAnnouncementService.AnnouncementRequested -= Collect; }
+        return true;
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task ConnectionCheck_AnnouncesTheNotionStatusPolitely() => _session.Dispatch(async () =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var service = fixture.Service();
+        service.DefaultStatus = Status(NotionCliState.SignedIn, "Workspace");
+        var vm = new AgentSkillsSettingsViewModel(service);
+        var control = new AgentSkillsSettingsControl(vm);
+        using var host = new AgentSkillsSettingsTestWindow(control);
+        await WhenIdle(vm);
+        host.Pump();
+        var announcements = new List<AccessibilityAnnouncement>();
+        void Collect(object? sender, AccessibilityAnnouncement announcement) => announcements.Add(announcement);
+        AccessibilityAnnouncementService.AnnouncementRequested += Collect;
+        try
+        {
+            var refresh = Named<Button>(control, "RefreshNotionButton");
+            host.Space(refresh);
+            await WhenIdle(vm);
+            host.Pump();
+            Assert.Equal(["Checking the Notion CLI…", "Connected to Workspace, CLI 0.23.9"], announcements.Select(item => item.Message));
+            Assert.All(announcements, item => Assert.Equal(AutomationLiveSetting.Polite, item.LiveSetting));
         }
         finally { AccessibilityAnnouncementService.AnnouncementRequested -= Collect; }
         return true;
@@ -576,12 +537,13 @@ public sealed class AgentSkillsSettingsControlTests
             if (!action)
             {
                 host.Pump();
-                var checking = Assert.Single(Named<Expander>(control, "NotionExpander").GetVisualDescendants().OfType<TextBlock>(),
+                var checking = Assert.Single(Named<SettingsCard>(control, "NotionCard").GetVisualDescendants().OfType<TextBlock>(),
                     text => text.Text == "Checking the Notion CLI…");
                 Assert.True(checking.IsEffectivelyVisible);
                 Assert.True(checking.Bounds.Height > 0);
             }
             await vm.RefreshAsync(); // A queued refresh must not survive detachment either.
+            announcements.Clear();
             host.Detach();
             string summary = vm.NotionSummary;
             var state = vm.NotionState;
@@ -649,14 +611,19 @@ public sealed class AgentSkillsSettingsControlTests
             Assert.Equal(4, service.StatusReads);
             vm.NotionError = "one attached announcement";
             host.Pump();
-            Assert.Equal(["one attached announcement"], announcements.Select(item => item.Message));
+            Assert.Equal(["one attached announcement"], announcements
+                .Where(item => item.LiveSetting == AutomationLiveSetting.Assertive).Select(item => item.Message));
+            Assert.Equal(["Checking the Notion CLI…", "Connected to Reattached, CLI 0.23.9", "Checking the Notion CLI…", "Connected to Reattached, CLI 0.23.9"],
+                announcements.Where(item => item.LiveSetting == AutomationLiveSetting.Polite).Select(item => item.Message));
+            int attached = announcements.Count;
             host.Detach();
             vm.NotionError = "no detached announcement";
+            vm.NotionSummary = "no detached summary";
             source.Sources.IsLoading = true;
             source.Sources.IsLoading = false;
             host.Pump();
             Assert.Equal(4, service.StatusReads);
-            Assert.Single(announcements);
+            Assert.Equal(attached, announcements.Count);
         }
         finally
         {
@@ -684,7 +651,7 @@ public sealed class AgentSkillsSettingsControlTests
         ];
         service.DefaultStatus = Status(NotionCliState.SignedIn,
             "A long workspace name with several teams and projects that must remain readable at a narrow window width");
-        var vm = new AgentSkillsSettingsViewModel(service) { IsNotionExpanded = true, IsAdvancedExpanded = true };
+        var vm = new AgentSkillsSettingsViewModel(service);
         var source = new TextBlock
         {
             Text = "A local repository source with a long descriptive title and explanatory text that wraps without horizontal scrolling",
@@ -698,9 +665,8 @@ public sealed class AgentSkillsSettingsControlTests
         host.Pump();
         Assert.Equal(dark ? ThemeVariant.Dark : ThemeVariant.Light, control.ActualThemeVariant);
         Assert.True(host.Scroll.Viewport.Width > 0);
-        Assert.True(host.Scroll.Extent.Height > host.Scroll.Viewport.Height);
-        string[] names = ["TargetModeSelector", "TargetErrorText", "NotionExpander", "NotionErrorText",
-            "NotificationsToggle", "AdvancedExpander", "VersionPolicySelector", "VersionInput", "VersionErrorText"];
+        string[] names = ["TargetModeSelector", "TargetErrorText", "NotionCard", "NotionErrorText",
+            "NotificationsToggle", "NotionVersionCard", "VersionPolicySelector", "VersionInput", "VersionErrorText"];
         foreach (string name in names)
             AssertFits(Named<Control>(control, name), host.Scroll);
         AssertFits(source, host.Scroll);
@@ -734,6 +700,71 @@ public sealed class AgentSkillsSettingsControlTests
         Assert.True(refresh.Focus());
         Assert.True(refresh.IsFocused);
     }, CancellationToken.None);
+
+    [Fact]
+    public Task Layout_ScrollsItselfInsideAFixedHeightHostAndAlignsCardsWithSettingsPages() => _session.Dispatch(() =>
+    {
+        using var fixture = new AgentSkillsSettingsTestFixture();
+        var vm = new AgentSkillsSettingsViewModel(fixture.Service());
+        var control = new AgentSkillsSettingsControl(vm, new TextBlock { Text = "Source" });
+        AgentLibraryTestEvidence.AddApplicationResources(control);
+        using var host = new AgentSkillsSettingsTestWindow(control, 900, height: 400);
+        host.Pump();
+        var scroll = Assert.IsType<ScrollViewer>(control.Content);
+        Assert.Equal(host.Scroll.Viewport.Height, scroll.Viewport.Height, 1);
+        Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
+
+        var refresh = Named<Button>(control, "RefreshNotionButton");
+        refresh.BringIntoView();
+        host.Pump();
+        Assert.True(scroll.Offset.Y > 0);
+        Point refreshPosition = refresh.TranslatePoint(default, scroll)!.Value;
+        Assert.InRange(refreshPosition.Y, -1, scroll.Viewport.Height - refresh.Bounds.Height + 1);
+
+        var body = Assert.IsType<StackPanel>(scroll.Content);
+        var surfaces = CardSurfaces(body);
+        Assert.Equal(6, surfaces.Length);
+        double cardX = surfaces[0].TranslatePoint(default, scroll)!.Value.X;
+        Assert.Equal(40, cardX, 1);
+        Assert.All(surfaces, surface =>
+        {
+            Assert.Equal(cardX, surface.TranslatePoint(default, scroll)!.Value.X, 1);
+            Assert.Equal(surfaces[0].Bounds.Width, surface.Bounds.Width, 1);
+        });
+        Assert.All(body.Children.OfType<TextBlock>().Where(text => text.Classes.Contains("section-heading")),
+            heading => Assert.Equal(cardX + 4, heading.TranslatePoint(default, scroll)!.Value.X, 1));
+        Assert.Empty(body.GetVisualDescendants().OfType<Expander>());
+        Control Surface(string card) => CardSurfaces(body).Single(surface => surface.FindAncestorOfType<SettingsCard>()?.Name == card);
+        var notion = Surface("NotionCard");
+        double notionBottom = notion.TranslatePoint(new Point(0, notion.Bounds.Height), scroll)!.Value.Y;
+        Assert.Equal(notionBottom, Surface("NotionVersionCard").TranslatePoint(default, scroll)!.Value.Y, 1);
+
+        string[] anchors = new[] { "skills.sh", "skills", "notion" }
+            .SelectMany(query => SettingsSearchIndex.Search(query, limit: 100, isWindows: true))
+            .Where(result => result.PageType == typeof(AgentSkillsSettingsControl) && result.Anchor is not null)
+            .Select(result => result.Anchor!).Distinct().ToArray();
+        Assert.Contains("SkillsShDiscoveryCard", anchors);
+        Assert.Contains("TargetModeCard", anchors);
+        Assert.Contains("NotionCard", anchors);
+        Assert.Equal("Install for these agents", AutomationProperties.GetName(Named<SettingsCard>(control, "TargetModeCard")));
+        Assert.All(anchors, anchor => Named<SettingsCard>(control, anchor));
+
+        Assert.Contains("search-field-standalone", Named<TextBox>(control, "VersionInput").Classes);
+        foreach (string name in new[] { "SkillsShDiscoveryToggle", "NotificationsToggle" })
+        {
+            var toggle = Named<ToggleSwitch>(control, name);
+            Assert.Null(toggle.OnContent);
+            Assert.Null(toggle.OffContent);
+        }
+    }, CancellationToken.None);
+
+    private static Control[] CardSurfaces(StackPanel body) => body.Children
+        .Where(child => child is not TextBlock)
+        .SelectMany(child => child is StackPanel group ? group.Children.AsEnumerable() : [child])
+        .Select(child => child is SettingsCard card
+            ? card.GetVisualDescendants().OfType<Border>().First(border => border.Classes.Contains("settings-card"))
+            : child)
+        .ToArray();
 
     private static void AssertFits(Control control, ScrollViewer viewport)
     {

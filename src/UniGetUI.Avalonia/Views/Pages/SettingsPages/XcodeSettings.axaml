@@ -94,14 +94,16 @@
                                    IsEnabled="{Binding IsEnabled}"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0">
-                <StackPanel Width="260" Spacing="6">
-                    <TextBox Text="{Binding InstallDirectoryDraft}" PlaceholderText="{t:Translate Default}"
-                             automation:AutomationProperties.Name="{t:Translate Installation directory}"/>
-                    <Button Content="{t:Translate Apply}" Command="{Binding ApplyInstallDirectoryCommand}"
-                            IsEnabled="{Binding !Account.IsBusy}" HorizontalAlignment="Left"/>
-                    <TextBlock Text="{Binding InstallDirectoryStatus}"
-                               IsVisible="{Binding HasInstallDirectoryStatus}" TextWrapping="Wrap"/>
-                </StackPanel>
+                <settings:SettingsCard.Content>
+                    <StackPanel Width="260" Spacing="6">
+                        <TextBox Text="{Binding InstallDirectoryDraft}" PlaceholderText="{t:Translate Default}"
+                                 automation:AutomationProperties.Name="{t:Translate Installation directory}"/>
+                        <Button Content="{t:Translate Apply}" Command="{Binding ApplyInstallDirectoryCommand}"
+                                IsEnabled="{Binding !Account.IsBusy}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding InstallDirectoryStatus}"
+                                   IsVisible="{Binding HasInstallDirectoryStatus}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </settings:SettingsCard.Content>
             </settings:SettingsCard>
 
             <settings:SettingsCard x:Name="XcodeArchiveDirectoryCard"
@@ -110,14 +112,16 @@
                                    IsEnabled="{Binding IsEnabled}"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0">
-                <StackPanel Width="260" Spacing="6">
-                    <TextBox Text="{Binding ArchiveDirectoryDraft}" PlaceholderText="{t:Translate Default}"
-                             automation:AutomationProperties.Name="{t:Translate Archive directory}"/>
-                    <Button Content="{t:Translate Apply}" Command="{Binding ApplyArchiveDirectoryCommand}"
-                            IsEnabled="{Binding !Account.IsBusy}" HorizontalAlignment="Left"/>
-                    <TextBlock Text="{Binding ArchiveDirectoryStatus}"
-                               IsVisible="{Binding HasArchiveDirectoryStatus}" TextWrapping="Wrap"/>
-                </StackPanel>
+                <settings:SettingsCard.Content>
+                    <StackPanel Width="260" Spacing="6">
+                        <TextBox Text="{Binding ArchiveDirectoryDraft}" PlaceholderText="{t:Translate Default}"
+                                 automation:AutomationProperties.Name="{t:Translate Archive directory}"/>
+                        <Button Content="{t:Translate Apply}" Command="{Binding ApplyArchiveDirectoryCommand}"
+                                IsEnabled="{Binding !Account.IsBusy}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding ArchiveDirectoryStatus}"
+                                   IsVisible="{Binding HasArchiveDirectoryStatus}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </settings:SettingsCard.Content>
             </settings:SettingsCard>
 
             <settings:ButtonCard x:Name="OpenXcodeCard"

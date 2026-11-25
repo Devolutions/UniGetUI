@@ -45,7 +45,6 @@ public sealed partial class AgentSkillsSettingsControl : UserControl, ISettingsP
         {
             if (install is not null)
                 await _viewModel.RunNotionActionAsync(install, requiresValidVersion: true);
-            if (_viewModel.HasVersionError) FocusVersion();
         };
         SignInButton.Click += async (_, _) =>
         {
@@ -53,7 +52,6 @@ public sealed partial class AgentSkillsSettingsControl : UserControl, ISettingsP
         };
         SignOutButton.Click += async (_, _) => await _viewModel.SignOutAsync();
         RefreshNotionButton.Click += async (_, _) => await _viewModel.RefreshAsync();
-        EditVersionButton.Click += (_, _) => FocusVersion();
     }
 
     private static Task ShowDialogAsync(ImmersiveDialog dialog)
@@ -61,19 +59,6 @@ public sealed partial class AgentSkillsSettingsControl : UserControl, ISettingsP
         if (MainWindow.Instance is not { } owner)
             throw new InvalidOperationException("The main window is not available for Notion setup.");
         return owner.ShowDialogAndRestoreVisibilityAsync(dialog);
-    }
-
-    private void FocusVersion()
-    {
-        _viewModel.IsNotionExpanded = true;
-        _viewModel.IsAdvancedExpanded = true;
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!_attached) return;
-            var target = _viewModel.SpecificVersion ? (Control)VersionInput : VersionPolicySelector;
-            target.BringIntoView();
-            target.Focus();
-        });
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -142,5 +127,8 @@ public sealed partial class AgentSkillsSettingsControl : UserControl, ISettingsP
         };
         if (!string.IsNullOrEmpty(error))
             AccessibilityAnnouncementService.Announce(error, AutomationLiveSetting.Assertive);
+        else if (e.PropertyName == nameof(AgentSkillsSettingsViewModel.NotionSummary)
+            && !string.IsNullOrEmpty(_viewModel.NotionSummary))
+            AccessibilityAnnouncementService.Announce(_viewModel.NotionSummary, AutomationLiveSetting.Polite);
     }
 }

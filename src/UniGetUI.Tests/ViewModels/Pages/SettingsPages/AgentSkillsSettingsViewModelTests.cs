@@ -121,7 +121,8 @@ public sealed class AgentSkillsSettingsViewModelTests
         Assert.Equal(explicitTargets ? ["detected-a", "detected-b", "unavailable-u"] : new[] { "detected-a", "detected-b" },
             vm.Agents.Select(row => row.Id));
         Assert.Equal(!disabled, vm.NotificationsEnabled);
-        Assert.Equal("0.23.8", vm.VersionSummary);
+        Assert.True(vm.SpecificVersion);
+        Assert.Equal("0.23.8", vm.VersionText);
         service.AssertNoHydrationWrites();
         before.AssertUnchanged();
         AssertOtherPreferences();
@@ -326,7 +327,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         Assert.Equal("", CoreSettings.GetValue(CoreSettings.K.SkillsNotionCliVersion));
         Assert.False(vm.SpecificVersion);
         Assert.False(vm.HasVersionError);
-        Assert.Equal("Latest available", vm.VersionSummary);
         Assert.True(vm.CanInstall);
         AssertOtherPreferences();
     }
@@ -349,7 +349,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         vm.VersionText = draft;
         Assert.Equal([expected], service.VersionWrites);
         Assert.Equal(expected, service.SavedVersion);
-        Assert.Equal(expected, vm.VersionSummary);
         Assert.False(vm.HasVersionError);
         Assert.True(vm.CanInstall);
     }
@@ -409,7 +408,7 @@ public sealed class AgentSkillsSettingsViewModelTests
         await vm.RefreshAsync();
         await vm.RefreshAsync();
         Assert.Equal(2, service.StatusReads);
-        Assert.Equal("0.23.8", vm.VersionSummary);
+        Assert.Equal("0.23.8", vm.VersionText);
         Assert.True(vm.CanInstall);
         service.AssertNoHydrationWrites();
         before.AssertUnchanged();
@@ -429,7 +428,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         vm.VersionText = "0.23.9";
         Assert.False(vm.HasVersionError);
         Assert.Equal("", vm.VersionError);
-        Assert.Equal("0.23.9", vm.VersionSummary);
         Assert.Equal(["0.23.9"], service.VersionWrites);
         Assert.True(vm.CanInstall);
     }
@@ -463,13 +461,11 @@ public sealed class AgentSkillsSettingsViewModelTests
         var vm = new AgentSkillsSettingsViewModel(service);
         await vm.RefreshAsync();
         vm.VersionPolicy = 1;
-        vm.IsAdvancedExpanded = false;
         int callbacks = 0;
         await vm.RunNotionActionAsync(() => { callbacks++; return Task.CompletedTask; }, requiresValidVersion: true);
         Assert.Equal(0, callbacks);
         Assert.Equal(0, service.SourceRefreshes);
         Assert.Equal(1, service.StatusReads);
-        Assert.True(vm.IsAdvancedExpanded);
         AssertInvalidVersion(vm);
     }
 
@@ -531,7 +527,7 @@ public sealed class AgentSkillsSettingsViewModelTests
 
     [Theory]
     [MemberData(nameof(StatusCases))]
-    public async Task StatusResult_MapsSummaryActionsAndExpansion(bool sources, NotionCliState state,
+    public async Task StatusResult_MapsSummaryAndActions(bool sources, NotionCliState state,
         string? workspace, string? message, string summary, string error)
     {
         using var fixture = new AgentSkillsSettingsTestFixture();
@@ -539,7 +535,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         service.HasNotionSources = sources;
         service.DefaultStatus = Status(state, workspace, message);
         var vm = new AgentSkillsSettingsViewModel(service);
-        Assert.False(vm.IsNotionExpanded);
         await vm.RefreshAsync();
         Assert.Equal(state, vm.NotionState);
         Assert.Equal(summary, vm.NotionSummary);
@@ -548,7 +543,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         Assert.Equal(state == NotionCliState.NotInstalled, vm.ShowInstall);
         Assert.Equal(state == NotionCliState.SignedOut, vm.ShowSignIn);
         Assert.Equal(state == NotionCliState.SignedIn, vm.ShowSignOut);
-        Assert.Equal(sources && state != NotionCliState.SignedIn, vm.IsNotionExpanded);
         Assert.False(vm.IsBusy);
         Assert.True(vm.CanAct);
         Assert.Equal(1, service.StatusReads);
@@ -570,7 +564,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         Assert.Equal("status failed", vm.NotionError);
         Assert.True(vm.HasNotionError);
         Assert.False(vm.ShowSignIn);
-        Assert.Equal(sources, vm.IsNotionExpanded);
         Assert.True(vm.CanAct);
         var gate = Gate<NotionStatus>();
         service.StatusQueue.Enqueue(gate.Task);
@@ -585,23 +578,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         Assert.False(vm.HasNotionError);
         Assert.True(vm.ShowSignOut);
         Assert.Equal("Connected to Recovered, CLI 0.23.9", vm.NotionSummary);
-        Assert.Equal(2, service.StatusReads);
-    }
-
-    [Fact]
-    public async Task UserCollapse_AfterAutoExpansionSurvivesRefresh()
-    {
-        using var fixture = new AgentSkillsSettingsTestFixture();
-        var service = fixture.Service();
-        service.HasNotionSources = true;
-        var vm = new AgentSkillsSettingsViewModel(service);
-        await vm.RefreshAsync();
-        Assert.True(vm.IsNotionExpanded);
-        vm.IsNotionExpanded = false;
-        service.DefaultStatus = Status(NotionCliState.Unknown, message: "retry");
-        await vm.RefreshAsync();
-        Assert.False(vm.IsNotionExpanded);
-        Assert.Equal("retry", vm.NotionError);
         Assert.Equal(2, service.StatusReads);
     }
 
@@ -654,7 +630,6 @@ public sealed class AgentSkillsSettingsViewModelTests
         service.SignOut = Action;
         await RunAction(vm, kind, Action);
         Assert.Equal("Could not complete the Notion action: action failed", vm.NotionError);
-        Assert.True(vm.IsNotionExpanded);
         Assert.False(vm.IsBusy);
         Assert.True(vm.CanAct);
         Assert.Equal(1, service.StatusReads);
@@ -863,8 +838,6 @@ public sealed class AgentSkillsSettingsViewModelTests
     {
         Assert.True(vm.SpecificVersion);
         Assert.True(vm.HasVersionError);
-        Assert.True(vm.IsAdvancedExpanded);
         Assert.Equal(VersionMessage, vm.VersionError);
-        Assert.Equal("Version needs attention", vm.VersionSummary);
     }
 }

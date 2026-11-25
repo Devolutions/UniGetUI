@@ -44,6 +44,44 @@ public sealed class PowerShellManagerTests
             PowerShell.ParseInstalledPackages(output.Split('\n'), new PowerShell()).Select(package => package.Id));
     }
 
+    [Theory]
+    [InlineData("$InstalledDate = $null", 0)]
+    [InlineData("$UpdatedDate = $null", 0)]
+    [InlineData("$InstalledDate = 'not a date'", 1)]
+    public void InstalledListingToleratesOnlyPowerShellGetDateResets(string statement, int expectedExit)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+        process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-NonInteractive");
+        process.StartInfo.ArgumentList.Add("-Command");
+        process.StartInfo.ArgumentList.Add(
+            "function New-PSGetItemInfo { param([string]$Name, [DateTime]$InstalledDate, [DateTime]$UpdatedDate)"
+            + " $InstalledDate = Get-Date; $UpdatedDate = Get-Date;\n"
+            + "                " + statement + "\n"
+            + " [pscustomobject]@{Name=$Name;Version='1.0';Repository='PSGallery'} };"
+            + " function Get-InstalledModule { New-PSGetItemInfo -Name 'Before'; New-PSGetItemInfo -Name 'After' };"
+            + PowerShell.InstalledListingCommand
+        );
+        process.Start();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
+        string output = process.StandardOutput.ReadToEnd();
+        Assert.True(process.WaitForExit(10000));
+        Assert.Equal(expectedExit, process.ExitCode);
+        Assert.Contains("ArgumentTransformationMetadataException", stderr.GetAwaiter().GetResult());
+        Assert.Equal(["Before", "After"],
+            PowerShell.ParseInstalledPackages(output.Split('\n'), new PowerShell()).Select(package => package.Id));
+    }
+
     [Fact]
     public void InstalledListingAcceptsNoInstalledModules()
     {

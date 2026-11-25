@@ -3130,5 +3130,7 @@
   "Add more pages": "Προσθήκη περισσότερων σελίδων",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Ενεργοποιήστε επεκτάσεις όπως το {0} για να προσθέσετε τις σελίδες τους εδώ. Μπορείτε επίσης να σύρετε μια σελίδα από το μενού πλοήγησης στο «Περισσότερα» ή να κάνετε δεξί κλικ σε αυτήν, για να παραμείνει εδώ.",
   "Keep the navigation menu short": "Διατηρήστε σύντομο το μενού πλοήγησης",
-  "Browse extensions": "Περιήγηση στις επεκτάσεις"
+  "Browse extensions": "Περιήγηση στις επεκτάσεις",
+  "Uninstall casks Homebrew can no longer find": "Απεγκατάσταση των casks που το Homebrew δεν μπορεί πλέον να εντοπίσει",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Το Homebrew δεν μπορεί πλέον να εντοπίσει τα {0}, επομένως δεν μπορεί να τα ενημερώσει. Απεγκαταστήστε τα και, στη συνέχεια, εγκαταστήστε ξανά όσα εξακολουθείτε να χρειάζεστε με το νέο τους όνομα."
 }

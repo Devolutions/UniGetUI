@@ -3130,5 +3130,7 @@
   "Add more pages": "Shto më shumë faqe",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Aktivizo shtesa si {0} për t'i shtuar faqet e tyre këtu. Mund edhe të tërheqësh një faqe nga menyja e navigimit te Më shumë ose të klikosh me të djathtën për ta mbajtur këtu.",
   "Keep the navigation menu short": "Mbaje të shkurtër menynë e navigimit",
-  "Browse extensions": "Shfleto shtesat"
+  "Browse extensions": "Shfleto shtesat",
+  "Uninstall casks Homebrew can no longer find": "Çinstalo cask-et që Homebrew nuk mund t'i gjejë më",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew nuk mund t'i gjejë më {0}, ndaj nuk mund t'i përditësojë. Çinstaloji, pastaj instalo me emrin e ri ato që të duhen ende."
 }

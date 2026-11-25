@@ -3130,5 +3130,7 @@
   "Add more pages": "વધુ પેજ ઉમેરો",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "તેમના પેજ અહીં ઉમેરવા માટે {0} જેવી એક્સ્ટેન્શન્સ ચાલુ કરો. તમે પેજને નેવિગેશન મેનૂમાંથી More પર ખેંચી શકો છો અથવા તેને અહીં રાખવા માટે તેના પર રાઇટ-ક્લિક કરી શકો છો.",
   "Keep the navigation menu short": "નેવિગેશન મેનૂ ટૂંકું રાખો",
-  "Browse extensions": "એક્સ્ટેન્શન્સ બ્રાઉઝ કરો"
+  "Browse extensions": "એક્સ્ટેન્શન્સ બ્રાઉઝ કરો",
+  "Uninstall casks Homebrew can no longer find": "Homebrew હવે શોધી શકતું નથી એવા કાસ્કને અનઇન્સ્ટોલ કરો",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew હવે {0} શોધી શકતું નથી, તેથી તે અપડેટ કરી શકતું નથી. તેમને અનઇન્સ્ટોલ કરો, પછી નવા નામ હેઠળ તમને હજી પણ જોઈતા હોય તે ઇન્સ્ટોલ કરો."
 }

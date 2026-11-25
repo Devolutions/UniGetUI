@@ -3130,5 +3130,7 @@
   "Add more pages": "Lisa lehti",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Lülita sisse laiendused, näiteks {0}, et lisada nende lehed siia. Lehe siin hoidmiseks saad selle ka navigeerimismenüüst valikule „Veel“ lohistada või sellel paremklõpsata.",
   "Keep the navigation menu short": "Hoia navigeerimismenüü lühike",
-  "Browse extensions": "Sirvi laiendusi"
+  "Browse extensions": "Sirvi laiendusi",
+  "Uninstall casks Homebrew can no longer find": "Eemalda caskid, mida Homebrew enam ei leia",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ei leia enam pakette {0}, mistõttu ei saa neid uuendada. Eemalda need ja paigalda need, mida endiselt vajad, nende uue nime all."
 }

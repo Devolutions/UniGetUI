@@ -3130,5 +3130,7 @@
   "Add more pages": "Přidat další stránky",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Zapnutím rozšíření, jako je {0}, sem přidáte jejich stránky. Stránku sem můžete také přesunout přetažením z navigační nabídky na Více nebo kliknutím pravým tlačítkem.",
   "Keep the navigation menu short": "Zachovat navigační nabídku přehlednou",
-  "Browse extensions": "Procházet rozšíření"
+  "Browse extensions": "Procházet rozšíření",
+  "Uninstall casks Homebrew can no longer find": "Odinstalovat balíčky Cask, které Homebrew už nedokáže najít",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew už nedokáže najít {0}, takže je nemůže aktualizovat. Odinstalujte je a poté znovu nainstalujte ty, které stále potřebujete, pod jejich novým názvem."
 }

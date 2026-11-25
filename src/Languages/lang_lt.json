@@ -3130,5 +3130,7 @@
   "Add more pages": "Pridėti daugiau puslapių",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Įjunkite plėtinius, pvz., {0}, kad čia būtų rodomi jų puslapiai. Taip pat galite vilkti puslapį iš naršymo meniu į „Daugiau“ arba spustelėti jį dešiniuoju pelės mygtuku, kad jis liktų čia.",
   "Keep the navigation menu short": "Sutrumpinkite naršymo meniu",
-  "Browse extensions": "Naršyti plėtinius"
+  "Browse extensions": "Naršyti plėtinius",
+  "Uninstall casks Homebrew can no longer find": "Pašalinti Homebrew neberandamas programas",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew neberanda {0}, todėl negali jų atnaujinti. Pašalinkite jas, tada iš naujo įdiekite tas, kurių vis dar reikia, naujais jų pavadinimais."
 }

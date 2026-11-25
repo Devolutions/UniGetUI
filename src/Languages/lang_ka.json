@@ -3130,5 +3130,7 @@
   "Add more pages": "მეტი გვერდის დამატება",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "ჩართეთ ისეთი გაფართოებები, როგორიცაა {0}, რომ მათი გვერდები აქ დაამატოთ. ასევე შეგიძლიათ გვერდი ნავიგაციის მენიუდან „მეტის“ გვერდზე გადაათრიოთ ან მასზე მარჯვენა ღილაკით დააწკაპუნოთ, რომ ის აქ დატოვოთ.",
   "Keep the navigation menu short": "ნავიგაციის მენიუს მოკლედ შენარჩუნება",
-  "Browse extensions": "გაფართოებების დათვალიერება"
+  "Browse extensions": "გაფართოებების დათვალიერება",
+  "Uninstall casks Homebrew can no longer find": "წაშალეთ cask-ები, რომლებსაც Homebrew ვეღარ პოულობს",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ვეღარ პოულობს {0}-ს, ამიტომ მათ განახლებას ვერ ახერხებს. წაშალეთ ისინი, შემდეგ კი კვლავ საჭიროები ახალი სახელით დააინსტალირეთ."
 }

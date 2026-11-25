@@ -3130,5 +3130,7 @@
   "Add more pages": "Dodaj još stranica",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Uključi proširenja kao što je {0} da bi se njihove stranice prikazale ovdje. Možeš i povući stranicu iz navigacijskog izbornika na Više ili je kliknuti desnom tipkom miša da bi ostala ovdje.",
   "Keep the navigation menu short": "Neka navigacijski izbornik bude kratak",
-  "Browse extensions": "Pregledaj proširenja"
+  "Browse extensions": "Pregledaj proširenja",
+  "Uninstall casks Homebrew can no longer find": "Deinstalirajte caskove koje Homebrew više ne može pronaći",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew više ne može pronaći {0}, pa ih ne može ažurirati. Deinstalirajte ih, a zatim ponovno instalirajte one koje još trebate pod njihovim novim nazivom."
 }

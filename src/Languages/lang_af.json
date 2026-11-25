@@ -3130,5 +3130,7 @@
   "Add more pages": "Voeg meer bladsye by",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Skakel uitbreidings soos {0} aan om hul bladsye hier by te voeg. Jy kan ook 'n bladsy vanaf die navigasiekieslys na Meer sleep, of daarop regskliek, om dit hier te hou.",
   "Keep the navigation menu short": "Hou die navigasiekieslys kort",
-  "Browse extensions": "Blaai deur uitbreidings"
+  "Browse extensions": "Blaai deur uitbreidings",
+  "Uninstall casks Homebrew can no longer find": "Deïnstalleer casks wat Homebrew nie meer kan vind nie",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew kan {0} nie meer vind nie, daarom kan dit hulle nie opdateer nie. Deïnstalleer hulle en installeer dan dié wat jy steeds nodig het onder hulle nuwe name."
 }

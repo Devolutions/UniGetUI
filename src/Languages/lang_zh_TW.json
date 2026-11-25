@@ -3131,5 +3131,7 @@
   "Add more pages": "新增更多頁面",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "啟用例如 {0} 之類的擴充功能，即可在此處新增其頁面。您也可以將頁面從導覽選單拖曳至「更多」，或按一下滑鼠右鍵，將頁面保留在此處。",
   "Keep the navigation menu short": "縮短導覽選單",
-  "Browse extensions": "瀏覽擴充功能"
+  "Browse extensions": "瀏覽擴充功能",
+  "Uninstall casks Homebrew can no longer find": "解除安裝 Homebrew 已無法找到的 cask 項目",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew 已無法找到 {0}，因此無法更新。請先解除安裝，再以新名稱安裝仍需要的項目。"
 }

@@ -3130,5 +3130,7 @@
   "Add more pages": "Aldoni pliajn paĝojn",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Ŝaltu etendaĵojn kiel {0} por aldoni iliajn paĝojn ĉi tie. Vi ankaŭ povas treni paĝon el la navigada menuo al Pli, aŭ dekstre alklaki ĝin, por konservi ĝin ĉi tie.",
   "Keep the navigation menu short": "Konservi la navigadan menuon mallonga",
-  "Browse extensions": "Foliumi etendaĵojn"
+  "Browse extensions": "Foliumi etendaĵojn",
+  "Uninstall casks Homebrew can no longer find": "Malinstali caskojn, kiujn Homebrew ne plu povas trovi",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ne plu povas trovi {0}, do ĝi ne povas ĝisdatigi ilin. Malinstalu ilin, poste instalu sub ilia nova nomo tiujn, kiujn vi ankoraŭ bezonas."
 }

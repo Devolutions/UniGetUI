@@ -3130,5 +3130,7 @@
   "Add more pages": "Добавить страницы",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Включите расширения, например {0}, чтобы добавить их страницы сюда. Вы также можете перетащить страницу из меню навигации на «Еще» или щелкнуть ее правой кнопкой мыши, чтобы оставить ее здесь.",
   "Keep the navigation menu short": "Сделать меню навигации короче",
-  "Browse extensions": "Обзор расширений"
+  "Browse extensions": "Обзор расширений",
+  "Uninstall casks Homebrew can no longer find": "Удалить cask-пакеты, которые Homebrew больше не может найти",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew больше не может найти {0}, поэтому не может обновить их. Удалите их, а затем установите те, которые вам ещё нужны, под их новыми именами."
 }

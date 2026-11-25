@@ -3130,5 +3130,7 @@
   "Add more pages": "மேலும் பக்கங்களைச் சேர்",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "அவற்றின் பக்கங்களை இங்கே சேர்க்க {0} போன்ற நீட்டிப்புகளை இயக்கவும். ஒரு பக்கத்தை இங்கேயே வைத்திருக்க, வழிசெலுத்தல் பட்டியலிலிருந்து மேலும் பக்கத்துக்கு இழுக்கலாம் அல்லது அதை வலது கிளிக் செய்யலாம்.",
   "Keep the navigation menu short": "வழிசெலுத்தல் பட்டியலைச் சுருக்கமாக வைத்திரு",
-  "Browse extensions": "நீட்டிப்புகளை உலாவு"
+  "Browse extensions": "நீட்டிப்புகளை உலாவு",
+  "Uninstall casks Homebrew can no longer find": "Homebrew இனி கண்டறிய முடியாத cask-களை நிறுவல் நீக்கு",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew இனி {0} ஐக் கண்டறிய முடியாது, எனவே அவற்றைப் புதுப்பிக்க முடியாது. அவற்றை நிறுவல் நீக்கி, புதிய பெயரில் இன்னும் தேவைப்படுபவற்றை நிறுவவும்."
 }

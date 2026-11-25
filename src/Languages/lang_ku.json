@@ -3130,5 +3130,7 @@
   "Add more pages": "لاپەڕەی زیاتر زیاد بکە",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "درێژکراوەکانی وەک {0} چالاک بکە بۆ زیادکردنی لاپەڕەکانیان لێرە. هەروەها دەتوانیت لاپەڕەیەک لە پێڕستی ڕێدۆزەکان ڕابکێشیت بۆ سەر «زیاتر»، یان کلیکی ڕاستی لێ بکەیت، بۆ ئەوەی لێرە بیهێڵیتەوە.",
   "Keep the navigation menu short": "پێڕستی ڕێدۆزەکان کورت بهێڵەوە",
-  "Browse extensions": "درێژکراوەکان بگەڕێ"
+  "Browse extensions": "درێژکراوەکان بگەڕێ",
+  "Uninstall casks Homebrew can no longer find": "سڕینەوەی ئەو cask ـانەی Homebrew چیتر ناتوانێت بیان بدۆزێتەوە",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew چیتر ناتوانێت {0} بدۆزێتەوە، بۆیە ناتوانێت نوێیان بکاتەوە. بیان بسڕەوە، پاشان هەر یەکێکیان کە هێشتا پێویستتە بە ناوی نوێیانەوە دایبمەزرێنە."
 }

@@ -3130,5 +3130,7 @@
   "Add more pages": "আরও পৃষ্ঠা যোগ করুন",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "এখানে তাদের পৃষ্ঠা যোগ করতে {0}-এর মতো এক্সটেনশনগুলি সক্ষম করুন। কোনো পৃষ্ঠাকে এখানে রাখতে নেভিগেশন মেনু থেকে সেটিকে আরও-তে টেনে আনতে পারেন, অথবা ডান-ক্লিক করতে পারেন।",
   "Keep the navigation menu short": "নেভিগেশন মেনু সংক্ষিপ্ত রাখুন",
-  "Browse extensions": "এক্সটেনশন ব্রাউজ করুন"
+  "Browse extensions": "এক্সটেনশন ব্রাউজ করুন",
+  "Uninstall casks Homebrew can no longer find": "Homebrew যে caskগুলো আর খুঁজে পাচ্ছে না, সেগুলো আনইনস্টল করুন",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew এখন আর {0} খুঁজে পাচ্ছে না, তাই সেগুলো আপডেট করতে পারছে না। সেগুলো আনইনস্টল করুন, তারপর যেগুলো এখনও প্রয়োজন সেগুলো তাদের নতুন নামে ইনস্টল করুন।"
 }

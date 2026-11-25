@@ -3130,5 +3130,7 @@
   "Add more pages": "Tilføj flere sider",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Aktivér udvidelser som {0} for at tilføje deres sider her. Du kan også trække en side fra navigationsmenuen til Mere eller højreklikke på den for at beholde den her.",
   "Keep the navigation menu short": "Hold navigationsmenuen kort",
-  "Browse extensions": "Gennemse udvidelser"
+  "Browse extensions": "Gennemse udvidelser",
+  "Uninstall casks Homebrew can no longer find": "Afinstaller de casks, som Homebrew ikke længere kan finde",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew kan ikke længere finde {0}, så de ikke kan opdateres. Afinstaller dem, og installér dem, du stadig har brug for, under deres nye navn."
 }

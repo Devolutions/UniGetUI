@@ -3130,5 +3130,7 @@
   "Add more pages": "Thêm trang",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Bật các tiện ích mở rộng như {0} để thêm trang của chúng vào đây. Bạn cũng có thể kéo một trang từ menu điều hướng vào Khác hoặc nhấp chuột phải vào trang đó để giữ trang ở đây.",
   "Keep the navigation menu short": "Giữ menu điều hướng gọn",
-  "Browse extensions": "Duyệt tiện ích mở rộng"
+  "Browse extensions": "Duyệt tiện ích mở rộng",
+  "Uninstall casks Homebrew can no longer find": "Gỡ cài đặt các Casks mà Homebrew không còn tìm thấy",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew không còn tìm thấy {0}, vì vậy không thể cập nhật chúng. Hãy gỡ cài đặt chúng, sau đó cài đặt những mục bạn vẫn cần bằng tên mới."
 }

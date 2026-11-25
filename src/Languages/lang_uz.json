@@ -3125,5 +3125,7 @@
     "Add more pages": "Ko‘proq sahifa qo‘shish",
     "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Sahifalarini bu yerga qo‘shish uchun {0} kabi kengaytmalarni yoqing. Sahifani shu yerda qoldirish uchun uni navigatsiya menyusidan “More” ustiga sudrab olib borishingiz yoki ustiga o‘ng tugma bilan bosishingiz ham mumkin.",
     "Keep the navigation menu short": "Navigatsiya menyusini ixcham saqlash",
-    "Browse extensions": "Kengaytmalarni ko‘rib chiqish"
+    "Browse extensions": "Kengaytmalarni ko‘rib chiqish",
+    "Uninstall casks Homebrew can no longer find": "Homebrew endi topa olmaydigan casklarni o‘chirish",
+    "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew endi {0} ni topa olmaydi, shuning uchun ularni yangilay olmaydi. Ularni o‘chirib tashlang, keyin hali ham kerak bo‘lganlarini yangi nomi bilan o‘rnating."
 }

@@ -3130,5 +3130,7 @@
   "Add more pages": "Adaugă mai multe pagini",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Activează extensii precum {0} pentru a le adăuga paginile aici. De asemenea, poți trage o pagină din meniul de navigare peste Mai multe sau poți face clic dreapta pe ea pentru a o păstra aici.",
   "Keep the navigation menu short": "Păstrează meniul de navigare scurt",
-  "Browse extensions": "Răsfoiește extensiile"
+  "Browse extensions": "Răsfoiește extensiile",
+  "Uninstall casks Homebrew can no longer find": "Dezinstalează cask-urile pe care Homebrew nu le mai găsește",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew nu mai poate găsi {0}, așa că nu le poate actualiza. Dezinstalează-le, apoi instalează din nou, sub noul lor nume, pe cele de care mai ai nevoie."
 }

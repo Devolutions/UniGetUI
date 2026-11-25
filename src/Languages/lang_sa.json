@@ -3130,5 +3130,7 @@
   "Add more pages": "अधिकानि पृष्ठानि योजयतु",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "अत्र तेषां पृष्ठानि योजयितुं {0} इत्यादीनि विस्ताराणि सक्रियाणि करोतु। पृष्ठम् अत्र स्थापयितुं संचरणसूचीतः अधिक-पृष्ठे आकृष्य स्थापयितुं शक्नोति, अथवा तस्मिन् दक्षिण-क्लिक् कर्तुं शक्नोति।",
   "Keep the navigation menu short": "संचरणसूचीं संक्षिप्तां स्थापयतु",
-  "Browse extensions": "विस्तारान् अन्वेषयतु"
+  "Browse extensions": "विस्तारान् अन्वेषयतु",
+  "Uninstall casks Homebrew can no longer find": "Homebrew इदानीं अन्वेष्टुं न शक्नोति तानि casks विस्थापयतु",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew इदानीं {0} अन्वेष्टुं न शक्नोति, अतः तानि अद्यतनयितुं न शक्नोति। तानि विस्थापयतु, ततः येषाम् अद्यापि आवश्यकता अस्ति तानि तेषां नूतननाम्ना स्थापयतु।"
 }

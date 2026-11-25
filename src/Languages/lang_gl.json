@@ -3130,5 +3130,7 @@
   "Add more pages": "Engadir máis páxinas",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Activa extensións como {0} para engadir aquí as súas páxinas. Tamén podes arrastrar unha páxina do menú de navegación ata Máis ou facer clic nela co botón dereito para deixala aquí.",
   "Keep the navigation menu short": "Manter curto o menú de navegación",
-  "Browse extensions": "Explorar extensións"
+  "Browse extensions": "Explorar extensións",
+  "Uninstall casks Homebrew can no longer find": "Desinstalar os casks que Homebrew xa non pode atopar",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew xa non pode atopar {0}, polo que non pode actualizalos. Desinstálaos e, a continuación, instala cos seus novos nomes os que aínda necesites."
 }

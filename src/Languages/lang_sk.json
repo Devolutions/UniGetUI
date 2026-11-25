@@ -3130,5 +3130,7 @@
   "Add more pages": "Pridať ďalšie stránky",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Povoľte rozšírenia, ako je {0}, aby sa sem pridali ich stránky. Môžete sem tiež presunúť stránku z navigačnej ponuky alebo na ňu kliknúť pravým tlačidlom myši, aby ste ju tu ponechali.",
   "Keep the navigation menu short": "Zachovať navigačnú ponuku krátku",
-  "Browse extensions": "Prehliadať rozšírenia"
+  "Browse extensions": "Prehliadať rozšírenia",
+  "Uninstall casks Homebrew can no longer find": "Odinštalovať casky, ktoré Homebrew už nedokáže nájsť",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew už nedokáže nájsť {0}, preto ich nemôže aktualizovať. Odinštalujte ich a potom znova nainštalujte tie, ktoré ešte potrebujete, pod ich novým názvom."
 }

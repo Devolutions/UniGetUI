@@ -3130,5 +3130,7 @@
   "Add more pages": "הוסף דפים נוספים",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "הפעל הרחבות כגון {0} כדי להוסיף את הדפים שלהן לכאן. אפשר גם לגרור דף מתפריט הניווט אל More, או ללחוץ עליו באמצעות לחצן העכבר הימני, כדי להשאיר אותו כאן.",
   "Keep the navigation menu short": "שמור על תפריט ניווט קצר",
-  "Browse extensions": "עיין בהרחבות"
+  "Browse extensions": "עיין בהרחבות",
+  "Uninstall casks Homebrew can no longer find": "הסר יישומי Cask ש-Homebrew כבר לא מוצא",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew כבר לא מוצא את {0}, ולכן אינו יכול לעדכן אותם. הסר אותם, ולאחר מכן התקן מחדש בשם החדש את אלה שעדיין נחוצים לך."
 }

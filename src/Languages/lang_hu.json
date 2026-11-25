@@ -3130,5 +3130,7 @@
   "Add more pages": "További oldalak hozzáadása",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Kapcsoljon be olyan bővítményeket, mint a(z) {0}, hogy az oldalaik itt is megjelenjenek. A navigációs menüből is áthúzhat ide egy oldalt a Továbbiak elemre, vagy jobb gombbal rákattintva itt tarthatja.",
   "Keep the navigation menu short": "A navigációs menü röviden tartása",
-  "Browse extensions": "Bővítmények böngészése"
+  "Browse extensions": "Bővítmények böngészése",
+  "Uninstall casks Homebrew can no longer find": "A Homebrew által már nem megtalálható caskek eltávolítása",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "A Homebrew már nem találja ezeket: {0}, ezért nem tudja frissíteni őket. Távolítsa el őket, majd telepítse újra azokat, amelyekre továbbra is szüksége van, az új nevükön."
 }

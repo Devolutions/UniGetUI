@@ -3126,5 +3126,7 @@
   "Add more pages": "페이지 더 추가",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "{0} 같은 확장을 켜면 해당 페이지가 여기에 추가됩니다. 탐색 메뉴에서 페이지를 더 보기로 끌거나 마우스 오른쪽 버튼으로 클릭해 여기에 유지할 수도 있습니다.",
   "Keep the navigation menu short": "탐색 메뉴를 간결하게 유지",
-  "Browse extensions": "확장 찾아보기"
+  "Browse extensions": "확장 찾아보기",
+  "Uninstall casks Homebrew can no longer find": "Homebrew에서 더 이상 찾을 수 없는 캐스크 제거",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew에서 {0}을(를) 더 이상 찾을 수 없어 업데이트할 수 없습니다. 해당 항목을 제거한 다음, 계속 필요한 항목은 새 이름으로 설치하세요."
 }

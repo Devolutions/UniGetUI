@@ -3130,5 +3130,7 @@
   "Add more pages": "Lisää sivuja",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Ota käyttöön esimerkiksi {0}-laajennuksia lisätäksesi niiden sivut tänne. Voit myös pitää sivun täällä vetämällä sen navigointivalikosta Lisää-kohtaan tai napsauttamalla sitä hiiren kakkospainikkeella.",
   "Keep the navigation menu short": "Pidä navigointivalikko lyhyenä",
-  "Browse extensions": "Selaa laajennuksia"
+  "Browse extensions": "Selaa laajennuksia",
+  "Uninstall casks Homebrew can no longer find": "Poista Homebrew-caskit, joita Homebrew ei enää löydä",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ei enää löydä kohteita {0}, joten se ei voi päivittää niitä. Poista ne ja asenna edelleen tarvitsemasi uudelleen niiden uusilla nimillä."
 }

@@ -3130,5 +3130,7 @@
   "Add more pages": "افزودن صفحه‌های بیشتر",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "برای افزودن صفحه‌های افزونه‌ها به اینجا، افزونه‌هایی مانند {0} را فعال کنید. همچنین می‌توانید صفحه‌ای را از منوی ناوبری به «بیشتر» بکشید یا روی آن راست‌کلیک کنید تا اینجا نگه داشته شود.",
   "Keep the navigation menu short": "کوتاه نگه‌داشتن منوی ناوبری",
-  "Browse extensions": "مرور افزونه‌ها"
+  "Browse extensions": "مرور افزونه‌ها",
+  "Uninstall casks Homebrew can no longer find": "حذف caskهایی که Homebrew دیگر نمی‌تواند پیدا کند",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew دیگر نمی‌تواند {0} را پیدا کند، بنابراین نمی‌تواند آن‌ها را به‌روزرسانی کند. آن‌ها را حذف کنید و سپس هرکدام را که هنوز نیاز دارید با نام جدیدشان نصب کنید."
 }

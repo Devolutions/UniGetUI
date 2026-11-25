@@ -3130,5 +3130,7 @@
   "Add more pages": "เพิ่มหน้า",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "เปิดใช้งานส่วนขยาย เช่น {0} เพื่อเพิ่มหน้าของส่วนขยายที่นี่ คุณยังสามารถลากหน้าจากเมนูนำทางไปยังหน้าเพิ่มเติม หรือคลิกขวาที่หน้า เพื่อให้หน้าอยู่ที่นี่",
   "Keep the navigation menu short": "ทำให้เมนูนำทางสั้น",
-  "Browse extensions": "เรียกดูส่วนขยาย"
+  "Browse extensions": "เรียกดูส่วนขยาย",
+  "Uninstall casks Homebrew can no longer find": "ถอนการติดตั้ง cask ที่ Homebrew ไม่พบอีกต่อไป",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ไม่พบ {0} อีกต่อไป จึงไม่สามารถอัปเดตรายการเหล่านี้ได้ ถอนการติดตั้งรายการเหล่านี้ แล้วติดตั้งรายการที่ยังต้องการอีกครั้งโดยใช้ชื่อใหม่"
 }

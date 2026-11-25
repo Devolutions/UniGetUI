@@ -3130,5 +3130,7 @@
   "Add more pages": "Добавете още страници",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Включете разширения като {0}, за да добавите страниците им тук. Можете също да плъзнете страница от навигационното меню върху „Още“ или да щракнете върху нея с десния бутон, за да я запазите тук.",
   "Keep the navigation menu short": "Поддържайте навигационното меню кратко",
-  "Browse extensions": "Разгледайте разширенията"
+  "Browse extensions": "Разгледайте разширенията",
+  "Uninstall casks Homebrew can no longer find": "Деинсталирайте cask пакетите, които Homebrew вече не може да открие",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew вече не може да открие {0}, затова не може да ги актуализира. Деинсталирайте ги, след което инсталирайте отново тези, които все още са ви нужни, под новите им имена."
 }

@@ -3130,5 +3130,7 @@
   "Add more pages": "ಇನ್ನಷ್ಟು ಪುಟಗಳನ್ನು ಸೇರಿಸಿ",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "{0} ನಂತಹ ವಿಸ್ತರಣೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅವುಗಳ ಪುಟಗಳನ್ನು ಇಲ್ಲಿ ಸೇರಿಸಿ. ಪುಟವನ್ನು ನ್ಯಾವಿಗೇಶನ್ ಮೆನುವಿನಿಂದ ಇನ್ನಷ್ಟು ಮೇಲೆ ಎಳೆದು ಬಿಡಬಹುದು, ಅಥವಾ ಅದನ್ನು ಇಲ್ಲಿಯೇ ಇರಿಸಲು ಅದರ ಮೇಲೆ ಬಲ ಕ್ಲಿಕ್ ಮಾಡಬಹುದು.",
   "Keep the navigation menu short": "ನ್ಯಾವಿಗೇಶನ್ ಮೆನುವನ್ನು ಚಿಕ್ಕದಾಗಿ ಇರಿಸಿ",
-  "Browse extensions": "ವಿಸ್ತರಣೆಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ"
+  "Browse extensions": "ವಿಸ್ತರಣೆಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ",
+  "Uninstall casks Homebrew can no longer find": "Homebrew ಇನ್ನು ಮುಂದೆ ಪತ್ತೆಹಚ್ಚಲಾಗದ casks ಅನ್ನು ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ಇನ್ನು ಮುಂದೆ {0} ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲಾಗುತ್ತಿಲ್ಲ, ಆದ್ದರಿಂದ ಅವುಗಳನ್ನು update ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ. ಅವುಗಳನ್ನು ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ, ನಂತರ ಇನ್ನೂ ಅಗತ್ಯವಿರುವವುಗಳನ್ನು ಅವುಗಳ ಹೊಸ ಹೆಸರಿನಲ್ಲಿ install ಮಾಡಿ."
 }

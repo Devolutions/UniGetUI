@@ -3130,5 +3130,7 @@
   "Add more pages": "Tambahkan halaman lainnya",
   "Turn on extensions such as {0} to add their pages here. You can also drag a page from the navigation menu onto More, or right-click it, to keep it here.": "Aktifkan ekstensi seperti {0} untuk menambahkan halamannya di sini. Anda juga dapat menyeret halaman dari menu navigasi ke Lainnya, atau mengeklik kanan halaman tersebut, agar tetap berada di sini.",
   "Keep the navigation menu short": "Buat menu navigasi tetap ringkas",
-  "Browse extensions": "Jelajahi ekstensi"
+  "Browse extensions": "Jelajahi ekstensi",
+  "Uninstall casks Homebrew can no longer find": "Copot cask yang tidak lagi dapat ditemukan Homebrew",
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew tidak lagi dapat menemukan {0}, jadi Homebrew tidak dapat memperbaruinya. Copot cask-cask tersebut, lalu instal kembali cask yang masih Anda perlukan dengan nama barunya."
 }

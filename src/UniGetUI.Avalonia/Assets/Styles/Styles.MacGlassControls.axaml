@@ -58,6 +58,15 @@
                      Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="CornerRadius" Value="7"/>
     </Style>
+    <!-- The package details split button stays fused: round only its outer corners. -->
+    <Style Selector="Button.action-main:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button.action-main:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="CornerRadius" Value="7,0,0,7"/>
+    </Style>
+    <Style Selector="Button.action-chevron:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button.action-chevron:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="CornerRadius" Value="0,7,7,0"/>
+    </Style>
     <!-- SvgIcon only honours state-style (or local) colours, hence the :not(:disabled) activators. -->
     <Style Selector="Button.accent:not(:disabled) controls|SvgIcon">
         <Setter Property="Foreground" Value="{DynamicResource MacAccentForeground}"/>

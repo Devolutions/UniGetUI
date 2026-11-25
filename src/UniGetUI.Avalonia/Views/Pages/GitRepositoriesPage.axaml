@@ -91,7 +91,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid Name="PageGrid" Margin="8,6,8,8" Grid.IsSharedSizeScope="True">
+    <Grid Name="PageGrid" Margin="8,6,8,-2" Grid.IsSharedSizeScope="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -309,6 +309,7 @@
         <!-- Drag to share the height between the clones and the panel under them -->
         <GridSplitter Grid.Row="5" Name="DetailsSplitter"
                       Classes="winui-horizontal-splitter"
+                      Padding="0"
                       ResizeDirection="Rows"
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                       ToolTip.Tip="{t:Translate Drag to resize}"
@@ -316,7 +317,7 @@
 
         <!-- Worktrees or branches of the selected clone -->
         <Grid Grid.Row="6" RowDefinitions="Auto,*">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,0,0,4">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,0,0,12">
                 <ListBox SelectionMode="Single,AlwaysSelected"
                          SelectedIndex="{Binding DetailsViewIndex, Mode=TwoWay}"
                          Background="Transparent"
@@ -341,21 +342,27 @@
                     </ListBoxItem>
                 </ListBox>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsEnabled="{Binding HasSelection}">
-                    <Button Command="{Binding RefreshDetailsCommand}" Padding="8,4"
+                    <StackPanel.Styles>
+                        <Style Selector="Button">
+                            <Setter Property="Padding" Value="8,4,8,8"/>
+                            <Setter Property="VerticalAlignment" Value="Stretch"/>
+                        </Style>
+                    </StackPanel.Styles>
+                    <Button Command="{Binding RefreshDetailsCommand}"
                             ToolTip.Tip="{t:Translate Read them again from git}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg" Width="16" Height="16"/>
                             <TextBlock Text="{t:Translate Reload}" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <Button Command="{Binding PruneWorktreesCommand}" Padding="8,4" IsVisible="{Binding ShowWorktrees}"
+                    <Button Command="{Binding PruneWorktreesCommand}" IsVisible="{Binding ShowWorktrees}"
                             ToolTip.Tip="{t:Translate Forget the worktrees whose folder was deleted}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg" Width="16" Height="16"/>
                             <TextBlock Text="{t:Translate Prune missing}" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <Button Command="{Binding DeleteMergedBranchesCommand}" Padding="8,4"
+                    <Button Command="{Binding DeleteMergedBranchesCommand}"
                             IsVisible="{Binding ShowBranches}" IsEnabled="{Binding HasMergedBranches}"
                             ToolTip.Tip="{t:Translate Delete the branches whose commits are all on the default branch}">
                         <StackPanel Orientation="Horizontal" Spacing="6">

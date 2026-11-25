@@ -9,7 +9,7 @@
     <UserControl.Styles>
         <StyleInclude Source="avares://UniGetUI/Views/Pages/AgentLibraryStyles.axaml"/>
     </UserControl.Styles>
-    <Grid x:Name="PageWorkspace" Margin="16,12" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+    <Grid x:Name="PageWorkspace" Margin="16,12,16,6" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Spacing="3">
                 <TextBlock Text="{t:Translate Agent Skills}" FontSize="26" FontWeight="SemiBold"

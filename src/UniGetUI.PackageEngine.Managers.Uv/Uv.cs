@@ -72,7 +72,14 @@ public sealed class Uv : PackageManager
             logger.Log($"Matched {matches.Length} packages for query '{query}'");
 
             Dictionary<string, string?> latestVersions = PyPIProjectClient.FetchLatestVersions(matches);
-            return ParseSearchMatches(matches, latestVersions, DefaultSource, this);
+            IReadOnlyList<Package> packages = ParseSearchMatches(
+                matches,
+                latestVersions,
+                DefaultSource,
+                this
+            );
+            logger.Close(0);
+            return packages;
         }
         catch (Exception e)
         {
@@ -244,6 +251,7 @@ public sealed class Uv : PackageManager
         bool toolScoped = true
     )
     {
+        string command = ((toolScoped ? Status.ExecutableCallArgs : "") + arguments).Trim();
         using Process process = new()
         {
             StartInfo = new ProcessStartInfo
@@ -255,13 +263,17 @@ public sealed class Uv : PackageManager
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
+                StandardErrorEncoding = System.Text.Encoding.UTF8,
             },
         };
+        process.StartInfo.Environment["NO_COLOR"] = "1";
 
         IProcessTaskLogger processLogger = TaskLogger.CreateNew(taskType, process);
 
         process.Start();
         RegisterListingProcess(process);
+
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
 
         string? line;
         List<string> outputLines = [];
@@ -271,11 +283,29 @@ public sealed class Uv : PackageManager
             outputLines.Add(line);
         }
 
-        processLogger.AddToStdErr(process.StandardError.ReadToEnd());
+        string errorOutput = stderr.GetAwaiter().GetResult();
+        processLogger.AddToStdErr(errorOutput);
         process.WaitForExit();
         processLogger.Close(process.ExitCode);
 
+        ThrowIfUvFailed($"uv {command}", process.ExitCode, errorOutput);
+
         return outputLines;
+    }
+
+    /// <summary>
+    /// A failed listing writes nothing to stdout, so returning its empty output would report that
+    /// uv found no packages. The loader turns this exception into a failed listing instead.
+    /// </summary>
+    internal static void ThrowIfUvFailed(string command, int exitCode, string errorOutput)
+    {
+        if (exitCode == 0)
+            return;
+
+        string message = $"{command} failed with exit code {exitCode}";
+        throw new InvalidOperationException(
+            string.IsNullOrWhiteSpace(errorOutput) ? message : $"{message}: {errorOutput.Trim()}"
+        );
     }
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
@@ -308,15 +338,17 @@ public sealed class Uv : PackageManager
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
             },
         };
+        process.StartInfo.Environment["NO_COLOR"] = "1";
         process.Start();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
         version = process.StandardOutput.ReadToEnd().Trim();
+        string errorOutput = stderr.GetAwaiter().GetResult();
         process.WaitForExit();
+        ThrowIfUvFailed("uv --version", process.ExitCode, errorOutput);
     }
 
     protected override void _performExtraLoadingSteps()
     {
-        Environment.SetEnvironmentVariable("NO_COLOR", "1", EnvironmentVariableTarget.Process);
-
         _ = PyPIIndexClient.PreWarmIndexAsync();
     }
 

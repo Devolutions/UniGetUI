@@ -785,6 +785,26 @@ public sealed class UvInstallOptionsTests : IDisposable
     }
 
     [Fact]
+    public void AFailedUvCommandReportsItsExitCodeAndStderrInsteadOfAnEmptyListing()
+    {
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
+            () =>
+                Uv.ThrowIfUvFailed(
+                    "uv tool list --outdated",
+                    1,
+                    "error: Failed to fetch: Request failed after 3 retries\n"
+                )
+        );
+        Assert.Equal(
+            "uv tool list --outdated failed with exit code 1: "
+                + "error: Failed to fetch: Request failed after 3 retries",
+            failure.Message
+        );
+
+        Uv.ThrowIfUvFailed("uv tool list", 0, "");
+    }
+
+    [Fact]
     public void UvRanksVersionsWithPep440AndFallsBackWhenItsParserRejects()
     {
         Uv manager = new();

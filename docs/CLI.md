@@ -492,15 +492,23 @@ for each manager across restarts, in `ManagerHealth.json` in its data folder:
 
 | Field | Meaning |
 | --- | --- |
-| `state` | `loading` (still starting), `unknown` (nothing listed yet), `healthy`, `failing`, `malfunctioning`, `not-found` or `disabled`. |
+| `state` | `loading` (still starting), `unknown` (nothing listed yet), `healthy`, `incomplete` (the manager answered, but its last listing of some kind skipped a source it could not reach), `failing`, `malfunctioning`, `not-found` or `disabled`. |
 | `needsAttention` | `true` when the app shows its health banner: a malfunction, or a listing that failed at least twice in a row with its last failure in the past 24 hours. For WinGet, Apt, Dnf and Pacman a single failed installed listing is enough, unless it timed out. A listing that keeps timing out needs attention only if no listing of that manager has succeeded since its failures began, so a manager that is only slow while the network comes up is not reported. |
-| `failingListing` | `search`, `installed` or `updates`: the listing that failed most recently, or `installed` for a malfunction. |
-| `reason`, `consecutiveFailures` | The failing listing's last error and how many times in a row it failed. |
-| `search`, `installed`, `updates` | Per listing: `lastSuccessUtc`, `lastFailureUtc`, `lastFailureReason`, `lastFailureWasTimeout` (the failure, or the first attempt it retried, timed out), `consecutiveFailures`, `failureStreakStartUtc` (when the current run of failures began), `lastPackageCount`, `lastFastRepairUtc`, `lastFastRepairReason` (a first attempt that failed and was retried) and `recentDurationsMs` (the last ten). |
+| `failingListing` | `search`, `installed` or `updates`: the listing that failed most recently, or `installed` for a malfunction. When `incomplete`, the listing that was last incomplete. |
+| `reason`, `consecutiveFailures` | The failing listing's last error and how many times in a row it failed. When `incomplete`, what was left out, and no failure count. |
+| `search`, `installed`, `updates` | Per listing: `lastSuccessUtc`, `lastFailureUtc`, `lastFailureReason`, `lastFailureWasTimeout` (the failure, or the first attempt it retried, timed out), `consecutiveFailures`, `failureStreakStartUtc` (when the current run of failures began), `lastPackageCount`, `lastFastRepairUtc`, `lastFastRepairReason` (a first attempt that failed and was retried), `lastIncompleteUtc`, `lastIncompleteReason` (set while the latest listing of that kind was incomplete, cleared by a complete one) and `recentDurationsMs` (the last ten). |
 
-A manager is `malfunctioning` when it is ready, its installed listing succeeded and returned no package
-at all, and a working installation of it always lists something (WinGet, Apt, Dnf and Pacman). The
-`DisableWinGetMalfunctionDetector` setting still turns this off for WinGet.
+A listing that only skipped unreachable sources neither counts as a failure nor needs attention;
+`lastSuccessUtc` and `lastPackageCount` only move on a complete listing. Any other incomplete
+listing, such as a manager that exited with an error or output that could not be read, still
+counts as a failure.
+
+A manager is `malfunctioning` when it is ready, its latest installed listing was complete, succeeded
+and returned no package at all, and a working installation of it always lists something (WinGet,
+Apt, Dnf and Pacman). The `DisableWinGetMalfunctionDetector` setting still turns this off for WinGet.
+
+`needsAttention` here reflects the whole record. The app's health popup, and the terminal UI's
+startup warning, additionally only report a failure or malfunction seen since the app started.
 
 ### Sources
 

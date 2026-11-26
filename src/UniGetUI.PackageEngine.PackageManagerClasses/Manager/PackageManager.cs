@@ -867,6 +867,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             public Exception? FastRepairCause;
             public Exception? Failure;
             public Exception? Incomplete;
+            public Exception? IncompleteNotFromSource;
         }
 
         private IReadOnlyList<IPackage> TrackListing(
@@ -877,8 +878,11 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         {
             ListingOutcome outcome = new() { Started = Stopwatch.GetTimestamp() };
             using var tracking = PackageListingScope.TrackFailures(error =>
-                Interlocked.CompareExchange(ref outcome.Incomplete, error, null)
-            );
+            {
+                Interlocked.CompareExchange(ref outcome.Incomplete, error, null);
+                if (error is not ListingSourceUnavailableException)
+                    Interlocked.CompareExchange(ref outcome.IncompleteNotFromSource, error, null);
+            });
             long start = Stopwatch.GetTimestamp();
             IReadOnlyList<IPackage> packages = listing(outcome);
             if (!outcome.Skipped && outcome.Failure is null && WasStoppedSince(outcome.Started))
@@ -892,9 +896,23 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 else if (kind is ManagerListingKind.Updates)
                     LastUpdatesListingFailed = true;
             }
+            Exception? healthFailure = outcome.Failure;
+            Exception? healthIncomplete = null;
             if (outcome.Incomplete is { } incomplete)
             {
                 Logger.Warn($"Manager {Name} returned an incomplete {kind} listing: {incomplete.Message}");
+                if (healthFailure is null || ReferenceEquals(healthFailure, incomplete))
+                {
+                    if (outcome.IncompleteNotFromSource is { } other)
+                    {
+                        healthFailure = other;
+                    }
+                    else
+                    {
+                        healthFailure = null;
+                        healthIncomplete = incomplete;
+                    }
+                }
                 outcome.Failure ??= incomplete;
             }
             // A skipped inventory listing did not list anything, so it cannot count as listed.
@@ -913,8 +931,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     kind,
                     Stopwatch.GetElapsedTime(start),
                     packages.Count,
-                    outcome.Failure,
-                    outcome.FastRepairCause
+                    healthFailure,
+                    outcome.FastRepairCause,
+                    healthIncomplete
                 );
             }
 

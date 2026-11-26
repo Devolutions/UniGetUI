@@ -23,6 +23,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
 
         public static DateTime Now => ClockOverride.Value?.Invoke() ?? DateTime.UtcNow;
 
+        public static DateTime SessionStartedUtc { get; } = DateTime.UtcNow;
+
         public static IDisposable UseClock(Func<DateTime> clock)
         {
             ClockOverride.Value = clock;
@@ -60,7 +62,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             TimeSpan duration,
             int packageCount,
             Exception? failure,
-            Exception? fastRepairCause
+            Exception? fastRepairCause,
+            Exception? incomplete = null
         )
         {
             lock (Gate)
@@ -84,12 +87,21 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                     listing.LastFastRepairReason = Describe(fastRepairCause);
                 }
 
-                if (failure is null)
+                if (failure is null && incomplete is not null)
+                {
+                    listing.LastIncompleteUtc = now;
+                    listing.LastIncompleteReason = Describe(incomplete, withType: false);
+                    listing.ConsecutiveFailures = 0;
+                    listing.FailureStreakStartUtc = null;
+                }
+                else if (failure is null)
                 {
                     listing.LastSuccessUtc = now;
                     listing.ConsecutiveFailures = 0;
                     listing.FailureStreakStartUtc = null;
                     listing.LastPackageCount = packageCount;
+                    listing.LastIncompleteUtc = null;
+                    listing.LastIncompleteReason = null;
                 }
                 else
                 {
@@ -168,9 +180,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 && (hresult & 0xFFFF) is Win32Timeout or Win32WaitTimeout or WinHttpTimeout
             );
 
-        private static string Describe(Exception failure) =>
+        private static string Describe(Exception failure, bool withType = true) =>
             UrlCredentials()
-                .Replace(Logger.Redact($"{failure.GetType().Name}: {failure.Message}"), "****@");
+                .Replace(
+                    Logger.Redact(withType ? $"{failure.GetType().Name}: {failure.Message}" : failure.Message),
+                    "****@"
+                );
 
         [GeneratedRegex(@"(?<=://)[^/?#\s@]+@")]
         private static partial Regex UrlCredentials();

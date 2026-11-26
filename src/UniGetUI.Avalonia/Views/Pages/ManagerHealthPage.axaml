@@ -106,6 +106,8 @@
                                                     </TextBlock>
                                                     <TextBlock Text="{Binding LastFailure}" FontSize="12" Opacity="0.7"
                                                                TextWrapping="Wrap" IsVisible="{Binding HasFailure}"/>
+                                                    <TextBlock Text="{Binding LastIncomplete}" FontSize="12" Opacity="0.7"
+                                                               TextWrapping="Wrap" IsVisible="{Binding HasIncomplete}"/>
                                                 </StackPanel>
                                             </Grid>
                                         </DataTemplate>

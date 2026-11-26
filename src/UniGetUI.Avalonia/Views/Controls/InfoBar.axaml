@@ -62,6 +62,20 @@
         <Style Selector="Window.mac-glass Border#SeverityStrip">
             <Setter Property="IsVisible" Value="False"/>
         </Style>
+        <Style Selector="Button#ActionButton">
+            <Setter Property="Grid.Column" Value="3"/>
+            <Setter Property="Margin" Value="8,0"/>
+        </Style>
+        <Style Selector="controls|InfoBar.toast Button#ActionButton">
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Grid.Column" Value="2"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Margin" Value="4,0,4,12"/>
+        </Style>
+        <Style Selector="controls|InfoBar.toast TextBlock#MessageText">
+            <Setter Property="MaxLines" Value="5"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
     </UserControl.Styles>
 
     <Border x:Name="BodyBorder"
@@ -74,13 +88,13 @@
             automation:AutomationProperties.Name="{Binding Title}"
             automation:AutomationProperties.HelpText="{Binding Message}"
             Padding="0">
-        <Grid ColumnDefinitions="5,Auto,*,Auto,Auto">
+        <Grid ColumnDefinitions="5,Auto,*,Auto,Auto" RowDefinitions="Auto,Auto">
 
             <!-- Severity colour strip -->
-            <Border x:Name="SeverityStrip" Grid.Column="0"/>
+            <Border x:Name="SeverityStrip" Grid.Column="0" Grid.RowSpan="2"/>
 
             <!-- Severity icon (top-aligned with the title's first line) -->
-            <Border Grid.Column="1"
+            <Border Grid.Column="1" Grid.RowSpan="2"
                     Width="20" Height="20"
                     Margin="12,12,4,0"
                     automation:AutomationProperties.AccessibilityView="Raw"
@@ -100,7 +114,8 @@
                 <TextBlock Text="{Binding Title}"
                            FontWeight="SemiBold"
                            TextWrapping="Wrap"/>
-                <TextBlock Text="{Binding Message}"
+                <TextBlock x:Name="MessageText"
+                           Text="{Binding Message}"
                            IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                            TextWrapping="Wrap"
                            Opacity="0.85"
@@ -108,17 +123,17 @@
             </StackPanel>
 
             <!-- Action button -->
-            <Button Grid.Column="3"
+            <Button x:Name="ActionButton"
                     Content="{Binding ActionButtonText}"
                     Command="{Binding ActionButtonCommand}"
                     IsVisible="{Binding ActionButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                     automation:AutomationProperties.Name="{Binding ActionButtonText}"
-                    Margin="8,0"
                     Padding="12,6"
                     VerticalAlignment="Center"/>
 
             <!-- Close button -->
             <Button Grid.Column="4"
+                    Grid.RowSpan="2"
                     IsVisible="{Binding IsClosable}"
                     Command="{Binding CloseCommand}"
                     automation:AutomationProperties.Name="Close"

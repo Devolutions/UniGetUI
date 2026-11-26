@@ -10,7 +10,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
 
         public static readonly TimeSpan AttentionWindow = TimeSpan.FromDays(1);
 
-        public static ManagerHealthReport Evaluate(IPackageManager manager)
+        public static ManagerHealthReport Evaluate(IPackageManager manager) => Evaluate(manager, null);
+
+        public static ManagerHealthReport Evaluate(IPackageManager manager, DateTime? observedSinceUtc)
         {
             ManagerHealthRecord record = manager.GetHealthRecord();
 
@@ -31,12 +33,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             if (failures.Length > 0)
             {
                 var urgent = failures
-                    .Where(entry => FailureNeedsAttention(manager, record, entry.Kind, entry.Listing))
+                    .Where(entry =>
+                        FailureNeedsAttention(manager, record, entry.Kind, entry.Listing)
+                        && ObservedSince(entry.Listing.LastFailureUtc, observedSinceUtc)
+                    )
                     .OrderByDescending(entry => entry.Listing.ConsecutiveFailures)
                     .ThenByDescending(entry => entry.Listing.LastFailureUtc)
                     .FirstOrDefault();
                 if (urgent.Listing is null && IsMalfunctioning(manager, record))
-                    return Malfunction(manager, record);
+                    return Malfunction(manager, record, observedSinceUtc);
 
                 var shown = urgent.Listing is not null
                     ? urgent
@@ -55,7 +60,24 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             }
 
             if (IsMalfunctioning(manager, record))
-                return Malfunction(manager, record);
+                return Malfunction(manager, record, observedSinceUtc);
+
+            var incomplete = Enum.GetValues<ManagerListingKind>()
+                .Select(kind => (Kind: kind, Listing: record[kind]))
+                .Where(entry => entry.Listing.LastIncompleteUtc is not null)
+                .OrderByDescending(entry => entry.Listing.LastIncompleteUtc)
+                .FirstOrDefault();
+            if (incomplete.Listing is not null)
+            {
+                return new ManagerHealthReport
+                {
+                    Manager = manager,
+                    Record = record,
+                    State = ManagerHealthState.Incomplete,
+                    FailingListing = incomplete.Kind,
+                    Reason = incomplete.Listing.LastIncompleteReason,
+                };
+            }
 
             bool anySuccess = Enum.GetValues<ManagerListingKind>()
                 .Any(kind => record[kind].LastSuccessUtc is not null);
@@ -67,8 +89,16 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
         }
 
         public static IReadOnlyList<ManagerHealthReport> ManagersNeedingAttention(
-            IEnumerable<IPackageManager> managers
-        ) => managers.Select(Evaluate).Where(report => report.NeedsAttention).ToArray();
+            IEnumerable<IPackageManager> managers,
+            DateTime? observedSinceUtc = null
+        ) =>
+            managers
+                .Select(manager => Evaluate(manager, observedSinceUtc))
+                .Where(report => report.NeedsAttention)
+                .ToArray();
+
+        private static bool ObservedSince(DateTime? observedUtc, DateTime? sinceUtc) =>
+            sinceUtc is not { } since || observedUtc >= since;
 
         public static string ListingName(ManagerListingKind kind) =>
             kind switch
@@ -85,6 +115,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 ManagerHealthState.Healthy => CoreTools.Translate("Healthy"),
                 ManagerHealthState.Failing => CoreTools.Translate("Failing"),
                 ManagerHealthState.Malfunctioning => CoreTools.Translate("Malfunctioning"),
+                ManagerHealthState.Incomplete => CoreTools.Translate("Incomplete"),
                 ManagerHealthState.NotFound => CoreTools.Translate("Not found"),
                 ManagerHealthState.Disabled => CoreTools.Translate("Disabled"),
                 _ => CoreTools.Translate("Not checked yet"),
@@ -102,7 +133,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                     "{0} failed {1} time(s) in a row: {2}",
                     ListingName(report.FailingListing ?? ManagerListingKind.Installed),
                     report.ConsecutiveFailures,
-                    report.Reason ?? CoreTools.Translate("Unknown error")
+                    SummarizeReason(report.Reason)
+                ),
+                ManagerHealthState.Incomplete => CoreTools.Translate(
+                    "{0} could only be listed partially: {1}",
+                    ListingName(report.FailingListing ?? ManagerListingKind.Installed),
+                    SummarizeReason(report.Reason)
                 ),
                 ManagerHealthState.Malfunctioning => CoreTools.Translate(
                     "{0} is ready but listed no installed packages, which usually means it is not working properly.",
@@ -118,6 +154,29 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 ),
                 _ => CoreTools.Translate("No listing has run since this record started."),
             };
+
+        public const int MaxSummarizedReasonLength = 160;
+
+        public static string SummarizeReason(string? reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                return CoreTools.Translate("Unknown error");
+
+            string summary = string.Join(' ', reason.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            int separator = summary.IndexOf(": ", StringComparison.Ordinal);
+            if (
+                separator > 0
+                && summary.AsSpan(0, separator).EndsWith("Exception", StringComparison.Ordinal)
+                && !summary.AsSpan(0, separator).Contains(' ')
+            )
+            {
+                summary = summary[(separator + 2)..];
+            }
+
+            return summary.Length <= MaxSummarizedReasonLength
+                ? summary
+                : summary[..(MaxSummarizedReasonLength - 1)].TrimEnd() + "…";
+        }
 
         private static bool FailureNeedsAttention(
             IPackageManager manager,
@@ -148,12 +207,14 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
         private static bool IsMalfunctioning(IPackageManager manager, ManagerHealthRecord record) =>
             DetectsMalfunctions(manager)
             && record.Installed.ConsecutiveFailures == 0
+            && record.Installed.LastIncompleteUtc is null
             && record.Installed.LastSuccessUtc is not null
             && record.Installed.LastPackageCount == 0;
 
         private static ManagerHealthReport Malfunction(
             IPackageManager manager,
-            ManagerHealthRecord record
+            ManagerHealthRecord record,
+            DateTime? observedSinceUtc
         ) =>
             new()
             {
@@ -161,7 +222,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 Record = record,
                 State = ManagerHealthState.Malfunctioning,
                 FailingListing = ManagerListingKind.Installed,
-                NeedsAttention = true,
+                NeedsAttention = ObservedSince(record.Installed.LastSuccessUtc, observedSinceUtc),
             };
 
         private static bool DetectsMalfunctions(IPackageManager manager) =>

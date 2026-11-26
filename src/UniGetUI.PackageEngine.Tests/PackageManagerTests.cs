@@ -707,6 +707,320 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void AMultiLineFailureIsDescribedOnOneShortLine()
+    {
+        var manager = CreateReadyManager();
+        string error =
+            "PowerShell exited with code 1 while listing packages: Get-Command : The term 'Get-InstalledModule' is\r\n"
+            + "not recognized as the name of a cmdlet, function, script file, or\r\noperable program.\r\n"
+            + "At line:1 char:9\r\n+ $null = Get-Command Get-InstalledModule -ErrorAction Stop\r\n"
+            + "+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n"
+            + "    + CategoryInfo          : ObjectNotFound: (Get-InstalledModule:String) [Get-Command]";
+        manager.SetInstalledPackages(() => throw new InvalidOperationException(error));
+
+        manager.GetInstalledPackages();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        string description = ManagerHealthEvaluator.Describe(report);
+        Assert.DoesNotContain('\n', description);
+        Assert.DoesNotContain("InvalidOperationException", description);
+        Assert.Contains("PowerShell exited with code 1 while listing packages", description);
+        Assert.EndsWith("…", description);
+        Assert.InRange(
+            ManagerHealthEvaluator.SummarizeReason(report.Reason).Length,
+            ManagerHealthEvaluator.MaxSummarizedReasonLength - 10,
+            ManagerHealthEvaluator.MaxSummarizedReasonLength
+        );
+        Assert.Contains("CategoryInfo", manager.GetHealthRecord().Installed.LastFailureReason);
+    }
+
+    [Theory]
+    [InlineData("TimeoutException: Task took too long", "Task took too long")]
+    [InlineData("Could not reach it: TimeoutException", "Could not reach it: TimeoutException")]
+    [InlineData("  short\r\n  reason  ", "short reason")]
+    public void ReasonSummariesDropOnlyALeadingExceptionType(string reason, string expected)
+    {
+        Assert.Equal(expected, ManagerHealthEvaluator.SummarizeReason(reason));
+    }
+
+    [Fact]
+    public void RepeatedIncompleteListingsAreAWarningThatNeverNeedsAttention()
+    {
+        var manager = CreateReadyManager();
+        var row = CreatePackage(manager, "Contoso.Partial", "Contoso Partial");
+        manager.SetAvailableUpdates(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "the source Contoso could not be reached");
+            return [row];
+        });
+
+        for (int i = 0; i < 3; i++)
+        {
+            Assert.Single(manager.GetAvailableUpdates(out bool failed));
+            Assert.True(failed);
+        }
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Incomplete, report.State);
+        Assert.False(report.NeedsAttention);
+        Assert.Equal(ManagerListingKind.Updates, report.FailingListing);
+        Assert.Equal("the source Contoso could not be reached", report.Reason);
+        Assert.Equal(0, report.ConsecutiveFailures);
+        Assert.Contains("could only be listed partially", ManagerHealthEvaluator.Describe(report));
+
+        var updates = manager.GetHealthRecord().Updates;
+        Assert.Equal(0, updates.ConsecutiveFailures);
+        Assert.Null(updates.LastFailureUtc);
+        Assert.Null(updates.LastSuccessUtc);
+        Assert.NotNull(updates.LastIncompleteUtc);
+    }
+
+    [Fact]
+    public void AnIncompleteListingNotCausedByAnUnreachableSourceIsStillAFailure()
+    {
+        var manager = CreateReadyManager();
+        var row = CreatePackage(manager, "Contoso.Partial", "Contoso Partial");
+        manager.SetAvailableUpdates(() =>
+        {
+            PackageListingScope.ReportIncomplete(new InvalidOperationException("exited with code 100"));
+            return [row];
+        });
+
+        manager.GetAvailableUpdates();
+        manager.GetAvailableUpdates();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Failing, report.State);
+        Assert.True(report.NeedsAttention);
+        Assert.Equal(2, report.ConsecutiveFailures);
+        Assert.Contains("exited with code 100", report.Reason);
+        Assert.Null(manager.GetHealthRecord().Updates.LastIncompleteUtc);
+    }
+
+    [Fact]
+    public void AnUnreachableSourceDoesNotHideAnotherIncompleteFailure()
+    {
+        var manager = CreateReadyManager();
+        manager.SetAvailableUpdates(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            PackageListingScope.ReportIncomplete(new InvalidDataException("unparseable row"));
+            return [];
+        });
+
+        manager.GetAvailableUpdates();
+
+        var updates = manager.GetHealthRecord().Updates;
+        Assert.Equal(1, updates.ConsecutiveFailures);
+        Assert.Contains("unparseable row", updates.LastFailureReason);
+        Assert.Equal(ManagerHealthState.Failing, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void ACompleteListingClearsTheIncompleteState()
+    {
+        var manager = CreateReadyManager();
+        var row = CreatePackage(manager, "Contoso.Partial", "Contoso Partial");
+        manager.SetAvailableUpdates(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            return [row];
+        });
+        manager.GetAvailableUpdates();
+
+        manager.SetAvailableUpdates(() => [row]);
+        manager.GetAvailableUpdates();
+
+        var updates = manager.GetHealthRecord().Updates;
+        Assert.Null(updates.LastIncompleteUtc);
+        Assert.Null(updates.LastIncompleteReason);
+        Assert.Equal(1, updates.LastPackageCount);
+        Assert.Equal(ManagerHealthState.Healthy, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void AnIncompleteListingEndsAFailureStreak()
+    {
+        var manager = CreateReadyManager();
+        manager.SetAvailableUpdates(() => throw new InvalidOperationException("down"));
+        manager.GetAvailableUpdates();
+        Assert.Equal(1, manager.GetHealthRecord().Updates.ConsecutiveFailures);
+
+        manager.SetAvailableUpdates(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            return [];
+        });
+        manager.GetAvailableUpdates();
+
+        var updates = manager.GetHealthRecord().Updates;
+        Assert.Equal(0, updates.ConsecutiveFailures);
+        Assert.Null(updates.FailureStreakStartUtc);
+        Assert.Equal(ManagerHealthState.Incomplete, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void ARealFailureOutranksAnIncompleteListing()
+    {
+        var manager = CreateReadyManager();
+        manager.SetInstalledPackages(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            return [];
+        });
+        manager.SetAvailableUpdates(() => throw new InvalidOperationException("down"));
+
+        manager.GetInstalledPackages();
+        manager.GetAvailableUpdates();
+        manager.GetAvailableUpdates();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Failing, report.State);
+        Assert.Equal(ManagerListingKind.Updates, report.FailingListing);
+        Assert.True(report.NeedsAttention);
+    }
+
+    [Fact]
+    public void AListingOnlyScanThatStopsAtAnIncompleteSourceIsRecordedAsIncomplete()
+    {
+        var manager = CreateReadyManager();
+        manager.SetInstalledPackages(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            return [CreatePackage(manager, "Contoso.Partial", "Contoso Partial")];
+        });
+
+        using (PackageListingScope.EnterListingOnly())
+        {
+            Assert.Empty(manager.GetInstalledPackages(out bool failed));
+            Assert.True(failed);
+        }
+
+        var installed = manager.GetHealthRecord().Installed;
+        Assert.Equal(0, installed.ConsecutiveFailures);
+        Assert.Equal("one source down", installed.LastIncompleteReason);
+        Assert.Equal(ManagerHealthState.Incomplete, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void AListingThatThrowsIsStillAFailureEvenIfItWasIncomplete()
+    {
+        var manager = CreateReadyManager();
+        manager.SetAvailableUpdates(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            throw new InvalidOperationException("crashed");
+        });
+
+        manager.GetAvailableUpdates();
+
+        var updates = manager.GetHealthRecord().Updates;
+        Assert.Equal(1, updates.ConsecutiveFailures);
+        Assert.Contains("crashed", updates.LastFailureReason);
+        Assert.Equal(ManagerHealthState.Failing, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void AFailureFromAnEarlierSessionDoesNotAskForAttentionUntilItRecurs()
+    {
+        var manager = CreateReadyManager();
+        manager.SetAvailableUpdates(() => throw new InvalidOperationException("down"));
+        DateTime earlier = DateTime.UtcNow - TimeSpan.FromHours(3);
+        DateTime sessionStart = earlier + TimeSpan.FromHours(1);
+
+        using (ManagerHealthStore.UseClock(() => earlier))
+        {
+            manager.GetAvailableUpdates();
+            manager.GetAvailableUpdates();
+        }
+
+        Assert.True(ManagerHealthEvaluator.Evaluate(manager).NeedsAttention);
+        Assert.Single(ManagerHealthEvaluator.ManagersNeedingAttention([manager]));
+        Assert.Empty(ManagerHealthEvaluator.ManagersNeedingAttention([manager], sessionStart));
+
+        using (ManagerHealthStore.UseClock(() => sessionStart + TimeSpan.FromMinutes(1)))
+            manager.GetAvailableUpdates();
+
+        Assert.Single(ManagerHealthEvaluator.ManagersNeedingAttention([manager], sessionStart));
+    }
+
+    [Fact]
+    public void AnOlderLongerStreakDoesNotHideAFailureSeenThisSession()
+    {
+        var manager = CreateReadyManager();
+        manager.SetAvailableUpdates(() => throw new InvalidOperationException("updates down"));
+        manager.SetFindPackages(_ => throw new InvalidOperationException("search down"));
+        DateTime earlier = DateTime.UtcNow - TimeSpan.FromHours(3);
+        DateTime sessionStart = earlier + TimeSpan.FromHours(1);
+
+        using (ManagerHealthStore.UseClock(() => earlier))
+        {
+            for (int i = 0; i < 5; i++)
+                manager.GetAvailableUpdates();
+        }
+
+        using (ManagerHealthStore.UseClock(() => sessionStart + TimeSpan.FromMinutes(1)))
+        {
+            manager.FindPackages("tool");
+            manager.FindPackages("tool");
+        }
+
+        Assert.Equal(ManagerListingKind.Updates, ManagerHealthEvaluator.Evaluate(manager).FailingListing);
+        var report = Assert.Single(ManagerHealthEvaluator.ManagersNeedingAttention([manager], sessionStart));
+        Assert.Equal(ManagerListingKind.Search, report.FailingListing);
+        Assert.Contains("search down", report.Reason);
+    }
+
+    [Fact]
+    public void AnIncompleteInstalledListingEndsAMalfunctionUntilTheNextCompleteOne()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        var row = CreatePackage(manager, "Contoso.Partial", "Contoso Partial");
+        manager.GetInstalledPackages();
+        var emptySuccess = manager.GetHealthRecord().Installed.LastSuccessUtc;
+        Assert.Equal(ManagerHealthState.Malfunctioning, ManagerHealthEvaluator.Evaluate(manager).State);
+
+        manager.SetInstalledPackages(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            return [row];
+        });
+        manager.GetInstalledPackages();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Incomplete, report.State);
+        Assert.False(report.NeedsAttention);
+        Assert.Empty(ManagerHealthEvaluator.ManagersNeedingAttention([manager]));
+        var installed = manager.GetHealthRecord().Installed;
+        Assert.Equal(emptySuccess, installed.LastSuccessUtc);
+        Assert.Equal(0, installed.LastPackageCount);
+
+        manager.SetInstalledPackages(() => [row]);
+        manager.GetInstalledPackages();
+        Assert.Equal(ManagerHealthState.Healthy, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void AnEarlierSessionsMalfunctionDoesNotAskForAttentionUntilItIsSeenAgain()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        DateTime earlier = DateTime.UtcNow - TimeSpan.FromHours(3);
+        DateTime sessionStart = earlier + TimeSpan.FromHours(1);
+
+        using (ManagerHealthStore.UseClock(() => earlier))
+            manager.GetInstalledPackages();
+
+        Assert.Empty(ManagerHealthEvaluator.ManagersNeedingAttention([manager], sessionStart));
+
+        using (ManagerHealthStore.UseClock(() => sessionStart + TimeSpan.FromMinutes(1)))
+            manager.GetInstalledPackages();
+
+        Assert.Single(ManagerHealthEvaluator.ManagersNeedingAttention([manager], sessionStart));
+    }
+
+    [Fact]
     public void EmptyInstalledListIsAMalfunctionOnlyWhenTheManagerExpectsPackages()
     {
         var expecting = CreateReadyManager();

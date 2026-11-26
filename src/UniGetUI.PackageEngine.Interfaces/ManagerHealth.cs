@@ -20,6 +20,7 @@ namespace UniGetUI.PackageEngine.Interfaces
         Malfunctioning,
         NotFound,
         Disabled,
+        Incomplete,
     }
 
     public sealed class ManagerListingHealth
@@ -35,6 +36,8 @@ namespace UniGetUI.PackageEngine.Interfaces
         public int? LastPackageCount { get; set; }
         public DateTime? LastFastRepairUtc { get; set; }
         public string? LastFastRepairReason { get; set; }
+        public DateTime? LastIncompleteUtc { get; set; }
+        public string? LastIncompleteReason { get; set; }
         public List<long> RecentDurationsMs { get; set; } = [];
 
         public ManagerListingHealth Clone() =>
@@ -49,6 +52,8 @@ namespace UniGetUI.PackageEngine.Interfaces
                 LastPackageCount = LastPackageCount,
                 LastFastRepairUtc = LastFastRepairUtc,
                 LastFastRepairReason = LastFastRepairReason,
+                LastIncompleteUtc = LastIncompleteUtc,
+                LastIncompleteReason = LastIncompleteReason,
                 RecentDurationsMs = [.. RecentDurationsMs],
             };
     }

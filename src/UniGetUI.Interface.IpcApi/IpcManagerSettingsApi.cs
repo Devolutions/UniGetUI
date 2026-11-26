@@ -49,6 +49,8 @@ public sealed class IpcManagerListingHealthInfo
     public int? LastPackageCount { get; set; }
     public DateTime? LastFastRepairUtc { get; set; }
     public string? LastFastRepairReason { get; set; }
+    public DateTime? LastIncompleteUtc { get; set; }
+    public string? LastIncompleteReason { get; set; }
     public IReadOnlyList<long> RecentDurationsMs { get; set; } = [];
 
     public static IpcManagerListingHealthInfo From(ManagerListingHealth listing) =>
@@ -63,6 +65,8 @@ public sealed class IpcManagerListingHealthInfo
             LastPackageCount = listing.LastPackageCount,
             LastFastRepairUtc = listing.LastFastRepairUtc,
             LastFastRepairReason = listing.LastFastRepairReason,
+            LastIncompleteUtc = listing.LastIncompleteUtc,
+            LastIncompleteReason = listing.LastIncompleteReason,
             RecentDurationsMs = listing.RecentDurationsMs.ToArray(),
         };
 }

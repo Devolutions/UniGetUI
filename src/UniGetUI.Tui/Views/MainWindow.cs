@@ -249,7 +249,7 @@ internal sealed class MainWindow : Window
             if (installed.IsLoading) await installed.WaitForCurrentLoadAsync();
             if (!TuiEngine.IsFakeData)
             {
-                foreach (var report in ManagerHealthEvaluator.ManagersNeedingAttention(TuiEngine.Managers))
+                foreach (var report in ManagerHealthEvaluator.ManagersNeedingAttention(TuiEngine.Managers, ManagerHealthStore.SessionStartedUtc))
                     TuiNotifications.Warning(
                         CoreTools.Translate("{0} is not working properly", report.Manager.DisplayName),
                         ManagerHealthEvaluator.Describe(report) + " "

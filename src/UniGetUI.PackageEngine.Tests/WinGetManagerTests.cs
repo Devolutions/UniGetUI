@@ -1667,8 +1667,9 @@ public sealed class WinGetManagerTests : IDisposable
         List<Exception> strictFailures = [];
         using var tracking = PackageListingScope.TrackFailures(strictFailures.Add);
         using var scope = PackageListingScope.EnterListingOnly();
-        var failure = Assert.Throws<InvalidOperationException>(helper.GetAvailableUpdates_UnSafe);
+        var failure = Assert.ThrowsAny<InvalidOperationException>(helper.GetAvailableUpdates_UnSafe);
         Assert.Same(failure, Assert.Single(strictFailures));
+        Assert.Equal(skipUnavailableCatalog, failure is ListingSourceUnavailableException);
         Assert.Equal(2, snapshots);
         Assert.Equal(skipUnavailableCatalog ? 2 : 3, attempts.Count);
         Assert.Equal(0, cliFallbacks);
@@ -1709,11 +1710,12 @@ public sealed class WinGetManagerTests : IDisposable
         List<Exception> failures = [];
         using var tracking = PackageListingScope.TrackFailures(failures.Add);
         Assert.Same(expectedPackage, Assert.Single(helper.GetInstalledPackages_UnSafe()));
-        Assert.Single(failures);
+        var skipped = Assert.IsType<ListingSourceUnavailableException>(Assert.Single(failures));
+        Assert.Equal("offline", skipped.SourceName);
 
         failures.Clear();
         using var scope = PackageListingScope.EnterListingOnly();
-        var failure = Assert.Throws<InvalidOperationException>(helper.GetInstalledPackages_UnSafe);
+        var failure = Assert.Throws<ListingSourceUnavailableException>(helper.GetInstalledPackages_UnSafe);
         Assert.Same(failure, Assert.Single(failures));
         Assert.Equal(1, cliListings);
     }

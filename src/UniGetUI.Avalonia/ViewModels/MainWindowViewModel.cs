@@ -106,6 +106,9 @@ public partial class MainWindowViewModel : ViewModelBase
     // (failures no longer pop a toast; expanded, the failure is already visible).
     public bool ShowFailedOperationBadge => OperationsPanelVisible && !OperationsPanelExpanded && HasFailedOperations;
 
+    public bool CanCancelAllOperations =>
+        Operations.Count(o => o.Operation.Status is OperationStatus.InQueue or OperationStatus.Running) > 1;
+
     public string OperationsHeaderText
     {
         get
@@ -170,6 +173,7 @@ public partial class MainWindowViewModel : ViewModelBase
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
+            OnPropertyChanged(nameof(CanCancelAllOperations));
             MaybeShowBatchSummaryToast();
             ShutdownController.OnOperationsChanged();
         });
@@ -647,6 +651,7 @@ public partial class MainWindowViewModel : ViewModelBase
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
+            OnPropertyChanged(nameof(CanCancelAllOperations));
             ShutdownController.OnOperationsChanged();
         };
 

@@ -645,6 +645,24 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             return OperationVeredict.Canceled;
         }
 
+        if (ReportedWindowsInstallerBusy(processOutput, returnCode))
+        {
+            StrongBox<int> attempts = _windowsInstallerBusyRetries.GetOrCreateValue(package);
+            if (attempts.Value < MaxWindowsInstallerBusyRetries)
+            {
+                attempts.Value++;
+                Logger.Warn(
+                    $"Another Windows Installer operation was in progress during the {operation} of {package.Id}; "
+                    + $"retrying once it finishes (attempt {attempts.Value} of {MaxWindowsInstallerBusyRetries})"
+                );
+                return OperationVeredict.AutoRetry;
+            }
+
+            _windowsInstallerBusyRetries.Remove(package);
+            return OperationVeredict.Failure;
+        }
+        _windowsInstallerBusyRetries.Remove(package);
+
         if (
             operation is OperationType.Uninstall
             && uintCode is 0x8A150017
@@ -966,16 +984,42 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         IReadOnlyList<string> processOutput,
         int returnCode,
         InstallOptions? options = null
-    ) =>
-        operation is OperationType.Update && ReportedUpdateNotSupported(returnCode)
+    )
+    {
+        if (ReportedWindowsInstallerBusy(processOutput, returnCode))
+            return CoreTools.Translate(
+                "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again",
+                new Dictionary<string, object?> { { "package", package.Name } }
+            );
+
+        return operation is OperationType.Update && ReportedUpdateNotSupported(returnCode)
             ? CoreTools.Translate(
                 "WinGet cannot update {package}. Its publisher requires updating it another way, for example from within the app itself",
                 new Dictionary<string, object?> { { "package", package.Name } }
             )
             : null;
+    }
 
     internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>
         (uint)returnCode is 0x8A150101 or 0x8A150103 or 0x8A150111;
+
+    private const int MaxWindowsInstallerBusyRetries = 3;
+    private const int ErrorInstallAlreadyRunning = 1618;
+    private static readonly ConditionalWeakTable<IPackage, StrongBox<int>> _windowsInstallerBusyRetries = new();
+
+    internal static bool ReportedWindowsInstallerBusy(IReadOnlyList<string> processOutput, int returnCode) =>
+        (uint)returnCode is 0x8A150102
+        || returnCode is ErrorInstallAlreadyRunning
+        || ((uint)returnCode is 0x8A150030 && processOutput.Any(EndsWithInstallerExitCode1618));
+
+    private static bool EndsWithInstallerExitCode1618(string line)
+    {
+        ReadOnlySpan<char> trimmed = line.AsSpan().TrimEnd();
+        if (!trimmed.EndsWith("1618", StringComparison.Ordinal))
+            return false;
+        ReadOnlySpan<char> before = trimmed[..^4].TrimEnd();
+        return before.Length > 0 && before[^1] is ':' or '：';
+    }
 
     internal bool ReportedUpdateNotApplicable(
         IReadOnlyList<string> processOutput,

@@ -4371,6 +4371,197 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    [Fact]
+    public async Task WinGetUpdateWaitsAndRetriesWhileWindowsInstallerIsBusyThenExplainsTheFailure()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("EpicGames.EpicGamesLauncher.Busy")
+            .WithVersion("1.3.51.0")
+            .WithNewVersion("1.3.210.0")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions())
+        {
+            ElevationOverride = true,
+        };
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            var retry = await operation.ProbeProcessVeredict(unchecked((int)0x8A150102), []);
+            OperationAssert.HasVeredict(retry, OperationVeredict.AutoRetry);
+            Assert.True(operation.WaitsForWindowsInstallerBeforeNextAttempt);
+        }
+
+        var final = await operation.ProbeProcessVeredict(unchecked((int)0x8A150102), []);
+
+        OperationAssert.HasVeredict(final, OperationVeredict.Failure);
+        Assert.False(operation.WaitsForWindowsInstallerBeforeNextAttempt);
+        Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.Contains("Another installation was still in progress", operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public void WinGetBusyRetryBudgetResetsAfterADifferentResult()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.BusyReset")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        for (int attempt = 0; attempt < 3; attempt++)
+            OperationAssert.HasVeredict(
+                manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150102)),
+                OperationVeredict.AutoRetry
+            );
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150012));
+
+        OperationAssert.HasVeredict(
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150102)),
+            OperationVeredict.AutoRetry
+        );
+    }
+
+    [Theory]
+    [InlineData("Uninstall failed with exit code: 1618")]
+    [InlineData("Échec du programme de désinstallation avec le code de sortie : 1618")]
+    public void WinGetUninstallBlockedByAnotherInstallationRetriesWithoutElevating(string exitCodeLine)
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("EpicGames.EpicOnlineServices.Busy")
+            .WithVersion("4.2.1")
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Uninstall,
+            ["Starting package uninstall...", exitCodeLine],
+            unchecked((int)0x8A150030)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void WinGetUninstallFailureForAnotherReasonStillRetriesElevated()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.UninstallNeedsAdmin")
+            .WithVersion("1.0.0")
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Uninstall,
+            ["Uninstall failed with exit code: 1603", "Version 2.0.1618"],
+            unchecked((int)0x8A150030)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+        Assert.True(package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public async Task WindowsInstallerWaitReturnsOnceTheLockStaysFree()
+    {
+        var probes = new Queue<bool?>([true, true, false, true, false, false]);
+        var delays = new List<TimeSpan>();
+
+        await RunWithWindowsInstallerLockStubs(
+            probes.Dequeue,
+            delays,
+            () => WindowsInstallerLock.WaitBeforeRetryAsync(CancellationToken.None)
+        );
+
+        Assert.Empty(probes);
+        Assert.Equal(WindowsInstallerLock.SettleDelay, delays[0]);
+        Assert.Equal(6, delays.Count);
+        Assert.All(delays.Skip(1), d => Assert.Equal(WindowsInstallerLock.PollInterval, d));
+    }
+
+    [Fact]
+    public async Task WindowsInstallerWaitGivesUpAfterTheMaximumWait()
+    {
+        var delays = new List<TimeSpan>();
+
+        await RunWithWindowsInstallerLockStubs(
+            () => true,
+            delays,
+            () => WindowsInstallerLock.WaitBeforeRetryAsync(CancellationToken.None)
+        );
+
+        TimeSpan polled = delays.Skip(1).Aggregate(TimeSpan.Zero, (sum, d) => sum + d);
+        Assert.Equal(WindowsInstallerLock.MaxWait, polled);
+    }
+
+    [Fact]
+    public async Task WindowsInstallerWaitFallsBackToAFixedDelayWhenTheLockCannotBeChecked()
+    {
+        var delays = new List<TimeSpan>();
+
+        await RunWithWindowsInstallerLockStubs(
+            () => null,
+            delays,
+            () => WindowsInstallerLock.WaitBeforeRetryAsync(CancellationToken.None)
+        );
+
+        Assert.Equal([WindowsInstallerLock.SettleDelay, WindowsInstallerLock.UnknownStateDelay], delays);
+    }
+
+    [Fact]
+    public async Task WindowsInstallerWaitStopsWhenCanceled()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Func<bool?> originalProbe = WindowsInstallerLock.ProbeBusy;
+        try
+        {
+            WindowsInstallerLock.ProbeBusy = () => true;
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => WindowsInstallerLock.WaitBeforeRetryAsync(cancellation.Token)
+            );
+        }
+        finally
+        {
+            WindowsInstallerLock.ProbeBusy = originalProbe;
+        }
+    }
+
+    private static async Task RunWithWindowsInstallerLockStubs(
+        Func<bool?> probe,
+        List<TimeSpan> delays,
+        Func<Task> body
+    )
+    {
+        Func<bool?> originalProbe = WindowsInstallerLock.ProbeBusy;
+        Func<TimeSpan, CancellationToken, Task> originalDelay = WindowsInstallerLock.Delay;
+        try
+        {
+            WindowsInstallerLock.ProbeBusy = probe;
+            WindowsInstallerLock.Delay = (delay, _) =>
+            {
+                delays.Add(delay);
+                return Task.CompletedTask;
+            };
+            await body();
+        }
+        finally
+        {
+            WindowsInstallerLock.ProbeBusy = originalProbe;
+            WindowsInstallerLock.Delay = originalDelay;
+        }
+    }
+
     private static readonly WinGetPkgOperationHelper.PortableArpEntry FfmpegPortableEntry = new(
         @"C:\Users\test\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg",
         MachineScope: false

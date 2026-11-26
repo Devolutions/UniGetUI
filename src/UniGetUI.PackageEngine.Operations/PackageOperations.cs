@@ -105,6 +105,7 @@ namespace UniGetUI.PackageEngine.Operations
         internal bool IsReinstallStep { get; init; }
         public bool FailedBecauseApplicationRunning { get; private set; }
         public bool FailedBecauseUpdateNotSupported { get; private set; }
+        internal bool WaitsForWindowsInstallerBeforeNextAttempt { get; private set; }
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
         private readonly List<string> _brokerKillBeforeOperationAdded = [];
@@ -419,6 +420,9 @@ namespace UniGetUI.PackageEngine.Operations
                 }
             );
 
+            if (WaitsForWindowsInstallerBeforeNextAttempt && !await WaitForWindowsInstallerAsync())
+                return OperationVeredict.Canceled;
+
             if (IsReinstallStep && ShouldUseAgentBroker())
             {
                 Line(
@@ -473,6 +477,31 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             return await PerformBrokerOperation();
+        }
+
+        private async Task<bool> WaitForWindowsInstallerAsync()
+        {
+            WaitsForWindowsInstallerBeforeNextAttempt = false;
+#if WINDOWS
+            if (Package.Manager is WinGet winget)
+            {
+                Line(
+                    CoreTools.Translate("Another installation is in progress. Waiting for it to finish before trying again..."),
+                    LineType.ProgressIndicator
+                );
+                try
+                {
+                    await winget.WaitForWindowsInstallerAsync(CancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+            }
+#else
+            await Task.CompletedTask;
+#endif
+            return true;
         }
 
         private async Task<OperationVeredict> PerformLocalOperation()
@@ -1233,6 +1262,13 @@ namespace UniGetUI.PackageEngine.Operations
 
             FailedBecauseApplicationRunning = false;
             FailedBecauseUpdateNotSupported = false;
+            WaitsForWindowsInstallerBeforeNextAttempt = false;
+#if WINDOWS
+            WaitsForWindowsInstallerBeforeNextAttempt =
+                veredict is OperationVeredict.AutoRetry
+                && Package.Manager is WinGet winget
+                && winget.ReportedWindowsInstallerBusy(Output, ReturnCode);
+#endif
             Metadata.FailureTitle = _genericFailureTitle;
             Metadata.FailureMessage = _genericFailureMessage;
             if (veredict is OperationVeredict.Failure)

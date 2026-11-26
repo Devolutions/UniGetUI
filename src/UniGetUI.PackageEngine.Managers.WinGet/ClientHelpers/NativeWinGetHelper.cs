@@ -727,6 +727,22 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 return null;
             }
 
+            IReadOnlyList<string> installedCodes = NativeWinGetCollection.Copy(installed.ProductCodes);
+            if (
+                !AnyVersionDeclaresInstalledProduct(
+                    installedCodes,
+                    ReadCatalogProductCodes(nativePackage, availableVersions, newest)
+                )
+            )
+            {
+                logger.Log(
+                    $"Not listing {DescribePackage(nativePackage)} as an update that needs a reinstall: no version of {nativePackage.Id} "
+                        + $"on {newest.PackageCatalog.Info.Name} declares the installed product ({FormatProductCodes(installedCodes)}), "
+                        + "so it cannot be confirmed to replace the installed app"
+                );
+                return null;
+            }
+
             return newest;
         }
         catch (Exception ex) when (!PackageListingScope.IsListingOnly)
@@ -778,6 +794,43 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         return expectedScope is not null
             && string.Equals(installed.ReadScope(), expectedScope, StringComparison.OrdinalIgnoreCase);
     }
+
+    internal static bool AnyVersionDeclaresInstalledProduct(
+        IReadOnlyList<string> installedCodes,
+        IEnumerable<IReadOnlyList<string>> catalogVersionCodes
+    )
+    {
+        string[] codes = [.. installedCodes.Where(code => !string.IsNullOrWhiteSpace(code))];
+        if (codes.Length == 0)
+            return false;
+
+        return catalogVersionCodes.Any(versionCodes =>
+            versionCodes.Any(code => codes.Contains(code, StringComparer.OrdinalIgnoreCase))
+        );
+    }
+
+    private static IEnumerable<IReadOnlyList<string>> ReadCatalogProductCodes(
+        CatalogPackage nativePackage,
+        IReadOnlyList<PackageVersionId> availableVersions,
+        PackageVersionInfo newest
+    )
+    {
+        yield return NativeWinGetCollection.Copy(newest.ProductCodes);
+        for (int i = 0; i < availableVersions.Count; i++)
+        {
+            if (
+                string.Equals(availableVersions[i].Version, newest.Version, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(availableVersions[i].Channel ?? "", newest.Channel ?? "", StringComparison.OrdinalIgnoreCase)
+            )
+                continue;
+
+            if (nativePackage.GetPackageVersionInfo(availableVersions[i]) is { } version)
+                yield return NativeWinGetCollection.Copy(version.ProductCodes);
+        }
+    }
+
+    private static string FormatProductCodes(IReadOnlyList<string> codes) =>
+        codes.Count == 0 ? "no product code" : string.Join(", ", codes);
 
     private static string? ReadInstalledScope(PackageVersionInfo installed)
     {

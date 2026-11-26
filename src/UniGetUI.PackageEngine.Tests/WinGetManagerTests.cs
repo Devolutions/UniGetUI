@@ -202,6 +202,69 @@ public sealed class WinGetManagerTests : IDisposable
         );
     }
 
+    private const string StandaloneBatteryHubCode = "{7E0B5C2A-3F4D-4C8E-9B61-2D5A8F1C4E93}_is1";
+    private const string DoronBatteryHubCode = "3dbe5c54-f0bc-5ecd-8ed5-c18e28514bdd";
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsNotListedWhenNoVersionOfThePackageDeclaresTheInstalledProduct()
+    {
+        Assert.False(
+            NativeWinGetHelper.AnyVersionDeclaresInstalledProduct(
+                [StandaloneBatteryHubCode],
+                [[DoronBatteryHubCode], [], [DoronBatteryHubCode]]
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsListedWhenAnOlderVersionDeclaresTheInstalledProduct()
+    {
+        Assert.True(
+            NativeWinGetHelper.AnyVersionDeclaresInstalledProduct(
+                ["audacity_is1"],
+                [[OtherProductCode, "{1991CCF7-A663-43C6-B471-FC22CEB19EC8}"], ["Audacity_is1"]]
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsListedWhenTheNewestVersionDeclaresTheInstalledProduct()
+    {
+        Assert.True(
+            NativeWinGetHelper.AnyVersionDeclaresInstalledProduct(
+                [QuickenProductCode],
+                [[QuickenProductCode.ToLowerInvariant()]]
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIsNotListedWhenTheInstalledProductHasNoCode()
+    {
+        Assert.False(NativeWinGetHelper.AnyVersionDeclaresInstalledProduct([], [["", " ", OtherProductCode]]));
+        Assert.False(
+            NativeWinGetHelper.AnyVersionDeclaresInstalledProduct(["", " "], [["", " ", OtherProductCode]])
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIdentityCheckStopsReadingVersionsOnceOneMatches()
+    {
+        int read = 0;
+        IEnumerable<IReadOnlyList<string>> Versions()
+        {
+            read++;
+            yield return [OtherProductCode];
+            read++;
+            yield return ["Audacity_is1"];
+            read++;
+            throw new InvalidOperationException("read past the match");
+        }
+
+        Assert.True(NativeWinGetHelper.AnyVersionDeclaresInstalledProduct(["Audacity_is1"], Versions()));
+        Assert.Equal(2, read);
+    }
+
     [Fact]
     public void ReinstallOnlyUpdateIsListedWhenTheProductChanges()
     {

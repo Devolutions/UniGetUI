@@ -47,7 +47,7 @@
                        FontSize="28" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display"/>
 
             <TextBlock x:Name="PagesHeader" Classes="more-section" Text="{t:Translate Pages}"/>
-            <Border x:Name="PageDropZone" Margin="-8,0" Padding="8,8,0,0" CornerRadius="8" BorderThickness="1"
+            <Border x:Name="PageDropZone" Margin="-9,0" Padding="8,8,0,0" CornerRadius="8" BorderThickness="1"
                     BorderBrush="Transparent" Background="Transparent">
                 <StackPanel>
                     <Border x:Name="EmptyPagesCard"

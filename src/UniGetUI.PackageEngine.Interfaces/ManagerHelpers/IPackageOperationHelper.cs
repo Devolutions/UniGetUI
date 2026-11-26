@@ -80,5 +80,13 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
         /// Managers that do not offer the choice return an empty list.
         /// </summary>
         public IReadOnlyList<PythonInterpreterChoice> ListPythonInterpreters();
+
+        /// <summary>
+        /// Returns the Python interpreter options this manager used the last time it installed
+        /// or upgraded the package, or null when it keeps no record. The install-options dialog
+        /// starts from these when the saved options do not choose an interpreter, so saving
+        /// without touching the Python section keeps the interpreter the tool runs on.
+        /// </summary>
+        public PythonInterpreterOptions? GetLastUsedPythonOptions(IPackage package) => null;
     }
 }

@@ -48,34 +48,18 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
                 parameters.Add("allow");
             }
 
-            OverridenInstallationOptions overrides = package.OverridenOptions;
-            UvToolInstallRecord? recorded = operation is OperationType.Update
-                ? UvToolInstallRecords.Get(package.Id)
-                : null;
+            ResolvedPythonOptions python = ResolvePythonOptions(package, options, operation);
 
-            // The dialog previews a command through GetStandaloneParameters, which hands the
-            // options straight to this method without applying them to the package. Read the
-            // options first so the preview matches the operation the same dialog would start.
-            string? pythonRequest = options.Uv_PythonRequest.Length > 0
-                ? options.Uv_PythonRequest
-                : overrides.Uv_PythonRequest ?? recorded?.PythonRequest;
-            bool? managedPython = bool.TryParse(options.Uv_ManagedPython, out bool chosenManagedPython)
-                ? chosenManagedPython
-                : overrides.Uv_ManagedPython ?? recorded?.ManagedPython;
-            bool noPythonDownloads = options.Uv_NoPythonDownloads
-                || overrides.Uv_NoPythonDownloads
-                || (recorded?.NoPythonDownloads ?? false);
-
-            if (pythonRequest is not null)
+            if (python.Request is not null)
             {
                 parameters.Add("--python");
-                parameters.Add(CoreTools.EscapeCommandLineArgument(pythonRequest));
+                parameters.Add(CoreTools.EscapeCommandLineArgument(python.Request));
             }
 
-            if (managedPython is bool managed)
+            if (python.ManagedPython is bool managed)
                 parameters.Add(managed ? "--managed-python" : "--no-managed-python");
 
-            if (noPythonDownloads)
+            if (python.NoPythonDownloads)
                 parameters.Add("--no-python-downloads");
         }
 
@@ -93,8 +77,9 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
 
     /// <summary>
     /// Copies the uv-specific options persisted by the install-options GUI into
-    /// <c>package.OverridenOptions</c> for <see cref="_getOperationParameters"/> to read, and
-    /// never clobbers an override that is already set with an unset value.
+    /// <c>package.OverridenOptions</c>. Only an explicit choice is copied, and it replaces the
+    /// previous one down to its cleared value, so choosing Default really clears the interpreter
+    /// instead of leaving the earlier one in place.
     /// </summary>
     public override void ApplyOperationOverrides(
         IPackage package,
@@ -102,14 +87,14 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
         OperationType operation
     )
     {
-        if (!string.IsNullOrWhiteSpace(options.Uv_PythonRequest))
-            package.OverridenOptions.Uv_PythonRequest = options.Uv_PythonRequest;
+        if (!PythonOptionsWereChosen(options))
+            return;
 
-        if (bool.TryParse(options.Uv_ManagedPython, out bool managedPython))
-            package.OverridenOptions.Uv_ManagedPython = managedPython;
-
-        if (options.Uv_NoPythonDownloads)
-            package.OverridenOptions.Uv_NoPythonDownloads = true;
+        package.OverridenOptions.Uv_PythonRequest =
+            options.Uv_PythonRequest.Length > 0 ? options.Uv_PythonRequest : null;
+        package.OverridenOptions.Uv_ManagedPython =
+            bool.TryParse(options.Uv_ManagedPython, out bool managedPython) ? managedPython : null;
+        package.OverridenOptions.Uv_NoPythonDownloads = options.Uv_NoPythonDownloads;
     }
 
     /// <summary>
@@ -166,11 +151,35 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
         return string.Join(' ', parts);
     }
 
+    /// <summary>
+    /// Returns what UniGetUI installed this tool with, so the install-options dialog can show it
+    /// instead of starting from Default.
+    /// </summary>
+    public override PythonInterpreterOptions? GetLastUsedPythonOptions(IPackage package)
+    {
+        UvToolInstallRecord? recorded = UvToolInstallRecords.Get(package.Id);
+        return recorded is null
+            ? null
+            : new PythonInterpreterOptions(
+                recorded.PythonRequest,
+                recorded.ManagedPython,
+                recorded.NoPythonDownloads
+            );
+    }
+
     protected override OperationVeredict _getOperationResult(
         IPackage package,
         OperationType operation,
         IReadOnlyList<string> processOutput,
         int returnCode
+    ) => _getOperationResult(package, operation, processOutput, returnCode, options: null);
+
+    protected override OperationVeredict _getOperationResult(
+        IPackage package,
+        OperationType operation,
+        IReadOnlyList<string> processOutput,
+        int returnCode,
+        InstallOptions? options
     )
     {
         if (returnCode != 0)
@@ -180,21 +189,17 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
         {
             case OperationType.Install or OperationType.Update:
                 {
-                    OverridenInstallationOptions overrides = package.OverridenOptions;
-                    UvToolInstallRecord? recorded = overrides.Uv_PythonRequest is null
-                        ? UvToolInstallRecords.Get(package.Id)
-                        : null;
-
-                    string? pythonRequest = overrides.Uv_PythonRequest ?? recorded?.PythonRequest;
+                    // Store what this operation actually used. An explicit Default therefore
+                    // clears the interpreter, and the flags no longer accumulate over time.
+                    ResolvedPythonOptions used = ResolvePythonOptions(package, options, operation);
                     UvToolInstallRecords.Record(
                         new UvToolInstallRecord
                         {
                             Id = package.Id,
                             Version = optionsVersionFor(package),
-                            PythonRequest = pythonRequest,
-                            ManagedPython = overrides.Uv_ManagedPython ?? recorded?.ManagedPython,
-                            NoPythonDownloads = overrides.Uv_NoPythonDownloads
-                                || (recorded?.NoPythonDownloads ?? false),
+                            PythonRequest = used.Request,
+                            ManagedPython = used.ManagedPython,
+                            NoPythonDownloads = used.NoPythonDownloads,
                             InstalledAt = DateTime.UtcNow.ToString("o"),
                             Source = package.Source.Name,
                             SchemaVersion = UvToolInstallRecords.SchemaVersion,
@@ -209,6 +214,60 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
 
         return OperationVeredict.Success;
     }
+
+    /// <summary>
+    /// True when the options themselves say which interpreter to use, including an explicit
+    /// Default. Any value already set counts, so options saved before the flag existed keep
+    /// working, and the flag is only needed to express "Default on purpose".
+    /// </summary>
+    private static bool PythonOptionsWereChosen(InstallOptions? options) =>
+        options is not null
+        && (
+            options.Uv_PythonOptionsChosen
+            || options.Uv_PythonRequest.Length > 0
+            || options.Uv_ManagedPython.Length > 0
+            || options.Uv_NoPythonDownloads
+        );
+
+    /// <summary>
+    /// Resolves the interpreter flags for an operation and, at the same time, for the record
+    /// written afterwards. An explicit choice wins outright; otherwise <c>OverridenOptions</c>
+    /// and the record from the last install fill in.
+    /// </summary>
+    private static ResolvedPythonOptions ResolvePythonOptions(
+        IPackage package,
+        InstallOptions? options,
+        OperationType operation
+    )
+    {
+        UvToolInstallRecord? recorded = operation is OperationType.Update
+            ? UvToolInstallRecords.Get(package.Id)
+            : null;
+
+        if (PythonOptionsWereChosen(options))
+        {
+            return new ResolvedPythonOptions(
+                options!.Uv_PythonRequest.Length > 0 ? options.Uv_PythonRequest : null,
+                bool.TryParse(options.Uv_ManagedPython, out bool managedPython)
+                    ? managedPython
+                    : null,
+                options.Uv_NoPythonDownloads
+            );
+        }
+
+        OverridenInstallationOptions overrides = package.OverridenOptions;
+        return new ResolvedPythonOptions(
+            overrides.Uv_PythonRequest ?? recorded?.PythonRequest,
+            overrides.Uv_ManagedPython ?? recorded?.ManagedPython,
+            overrides.Uv_NoPythonDownloads || (recorded?.NoPythonDownloads ?? false)
+        );
+    }
+
+    private sealed record ResolvedPythonOptions(
+        string? Request,
+        bool? ManagedPython,
+        bool NoPythonDownloads
+    );
 
     private static string optionsVersionFor(IPackage package)
     {

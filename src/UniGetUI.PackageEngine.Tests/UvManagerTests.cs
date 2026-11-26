@@ -674,6 +674,126 @@ public sealed class UvInstallOptionsTests : IDisposable
     }
 
     [Fact]
+    public void AnExplicitDefaultClearsTheInterpreterARecordKeeps()
+    {
+        UvToolInstallRecords.TestPathOverride = _recordsFile;
+        try
+        {
+            Uv manager = new();
+            UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+            Package package = new PackageBuilder()
+                .WithManager(manager)
+                .WithId("ruff")
+                .WithVersion("0.5.0")
+                .Build();
+
+            InstallOptions chosen = new()
+            {
+                Uv_PythonRequest = "3.12",
+                Uv_ManagedPython = "false",
+                Uv_NoPythonDownloads = true,
+                Uv_PythonOptionsChosen = true,
+            };
+            Assert.Equal(
+                [
+                    "install",
+                    "ruff",
+                    "--python",
+                    "\"3.12\"",
+                    "--no-managed-python",
+                    "--no-python-downloads",
+                ],
+                helper.GetParameters(package, chosen, OperationType.Install)
+            );
+            helper.GetResult(package, OperationType.Install, [], 0, chosen);
+
+            UvToolInstallRecord? recorded = UvToolInstallRecords.Get("ruff");
+            Assert.NotNull(recorded);
+            Assert.Equal("3.12", recorded.PythonRequest);
+            Assert.False(recorded.ManagedPython);
+            Assert.True(recorded.NoPythonDownloads);
+
+            // Default in the dialog is an explicit choice, not "nothing was chosen", so it wins
+            // over the interpreter the tool was installed with.
+            InstallOptions explicitDefault = new() { Uv_PythonOptionsChosen = true };
+            Assert.Equal(
+                ["upgrade", "ruff"],
+                helper.GetParameters(package, explicitDefault, OperationType.Update)
+            );
+            helper.GetResult(package, OperationType.Update, [], 0, explicitDefault);
+
+            recorded = UvToolInstallRecords.Get("ruff");
+            Assert.NotNull(recorded);
+            Assert.Null(recorded.PythonRequest);
+            Assert.Null(recorded.ManagedPython);
+            Assert.False(recorded.NoPythonDownloads);
+        }
+        finally
+        {
+            UvToolInstallRecords.TestPathOverride = null;
+        }
+    }
+
+    [Fact]
+    public void TheManagerReportsTheInterpreterItInstalledWith()
+    {
+        UvToolInstallRecords.TestPathOverride = _recordsFile;
+        try
+        {
+            Uv manager = new();
+            UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+            Package package = new PackageBuilder().WithManager(manager).WithId("httpie").Build();
+
+            Assert.Null(helper.GetLastUsedPythonOptions(package));
+
+            helper.GetResult(
+                package,
+                OperationType.Install,
+                [],
+                0,
+                new InstallOptions
+                {
+                    Uv_PythonRequest = "3.13.2",
+                    Uv_ManagedPython = "false",
+                    Uv_NoPythonDownloads = true,
+                    Uv_PythonOptionsChosen = true,
+                }
+            );
+
+            PythonInterpreterOptions? used = helper.GetLastUsedPythonOptions(package);
+            Assert.NotNull(used);
+            Assert.Equal("3.13.2", used.Request);
+            Assert.False(used.ManagedPython);
+            Assert.True(used.NoPythonDownloads);
+        }
+        finally
+        {
+            UvToolInstallRecords.TestPathOverride = null;
+        }
+    }
+
+    [Fact]
+    public void AnExplicitDefaultClearsTheInterpreterOverrides()
+    {
+        Uv manager = new();
+        Package package = new PackageBuilder().WithManager(manager).WithId("ruff").Build();
+        UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+        package.OverridenOptions.Uv_PythonRequest = "3.12";
+        package.OverridenOptions.Uv_ManagedPython = true;
+        package.OverridenOptions.Uv_NoPythonDownloads = true;
+
+        helper.ApplyOperationOverrides(
+            package,
+            new InstallOptions { Uv_PythonOptionsChosen = true },
+            OperationType.Install
+        );
+
+        Assert.Null(package.OverridenOptions.Uv_PythonRequest);
+        Assert.Null(package.OverridenOptions.Uv_ManagedPython);
+        Assert.False(package.OverridenOptions.Uv_NoPythonDownloads);
+    }
+
+    [Fact]
     public void UvOptionsSurviveAsJsonNodeRoundTrip()
     {
         InstallOptions options = new()
@@ -681,6 +801,7 @@ public sealed class UvInstallOptionsTests : IDisposable
             Uv_PythonRequest = "3.13.2",
             Uv_ManagedPython = "false",
             Uv_NoPythonDownloads = true,
+            Uv_PythonOptionsChosen = true,
         };
 
         InstallOptions reloaded = new(options.AsJsonNode());
@@ -688,6 +809,7 @@ public sealed class UvInstallOptionsTests : IDisposable
         Assert.Equal("3.13.2", reloaded.Uv_PythonRequest);
         Assert.Equal("false", reloaded.Uv_ManagedPython);
         Assert.True(reloaded.Uv_NoPythonDownloads);
+        Assert.True(reloaded.Uv_PythonOptionsChosen);
     }
 
     [Fact]

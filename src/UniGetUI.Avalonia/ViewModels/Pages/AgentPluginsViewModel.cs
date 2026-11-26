@@ -38,6 +38,9 @@ public partial class AgentPluginsViewModel : ViewModelBase
     private CancellationTokenSource? _operation;
     private CancellationTokenSource? _catalogRead;
     private int _catalogGeneration;
+    private int _inventoryLoad;
+    private IAgentPluginService? _inventoryHome;
+    private bool _inventoryReload;
     private IReadOnlyList<AgentPluginItem> _filteredPlugins = [];
     private bool _stopped;
     private bool _readingCatalog;
@@ -358,46 +361,39 @@ public partial class AgentPluginsViewModel : ViewModelBase
     public Task LoadInstalledCatalogAsync() => !IsAppHandoff && !_state.IsLoaded && CanWork && !IsLoadingCatalog
         ? ReadInstalledCatalogAsync(CancellationToken.None) : Task.CompletedTask;
 
-    public async Task LoadInstalledForAllProvidersAsync()
-    {
-        if (!CanWork || IsAppHandoff) return;
-        IAgentPluginService current = _service;
-        List<string> failures = [];
-        try
-        {
-            foreach (var provider in Providers)
-            {
-                if (ReferenceEquals(provider, _copilotApp)) continue;
-                if (GetState(provider).IsLoaded) continue;
-                SelectedProvider = provider;
-                try { await ReadInstalledCatalogAsync(CancellationToken.None, throwOnError: true); }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    failures.Add($"{provider.Name}: {ex.Message}");
-                }
-            }
-        }
-        finally
-        {
-            if (!ReferenceEquals(_service, current) && CanSelectProvider)
-                SelectedProvider = current;
-        }
-        SetProviderInventoryResult(failures, CoreTools.Translate("Loaded installed plugin inventories."));
-    }
+    public Task LoadInstalledForAllProvidersAsync() =>
+        ReadInstalledForAllProvidersAsync(reload: false, CoreTools.Translate("Loaded installed plugin inventories."));
 
-    public async Task RefreshInstalledForAllProvidersAsync()
+    public Task RefreshInstalledForAllProvidersAsync() =>
+        ReadInstalledForAllProvidersAsync(reload: true, CoreTools.Translate("Refreshed installed plugin inventories."));
+
+    private async Task ReadInstalledForAllProvidersAsync(bool reload, string successMessage)
     {
         if (!CanWork || IsAppHandoff) return;
-        IAgentPluginService current = _service;
+        int load = ++_inventoryLoad;
+        if (_inventoryHome is not null)
+        {
+            reload |= _inventoryReload;
+            CancelCatalogRead();
+        }
+        _inventoryReload = reload;
+        IAgentPluginService current = _inventoryHome ??= _service;
         List<string> failures = [];
+        bool cancelled = false;
         try
         {
             foreach (var provider in Providers)
             {
                 if (ReferenceEquals(provider, _copilotApp)) continue;
+                if (!reload && GetState(provider).IsLoaded) continue;
                 SelectedProvider = provider;
                 try { await ReadInstalledCatalogAsync(CancellationToken.None, throwOnError: true); }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (OperationCanceledException)
+                {
+                    cancelled = true;
+                    return;
+                }
+                catch (Exception ex)
                 {
                     failures.Add($"{provider.Name}: {ex.Message}");
                 }
@@ -405,10 +401,15 @@ public partial class AgentPluginsViewModel : ViewModelBase
         }
         finally
         {
-            if (!ReferenceEquals(_service, current) && CanSelectProvider)
-                SelectedProvider = current;
+            if (load == _inventoryLoad)
+            {
+                _inventoryHome = null;
+                _inventoryReload = false;
+                if (!cancelled && !ReferenceEquals(_service, current) && CanSelectProvider)
+                    SelectedProvider = current;
+            }
         }
-        SetProviderInventoryResult(failures, CoreTools.Translate("Refreshed installed plugin inventories."));
+        SetProviderInventoryResult(failures, successMessage);
     }
 
     private void SetProviderInventoryResult(IReadOnlyCollection<string> failures, string successMessage)

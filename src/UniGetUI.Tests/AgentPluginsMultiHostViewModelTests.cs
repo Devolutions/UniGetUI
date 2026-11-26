@@ -424,6 +424,99 @@ public sealed class AgentPluginsMultiHostViewModelTests
         }, CancellationToken.None);
 
     [Fact]
+    public Task AllProvidersLoad_SupersededByAnotherDoesNotThrowAndLoadsEveryProvider() =>
+        _session.Dispatch<bool>(async () =>
+        {
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var claude = new ProviderStub("Claude", supportsUpdate: true, supportsToggle: true)
+            {
+                Catalog = new([new("claude-plugin@claude-market", "Claude catalog", "1", true, true)], []),
+            };
+            var codex = new ProviderStub("Codex", supportsUpdate: false, supportsToggle: false)
+            {
+                Catalog = new([new("codex-plugin@codex-market", "Codex catalog", "1", true, false)], []),
+            };
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            int codexReads = 0;
+            codex.CatalogRead = async token =>
+            {
+                if (++codexReads == 1)
+                {
+                    entered.SetResult();
+                    await Task.Delay(Timeout.Infinite, token);
+                }
+                await release.Task.WaitAsync(token);
+                return codex.Catalog;
+            };
+            var vm = new AgentPluginsViewModel([claude, codex], _ => Task.FromResult(true));
+
+            Task first = vm.LoadInstalledForAllProvidersAsync();
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Task second = vm.LoadInstalledForAllProvidersAsync();
+            await first.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(vm.IsLoadingCatalog);
+            release.SetResult();
+            await second.WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Same(claude, vm.SelectedProvider);
+            Assert.False(vm.IsLoadingCatalog);
+            Assert.False(vm.HasError);
+            Assert.Equal("Loaded installed plugin inventories.", vm.Status);
+            Assert.Equal(1, claude.CatalogReads);
+            Assert.Equal(2, codex.CatalogReads);
+            Assert.Equal("claude-plugin@claude-market", Assert.Single(vm.Plugins).Id);
+            vm.SelectedProvider = codex;
+            Assert.Equal("codex-plugin@codex-market", Assert.Single(vm.Plugins).Id);
+            vm.Stop();
+            return true;
+        }, CancellationToken.None);
+
+    [Fact]
+    public Task CachedLoadDuringRefresh_KeepsHomeProviderAndFinishesTheRefresh() =>
+        _session.Dispatch<bool>(async () =>
+        {
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var claude = new ProviderStub("Claude", supportsUpdate: true, supportsToggle: true)
+            {
+                Catalog = new([new("claude-plugin@claude-market", "Claude catalog", "1", true, true)], []),
+            };
+            var codex = new ProviderStub("Codex", supportsUpdate: false, supportsToggle: false)
+            {
+                Catalog = new([new("codex-plugin@codex-market", "Codex catalog", "1", true, false)], []),
+            };
+            var vm = new AgentPluginsViewModel([claude, codex], _ => Task.FromResult(true));
+            await vm.LoadInstalledForAllProvidersAsync();
+            Assert.Same(claude, vm.SelectedProvider);
+
+            int claudeReads = 0;
+            claude.CatalogRead = async token =>
+            {
+                if (++claudeReads == 1)
+                {
+                    entered.SetResult();
+                    await release.Task.WaitAsync(token);
+                }
+                return claude.Catalog;
+            };
+            Task refresh = vm.RefreshInstalledForAllProvidersAsync();
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Task load = vm.LoadInstalledForAllProvidersAsync();
+            release.TrySetResult();
+            await refresh.WaitAsync(TimeSpan.FromSeconds(10));
+            await load.WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Same(claude, vm.SelectedProvider);
+            Assert.False(vm.IsLoadingCatalog);
+            Assert.False(vm.HasError);
+            Assert.Equal("Loaded installed plugin inventories.", vm.Status);
+            Assert.Equal(2, codex.CatalogReads);
+            Assert.Equal("claude-plugin@claude-market", Assert.Single(vm.Plugins).Id);
+            vm.Stop();
+            return true;
+        }, CancellationToken.None);
+
+    [Fact]
     public Task ProviderFailure_IsScopedToSelectedHostAndStopDiscardsLateDataPermanently() =>
         _session.Dispatch<bool>(async () =>
         {

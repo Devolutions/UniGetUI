@@ -97,14 +97,23 @@ namespace UniGetUI.PackageEngine.Operations
 
         internal void AdoptReinstallStepFailure()
         {
-            if (_uninstallBeforeReinstall?.FailedBecauseApplicationRunning is not true)
+            if (_uninstallBeforeReinstall is null)
                 return;
-            FailedBecauseApplicationRunning = true;
+            if (_uninstallBeforeReinstall.FailedBecauseApplicationRunning)
+                FailedBecauseApplicationRunning = true;
+            else if (_uninstallBeforeReinstall.FailedBecauseWindowsInstallerBusy)
+                FailedBecauseWindowsInstallerBusy = true;
+            else
+                return;
             Metadata.FailureMessage = _uninstallBeforeReinstall.Metadata.FailureMessage;
         }
         internal bool IsReinstallStep { get; init; }
         public bool FailedBecauseApplicationRunning { get; private set; }
         public bool FailedBecauseUpdateNotSupported { get; private set; }
+        internal bool FailedBecauseWindowsInstallerBusy { get; private set; }
+        internal bool WaitsForWindowsInstallerBeforeNextAttempt { get; private set; }
+        internal const int MaxWindowsInstallerBusyRetries = 3;
+        private int _windowsInstallerBusyRetries;
         public Task SuccessHandled { get; private set; } = Task.CompletedTask;
         private IReadOnlyList<string> _closeRunningAppProcessNames = [];
         private readonly List<string> _brokerKillBeforeOperationAdded = [];
@@ -419,6 +428,9 @@ namespace UniGetUI.PackageEngine.Operations
                 }
             );
 
+            if (WaitsForWindowsInstallerBeforeNextAttempt && !await WaitForWindowsInstallerAsync())
+                return OperationVeredict.Canceled;
+
             if (IsReinstallStep && ShouldUseAgentBroker())
             {
                 Line(
@@ -473,6 +485,38 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             return await PerformBrokerOperation();
+        }
+
+        protected override void OnRunCompleted()
+        {
+            _windowsInstallerBusyRetries = 0;
+            WaitsForWindowsInstallerBeforeNextAttempt = false;
+            base.OnRunCompleted();
+        }
+
+        private async Task<bool> WaitForWindowsInstallerAsync()
+        {
+            WaitsForWindowsInstallerBeforeNextAttempt = false;
+#if WINDOWS
+            if (Package.Manager is WinGet winget)
+            {
+                Line(
+                    CoreTools.Translate("Another installation is in progress. Waiting for it to finish before trying again..."),
+                    LineType.ProgressIndicator
+                );
+                try
+                {
+                    await winget.WaitForWindowsInstallerAsync(CancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+            }
+#else
+            await Task.CompletedTask;
+#endif
+            return true;
         }
 
         private async Task<OperationVeredict> PerformLocalOperation()
@@ -1233,6 +1277,31 @@ namespace UniGetUI.PackageEngine.Operations
 
             FailedBecauseApplicationRunning = false;
             FailedBecauseUpdateNotSupported = false;
+            WaitsForWindowsInstallerBeforeNextAttempt = false;
+            FailedBecauseWindowsInstallerBusy = false;
+#if WINDOWS
+            if (Package.Manager is WinGet winget && winget.ReportedWindowsInstallerBusy(Output, ReturnCode))
+            {
+                if (veredict is OperationVeredict.AutoRetry && _windowsInstallerBusyRetries < MaxWindowsInstallerBusyRetries)
+                {
+                    _windowsInstallerBusyRetries++;
+                    WaitsForWindowsInstallerBeforeNextAttempt = true;
+                    Logger.Warn(
+                        $"Another Windows Installer operation was in progress during the {CommandRole} of {Package.Id}; "
+                        + $"retrying once it finishes (attempt {_windowsInstallerBusyRetries} of {MaxWindowsInstallerBusyRetries})"
+                    );
+                }
+                else if (veredict is OperationVeredict.AutoRetry)
+                {
+                    veredict = OperationVeredict.Failure;
+                }
+                FailedBecauseWindowsInstallerBusy = veredict is OperationVeredict.Failure;
+            }
+            else
+            {
+                _windowsInstallerBusyRetries = 0;
+            }
+#endif
             Metadata.FailureTitle = _genericFailureTitle;
             Metadata.FailureMessage = _genericFailureMessage;
             if (veredict is OperationVeredict.Failure)

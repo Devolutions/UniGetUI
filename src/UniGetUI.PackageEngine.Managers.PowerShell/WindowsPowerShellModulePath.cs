@@ -81,7 +81,11 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             Func<string, bool> isPowerShellCoreHome
         )
         {
-            string? parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(entry));
+            string trimmed = Path.TrimEndingDirectorySeparator(entry);
+            if (!string.Equals(Path.GetFileName(trimmed), "Modules", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            string? parent = Path.GetDirectoryName(trimmed);
             return !string.IsNullOrEmpty(parent) && isPowerShellCoreHome(parent);
         }
 

@@ -250,13 +250,21 @@ public sealed class PowerShellManagerTests
             @"C:\Program Files\PowerShell\Modules",
             @"c:\users\someone\scoop\apps\pwsh\current\Modules\",
             @"C:\Program Files\PowerShell\7\Modules",
+            @"C:\Program Files\PowerShell\7\LegacyModules",
             @"D:\Team Modules",
             WindowsSharedModules,
             WindowsSystemModules
         );
 
         Assert.Equal(
-            string.Join(';', WindowsUserModules, @"D:\Team Modules", WindowsSharedModules, WindowsSystemModules),
+            string.Join(
+                ';',
+                WindowsUserModules,
+                @"C:\Program Files\PowerShell\7\LegacyModules",
+                @"D:\Team Modules",
+                WindowsSharedModules,
+                WindowsSystemModules
+            ),
             WindowsPowerShellModulePath.Repair(inherited, Documents, ProgramFiles, IsCoreHome)
         );
     }

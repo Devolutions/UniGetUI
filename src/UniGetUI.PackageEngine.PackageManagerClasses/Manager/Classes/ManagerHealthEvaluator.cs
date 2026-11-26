@@ -10,7 +10,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
 
         public static readonly TimeSpan AttentionWindow = TimeSpan.FromDays(1);
 
-        public static ManagerHealthReport Evaluate(IPackageManager manager)
+        public static ManagerHealthReport Evaluate(IPackageManager manager) => Evaluate(manager, null);
+
+        public static ManagerHealthReport Evaluate(IPackageManager manager, DateTime? observedSinceUtc)
         {
             ManagerHealthRecord record = manager.GetHealthRecord();
 
@@ -31,12 +33,15 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             if (failures.Length > 0)
             {
                 var urgent = failures
-                    .Where(entry => FailureNeedsAttention(manager, record, entry.Kind, entry.Listing))
+                    .Where(entry =>
+                        FailureNeedsAttention(manager, record, entry.Kind, entry.Listing)
+                        && ObservedSince(entry.Listing.LastFailureUtc, observedSinceUtc)
+                    )
                     .OrderByDescending(entry => entry.Listing.ConsecutiveFailures)
                     .ThenByDescending(entry => entry.Listing.LastFailureUtc)
                     .FirstOrDefault();
                 if (urgent.Listing is null && IsMalfunctioning(manager, record))
-                    return Malfunction(manager, record);
+                    return Malfunction(manager, record, observedSinceUtc);
 
                 var shown = urgent.Listing is not null
                     ? urgent
@@ -55,7 +60,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             }
 
             if (IsMalfunctioning(manager, record))
-                return Malfunction(manager, record);
+                return Malfunction(manager, record, observedSinceUtc);
 
             var incomplete = Enum.GetValues<ManagerListingKind>()
                 .Select(kind => (Kind: kind, Listing: record[kind]))
@@ -88,20 +93,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             DateTime? observedSinceUtc = null
         ) =>
             managers
-                .Select(Evaluate)
-                .Where(report =>
-                    report.NeedsAttention
-                    && (observedSinceUtc is not { } since || LastObservedUtc(report) >= since)
-                )
+                .Select(manager => Evaluate(manager, observedSinceUtc))
+                .Where(report => report.NeedsAttention)
                 .ToArray();
 
-        private static DateTime? LastObservedUtc(ManagerHealthReport report)
-        {
-            ManagerListingHealth listing = report.Record[report.FailingListing ?? ManagerListingKind.Installed];
-            return report.State is ManagerHealthState.Malfunctioning
-                ? listing.LastSuccessUtc
-                : listing.LastFailureUtc;
-        }
+        private static bool ObservedSince(DateTime? observedUtc, DateTime? sinceUtc) =>
+            sinceUtc is not { } since || observedUtc >= since;
 
         public static string ListingName(ManagerListingKind kind) =>
             kind switch
@@ -210,12 +207,14 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
         private static bool IsMalfunctioning(IPackageManager manager, ManagerHealthRecord record) =>
             DetectsMalfunctions(manager)
             && record.Installed.ConsecutiveFailures == 0
+            && record.Installed.LastIncompleteUtc is null
             && record.Installed.LastSuccessUtc is not null
             && record.Installed.LastPackageCount == 0;
 
         private static ManagerHealthReport Malfunction(
             IPackageManager manager,
-            ManagerHealthRecord record
+            ManagerHealthRecord record,
+            DateTime? observedSinceUtc
         ) =>
             new()
             {
@@ -223,7 +222,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 Record = record,
                 State = ManagerHealthState.Malfunctioning,
                 FailingListing = ManagerListingKind.Installed,
-                NeedsAttention = true,
+                NeedsAttention = ObservedSince(record.Installed.LastSuccessUtc, observedSinceUtc),
             };
 
         private static bool DetectsMalfunctions(IPackageManager manager) =>

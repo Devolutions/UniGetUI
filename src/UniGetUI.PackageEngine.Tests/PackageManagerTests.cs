@@ -945,6 +945,63 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void AnOlderLongerStreakDoesNotHideAFailureSeenThisSession()
+    {
+        var manager = CreateReadyManager();
+        manager.SetAvailableUpdates(() => throw new InvalidOperationException("updates down"));
+        manager.SetFindPackages(_ => throw new InvalidOperationException("search down"));
+        DateTime earlier = DateTime.UtcNow - TimeSpan.FromHours(3);
+        DateTime sessionStart = earlier + TimeSpan.FromHours(1);
+
+        using (ManagerHealthStore.UseClock(() => earlier))
+        {
+            for (int i = 0; i < 5; i++)
+                manager.GetAvailableUpdates();
+        }
+
+        using (ManagerHealthStore.UseClock(() => sessionStart + TimeSpan.FromMinutes(1)))
+        {
+            manager.FindPackages("tool");
+            manager.FindPackages("tool");
+        }
+
+        Assert.Equal(ManagerListingKind.Updates, ManagerHealthEvaluator.Evaluate(manager).FailingListing);
+        var report = Assert.Single(ManagerHealthEvaluator.ManagersNeedingAttention([manager], sessionStart));
+        Assert.Equal(ManagerListingKind.Search, report.FailingListing);
+        Assert.Contains("search down", report.Reason);
+    }
+
+    [Fact]
+    public void AnIncompleteInstalledListingEndsAMalfunctionUntilTheNextCompleteOne()
+    {
+        var manager = CreateReadyManager();
+        manager.ExpectsInstalled = true;
+        var row = CreatePackage(manager, "Contoso.Partial", "Contoso Partial");
+        manager.GetInstalledPackages();
+        var emptySuccess = manager.GetHealthRecord().Installed.LastSuccessUtc;
+        Assert.Equal(ManagerHealthState.Malfunctioning, ManagerHealthEvaluator.Evaluate(manager).State);
+
+        manager.SetInstalledPackages(() =>
+        {
+            PackageListingScope.ReportSourceUnavailable("Contoso", "one source down");
+            return [row];
+        });
+        manager.GetInstalledPackages();
+
+        var report = ManagerHealthEvaluator.Evaluate(manager);
+        Assert.Equal(ManagerHealthState.Incomplete, report.State);
+        Assert.False(report.NeedsAttention);
+        Assert.Empty(ManagerHealthEvaluator.ManagersNeedingAttention([manager]));
+        var installed = manager.GetHealthRecord().Installed;
+        Assert.Equal(emptySuccess, installed.LastSuccessUtc);
+        Assert.Equal(0, installed.LastPackageCount);
+
+        manager.SetInstalledPackages(() => [row]);
+        manager.GetInstalledPackages();
+        Assert.Equal(ManagerHealthState.Healthy, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
     public void AnEarlierSessionsMalfunctionDoesNotAskForAttentionUntilItIsSeenAgain()
     {
         var manager = CreateReadyManager();

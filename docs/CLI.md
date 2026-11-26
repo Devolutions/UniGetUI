@@ -503,9 +503,12 @@ A listing that only skipped unreachable sources neither counts as a failure nor 
 listing, such as a manager that exited with an error or output that could not be read, still
 counts as a failure.
 
-A manager is `malfunctioning` when it is ready, its installed listing succeeded and returned no package
-at all, and a working installation of it always lists something (WinGet, Apt, Dnf and Pacman). The
-`DisableWinGetMalfunctionDetector` setting still turns this off for WinGet.
+A manager is `malfunctioning` when it is ready, its latest installed listing was complete, succeeded
+and returned no package at all, and a working installation of it always lists something (WinGet,
+Apt, Dnf and Pacman). The `DisableWinGetMalfunctionDetector` setting still turns this off for WinGet.
+
+`needsAttention` here reflects the whole record. The app's health popup, and the terminal UI's
+startup warning, additionally only report a failure or malfunction seen since the app started.
 
 ### Sources
 

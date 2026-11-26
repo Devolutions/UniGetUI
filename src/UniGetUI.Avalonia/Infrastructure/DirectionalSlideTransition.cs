@@ -8,6 +8,7 @@ using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
@@ -49,7 +50,7 @@ public sealed class DirectionalSlideTransition : IPageTransition
         double sign = (Reverse || (FollowForwardDirection && !forward)) ? -1d : 1d;
         double width = (to ?? from)?.GetVisualParent()?.Bounds.Width
                        ?? (to ?? from)?.Bounds.Width ?? 0d;
-        var hidden = new List<ScrollViewer>();
+        var hidden = new List<ScrollBar>();
         HideScrollBars(from, hidden);
         HideScrollBars(to, hidden);
 
@@ -64,8 +65,11 @@ public sealed class DirectionalSlideTransition : IPageTransition
         }
         finally
         {
-            foreach (var sv in hidden)
-                sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            foreach (var bar in hidden)
+            {
+                bar.ClearValue(ScrollBar.OpacityProperty);
+                bar.ClearValue(ScrollBar.IsHitTestVisibleProperty);
+            }
         }
 
         if (cancellationToken.IsCancellationRequested)
@@ -80,17 +84,26 @@ public sealed class DirectionalSlideTransition : IPageTransition
         to?.RenderTransform = null;
     }
 
-    private static void HideScrollBars(Visual? root, List<ScrollViewer> hidden)
+    private static void HideScrollBars(Visual? root, List<ScrollBar> hidden)
     {
         if (root is null)
             return;
 
-        foreach (var sv in root.GetVisualDescendants().OfType<ScrollViewer>())
+        var viewers = root.GetVisualDescendants().OfType<ScrollViewer>()
+            .Where(sv => sv.VerticalScrollBarVisibility == ScrollBarVisibility.Auto)
+            .ToHashSet();
+        if (viewers.Count == 0)
+            return;
+
+        foreach (var bar in root.GetVisualDescendants().OfType<ScrollBar>())
         {
-            if (sv.VerticalScrollBarVisibility == ScrollBarVisibility.Auto)
+            if (bar.Orientation == Orientation.Vertical
+                && bar.TemplatedParent is ScrollViewer owner
+                && viewers.Contains(owner))
             {
-                sv.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
-                hidden.Add(sv);
+                bar.Opacity = 0;
+                bar.IsHitTestVisible = false;
+                hidden.Add(bar);
             }
         }
     }

@@ -340,7 +340,7 @@
                 <Grid RowDefinitions="Auto,*">
 
                     <!-- Toolbar: expand/collapse + bulk-ops menu -->
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto"
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto"
                           Height="28" Margin="4,2,4,2">
 
                         <!-- Expand/collapse chevron -->
@@ -376,8 +376,18 @@
                                    VerticalAlignment="Center"
                                    Margin="4,0,0,0"/>
 
-                        <!-- Bulk-ops menu -->
                         <Button Grid.Column="2"
+                                Classes="secondary-action"
+                                Height="24" Padding="10,0" Margin="0,0,4,0"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding CanCancelAllOperations}"
+                                Command="{Binding CancelAllOperationsCommand}">
+                            <TextBlock Text="{t:Translate Cancel all}" FontSize="12"
+                                       VerticalAlignment="Center"/>
+                        </Button>
+
+                        <!-- Bulk-ops menu -->
+                        <Button Grid.Column="3"
                                 Width="28" Height="24" Padding="0" Margin="0,0,4,0"
                                 Background="Transparent" BorderThickness="0" CornerRadius="4"
                                 HorizontalContentAlignment="Center"
@@ -402,9 +412,6 @@
                                               IsChecked="{Binding ShutdownController.IsArmed, Mode=TwoWay}"
                                               IsEnabled="{Binding ShutdownController.CanToggle}"
                                               IsVisible="{Binding ShutdownController.IsSupported}"/>
-                                    <Separator IsVisible="{Binding ShutdownController.IsSupported}"/>
-                                    <MenuItem Header="{t:Translate Cancel all}"
-                                              Command="{Binding CancelAllOperationsCommand}"/>
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>

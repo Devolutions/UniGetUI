@@ -8,7 +8,7 @@
              x:DataType="vm:SidebarViewModel">
     <UserControl.Styles>
         <Style Selector="Button.more-tile">
-            <Setter Property="Width" Value="168"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="Height" Value="104"/>
             <Setter Property="Margin" Value="0,0,8,8"/>
             <Setter Property="Padding" Value="12"/>
@@ -47,7 +47,7 @@
                        FontSize="28" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display"/>
 
             <TextBlock x:Name="PagesHeader" Classes="more-section" Text="{t:Translate Pages}"/>
-            <Border x:Name="PageDropZone" Margin="-8,0" Padding="8,8,0,0" CornerRadius="8" BorderThickness="1"
+            <Border x:Name="PageDropZone" Margin="-9,0" Padding="8,8,0,0" CornerRadius="8" BorderThickness="1"
                     BorderBrush="Transparent" Background="Transparent">
                 <StackPanel>
                     <Border x:Name="EmptyPagesCard"
@@ -73,7 +73,7 @@
                         </Grid>
                     </Border>
                     <Panel>
-                        <WrapPanel x:Name="PageTiles"
+                        <WrapPanel x:Name="PageTiles" ItemWidth="176"
                                    automation:AutomationProperties.Name="{t:Translate Pages}"/>
                         <Canvas IsHitTestVisible="False">
                             <Border x:Name="PageDropIndicator" Width="3" CornerRadius="1.5" IsVisible="False"
@@ -84,7 +84,7 @@
             </Border>
 
             <TextBlock Classes="more-section" Text="{t:Translate Tools}"/>
-            <WrapPanel x:Name="ToolTiles"
+            <WrapPanel x:Name="ToolTiles" ItemWidth="176" Margin="0,0,-8,0"
                        automation:AutomationProperties.Name="{t:Translate Tools}"/>
 
             <Border x:Name="MoreFooter"

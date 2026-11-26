@@ -1,7 +1,10 @@
 #if WINDOWS
 using System.Diagnostics;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -168,6 +171,151 @@ public sealed class PowerShellManagerTests
             moduleDirectory.Delete();
             moduleRoot.Delete();
         }
+    }
+
+    [Fact]
+    public void InstalledListingWorksWhenStartedFromPowerShell7()
+    {
+        DirectoryInfo coreHome = Directory.CreateTempSubdirectory("unigetui-pwsh-home-");
+        string? parentModulePath = Environment.GetEnvironmentVariable(WindowsPowerShellModulePath.VariableName);
+        try
+        {
+            File.WriteAllBytes(Path.Join(coreHome.FullName, "pwsh.dll"), []);
+            DirectoryInfo coreModule = Directory.CreateDirectory(
+                Path.Join(coreHome.FullName, "Modules", "PowerShellGet", "99.0.0")
+            );
+            File.WriteAllText(
+                Path.Join(coreModule.FullName, "PowerShellGet.psd1"),
+                "@{ ModuleVersion = '99.0.0'; RootModule = 'Missing.psm1';"
+                + " FunctionsToExport = @('Get-InstalledModule', 'Get-PSRepository') }"
+            );
+            Environment.SetEnvironmentVariable(
+                WindowsPowerShellModulePath.VariableName,
+                string.Join(
+                    Path.PathSeparator,
+                    Path.Join(
+                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                        "PowerShell",
+                        "Modules"
+                    ),
+                    Path.Join(coreHome.FullName, "Modules"),
+                    Path.Join(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                        "WindowsPowerShell",
+                        "Modules"
+                    ),
+                    Path.Join(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "Modules")
+                )
+            );
+            var manager = new ListingPowerShell
+            {
+                Status = new ManagerStatus
+                {
+                    Found = true,
+                    ExecutablePath = Path.Join(
+                        Environment.SystemDirectory,
+                        "WindowsPowerShell",
+                        "v1.0",
+                        "powershell.exe"
+                    ),
+                    ExecutableCallArgs = " -NoProfile -Command",
+                },
+            };
+
+            using var scope = PackageListingScope.EnterListingOnly();
+            manager.ListInstalled();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(WindowsPowerShellModulePath.VariableName, parentModulePath);
+            coreHome.Delete(recursive: true);
+        }
+    }
+
+    private const string Documents = @"C:\Users\Someone\Documents";
+    private const string ProgramFiles = @"C:\Program Files";
+    private const string WindowsUserModules = @"C:\Users\Someone\Documents\WindowsPowerShell\Modules";
+    private const string WindowsSharedModules = @"C:\Program Files\WindowsPowerShell\Modules";
+    private const string WindowsSystemModules = @"C:\Windows\system32\WindowsPowerShell\v1.0\Modules";
+
+    private static bool IsCoreHome(string directory) =>
+        directory is @"C:\Program Files\PowerShell\7" or @"c:\users\someone\scoop\apps\pwsh\current";
+
+    [Fact]
+    public void ModulePathDropsPowerShell7EntriesAndRestoresTheWindowsPowerShellUserFolder()
+    {
+        string inherited = string.Join(
+            ';',
+            @"C:\Users\Someone\Documents\PowerShell\Modules",
+            @"C:\Program Files\PowerShell\Modules",
+            @"c:\users\someone\scoop\apps\pwsh\current\Modules\",
+            @"C:\Program Files\PowerShell\7\Modules",
+            @"C:\Program Files\PowerShell\7\LegacyModules",
+            @"D:\Team Modules",
+            WindowsSharedModules,
+            WindowsSystemModules
+        );
+
+        Assert.Equal(
+            string.Join(
+                ';',
+                WindowsUserModules,
+                @"C:\Program Files\PowerShell\7\LegacyModules",
+                @"D:\Team Modules",
+                WindowsSharedModules,
+                WindowsSystemModules
+            ),
+            WindowsPowerShellModulePath.Repair(inherited, Documents, ProgramFiles, IsCoreHome)
+        );
+    }
+
+    [Fact]
+    public void ModulePathWithoutPowerShell7EntriesIsLeftAlone()
+    {
+        string inherited = string.Join(';', @"D:\Team Modules", WindowsSharedModules, WindowsSystemModules);
+
+        Assert.Null(WindowsPowerShellModulePath.Repair(inherited, Documents, ProgramFiles, IsCoreHome));
+    }
+
+    [Fact]
+    public void ModulePathKeepsAnExistingWindowsPowerShellUserFolderInPlace()
+    {
+        string inherited = string.Join(
+            ';',
+            @"C:\Program Files\PowerShell\7\Modules",
+            @"D:\Team Modules",
+            WindowsUserModules + @"\",
+            WindowsSystemModules
+        );
+
+        Assert.Equal(
+            string.Join(';', @"D:\Team Modules", WindowsUserModules + @"\", WindowsSystemModules),
+            WindowsPowerShellModulePath.Repair(inherited, Documents, ProgramFiles, IsCoreHome)
+        );
+    }
+
+    [Fact]
+    public void ModulePathOfOnlyPowerShell7EntriesIsRemoved()
+    {
+        var environment = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PSModulePath"] = string.Join(
+                ';',
+                Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "PowerShell", "Modules"),
+                Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "Modules")
+            ),
+            ["Other"] = "kept",
+        };
+
+        new PowerShell().PrepareProcessEnvironment(environment);
+
+        Assert.False(environment.ContainsKey("PSModulePath"));
+        Assert.Equal("kept", environment["Other"]);
+    }
+
+    private sealed class ListingPowerShell : PowerShell
+    {
+        public IReadOnlyList<Package> ListInstalled() => _getInstalledPackages_UnSafe();
     }
 
     private sealed class PowerShellModuleFactAttribute : FactAttribute

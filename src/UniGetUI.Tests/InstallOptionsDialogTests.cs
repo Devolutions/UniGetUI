@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
@@ -190,6 +191,109 @@ public sealed class InstallOptionsDialogTests : IDisposable
         window.Close();
         return true;
     }, CancellationToken.None);
+
+    [Fact]
+    public Task SavingBeforeTheInterpreterListLoadsKeepsTheSavedRequest() => _session.Dispatch<bool>(async () =>
+    {
+        var manager = new Uv();
+        IPackage package = new Package(
+            "ruff", "ruff", "0.17.5", "0.17.5",
+            manager.Properties.DefaultSource, manager, new OverridenInstallationOptions());
+        var options = new InstallOptions
+        {
+            Uv_PythonRequest = "3.12",
+            Uv_ManagedPython = "false",
+            Uv_PythonOptionsChosen = true,
+        };
+
+        var (vm, _, window) = ShowDialog(package, options);
+
+        // `uv python list` may not have answered yet; saving must still keep the request.
+        vm.ApplyChanges();
+
+        Assert.Equal("3.12", options.Uv_PythonRequest);
+        Assert.Equal("false", options.Uv_ManagedPython);
+
+        window.Close();
+        return true;
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task TheDialogStartsFromTheInterpreterTheToolWasInstalledWith() => _session.Dispatch<bool>(async () =>
+    {
+        WriteInstallRecord("ruff", pythonRequest: "3.12", managedPython: false, noPythonDownloads: true);
+        var manager = new Uv();
+        IPackage package = new Package(
+            "ruff", "ruff", "0.17.5", "0.17.5",
+            manager.Properties.DefaultSource, manager, new OverridenInstallationOptions());
+        var options = new InstallOptions();
+
+        var (vm, _, window) = ShowDialog(package, options);
+
+        Assert.Equal(CoreTools.Translate("system Python"), vm.SelectedManagedPython);
+        Assert.True(vm.NoPythonDownloadsChecked);
+
+        vm.ApplyChanges();
+
+        Assert.Equal("3.12", options.Uv_PythonRequest);
+        Assert.Equal("false", options.Uv_ManagedPython);
+        Assert.True(options.Uv_NoPythonDownloads);
+        Assert.True(options.Uv_PythonOptionsChosen);
+
+        window.Close();
+        return true;
+    }, CancellationToken.None);
+
+    [Fact]
+    public Task AnExplicitDefaultInTheSavedOptionsIsNotReplacedByTheRecord() => _session.Dispatch<bool>(async () =>
+    {
+        WriteInstallRecord("ruff", pythonRequest: "3.12", managedPython: null, noPythonDownloads: false);
+        var manager = new Uv();
+        IPackage package = new Package(
+            "ruff", "ruff", "0.17.5", "0.17.5",
+            manager.Properties.DefaultSource, manager, new OverridenInstallationOptions());
+        var options = new InstallOptions { Uv_PythonOptionsChosen = true };
+
+        var (vm, _, window) = ShowDialog(package, options);
+
+        Assert.Equal(CoreTools.Translate("Default"), vm.SelectedPython);
+        Assert.Equal(CoreTools.Translate("Default"), vm.SelectedManagedPython);
+        Assert.False(vm.NoPythonDownloadsChecked);
+
+        vm.ApplyChanges();
+
+        Assert.Equal("", options.Uv_PythonRequest);
+        Assert.True(options.Uv_PythonOptionsChosen);
+
+        window.Close();
+        return true;
+    }, CancellationToken.None);
+
+    private static void WriteInstallRecord(
+        string id,
+        string? pythonRequest,
+        bool? managedPython,
+        bool noPythonDownloads)
+    {
+        var record = new JsonObject
+        {
+            ["id"] = id,
+            ["version"] = "0.17.5",
+            ["source"] = "uv",
+            ["schemaVersion"] = 1,
+            ["noPythonDownloads"] = noPythonDownloads,
+        };
+        if (pythonRequest is not null)
+            record["pythonRequest"] = pythonRequest;
+        if (managedPython is bool managed)
+            record["managedPython"] = managed;
+
+        Directory.CreateDirectory(CoreData.UniGetUIDataDirectory);
+        File.WriteAllText(
+            Path.Combine(CoreData.UniGetUIDataDirectory, "uv_tool_install_records.json"),
+            new JsonArray(record).ToJsonString()
+        );
+    }
 
     private (InstallOptionsViewModel Vm, InstallOptionsControl Control, Window Window) ShowDialog(
         IPackage package, InstallOptions options)

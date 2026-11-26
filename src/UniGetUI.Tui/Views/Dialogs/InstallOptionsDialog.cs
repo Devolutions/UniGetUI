@@ -377,6 +377,11 @@ internal sealed class InstallOptionsDialog : FormDialog
         to.Architecture = from.Architecture;
         to.InstallationScope = from.InstallationScope;
         to.CustomInstallLocation = from.CustomInstallLocation;
+        // Not shown by this dialog, but saving must not drop a choice made in the desktop one.
+        to.Uv_PythonRequest = from.Uv_PythonRequest;
+        to.Uv_ManagedPython = from.Uv_ManagedPython;
+        to.Uv_NoPythonDownloads = from.Uv_NoPythonDownloads;
+        to.Uv_PythonOptionsChosen = from.Uv_PythonOptionsChosen;
         to.CustomParameters_Install = from.CustomParameters_Install.ToList();
         to.CustomParameters_Update = from.CustomParameters_Update.ToList();
         to.CustomParameters_Uninstall = from.CustomParameters_Uninstall.ToList();

@@ -17,6 +17,7 @@ using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
@@ -410,13 +411,33 @@ public partial class InstallOptionsViewModel : ObservableObject
         ManagedPythonOptions.Add(defaultPythonLabel);
         ManagedPythonOptions.Add(uvManagedLabel);
         ManagedPythonOptions.Add(systemPythonLabel);
-        SelectedManagedPython = options.Uv_ManagedPython switch
+
+        string pythonRequest = options.Uv_PythonRequest;
+        string managedPython = options.Uv_ManagedPython;
+        bool noPythonDownloads = options.Uv_NoPythonDownloads;
+        if (PythonEnabled && !options.Uv_PythonOptionsChosen)
+        {
+            // Nothing saved here chose an interpreter: start from what the manager installed the
+            // package with, so saving the dialog without touching this section keeps it.
+            PythonInterpreterOptions? used =
+                _package.Manager.OperationHelper.GetLastUsedPythonOptions(_package);
+            if (used is not null)
+            {
+                if (pythonRequest.Length is 0 && used.Request is { Length: > 0 } recordedRequest)
+                    pythonRequest = recordedRequest;
+                if (managedPython.Length is 0 && used.ManagedPython is bool recordedManaged)
+                    managedPython = recordedManaged ? "true" : "false";
+                noPythonDownloads |= used.NoPythonDownloads;
+            }
+        }
+
+        SelectedManagedPython = managedPython switch
         {
             "true" => uvManagedLabel,
             "false" => systemPythonLabel,
             _ => defaultPythonLabel,
         };
-        NoPythonDownloadsChecked = options.Uv_NoPythonDownloads;
+        NoPythonDownloadsChecked = noPythonDownloads;
 
         // CLI params
         ParamsInstall = string.Join(' ', options.CustomParameters_Install);
@@ -448,7 +469,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         if (caps.SupportsCustomVersions && caps.CanListVersions)
             _ = LoadVersionsAsync(options.Version);
 
-        _ = LoadPythonOptionsAsync(options.Uv_PythonRequest);
+        _ = LoadPythonOptionsAsync(pythonRequest);
 
         _ = LoadIgnoredUpdatesAsync();
 
@@ -762,31 +783,45 @@ public partial class InstallOptionsViewModel : ObservableObject
         if (!PythonEnabled)
             return;
 
-        var interpreters = await Task.Run(
-            () => _package.Manager.OperationHelper.ListPythonInterpreters());
-
+        // Fill the list with the saved request before uv python list answers, so a save made in
+        // the meantime keeps it instead of writing an empty interpreter back.
         string defaultLabel = CoreTools.Translate("Default");
         PythonOptions.Add(defaultLabel);
         _pythonSelections[defaultLabel] = "";
-
-        foreach (var interpreter in interpreters)
+        if (persistedRequest.Length > 0)
         {
-            PythonOptions.Add(interpreter.DisplayName);
-            _pythonSelections[interpreter.DisplayName] = interpreter.Request;
-            if (interpreter.Request == persistedRequest)
-                SelectedPython = interpreter.DisplayName;
-        }
-
-        if (SelectedPython is null && persistedRequest.Length > 0)
-        {
-            // The persisted interpreter is not offered anymore; keep it selectable verbatim.
             PythonOptions.Add(persistedRequest);
             _pythonSelections[persistedRequest] = persistedRequest;
             SelectedPython = persistedRequest;
         }
-
-        if (SelectedPython is null)
+        else
+        {
             SelectedPython = defaultLabel;
+        }
+
+        var interpreters = await Task.Run(
+            () => _package.Manager.OperationHelper.ListPythonInterpreters());
+
+        PythonInterpreterChoice? persistedChoice = null;
+        foreach (var interpreter in interpreters)
+        {
+            if (interpreter.Request == persistedRequest)
+                persistedChoice = interpreter;
+            if (PythonOptions.Contains(interpreter.DisplayName))
+                continue;
+            PythonOptions.Add(interpreter.DisplayName);
+            _pythonSelections[interpreter.DisplayName] = interpreter.Request;
+        }
+
+        if (persistedChoice is not null)
+        {
+            // Swap the placeholder request for the display name uv knows it by.
+            if (SelectedPython == persistedRequest)
+                SelectedPython = persistedChoice.DisplayName;
+            if (persistedRequest != persistedChoice.DisplayName
+                && PythonOptions.Remove(persistedRequest))
+                _pythonSelections.Remove(persistedRequest);
+        }
     }
 
     // ── Snapshot & apply ──────────────────────────────────────────────────────
@@ -820,15 +855,17 @@ public partial class InstallOptionsViewModel : ObservableObject
         o.Architecture = (SelectedArch != defaultLabel && SelectedArch is not null) ? SelectedArch : "";
         o.InstallationScope = ScopeToString(SelectedScope);
 
-        o.Uv_PythonRequest = _pythonSelections.TryGetValue(SelectedPython ?? "", out string? request)
-            ? request
-            : "";
+        o.Uv_PythonRequest = SelectedPython is not null
+            && _pythonSelections.TryGetValue(SelectedPython, out string? request)
+                ? request
+                : _options.Uv_PythonRequest;
         string uvManagedLabel = CoreTools.Translate("uv-managed Python");
         string systemPythonLabel = CoreTools.Translate("system Python");
         o.Uv_ManagedPython = SelectedManagedPython == uvManagedLabel ? "true"
             : SelectedManagedPython == systemPythonLabel ? "false"
             : "";
         o.Uv_NoPythonDownloads = NoPythonDownloadsChecked;
+        o.Uv_PythonOptionsChosen = PythonEnabled;
 
         o.CustomInstallLocation = LocationText;
         o.CustomParameters_Install = Split(ParamsInstall);
@@ -869,6 +906,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.Uv_PythonRequest = s.Uv_PythonRequest;
         _options.Uv_ManagedPython = s.Uv_ManagedPython;
         _options.Uv_NoPythonDownloads = s.Uv_NoPythonDownloads;
+        _options.Uv_PythonOptionsChosen = s.Uv_PythonOptionsChosen;
         _options.CustomParameters_Install = s.CustomParameters_Install;
         _options.CustomParameters_Update = s.CustomParameters_Update;
         _options.CustomParameters_Uninstall = s.CustomParameters_Uninstall;

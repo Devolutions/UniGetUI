@@ -40,6 +40,7 @@ public partial class AgentPluginsViewModel : ViewModelBase
     private int _catalogGeneration;
     private int _inventoryLoad;
     private IAgentPluginService? _inventoryHome;
+    private bool _inventoryReload;
     private IReadOnlyList<AgentPluginItem> _filteredPlugins = [];
     private bool _stopped;
     private bool _readingCatalog;
@@ -370,6 +371,12 @@ public partial class AgentPluginsViewModel : ViewModelBase
     {
         if (!CanWork || IsAppHandoff) return;
         int load = ++_inventoryLoad;
+        if (_inventoryHome is not null)
+        {
+            reload |= _inventoryReload;
+            CancelCatalogRead();
+        }
+        _inventoryReload = reload;
         IAgentPluginService current = _inventoryHome ??= _service;
         List<string> failures = [];
         bool cancelled = false;
@@ -397,6 +404,7 @@ public partial class AgentPluginsViewModel : ViewModelBase
             if (load == _inventoryLoad)
             {
                 _inventoryHome = null;
+                _inventoryReload = false;
                 if (!cancelled && !ReferenceEquals(_service, current) && CanSelectProvider)
                     SelectedProvider = current;
             }

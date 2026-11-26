@@ -40,6 +40,9 @@ namespace UniGetUI.PackageEngine.Operations
         /// </summary>
         protected abstract IReadOnlyList<string> GetSourceParameters();
 
+        protected override void PrepareProcessEnvironment() =>
+            Source.Manager.PrepareProcessEnvironment(process.StartInfo.Environment);
+
         protected sealed override void PrepareProcessStartInfo() =>
             PrepareSourceProcessStartInfo(GetSourceParameters());
 

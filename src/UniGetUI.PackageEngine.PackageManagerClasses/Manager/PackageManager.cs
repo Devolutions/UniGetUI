@@ -55,6 +55,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         public virtual bool IdentifiersAreQuotedOnCommandLine => false;
 
+        public virtual void PrepareProcessEnvironment(IDictionary<string, string?> environment) { }
+
         public virtual bool CanUpdateToExactVersion =>
             Capabilities.SupportsCustomVersions
             && Capabilities.SupportsCustomVersionsOnUpdate

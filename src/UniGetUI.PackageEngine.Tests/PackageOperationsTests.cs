@@ -546,6 +546,46 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task PackageOperationsStartWithTheManagersProcessEnvironment()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        IReadOnlyList<string> output = [];
+        var manager = new PackageManagerBuilder()
+            .WithName($"EnvironmentManager{Guid.NewGuid():N}")
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+                manager.ProcessEnvironment = environment =>
+                    environment["UNIGETUI_OPERATION_ENVIRONMENT_TEST"] = "prepared-by-manager";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (_, _, _) => ["echo", "%UNIGETUI_OPERATION_ENVIRONMENT_TEST%"];
+                helper.ResultFactory = (_, _, lines, _) =>
+                {
+                    output = lines.ToList();
+                    return OperationVeredict.Success;
+                };
+            })
+            .Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+        InitializeLoaders();
+        using var operation = new InstallPackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        Assert.Contains(output, line => line.Contains("prepared-by-manager"));
+    }
+
+    [Fact]
     public void ReinstallUninstallKeepsDataAndTheUpdateListing()
     {
         var manager = CreateManager();

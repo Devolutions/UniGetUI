@@ -39,6 +39,8 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public bool IdentifiersAreQuotedOnCommandLine { get; }
 
+        public void PrepareProcessEnvironment(IDictionary<string, string?> environment) { }
+
         /// <summary>
         /// Compares two version strings using this manager's ecosystem semantics, returning a
         /// negative number, zero or a positive number in the usual way, or null when the two

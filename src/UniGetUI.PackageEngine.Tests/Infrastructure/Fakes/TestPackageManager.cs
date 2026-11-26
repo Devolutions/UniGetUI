@@ -155,6 +155,11 @@ public sealed class TestPackageManager : PackageManager
             ? eligibility(update, version)
             : base.IsEligibleUpdateTarget(update, version);
 
+    public Action<IDictionary<string, string?>>? ProcessEnvironment { get; set; }
+
+    public override void PrepareProcessEnvironment(IDictionary<string, string?> environment) =>
+        ProcessEnvironment?.Invoke(environment);
+
     public override bool InstallerUrlFollowsPackageVersion => _installerUrlFollowsPackageVersion;
 
     public override bool CommandLineIsShellInterpreted => _commandLineIsShellInterpreted;

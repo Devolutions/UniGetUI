@@ -79,6 +79,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 p
             );
 
+            Manager.PrepareProcessEnvironment(p.StartInfo.Environment);
             p.Start();
 
             string? line;

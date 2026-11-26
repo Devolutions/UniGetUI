@@ -319,6 +319,9 @@ namespace UniGetUI.PackageEngine.Operations
                 + Package.OverridenOptions.ToString();
         }
 
+        protected override void PrepareProcessEnvironment() =>
+            Package.Manager.PrepareProcessEnvironment(process.StartInfo.Environment);
+
         protected sealed override void PrepareProcessStartInfo()
         {
             bool IsAdmin = CoreTools.IsAdministrator();

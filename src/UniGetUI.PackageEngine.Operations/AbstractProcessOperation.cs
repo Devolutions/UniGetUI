@@ -100,6 +100,8 @@ public abstract class AbstractProcessOperation : AbstractOperation
         }
     }
 
+    protected virtual void PrepareProcessEnvironment() { }
+
     protected void RedirectWinGetTempFolder()
     {
         AppPaths.RedirectTempToElevatedDirectory(process.StartInfo);
@@ -155,6 +157,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
         if (process.StartInfo.FileName == CoreData.ElevatorPath)
             CoreTools.PrepareForegroundForElevation();
 
+        PrepareProcessEnvironment();
         process.Start();
         if (CancellationToken.IsCancellationRequested)
         {

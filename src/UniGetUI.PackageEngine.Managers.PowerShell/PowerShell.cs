@@ -110,6 +110,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 p
             );
 
+            PrepareProcessEnvironment(p.StartInfo.Environment);
             p.Start();
             string? line;
             List<string> outputLines = [];
@@ -165,6 +166,9 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             callArguments = " -NoProfile -Command";
         }
 
+        public override void PrepareProcessEnvironment(IDictionary<string, string?> environment) =>
+            WindowsPowerShellModulePath.Apply(environment);
+
         protected override IReadOnlyList<string> _getOperationCallArgs(
             string executablePath,
             string callArguments
@@ -200,6 +204,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     StandardOutputEncoding = Encoding.UTF8,
                 },
             };
+            PrepareProcessEnvironment(process.StartInfo.Environment);
             process.Start();
             version = process.StandardOutput.ReadToEnd().Trim();
         }

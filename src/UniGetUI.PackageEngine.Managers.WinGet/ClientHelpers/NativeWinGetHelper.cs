@@ -809,25 +809,75 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         );
     }
 
+    internal readonly record struct CatalogVersionKey(string? CatalogId, string? Version, string? Channel);
+
+    internal sealed record CatalogVersionProduct(
+        string? CatalogId,
+        string? PackageId,
+        string? Version,
+        string? Channel,
+        IReadOnlyList<string> ProductCodes
+    );
+
+    internal static IEnumerable<IReadOnlyList<string>> ProductCodesOfReplacement(
+        CatalogVersionProduct newest,
+        int versionCount,
+        Func<int, CatalogVersionKey> readKey,
+        Func<int, CatalogVersionProduct?> readVersion
+    )
+    {
+        yield return newest.ProductCodes;
+        if (string.IsNullOrWhiteSpace(newest.CatalogId))
+            yield break;
+
+        for (int i = 0; i < versionCount; i++)
+        {
+            CatalogVersionKey key = readKey(i);
+            if (
+                !SameText(key.CatalogId, newest.CatalogId)
+                || (SameText(key.Version, newest.Version) && SameText(key.Channel, newest.Channel))
+            )
+                continue;
+
+            if (
+                readVersion(i) is { } version
+                && SameText(version.CatalogId, newest.CatalogId)
+                && IsSamePackage(newest.PackageId, version.PackageId)
+            )
+                yield return version.ProductCodes;
+        }
+    }
+
+    private static bool SameText(string? a, string? b) =>
+        string.Equals(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase);
+
     private static IEnumerable<IReadOnlyList<string>> ReadCatalogProductCodes(
         CatalogPackage nativePackage,
         IReadOnlyList<PackageVersionId> availableVersions,
         PackageVersionInfo newest
-    )
-    {
-        yield return NativeWinGetCollection.Copy(newest.ProductCodes);
-        for (int i = 0; i < availableVersions.Count; i++)
-        {
-            if (
-                string.Equals(availableVersions[i].Version, newest.Version, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(availableVersions[i].Channel ?? "", newest.Channel ?? "", StringComparison.OrdinalIgnoreCase)
-            )
-                continue;
+    ) =>
+        ProductCodesOfReplacement(
+            ToCatalogVersionProduct(newest),
+            availableVersions.Count,
+            i => new CatalogVersionKey(
+                availableVersions[i].PackageCatalogId,
+                availableVersions[i].Version,
+                availableVersions[i].Channel
+            ),
+            i =>
+                nativePackage.GetPackageVersionInfo(availableVersions[i]) is { } version
+                    ? ToCatalogVersionProduct(version)
+                    : null
+        );
 
-            if (nativePackage.GetPackageVersionInfo(availableVersions[i]) is { } version)
-                yield return NativeWinGetCollection.Copy(version.ProductCodes);
-        }
-    }
+    private static CatalogVersionProduct ToCatalogVersionProduct(PackageVersionInfo version) =>
+        new(
+            version.PackageCatalog?.Info?.Id,
+            version.Id,
+            version.Version,
+            version.Channel,
+            NativeWinGetCollection.Copy(version.ProductCodes)
+        );
 
     private static string FormatProductCodes(IReadOnlyList<string> codes) =>
         codes.Count == 0 ? "no product code" : string.Join(", ", codes);

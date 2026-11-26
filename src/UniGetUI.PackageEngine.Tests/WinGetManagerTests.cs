@@ -265,6 +265,118 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal(2, read);
     }
 
+    private static NativeWinGetHelper.CatalogVersionProduct CatalogVersion(
+        string? catalogId,
+        string packageId,
+        string version,
+        string channel,
+        string[] productCodes
+    ) => new(catalogId, packageId, version, channel, productCodes);
+
+    private static bool ReplacementDeclaresInstalledProduct(
+        string installedCode,
+        NativeWinGetHelper.CatalogVersionProduct newest,
+        params NativeWinGetHelper.CatalogVersionProduct[] versions
+    ) =>
+        NativeWinGetHelper.AnyVersionDeclaresInstalledProduct(
+            [installedCode],
+            NativeWinGetHelper.ProductCodesOfReplacement(
+                newest,
+                versions.Length,
+                i => new NativeWinGetHelper.CatalogVersionKey(
+                    versions[i].CatalogId,
+                    versions[i].Version,
+                    versions[i].Channel
+                ),
+                i => versions[i]
+            )
+        );
+
+    private static readonly NativeWinGetHelper.CatalogVersionProduct NewestBatteryHub = CatalogVersion("Microsoft.Winget.Source_8wekyb3d8bbwe",
+        "DORON177.BatteryHub",
+        "2.0.7",
+        "",
+        [DoronBatteryHubCode]
+    );
+
+    [Fact]
+    public void ReinstallOnlyUpdateIgnoresProductCodesFromACorrelatedCatalog()
+    {
+        Assert.False(
+            ReplacementDeclaresInstalledProduct(
+                StandaloneBatteryHubCode,
+                NewestBatteryHub,
+                NewestBatteryHub,
+                CatalogVersion("Winget-Repo", "krisgfx9.BatteryHub", "1.1.0", "", [StandaloneBatteryHubCode]),
+                CatalogVersion("Winget-Repo", "DORON177.BatteryHub", "1.1.0", "", [StandaloneBatteryHubCode])
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateIgnoresProductCodesFromAnotherPackageOnTheSameCatalog()
+    {
+        Assert.False(
+            ReplacementDeclaresInstalledProduct(
+                StandaloneBatteryHubCode,
+                NewestBatteryHub,
+                CatalogVersion(NewestBatteryHub.CatalogId,
+                    "krisgfx9.BatteryHub",
+                    "1.1.0",
+                    "",
+                    [StandaloneBatteryHubCode]
+                )
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateAcceptsAnOlderVersionOfTheReplacementOnItsCatalog()
+    {
+        Assert.True(
+            ReplacementDeclaresInstalledProduct(
+                StandaloneBatteryHubCode,
+                NewestBatteryHub,
+                CatalogVersion("Winget-Repo", "krisgfx9.BatteryHub", "1.1.0", "", [OtherProductCode]),
+                NewestBatteryHub,
+                CatalogVersion(NewestBatteryHub.CatalogId,
+                    "doron177.batteryhub",
+                    "1.2.0",
+                    "",
+                    [StandaloneBatteryHubCode]
+                )
+            )
+        );
+    }
+
+    [Fact]
+    public void ReinstallOnlyUpdateReadsNoVersionOfAnotherCatalog()
+    {
+        int read = 0;
+        NativeWinGetHelper.CatalogVersionKey[] keys =
+        [
+            new("Winget-Repo", "1.1.0", ""),
+            new("msstore", "1.0.0", ""),
+        ];
+
+        Assert.False(
+            NativeWinGetHelper.AnyVersionDeclaresInstalledProduct(
+                [StandaloneBatteryHubCode],
+                NativeWinGetHelper.ProductCodesOfReplacement(
+                    NewestBatteryHub,
+                    keys.Length,
+                    i => keys[i],
+                    _ =>
+                    {
+                        read++;
+                        return null;
+                    }
+                )
+            )
+        );
+        Assert.Equal(0, read);
+    }
+
     [Fact]
     public void ReinstallOnlyUpdateIsListedWhenTheProductChanges()
     {

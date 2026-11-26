@@ -43,6 +43,16 @@ namespace UniGetUI.PackageEngine.Operations
         protected sealed override void PrepareProcessStartInfo() =>
             PrepareSourceProcessStartInfo(GetSourceParameters());
 
+        protected override async Task<OperationVeredict> PerformOperation()
+        {
+            if (Source.Manager.IsReady() && Source.Manager.TryReloadMissingExecutable())
+            {
+                PrepareProcessStartInfo();
+            }
+
+            return await base.PerformOperation();
+        }
+
         protected override void ApplyRetryAction(string retryMode)
         {
             switch (retryMode)

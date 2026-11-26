@@ -257,6 +257,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         }
 
         private readonly bool _baseConstructorCalled;
+        private readonly Lock _initializeLock = new();
         private bool _ready;
 
         public PackageManager()
@@ -309,6 +310,21 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         public virtual void Initialize()
         {
+            bool shouldInitializeSources;
+            lock (_initializeLock)
+            {
+                InitializeCore(out shouldInitializeSources);
+            }
+
+            if (shouldInitializeSources)
+            {
+                InitializeSourcesSafely();
+            }
+        }
+
+        private void InitializeCore(out bool shouldInitializeSources)
+        {
+            shouldInitializeSources = false;
             IsInitializing = true;
             try
             {
@@ -339,10 +355,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     return;
                 }
 
-                Status = new ManagerStatus();
-                Status.Found = found;
-                Status.ExecutablePath = path;
-                Status.ExecutableCallArgs = callArguments;
+                Status = new ManagerStatus
+                {
+                    Found = found,
+                    ExecutablePath = path,
+                    ExecutableCallArgs = callArguments,
+                };
 
                 if (!Status.Found)
                 { // Do not load version of managers that were not found
@@ -366,7 +384,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 // Finish initialization
                 _performExtraLoadingSteps();
                 _ready = true;
-                _initializeSources();
+                shouldInitializeSources = true;
             }
             catch (Exception ex)
             {
@@ -378,6 +396,83 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 IsInitializing = false;
                 ManagerHealthStore.NotifyChanged(Name);
             }
+        }
+
+        private void InitializeSourcesSafely()
+        {
+            try
+            {
+                _initializeSources();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"An error occurred while initialising sources for package manager {Name}");
+                Logger.Error(ex);
+            }
+        }
+
+        internal bool IsCachedExecutableMissing()
+        {
+            string executablePath = Status.ExecutablePath;
+            return !string.IsNullOrWhiteSpace(executablePath)
+                && Path.IsPathRooted(executablePath)
+                && !File.Exists(executablePath);
+        }
+
+        public bool TryReloadMissingExecutable() => TryReloadMissingExecutable(refreshSources: true);
+
+        internal bool TryReloadMissingExecutable(bool refreshSources)
+        {
+            if (!IsEnabled() || !IsCachedExecutableMissing())
+            {
+                return false;
+            }
+
+            bool reloaded;
+
+            bool shouldInitializeSources;
+            lock (_initializeLock)
+            {
+                if (!IsEnabled())
+                {
+                    return false;
+                }
+
+                // Another thread may have already reloaded the manager while we waited for the lock.
+                if (!IsCachedExecutableMissing())
+                {
+                    return IsReady();
+                }
+
+                string missingPath = Status.ExecutablePath;
+                Logger.Warn(
+                    $"The cached executable path for {Name} ({missingPath}) no longer exists; re-detecting the executable..."
+                );
+
+                PersistedEnvironment.Refresh();
+                InitializeCore(out shouldInitializeSources);
+
+                reloaded = IsReady() && !IsCachedExecutableMissing();
+                if (reloaded)
+                {
+                    Logger.ImportantInfo(
+                        $"Reloaded {Name} with executable path {Status.ExecutablePath}"
+                    );
+                }
+                else
+                {
+                    Logger.Warn(
+                        $"Could not find a replacement executable for {Name} after {missingPath} disappeared."
+                    );
+                }
+            }
+
+            if (refreshSources && shouldInitializeSources)
+            {
+                InitializeSourcesSafely();
+            }
+
+            return reloaded;
         }
 
         /// <summary>
@@ -884,6 +979,20 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             bool elevated = false
         )
         {
+            if (
+                string.Equals(
+                    fileName,
+                    Status.ExecutablePath,
+                    OperatingSystem.IsWindows()
+                        ? StringComparison.OrdinalIgnoreCase
+                        : StringComparison.Ordinal
+                )
+                && TryReloadMissingExecutable()
+            )
+            {
+                fileName = Status.ExecutablePath;
+            }
+
             if (string.IsNullOrWhiteSpace(fileName))
             {
                 throw new InvalidOperationException(
@@ -1237,10 +1346,16 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         }
 
         /// <summary>
-        /// Attempt a live, fast, repair method when an exception occurs (for example, reconnect to COM Server)
+        /// Attempt a live, fast, repair method when an exception occurs (for example, reconnect to COM Server
+        /// or re-detect an executable whose path moved after an upgrade)
         /// </summary>
         public virtual void AttemptFastRepair()
         {
+            if (TryReloadMissingExecutable())
+            {
+                return;
+            }
+
             Logger.Debug($"Manager {Name} has not implemented AttemptFastRepair");
         }
     }

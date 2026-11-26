@@ -5,12 +5,20 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
+using UniGetUI.PackageEngine.Classes.Manager.Providers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -1264,6 +1272,301 @@ public sealed class PackageManagerTests : IDisposable
                 )
                 .WaitAsync(TimeSpan.FromSeconds(30))
         );
+    }
+
+    [Fact]
+    public void AttemptFastRepairReloadsManagerWhenCachedExecutableMovesToNewPath()
+    {
+        var oldExe = CreateExecutable("pwsh-7.6.exe");
+        var newExe = CreateExecutable("pwsh-7.7.exe");
+        var manager = new RelocatablePackageManager($"Relocatable-{Guid.NewGuid():N}", [oldExe])
+        {
+            LoadedVersion = "PowerShell 7.6.0",
+        };
+        manager.Initialize();
+        Assert.Equal(oldExe, manager.Status.ExecutablePath);
+        Assert.Equal([oldExe], manager.Status.OperationCallArgs);
+
+        File.Delete(oldExe);
+        manager.Candidates = [newExe];
+        manager.LoadedVersion = "PowerShell 7.7.0";
+
+        var packages = manager.GetInstalledPackages(out bool failed);
+
+        Assert.False(failed);
+        Assert.Single(packages);
+        Assert.Equal(newExe, manager.Status.ExecutablePath);
+        Assert.Equal("PowerShell 7.7.0", manager.Status.Version);
+        Assert.Equal([newExe], manager.Status.OperationCallArgs);
+        Assert.Equal(ManagerHealthState.Healthy, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void AttemptFastRepairFallsBackToCandidateWhenSavedCustomPathDisappears()
+    {
+        var oldExe = CreateExecutable("saved-old.exe");
+        var newExe = CreateExecutable("candidate-new.exe");
+        var manager = new RelocatablePackageManager($"SavedRelocatable-{Guid.NewGuid():N}", [oldExe]);
+        EnableCustomManagerPaths();
+        Settings.SetDictionaryItem<string, string>(Settings.K.ManagerPaths, manager.Name, oldExe);
+        manager.Initialize();
+        Assert.Equal(oldExe, manager.Status.ExecutablePath);
+
+        File.Delete(oldExe);
+        manager.Candidates = [newExe];
+
+        var packages = manager.GetInstalledPackages(out bool failed);
+
+        Assert.False(failed);
+        Assert.Single(packages);
+        Assert.Equal(newExe, manager.Status.ExecutablePath);
+    }
+
+    [Fact]
+    public void AttemptFastRepairMarksManagerNotFoundWhenExecutableIsRemovedWithoutReplacement()
+    {
+        var oldExe = CreateExecutable("removed.exe");
+        var manager = new RelocatablePackageManager($"Removed-{Guid.NewGuid():N}", [oldExe]);
+        manager.Initialize();
+        Assert.True(manager.IsReady());
+
+        File.Delete(oldExe);
+        manager.Candidates = [];
+
+        var packages = manager.GetInstalledPackages(out bool failed);
+
+        Assert.True(failed);
+        Assert.Empty(packages);
+        Assert.False(manager.IsReady());
+        Assert.False(manager.Status.Found);
+        Assert.Equal(ManagerHealthState.NotFound, ManagerHealthEvaluator.Evaluate(manager).State);
+    }
+
+    [Fact]
+    public void AttemptFastRepairDoesNotReloadWhenCachedExecutableStillExists()
+    {
+        var existingExe = CreateExecutable("still-here.exe");
+        var manager = new RelocatablePackageManager($"Existing-{Guid.NewGuid():N}", [existingExe])
+        {
+            AlwaysFailInstalledListing = true,
+        };
+        manager.Initialize();
+        Assert.Equal(1, manager.LoadExecutableCalls);
+
+        var packages = manager.GetInstalledPackages(out bool failed);
+
+        Assert.True(failed);
+        Assert.Empty(packages);
+        Assert.Equal(1, manager.LoadExecutableCalls);
+    }
+
+    [Fact]
+    public void SourceAndDetailsHelpersRetryAfterReloadingMissingExecutable()
+    {
+        var firstExe = CreateExecutable("helper-1.exe");
+        var secondExe = CreateExecutable("helper-2.exe");
+        var thirdExe = CreateExecutable("helper-3.exe");
+        var manager = new RelocatablePackageManager($"Helpers-{Guid.NewGuid():N}", [firstExe]);
+        manager.Initialize();
+
+        File.Delete(firstExe);
+        manager.Candidates = [secondExe];
+        var sources = ((BaseSourceHelper)manager.SourcesHelper)._getSources();
+        Assert.Single(sources);
+        Assert.Equal(secondExe, manager.Status.ExecutablePath);
+
+        File.Delete(secondExe);
+        manager.Candidates = [thirdExe];
+        var package = new Package("Contoso Module", "Contoso.Module", "1.0.0", manager.DefaultSource, manager);
+        var versions = manager.DetailsHelper.GetVersions(package);
+        Assert.Equal(["1.0.0"], versions);
+        Assert.Equal(thirdExe, manager.Status.ExecutablePath);
+    }
+
+    [Fact]
+    public async Task PackageAndSourceOperationsReloadMissingExecutableBeforeLaunching()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string cmdExe = Path.Combine(Environment.SystemDirectory, "cmd.exe");
+        var firstExe = CreateExecutable("op-old.exe");
+        var manager = new RelocatablePackageManager($"OpRelocatable-{Guid.NewGuid():N}", [firstExe])
+        {
+            CallArguments = "",
+            UseEmptyOperationCallArgs = true,
+            OperationParameters = ["/c", "exit", "0"],
+            SourceParameters = ["/c", "exit", "0"],
+        };
+        manager.Initialize();
+        Assert.Equal(firstExe, manager.Status.ExecutablePath);
+
+        File.Delete(firstExe);
+        manager.Candidates = [cmdExe];
+
+        var package = new Package("Contoso", "Contoso", "1.0.0", manager.DefaultSource, manager);
+        using var installOp = new InstallPackageOperation(
+            package,
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        await installOp.MainThread();
+
+        Assert.Equal(OperationStatus.Succeeded, installOp.Status);
+        Assert.Equal(cmdExe, manager.Status.ExecutablePath);
+
+        var secondExe = CreateExecutable("source-op-old.exe");
+        manager.Candidates = [secondExe];
+        manager.Initialize();
+        Assert.Equal(secondExe, manager.Status.ExecutablePath);
+
+        File.Delete(secondExe);
+        manager.Candidates = [cmdExe];
+
+        using var sourceOp = new AddSourceOperation(manager.DefaultSource);
+        await sourceOp.MainThread();
+
+        Assert.Equal(OperationStatus.Succeeded, sourceOp.Status);
+        Assert.Equal(cmdExe, manager.Status.ExecutablePath);
+    }
+
+    private sealed class RelocatablePackageManager : PackageManager
+    {
+        public IReadOnlyList<string> Candidates { get; set; }
+        public string LoadedVersion { get; set; } = "1.0.0";
+        public string CallArguments { get; set; } = "-NoProfile";
+        public bool UseEmptyOperationCallArgs { get; set; }
+        public string[] OperationParameters { get; set; } = [];
+        public string[] SourceParameters { get; set; } = [];
+        public int LoadExecutableCalls { get; private set; }
+        public bool AlwaysFailInstalledListing { get; set; }
+
+        public RelocatablePackageManager(string name, IReadOnlyList<string> candidates)
+        {
+            ManagerHealthStore.TestPathOverride ??= Path.Combine(
+                AppContext.BaseDirectory,
+                "ManagerHealth.test.json"
+            );
+            Candidates = candidates;
+            Capabilities = new ManagerCapabilities
+            {
+                SupportsCustomVersions = true,
+                SupportsCustomSources = true,
+            };
+            Properties = new ManagerProperties
+            {
+                Name = name,
+                DisplayName = name,
+                Description = "Relocatable test manager",
+                ExecutableFriendlyName = $"{name}.exe",
+                InstallVerb = "install",
+                UpdateVerb = "update",
+                UninstallVerb = "uninstall",
+            };
+            var defaultSource = new ManagerSource(this, "default", new Uri("https://example.test/default"));
+            var properties = Properties;
+            properties.DefaultSource = defaultSource;
+            properties.KnownSources = [defaultSource];
+            Properties = properties;
+
+            SourcesHelper = new RelocatableSourceHelper(this);
+            DetailsHelper = new RelocatableDetailsHelper(this);
+            OperationHelper = new RelocatableOperationHelper(this);
+        }
+
+        public override IReadOnlyList<string> FindCandidateExecutableFiles() => Candidates;
+
+        protected override void _loadManagerExecutableFile(
+            out bool found,
+            out string path,
+            out string callArguments
+        )
+        {
+            LoadExecutableCalls++;
+            (found, path) = GetExecutableFile();
+            callArguments = CallArguments;
+        }
+
+        protected override IReadOnlyList<string> _getOperationCallArgs(
+            string executablePath,
+            string callArguments
+        ) => UseEmptyOperationCallArgs ? [] : [executablePath];
+
+        protected override void _loadManagerVersion(out string version)
+        {
+            version = LoadedVersion;
+        }
+
+        protected override IReadOnlyList<Package> FindPackages_UnSafe(string query) => [];
+
+        protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe() => [];
+
+        protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
+        {
+            if (AlwaysFailInstalledListing)
+                throw new InvalidOperationException("transient error");
+
+            if (!File.Exists(Status.ExecutablePath))
+                throw new Win32Exception(2, "The system cannot find the file specified.");
+
+            return [new Package("Contoso", "Contoso", "1.0.0", DefaultSource, this)];
+        }
+
+        private sealed class RelocatableSourceHelper(RelocatablePackageManager manager)
+            : BaseSourceHelper(manager)
+        {
+            public override string[] GetAddSourceParameters(IManagerSource source) => manager.SourceParameters;
+            public override string[] GetRemoveSourceParameters(IManagerSource source) => manager.SourceParameters;
+            protected override OperationVeredict _getAddSourceOperationVeredict(IManagerSource source, int ReturnCode, string[] Output) => OperationVeredict.Success;
+            protected override OperationVeredict _getRemoveSourceOperationVeredict(IManagerSource source, int ReturnCode, string[] Output) => OperationVeredict.Success;
+
+            protected override IReadOnlyList<IManagerSource> GetSources_UnSafe()
+            {
+                if (!File.Exists(Manager.Status.ExecutablePath))
+                    throw new Win32Exception(2, "The system cannot find the file specified.");
+
+                return [Manager.DefaultSource];
+            }
+        }
+
+        private sealed class RelocatableDetailsHelper(RelocatablePackageManager manager)
+            : BasePkgDetailsHelper(manager)
+        {
+            protected override void GetDetails_UnSafe(IPackageDetails details)
+            {
+                if (!File.Exists(Manager.Status.ExecutablePath))
+                    throw new Win32Exception(2, "The system cannot find the file specified.");
+            }
+
+            protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
+            {
+                if (!File.Exists(Manager.Status.ExecutablePath))
+                    throw new Win32Exception(2, "The system cannot find the file specified.");
+
+                return ["1.0.0"];
+            }
+
+            protected override UniGetUI.Core.IconEngine.CacheableIcon? GetIcon_UnSafe(IPackage package) => null;
+            protected override IReadOnlyList<Uri> GetScreenshots_UnSafe(IPackage package) => [];
+            protected override string? GetInstallLocation_UnSafe(IPackage package) => null;
+        }
+
+        private sealed class RelocatableOperationHelper(RelocatablePackageManager manager)
+            : BasePkgOperationHelper(manager)
+        {
+            protected override IReadOnlyList<string> _getOperationParameters(
+                IPackage package,
+                InstallOptions options,
+                OperationType operation
+            ) => manager.OperationParameters;
+
+            protected override OperationVeredict _getOperationResult(
+                IPackage package,
+                OperationType operation,
+                IReadOnlyList<string> processOutput,
+                int returnCode
+            ) => returnCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure;
+        }
     }
 
     private static TestPackageManager CreateManager()

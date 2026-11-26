@@ -493,6 +493,12 @@ namespace UniGetUI.PackageEngine.Operations
                     return OperationVeredict.Canceled;
                 }
             }
+
+            if (Package.Manager.IsReady() && Package.Manager.TryReloadMissingExecutable())
+            {
+                PrepareProcessStartInfo();
+            }
+
             return await base.PerformOperation();
         }
 

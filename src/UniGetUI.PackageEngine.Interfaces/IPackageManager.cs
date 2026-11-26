@@ -143,6 +143,14 @@ namespace UniGetUI.PackageEngine.Interfaces
         public void AttemptFastRepair();
 
         /// <summary>
+        /// Re-detects and reloads the manager when its cached executable path no longer exists on
+        /// disk (for example after an in-place upgrade switched install locations, such as
+        /// PowerShell 7 MSI to MSIX). Returns true when the manager is ready with an existing
+        /// executable afterwards.
+        /// </summary>
+        public bool TryReloadMissingExecutable() => false;
+
+        /// <summary>
         /// Find all available executable files that apply to this package manager
         /// </summary>
         /// <returns></returns>

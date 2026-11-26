@@ -31,7 +31,9 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
                 );
         }
 
-        public void GetDetails(IPackageDetails details)
+        public void GetDetails(IPackageDetails details) => GetDetails(details, secondAttempt: false);
+
+        private void GetDetails(IPackageDetails details, bool secondAttempt)
         {
             if (!Manager.IsReady())
             {
@@ -50,12 +52,21 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
             }
             catch (Exception e)
             {
+                if (!secondAttempt && Manager.TryReloadMissingExecutable())
+                {
+                    GetDetails(details, secondAttempt: true);
+                    return;
+                }
+
                 Logger.Error("Error finding installed packages on manager " + Manager.Name);
                 Logger.Error(e);
             }
         }
 
-        public IReadOnlyList<string> GetVersions(IPackage package)
+        public IReadOnlyList<string> GetVersions(IPackage package) =>
+            GetVersions(package, secondAttempt: false);
+
+        private IReadOnlyList<string> GetVersions(IPackage package, bool secondAttempt)
         {
             if (!Manager.IsReady())
             {
@@ -86,6 +97,11 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
             }
             catch (Exception e)
             {
+                if (!secondAttempt && Manager.TryReloadMissingExecutable())
+                {
+                    return GetVersions(package, secondAttempt: true);
+                }
+
                 Logger.Error(
                     $"Error finding available package versions for package {package.Id} on manager "
                         + Manager.Name

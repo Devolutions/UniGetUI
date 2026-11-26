@@ -198,8 +198,42 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
 
         protected override bool UseSubstringSearch => true;
 
-        public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
-            CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "pwsh.exe" : "pwsh");
+        public override IReadOnlyList<string> FindCandidateExecutableFiles()
+        {
+            if (!OperatingSystem.IsWindows())
+                return CoreTools.WhichMultiple("pwsh");
+
+            return FindWindowsCandidateExecutableFiles(
+                () => CoreTools.WhichMultiple("pwsh.exe"),
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                File.Exists
+            );
+        }
+
+        internal static IReadOnlyList<string> FindWindowsCandidateExecutableFiles(
+            Func<IReadOnlyList<string>> findOnPath,
+            string localAppDataDirectory,
+            Func<string, bool> fileExists
+        )
+        {
+            List<string> candidates = [.. findOnPath()];
+            if (!string.IsNullOrWhiteSpace(localAppDataDirectory))
+            {
+                string windowsAppsAlias = Path.Join(
+                    localAppDataDirectory,
+                    "Microsoft",
+                    "WindowsApps",
+                    "pwsh.exe"
+                );
+                if (
+                    fileExists(windowsAppsAlias)
+                    && !candidates.Contains(windowsAppsAlias, StringComparer.OrdinalIgnoreCase)
+                )
+                    candidates.Add(windowsAppsAlias);
+            }
+
+            return candidates;
+        }
 
         protected override void _loadManagerExecutableFile(
             out bool found,

@@ -815,5 +815,35 @@ public sealed class PowerShell7ManagerTests : IDisposable
             }
         );
     }
+    [Fact]
+    public void FindWindowsCandidateExecutableFiles_IncludesWindowsAppsAliasWhenMissingFromPath()
+    {
+        string localAppData = @"C:\Users\alice\AppData\Local";
+        string windowsAppsAlias = Path.Join(localAppData, "Microsoft", "WindowsApps", "pwsh.exe");
+
+        var candidates = PowerShell7.FindWindowsCandidateExecutableFiles(
+            static () => [],
+            localAppData,
+            path => path.Equals(windowsAppsAlias, StringComparison.OrdinalIgnoreCase)
+        );
+
+        Assert.Equal([windowsAppsAlias], candidates);
+    }
+
+    [Fact]
+    public void FindWindowsCandidateExecutableFiles_PrefersPathOrderAndDeduplicatesWindowsAppsAlias()
+    {
+        string localAppData = @"C:\Users\alice\AppData\Local";
+        string msiPath = @"C:\Program Files\PowerShell\7\pwsh.exe";
+        string windowsAppsAlias = Path.Join(localAppData, "Microsoft", "WindowsApps", "pwsh.exe");
+
+        var candidates = PowerShell7.FindWindowsCandidateExecutableFiles(
+            () => [msiPath, windowsAppsAlias.ToLowerInvariant()],
+            localAppData,
+            static _ => true
+        );
+
+        Assert.Equal([msiPath, windowsAppsAlias.ToLowerInvariant()], candidates);
+    }
 }
 #endif

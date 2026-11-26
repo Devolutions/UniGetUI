@@ -5,6 +5,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 
 namespace UniGetUI.PackageEngine.Classes.Manager.Providers
 {
@@ -82,7 +83,10 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Providers
         public virtual IReadOnlyList<IManagerSource> GetSources() =>
             TaskRecycler<IReadOnlyList<IManagerSource>>.RunOrAttach(_getSources, 15);
 
-        public virtual IReadOnlyList<IManagerSource> _getSources()
+        public virtual IReadOnlyList<IManagerSource> _getSources() =>
+            _getSources(secondAttempt: false);
+
+        private IReadOnlyList<IManagerSource> _getSources(bool secondAttempt)
         {
             try
             {
@@ -110,6 +114,19 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Providers
             }
             catch (Exception e)
             {
+                bool reloaded =
+                    !secondAttempt
+                    && !Manager.IsInitializing
+                    && (
+                        Manager is PackageManager manager
+                            ? manager.TryReloadMissingExecutable(refreshSources: false)
+                            : Manager.TryReloadMissingExecutable()
+                    );
+                if (reloaded)
+                {
+                    return _getSources(secondAttempt: true);
+                }
+
                 Logger.Error("Error finding sources for manager " + Manager.Name);
                 Logger.Error(e);
                 return [];

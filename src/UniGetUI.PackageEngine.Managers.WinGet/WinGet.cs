@@ -1027,6 +1027,12 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             try
             {
                 TryRepairTempFolderPermissions();
+                if (TryReloadMissingExecutable())
+                {
+                    NO_PACKAGES_HAVE_BEEN_LOADED = false;
+                    return;
+                }
+
                 if (WinGetHelper.Instance is NativeWinGetHelper)
                 {
                     if (

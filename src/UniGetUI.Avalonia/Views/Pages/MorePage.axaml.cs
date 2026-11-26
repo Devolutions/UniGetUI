@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Controls;
@@ -49,6 +50,18 @@ public partial class MorePage : UserControl, INavigationDropTarget
 
         foreach (PageType page in ToolTilePages)
             ToolTiles.Children.Add(CreateTile(page));
+
+        PageTiles.GetObservable(BoundsProperty).SubscribeValue(bounds => FitTilesToRow(PageTiles, bounds.Width));
+        ToolTiles.GetObservable(BoundsProperty).SubscribeValue(bounds => FitTilesToRow(ToolTiles, bounds.Width));
+    }
+
+    private static void FitTilesToRow(WrapPanel panel, double availableWidth)
+    {
+        if (availableWidth <= 0)
+            return;
+        double minSlotWidth = TileSize.Width + TileSpacing;
+        int columns = Math.Max(1, (int)(availableWidth / minSlotWidth));
+        panel.ItemWidth = Math.Floor(availableWidth / columns);
     }
 
     internal PageType[] PageTileOrder
@@ -308,6 +321,7 @@ public partial class MorePage : UserControl, INavigationDropTarget
     }
 
     internal static readonly Size TileSize = new(168, 104);
+    private const double TileSpacing = 8;
 
     public int? UpdateExternalDrop(Point pointInTopLevel)
     {

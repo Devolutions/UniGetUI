@@ -4401,12 +4401,31 @@ public sealed class WinGetManagerTests : IDisposable
 
         OperationAssert.HasVeredict(final, OperationVeredict.Failure);
         Assert.False(operation.WaitsForWindowsInstallerBeforeNextAttempt);
+        Assert.True(operation.FailedBecauseWindowsInstallerBusy);
         Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
         Assert.Contains("Another installation was still in progress", operation.Metadata.FailureMessage);
     }
 
     [Fact]
-    public void WinGetBusyRetryBudgetResetsAfterADifferentResult()
+    public void WinGetHelperKeepsAskingToRetryWhileWindowsInstallerIsBusy()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.BusyHelper")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        for (int attempt = 0; attempt <= PackageOperation.MaxWindowsInstallerBusyRetries; attempt++)
+            OperationAssert.HasVeredict(
+                manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150102)),
+                OperationVeredict.AutoRetry
+            );
+    }
+
+    [Fact]
+    public async Task WinGetBusyRetryBudgetResetsAfterADifferentResult()
     {
         var manager = new WinGet();
         var package = new PackageBuilder()
@@ -4415,18 +4434,54 @@ public sealed class WinGetManagerTests : IDisposable
             .WithVersion("1.0.0")
             .WithNewVersion("2.0.0")
             .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions())
+        {
+            ElevationOverride = true,
+        };
 
-        for (int attempt = 0; attempt < 3; attempt++)
+        for (int attempt = 0; attempt < PackageOperation.MaxWindowsInstallerBusyRetries; attempt++)
             OperationAssert.HasVeredict(
-                manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150102)),
+                await operation.ProbeProcessVeredict(unchecked((int)0x8A150102), []),
                 OperationVeredict.AutoRetry
             );
-        manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150012));
+        await operation.ProbeProcessVeredict(unchecked((int)0x8A150012), []);
 
         OperationAssert.HasVeredict(
-            manager.OperationHelper.GetResult(package, OperationType.Update, [], unchecked((int)0x8A150102)),
+            await operation.ProbeProcessVeredict(unchecked((int)0x8A150102), []),
             OperationVeredict.AutoRetry
         );
+    }
+
+    [Fact]
+    public async Task WinGetBusyRetryBudgetResetsWhenARunEndsWithoutAnotherResult()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.BusyCanceled")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions())
+        {
+            ElevationOverride = true,
+        };
+
+        for (int attempt = 0; attempt < PackageOperation.MaxWindowsInstallerBusyRetries; attempt++)
+            OperationAssert.HasVeredict(
+                await operation.ProbeProcessVeredict(unchecked((int)0x8A150102), []),
+                OperationVeredict.AutoRetry
+            );
+        Assert.True(operation.WaitsForWindowsInstallerBeforeNextAttempt);
+
+        operation.CompleteRun();
+
+        Assert.False(operation.WaitsForWindowsInstallerBeforeNextAttempt);
+        OperationAssert.HasVeredict(
+            await operation.ProbeProcessVeredict(unchecked((int)0x8A150102), []),
+            OperationVeredict.AutoRetry
+        );
+        Assert.True(operation.WaitsForWindowsInstallerBeforeNextAttempt);
     }
 
     [Theory]
@@ -5135,6 +5190,8 @@ public sealed class WinGetManagerTests : IDisposable
 
         public Task<OperationVeredict> ProbeProcessVeredict(int returnCode, List<string> output)
             => GetProcessVeredict(returnCode, output);
+
+        public void CompleteRun() => OnRunCompleted();
     }
 
     private static void SetCliToolKind(WinGet manager, WinGetCliToolKind kind)

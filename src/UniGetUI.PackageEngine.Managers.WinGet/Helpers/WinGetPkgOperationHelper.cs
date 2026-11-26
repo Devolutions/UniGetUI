@@ -647,21 +647,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
         if (ReportedWindowsInstallerBusy(processOutput, returnCode))
         {
-            StrongBox<int> attempts = _windowsInstallerBusyRetries.GetOrCreateValue(package);
-            if (attempts.Value < MaxWindowsInstallerBusyRetries)
-            {
-                attempts.Value++;
-                Logger.Warn(
-                    $"Another Windows Installer operation was in progress during the {operation} of {package.Id}; "
-                    + $"retrying once it finishes (attempt {attempts.Value} of {MaxWindowsInstallerBusyRetries})"
-                );
-                return OperationVeredict.AutoRetry;
-            }
-
-            _windowsInstallerBusyRetries.Remove(package);
-            return OperationVeredict.Failure;
+            return OperationVeredict.AutoRetry;
         }
-        _windowsInstallerBusyRetries.Remove(package);
 
         if (
             operation is OperationType.Uninstall
@@ -1003,9 +990,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>
         (uint)returnCode is 0x8A150101 or 0x8A150103 or 0x8A150111;
 
-    private const int MaxWindowsInstallerBusyRetries = 3;
     private const int ErrorInstallAlreadyRunning = 1618;
-    private static readonly ConditionalWeakTable<IPackage, StrongBox<int>> _windowsInstallerBusyRetries = new();
 
     internal static bool ReportedWindowsInstallerBusy(IReadOnlyList<string> processOutput, int returnCode) =>
         (uint)returnCode is 0x8A150102

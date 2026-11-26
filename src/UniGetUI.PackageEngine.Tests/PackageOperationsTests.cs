@@ -1672,6 +1672,66 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public void AFailedReinstallUninstallBecauseWindowsInstallerWasBusyExplainsTheUpdateFailure()
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        using var operation = new InspectableUpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true }
+        );
+        var uninstall = Assert.IsType<UninstallPackageOperation>(
+            Assert.Single(operation.AttemptPreOperationsForTests()).Operation
+        );
+        typeof(PackageOperation)
+            .GetProperty(
+                nameof(PackageOperation.FailedBecauseWindowsInstallerBusy),
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+            )!
+            .SetValue(uninstall, true);
+        uninstall.Metadata.FailureMessage = "Another installation was still in progress";
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        operation.AdoptReinstallStepFailure();
+
+        Assert.True(operation.FailedBecauseWindowsInstallerBusy);
+        Assert.False(operation.FailedBecauseApplicationRunning);
+        Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.Equal("Another installation was still in progress", operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public void AnUnexplainedReinstallUninstallFailureKeepsTheUpdateMessage()
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        using var operation = new InspectableUpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallBeforeUpdate = true }
+        );
+        var uninstall = Assert.IsType<UninstallPackageOperation>(
+            Assert.Single(operation.AttemptPreOperationsForTests()).Operation
+        );
+        uninstall.Metadata.FailureMessage = "Something else went wrong";
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        operation.AdoptReinstallStepFailure();
+
+        Assert.False(operation.FailedBecauseWindowsInstallerBusy);
+        Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
     public void AnUpdateWithoutANewVersionRunsAsANormalUpdate()
     {
         var manager = new PackageManagerBuilder()

@@ -695,7 +695,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void RefreshManagerHealthBanner()
     {
-        var unhealthy = ManagerHealthEvaluator.ManagersNeedingAttention(PEInterface.Managers);
+        var unhealthy = ManagerHealthEvaluator.ManagersNeedingAttention(
+            PEInterface.Managers,
+            ManagerHealthStore.SessionStartedUtc
+        );
         string key = string.Join("|", unhealthy.Select(report => $"{report.Manager.Name}:{report.State}"));
         if (unhealthy.Count == 0)
         {

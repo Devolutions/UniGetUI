@@ -1019,7 +1019,8 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.DataTemplates>
                 <DataTemplate DataType="vm:InfoBarViewModel">
-                    <controls:InfoBar PointerEntered="Toast_PointerEntered"
+                    <controls:InfoBar Classes="toast"
+                                      PointerEntered="Toast_PointerEntered"
                                       PointerExited="Toast_PointerExited"/>
                 </DataTemplate>
             </ItemsControl.DataTemplates>

@@ -175,7 +175,7 @@ public partial class ManagerHealthRowViewModel : ObservableObject
         IsHealthy = report.State is ManagerHealthState.Healthy;
         NeedsAttention = report.NeedsAttention;
         IsWarning = !report.NeedsAttention
-            && report.State is ManagerHealthState.Failing or ManagerHealthState.NotFound;
+            && report.State is ManagerHealthState.Failing or ManagerHealthState.NotFound or ManagerHealthState.Incomplete;
 
         var kinds = Enum.GetValues<ManagerListingKind>();
         for (int index = 0; index < kinds.Length; index++)
@@ -237,6 +237,8 @@ public sealed class ManagerListingHealthViewModel
     public string LastFailure { get; }
     public string Duration { get; }
     public bool HasFailure { get; }
+    public string LastIncomplete { get; }
+    public bool HasIncomplete { get; }
 
     public ManagerListingHealthViewModel(ManagerListingKind kind, ManagerListingHealth listing)
     {
@@ -248,6 +250,11 @@ public sealed class ManagerListingHealthViewModel
         LastFailure = listing.LastFailureUtc is { } failure
             ? CoreTools.Translate("Last failure: {0}", failure.ToLocalTime().ToString("g"))
                 + (listing.LastFailureReason is { } reason ? $" ({reason})" : "")
+            : "";
+        HasIncomplete = listing.LastIncompleteUtc is not null;
+        LastIncomplete = listing.LastIncompleteUtc is { } incomplete
+            ? CoreTools.Translate("Last incomplete listing: {0}", incomplete.ToLocalTime().ToString("g"))
+                + (listing.LastIncompleteReason is { } partialReason ? $" ({partialReason})" : "")
             : "";
         Duration = listing.RecentDurationsMs.Count > 0
             ? CoreTools.Translate(

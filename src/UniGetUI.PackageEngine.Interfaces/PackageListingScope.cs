@@ -28,6 +28,9 @@ public static class PackageListingScope
             throw error;
     }
 
+    public static void ReportSourceUnavailable(string sourceName, string message) =>
+        ReportIncomplete(new ListingSourceUnavailableException(sourceName, message));
+
     public static IDisposable TrackFailures(Action<Exception> reportFailure)
     {
         var previous = ReportFailure.Value;
@@ -51,4 +54,10 @@ public static class PackageListingScope
     {
         public void Dispose() => ListingOnly.Value = previous;
     }
+}
+
+public sealed class ListingSourceUnavailableException(string sourceName, string message)
+    : InvalidOperationException(message)
+{
+    public string SourceName { get; } = sourceName;
 }

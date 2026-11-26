@@ -1327,9 +1327,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             else
             {
                 onSkipped?.Invoke(catalogName);
-                PackageListingScope.ReportIncomplete(new InvalidOperationException(
-                    $"Skipping unavailable WinGet catalog {catalogName} while loading local packages"
-                ));
+                PackageListingScope.ReportSourceUnavailable(
+                    catalogName,
+                    $"the WinGet source {catalogName} could not be reached"
+                );
             }
         }
 

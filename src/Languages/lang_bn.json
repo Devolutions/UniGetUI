@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "নেভিগেশন মেনু সংক্ষিপ্ত রাখুন",
   "Browse extensions": "এক্সটেনশন ব্রাউজ করুন",
   "Uninstall casks Homebrew can no longer find": "Homebrew যে caskগুলো আর খুঁজে পাচ্ছে না, সেগুলো আনইনস্টল করুন",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew এখন আর {0} খুঁজে পাচ্ছে না, তাই সেগুলো আপডেট করতে পারছে না। সেগুলো আনইনস্টল করুন, তারপর যেগুলো এখনও প্রয়োজন সেগুলো তাদের নতুন নামে ইনস্টল করুন।"
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew এখন আর {0} খুঁজে পাচ্ছে না, তাই সেগুলো আপডেট করতে পারছে না। সেগুলো আনইনস্টল করুন, তারপর যেগুলো এখনও প্রয়োজন সেগুলো তাদের নতুন নামে ইনস্টল করুন।",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "অন্য একটি ইনস্টলেশন প্রক্রিয়া চলমান থাকায় {package} পরিবর্তন করা যায়নি। এটি শেষ হওয়া পর্যন্ত অপেক্ষা করুন, তারপর আবার চেষ্টা করুন",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "অন্য একটি ইনস্টলেশন চলছে। আবার চেষ্টা করার আগে এটি শেষ হওয়া পর্যন্ত অপেক্ষা করা হচ্ছে...",
+  "Last incomplete listing: {0}": "সর্বশেষ অসম্পূর্ণ তালিকা: {0}",
+  "Incomplete": "অসম্পূর্ণ",
+  "{0} could only be listed partially: {1}": "{0}-এর আংশিক তালিকা দেখানো সম্ভব হয়েছে: {1}"
 }

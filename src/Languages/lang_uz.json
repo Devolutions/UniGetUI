@@ -3127,5 +3127,10 @@
     "Keep the navigation menu short": "Navigatsiya menyusini ixcham saqlash",
     "Browse extensions": "Kengaytmalarni ko‘rib chiqish",
     "Uninstall casks Homebrew can no longer find": "Homebrew endi topa olmaydigan casklarni o‘chirish",
-    "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew endi {0} ni topa olmaydi, shuning uchun ularni yangilay olmaydi. Ularni o‘chirib tashlang, keyin hali ham kerak bo‘lganlarini yangi nomi bilan o‘rnating."
+    "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew endi {0} ni topa olmaydi, shuning uchun ularni yangilay olmaydi. Ularni o‘chirib tashlang, keyin hali ham kerak bo‘lganlarini yangi nomi bilan o‘rnating.",
+    "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Boshqa o‘rnatish jarayoni hali davom etayotgan edi, shuning uchun {package} ni o‘zgartirib bo‘lmadi. Tugashini kuting, so‘ng qayta urinib ko‘ring.",
+    "Another installation is in progress. Waiting for it to finish before trying again...": "Boshqa o‘rnatish jarayoni davom etmoqda. Qayta urinishdan oldin uning tugashini kuting...",
+    "Last incomplete listing: {0}": "Oxirgi to‘liq bo‘lmagan ro‘yxat: {0}",
+    "Incomplete": "To‘liq emas",
+    "{0} could only be listed partially: {1}": "{0} ro‘yxati faqat qisman olindi: {1}"
 }

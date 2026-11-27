@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Giữ menu điều hướng gọn",
   "Browse extensions": "Duyệt tiện ích mở rộng",
   "Uninstall casks Homebrew can no longer find": "Gỡ cài đặt các Casks mà Homebrew không còn tìm thấy",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew không còn tìm thấy {0}, vì vậy không thể cập nhật chúng. Hãy gỡ cài đặt chúng, sau đó cài đặt những mục bạn vẫn cần bằng tên mới."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew không còn tìm thấy {0}, vì vậy không thể cập nhật chúng. Hãy gỡ cài đặt chúng, sau đó cài đặt những mục bạn vẫn cần bằng tên mới.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Một lượt cài đặt khác vẫn đang diễn ra nên không thể thay đổi {package}. Hãy đợi quá trình đó hoàn tất rồi thử lại.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Đang có một lượt cài đặt. Chờ quá trình đó hoàn tất trước khi thử lại...",
+  "Last incomplete listing: {0}": "Danh sách chưa hoàn tất gần nhất: {0}",
+  "Incomplete": "Chưa hoàn tất",
+  "{0} could only be listed partially: {1}": "Chỉ liệt kê được một phần {0}: {1}"
 }

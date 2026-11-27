@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "A navigációs menü röviden tartása",
   "Browse extensions": "Bővítmények böngészése",
   "Uninstall casks Homebrew can no longer find": "A Homebrew által már nem megtalálható caskek eltávolítása",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "A Homebrew már nem találja ezeket: {0}, ezért nem tudja frissíteni őket. Távolítsa el őket, majd telepítse újra azokat, amelyekre továbbra is szüksége van, az új nevükön."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "A Homebrew már nem találja ezeket: {0}, ezért nem tudja frissíteni őket. Távolítsa el őket, majd telepítse újra azokat, amelyekre továbbra is szüksége van, az új nevükön.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Egy másik telepítés még folyamatban volt, ezért a(z) {package} nem módosítható. Várja meg, amíg befejeződik, majd próbálja újra.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Egy másik telepítés van folyamatban. Várja meg, amíg befejeződik, majd próbálja újra...",
+  "Last incomplete listing: {0}": "Utolsó nem teljes listázás: {0}",
+  "Incomplete": "Hiányos",
+  "{0} could only be listed partially: {1}": "A(z) {0} listázása csak részben sikerült: {1}"
 }

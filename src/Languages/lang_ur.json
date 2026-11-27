@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "نیویگیشن مینو مختصر رکھیں",
   "Browse extensions": "ایکسٹینشنز دیکھیں",
   "Uninstall casks Homebrew can no longer find": "ان کاسکس کو اَن انسٹال کریں جنہیں Homebrew اب تلاش نہیں کر سکتا",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew اب {0} کو تلاش نہیں کر سکتا، اس لیے انہیں اپ ڈیٹ نہیں کر سکتا۔ انہیں اَن انسٹال کریں، پھر جن کی آپ کو اب بھی ضرورت ہو انہیں نئے نام سے انسٹال کریں۔"
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew اب {0} کو تلاش نہیں کر سکتا، اس لیے انہیں اپ ڈیٹ نہیں کر سکتا۔ انہیں اَن انسٹال کریں، پھر جن کی آپ کو اب بھی ضرورت ہو انہیں نئے نام سے انسٹال کریں۔",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "ایک اور انسٹالیشن ابھی جاری تھی، اس لیے {package} میں تبدیلی نہیں کی جا سکی۔ اس کے مکمل ہونے کا انتظار کریں، پھر دوبارہ کوشش کریں۔",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "ایک اور انسٹالیشن جاری ہے۔ دوبارہ کوشش کرنے سے پہلے اس کے مکمل ہونے کا انتظار کیا جا رہا ہے...",
+  "Last incomplete listing: {0}": "آخری نامکمل فہرست: {0}",
+  "Incomplete": "نامکمل",
+  "{0} could only be listed partially: {1}": "{0} کی فہرست صرف جزوی طور پر دکھائی جا سکی: {1}"
 }

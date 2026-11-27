@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "வழிசெலுத்தல் பட்டியலைச் சுருக்கமாக வைத்திரு",
   "Browse extensions": "நீட்டிப்புகளை உலாவு",
   "Uninstall casks Homebrew can no longer find": "Homebrew இனி கண்டறிய முடியாத cask-களை நிறுவல் நீக்கு",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew இனி {0} ஐக் கண்டறிய முடியாது, எனவே அவற்றைப் புதுப்பிக்க முடியாது. அவற்றை நிறுவல் நீக்கி, புதிய பெயரில் இன்னும் தேவைப்படுபவற்றை நிறுவவும்."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew இனி {0} ஐக் கண்டறிய முடியாது, எனவே அவற்றைப் புதுப்பிக்க முடியாது. அவற்றை நிறுவல் நீக்கி, புதிய பெயரில் இன்னும் தேவைப்படுபவற்றை நிறுவவும்.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "மற்றொரு நிறுவல் இன்னும் நடைபெற்று கொண்டிருந்ததால், {package}-ஐ மாற்ற முடியவில்லை. அது முடியும் வரை காத்திருந்து, மீண்டும் முயற்சிக்கவும்",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "மற்றொரு நிறுவல் நடைபெற்று கொண்டிருக்கிறது. மீண்டும் முயற்சிக்கும் முன் அது முடியும் வரை காத்திருக்கிறது...",
+  "Last incomplete listing: {0}": "கடைசியாக முழுமையடையாத பட்டியல்: {0}",
+  "Incomplete": "முழுமையடையாதது",
+  "{0} could only be listed partially: {1}": "{0}-ஐப் பகுதியளவே பட்டியலிட முடிந்தது: {1}"
 }

@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "ნავიგაციის მენიუს მოკლედ შენარჩუნება",
   "Browse extensions": "გაფართოებების დათვალიერება",
   "Uninstall casks Homebrew can no longer find": "წაშალეთ cask-ები, რომლებსაც Homebrew ვეღარ პოულობს",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ვეღარ პოულობს {0}-ს, ამიტომ მათ განახლებას ვერ ახერხებს. წაშალეთ ისინი, შემდეგ კი კვლავ საჭიროები ახალი სახელით დააინსტალირეთ."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ვეღარ პოულობს {0}-ს, ამიტომ მათ განახლებას ვერ ახერხებს. წაშალეთ ისინი, შემდეგ კი კვლავ საჭიროები ახალი სახელით დააინსტალირეთ.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "სხვა ინსტალაცია ჯერ კიდევ მიმდინარეობდა, ამიტომ {package}-ის შეცვლა ვერ მოხერხდა. დაელოდეთ მის დასრულებას და სცადეთ ხელახლა.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "მიმდინარეობს სხვა ინსტალაცია. ხელახლა ცდამდე დაელოდეთ მის დასრულებას...",
+  "Last incomplete listing: {0}": "ბოლო არასრული ჩამონათვალი: {0}",
+  "Incomplete": "არასრული",
+  "{0} could only be listed partially: {1}": "{0}-ის მხოლოდ ნაწილობრივ ჩამოთვლა მოხერხდა: {1}"
 }

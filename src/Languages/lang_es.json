@@ -3128,5 +3128,10 @@
   "Keep the navigation menu short": "Mantener corto el menú de navegación",
   "Browse extensions": "Explorar extensiones",
   "Uninstall casks Homebrew can no longer find": "Desinstalar los casks que Homebrew ya no encuentra",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ya no encuentra {0}, así que no puede actualizarlos. Desinstálalos y, después, instala con su nuevo nombre los que aún necesites."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ya no encuentra {0}, así que no puede actualizarlos. Desinstálalos y, después, instala con su nuevo nombre los que aún necesites.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Otra instalación seguía en curso, por lo que no se pudo modificar {package}. Espera a que termine y vuelve a intentarlo.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Hay otra instalación en curso. Esperando a que termine antes de volver a intentarlo...",
+  "Last incomplete listing: {0}": "Último listado incompleto: {0}",
+  "Incomplete": "Incompleto",
+  "{0} could only be listed partially: {1}": "Solo se pudo mostrar parcialmente {0}: {1}"
 }

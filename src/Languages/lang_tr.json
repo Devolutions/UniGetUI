@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Gezinme menüsünü kısa tutun",
   "Browse extensions": "Uzantılara göz at",
   "Uninstall casks Homebrew can no longer find": "Homebrew'un artık bulamadığı cask'leri kaldırın",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew artık {0} paketini bulamadığı için bunları güncelleyemiyor. Bunları kaldırın, ardından hâlâ ihtiyaç duyduklarınızı yeni adlarıyla yükleyin."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew artık {0} paketini bulamadığı için bunları güncelleyemiyor. Bunları kaldırın, ardından hâlâ ihtiyaç duyduklarınızı yeni adlarıyla yükleyin.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Başka bir yükleme hâlâ devam ettiğinden {package} değiştirilemedi. Tamamlanmasını bekleyip yeniden deneyin",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Başka bir yükleme devam ediyor. Yeniden denemeden önce tamamlanması bekleniyor...",
+  "Last incomplete listing: {0}": "Son eksik listeleme: {0}",
+  "Incomplete": "Eksik",
+  "{0} could only be listed partially: {1}": "{0} yalnızca kısmen listelenebildi: {1}"
 }

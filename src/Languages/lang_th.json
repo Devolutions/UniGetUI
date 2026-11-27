@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "ทำให้เมนูนำทางสั้น",
   "Browse extensions": "เรียกดูส่วนขยาย",
   "Uninstall casks Homebrew can no longer find": "ถอนการติดตั้ง cask ที่ Homebrew ไม่พบอีกต่อไป",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ไม่พบ {0} อีกต่อไป จึงไม่สามารถอัปเดตรายการเหล่านี้ได้ ถอนการติดตั้งรายการเหล่านี้ แล้วติดตั้งรายการที่ยังต้องการอีกครั้งโดยใช้ชื่อใหม่"
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ไม่พบ {0} อีกต่อไป จึงไม่สามารถอัปเดตรายการเหล่านี้ได้ ถอนการติดตั้งรายการเหล่านี้ แล้วติดตั้งรายการที่ยังต้องการอีกครั้งโดยใช้ชื่อใหม่",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "ยังมีการติดตั้งอื่นกำลังดำเนินการอยู่ จึงไม่สามารถเปลี่ยนแปลง {package} ได้ โปรดรอให้เสร็จสิ้นแล้วลองอีกครั้ง",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "กำลังติดตั้งรายการอื่นอยู่ จะลองอีกครั้งเมื่อดำเนินการเสร็จสิ้น...",
+  "Last incomplete listing: {0}": "รายการล่าสุดที่แสดงได้ไม่สมบูรณ์: {0}",
+  "Incomplete": "ไม่สมบูรณ์",
+  "{0} could only be listed partially: {1}": "แสดงรายการ {0} ได้เพียงบางส่วน: {1}"
 }

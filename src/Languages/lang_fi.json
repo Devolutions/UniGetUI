@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Pidä navigointivalikko lyhyenä",
   "Browse extensions": "Selaa laajennuksia",
   "Uninstall casks Homebrew can no longer find": "Poista Homebrew-caskit, joita Homebrew ei enää löydä",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ei enää löydä kohteita {0}, joten se ei voi päivittää niitä. Poista ne ja asenna edelleen tarvitsemasi uudelleen niiden uusilla nimillä."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ei enää löydä kohteita {0}, joten se ei voi päivittää niitä. Poista ne ja asenna edelleen tarvitsemasi uudelleen niiden uusilla nimillä.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Paketin {package} muuttaminen ei onnistunut, koska toinen asennus oli vielä käynnissä. Odota sen valmistumista ja yritä sitten uudelleen",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Toinen asennus on käynnissä. Odotetaan sen valmistumista ennen uutta yritystä...",
+  "Last incomplete listing: {0}": "Viimeisin keskeneräinen luettelointi: {0}",
+  "Incomplete": "Keskeneräinen",
+  "{0} could only be listed partially: {1}": "Kohde {0} voitiin luetteloida vain osittain: {1}"
 }

@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Zachovať navigačnú ponuku krátku",
   "Browse extensions": "Prehliadať rozšírenia",
   "Uninstall casks Homebrew can no longer find": "Odinštalovať casky, ktoré Homebrew už nedokáže nájsť",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew už nedokáže nájsť {0}, preto ich nemôže aktualizovať. Odinštalujte ich a potom znova nainštalujte tie, ktoré ešte potrebujete, pod ich novým názvom."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew už nedokáže nájsť {0}, preto ich nemôže aktualizovať. Odinštalujte ich a potom znova nainštalujte tie, ktoré ešte potrebujete, pod ich novým názvom.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Stále prebiehala iná inštalácia, preto sa balík {package} nepodarilo zmeniť. Počkajte na jej dokončenie a skúste to znova",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Prebieha iná inštalácia. Čaká sa na jej dokončenie a potom sa to skúsi znova...",
+  "Last incomplete listing: {0}": "Posledný neúplný výpis: {0}",
+  "Incomplete": "Neúplný",
+  "{0} could only be listed partially: {1}": "Položky {0} sa podarilo zobraziť iba čiastočne: {1}"
 }

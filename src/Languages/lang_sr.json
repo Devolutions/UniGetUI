@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Нека мени за навигацију буде кратак",
   "Browse extensions": "Прегледај проширења",
   "Uninstall casks Homebrew can no longer find": "Деинсталирај cask пакете које Homebrew више не може да пронађе",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew више не може да пронађе {0}, па не може да их ажурира. Деинсталирај их, а затим поново инсталирај оне који су ти и даље потребни под новим именом."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew више не може да пронађе {0}, па не може да их ажурира. Деинсталирај их, а затим поново инсталирај оне који су ти и даље потребни под новим именом.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Друга инсталација је још била у току, па није било могуће изменити {package}. Сачекај да се заврши, па покушај поново.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Друга инсталација је у току. Чека се да се заврши пре поновног покушаја...",
+  "Last incomplete listing: {0}": "Последњи непотпуни списак: {0}",
+  "Incomplete": "Непотпуно",
+  "{0} could only be listed partially: {1}": "За {0} је било могуће приказати само део ставки: {1}"
 }

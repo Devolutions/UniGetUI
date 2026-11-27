@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Sutrumpinkite naršymo meniu",
   "Browse extensions": "Naršyti plėtinius",
   "Uninstall casks Homebrew can no longer find": "Pašalinti Homebrew neberandamas programas",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew neberanda {0}, todėl negali jų atnaujinti. Pašalinkite jas, tada iš naujo įdiekite tas, kurių vis dar reikia, naujais jų pavadinimais."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew neberanda {0}, todėl negali jų atnaujinti. Pašalinkite jas, tada iš naujo įdiekite tas, kurių vis dar reikia, naujais jų pavadinimais.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Vis dar vyko kitas diegimas, todėl {package} pakeisti nepavyko. Palaukite, kol jis bus baigtas, tada bandykite dar kartą.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Vyksta kitas diegimas. Prieš bandant dar kartą laukiama, kol jis bus baigtas...",
+  "Last incomplete listing: {0}": "Paskutinis neužbaigtas sąrašas: {0}",
+  "Incomplete": "Neužbaigta",
+  "{0} could only be listed partially: {1}": "Pavyko išvardyti tik dalį {0}: {1}"
 }

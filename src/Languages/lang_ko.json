@@ -3128,5 +3128,10 @@
   "Keep the navigation menu short": "탐색 메뉴를 간결하게 유지",
   "Browse extensions": "확장 찾아보기",
   "Uninstall casks Homebrew can no longer find": "Homebrew에서 더 이상 찾을 수 없는 캐스크 제거",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew에서 {0}을(를) 더 이상 찾을 수 없어 업데이트할 수 없습니다. 해당 항목을 제거한 다음, 계속 필요한 항목은 새 이름으로 설치하세요."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew에서 {0}을(를) 더 이상 찾을 수 없어 업데이트할 수 없습니다. 해당 항목을 제거한 다음, 계속 필요한 항목은 새 이름으로 설치하세요.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "다른 설치가 아직 진행 중이어서 {package}을(를) 변경할 수 없습니다. 설치가 완료될 때까지 기다린 후 다시 시도하세요.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "다른 설치가 진행 중입니다. 완료될 때까지 기다린 후 다시 시도합니다...",
+  "Last incomplete listing: {0}": "마지막으로 일부만 표시된 목록: {0}",
+  "Incomplete": "불완전",
+  "{0} could only be listed partially: {1}": "{0}을(를) 일부만 표시할 수 있었습니다: {1}"
 }

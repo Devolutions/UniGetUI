@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Konservi la navigadan menuon mallonga",
   "Browse extensions": "Foliumi etendaĵojn",
   "Uninstall casks Homebrew can no longer find": "Malinstali caskojn, kiujn Homebrew ne plu povas trovi",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ne plu povas trovi {0}, do ĝi ne povas ĝisdatigi ilin. Malinstalu ilin, poste instalu sub ilia nova nomo tiujn, kiujn vi ankoraŭ bezonas."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ne plu povas trovi {0}, do ĝi ne povas ĝisdatigi ilin. Malinstalu ilin, poste instalu sub ilia nova nomo tiujn, kiujn vi ankoraŭ bezonas.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Alia instalado ankoraŭ estis en progreso, do {package} ne povis esti ŝanĝita. Atendu ĝis ĝi finiĝos, poste reprovu",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Alia instalado estas en progreso. Atendante ĝis ĝi finiĝos antaŭ ol reprovi...",
+  "Last incomplete listing: {0}": "Lasta nekompleta listigo: {0}",
+  "Incomplete": "Nekompleta",
+  "{0} could only be listed partially: {1}": "{0} povis esti listigita nur parte: {1}"
 }

@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Håll navigeringsmenyn kort",
   "Browse extensions": "Bläddra bland tillägg",
   "Uninstall casks Homebrew can no longer find": "Avinstallera caskar som Homebrew inte längre hittar",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew kan inte längre hitta {0}, så de kan inte uppdateras. Avinstallera dem och installera sedan de du fortfarande behöver under deras nya namn."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew kan inte längre hitta {0}, så de kan inte uppdateras. Avinstallera dem och installera sedan de du fortfarande behöver under deras nya namn.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "En annan installation pågick fortfarande, så {package} kunde inte ändras. Vänta tills den är klar och försök sedan igen.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "En annan installation pågår. Väntar tills den är klar innan ett nytt försök...",
+  "Last incomplete listing: {0}": "Senaste ofullständiga listningen: {0}",
+  "Incomplete": "Ofullständig",
+  "{0} could only be listed partially: {1}": "{0} kunde bara listas delvis: {1}"
 }

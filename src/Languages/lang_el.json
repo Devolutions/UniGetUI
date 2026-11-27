@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Διατηρήστε σύντομο το μενού πλοήγησης",
   "Browse extensions": "Περιήγηση στις επεκτάσεις",
   "Uninstall casks Homebrew can no longer find": "Απεγκατάσταση των casks που το Homebrew δεν μπορεί πλέον να εντοπίσει",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Το Homebrew δεν μπορεί πλέον να εντοπίσει τα {0}, επομένως δεν μπορεί να τα ενημερώσει. Απεγκαταστήστε τα και, στη συνέχεια, εγκαταστήστε ξανά όσα εξακολουθείτε να χρειάζεστε με το νέο τους όνομα."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Το Homebrew δεν μπορεί πλέον να εντοπίσει τα {0}, επομένως δεν μπορεί να τα ενημερώσει. Απεγκαταστήστε τα και, στη συνέχεια, εγκαταστήστε ξανά όσα εξακολουθείτε να χρειάζεστε με το νέο τους όνομα.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Μια άλλη εγκατάσταση ήταν ακόμη σε εξέλιξη, επομένως δεν ήταν δυνατή η αλλαγή του {package}. Περιμένετε να ολοκληρωθεί και δοκιμάστε ξανά",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Μια άλλη εγκατάσταση βρίσκεται σε εξέλιξη. Περιμένετε να ολοκληρωθεί πριν δοκιμάσετε ξανά...",
+  "Last incomplete listing: {0}": "Τελευταία μη ολοκληρωμένη λίστα: {0}",
+  "Incomplete": "Μη ολοκληρωμένο",
+  "{0} could only be listed partially: {1}": "Η καταχώριση του {0} ολοκληρώθηκε μόνο εν μέρει: {1}"
 }

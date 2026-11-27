@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Buat menu navigasi tetap ringkas",
   "Browse extensions": "Jelajahi ekstensi",
   "Uninstall casks Homebrew can no longer find": "Copot cask yang tidak lagi dapat ditemukan Homebrew",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew tidak lagi dapat menemukan {0}, jadi Homebrew tidak dapat memperbaruinya. Copot cask-cask tersebut, lalu instal kembali cask yang masih Anda perlukan dengan nama barunya."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew tidak lagi dapat menemukan {0}, jadi Homebrew tidak dapat memperbaruinya. Copot cask-cask tersebut, lalu instal kembali cask yang masih Anda perlukan dengan nama barunya.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Instalasi lain masih berlangsung, sehingga {package} tidak dapat diubah. Tunggu hingga selesai, lalu coba lagi",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Instalasi lain sedang berlangsung. Menunggu hingga selesai sebelum mencoba lagi...",
+  "Last incomplete listing: {0}": "Daftar terakhir yang tidak lengkap: {0}",
+  "Incomplete": "Tidak lengkap",
+  "{0} could only be listed partially: {1}": "{0} hanya dapat ditampilkan sebagian: {1}"
 }

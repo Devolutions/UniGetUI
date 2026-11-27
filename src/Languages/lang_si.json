@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "සංචලන මෙනුව කෙටියෙන් තබාගන්න",
   "Browse extensions": "දිගු ගවේෂණය කරන්න",
   "Uninstall casks Homebrew can no longer find": "Homebrewට තවදුරටත් සොයාගත නොහැකි casks ඉවත් කරන්න",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrewට {0} තවදුරටත් සොයාගත නොහැකි බැවින්, ඒවා යාවත්කාලීන කළ නොහැක. ඒවා ඉවත් කර, තවමත් අවශ්‍ය ඒවා ඒවායේ නව නාමයෙන් ස්ථාපනය කරන්න."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrewට {0} තවදුරටත් සොයාගත නොහැකි බැවින්, ඒවා යාවත්කාලීන කළ නොහැක. ඒවා ඉවත් කර, තවමත් අවශ්‍ය ඒවා ඒවායේ නව නාමයෙන් ස්ථාපනය කරන්න.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "තවත් ස්ථාපනයක් සිදුවෙමින් තිබූ බැවින් {package} වෙනස් කළ නොහැකි විය. එය අවසන් වන තෙක් රැඳී සිට, පසුව නැවත උත්සාහ කරන්න",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "තවත් ස්ථාපනයක් සිදුවෙමින් පවතී. නැවත උත්සාහ කිරීමට පෙර එය අවසන් වන තෙක් රැඳී සිටින්න...",
+  "Last incomplete listing: {0}": "අවසන් අසම්පූර්ණ ලැයිස්තුගත කිරීම: {0}",
+  "Incomplete": "අසම්පූර්ණයි",
+  "{0} could only be listed partially: {1}": "{0} අර්ධ වශයෙන් පමණක් ලැයිස්තුගත කළ හැකි විය: {1}"
 }

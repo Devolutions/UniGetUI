@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Păstrează meniul de navigare scurt",
   "Browse extensions": "Răsfoiește extensiile",
   "Uninstall casks Homebrew can no longer find": "Dezinstalează cask-urile pe care Homebrew nu le mai găsește",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew nu mai poate găsi {0}, așa că nu le poate actualiza. Dezinstalează-le, apoi instalează din nou, sub noul lor nume, pe cele de care mai ai nevoie."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew nu mai poate găsi {0}, așa că nu le poate actualiza. Dezinstalează-le, apoi instalează din nou, sub noul lor nume, pe cele de care mai ai nevoie.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "O altă instalare era încă în curs, așa că pachetul {package} nu a putut fi modificat. Așteaptă să se încheie, apoi încearcă din nou.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "O altă instalare este în curs. Așteptăm să se finalizeze înainte de a încerca din nou...",
+  "Last incomplete listing: {0}": "Ultima listare incompletă: {0}",
+  "Incomplete": "Incompletă",
+  "{0} could only be listed partially: {1}": "Listarea pentru {0} a fost doar parțială: {1}"
 }

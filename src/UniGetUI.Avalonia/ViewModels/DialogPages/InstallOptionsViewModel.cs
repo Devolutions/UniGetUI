@@ -49,6 +49,9 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string PythonSectionLabel { get; } = CoreTools.Translate("Python");
     public string PythonLabel { get; } = CoreTools.Translate("Python interpreter:");
     public string ManagedPythonLabel { get; } = CoreTools.Translate("Python source:");
+    public string PythonInterpreterHint { get; } = CoreTools.Translate(
+        "Default lets uv choose. An update with Default keeps the interpreter the tool already runs on."
+    );
     public string NoPythonDownloadsCheckBox_Content { get; } = CoreTools.Translate("Do not download Python interpreters");
     public string SelectDirLabel { get; } = CoreTools.Translate("Select");
     public string ResetDirLabel { get; } = CoreTools.Translate("Reset");

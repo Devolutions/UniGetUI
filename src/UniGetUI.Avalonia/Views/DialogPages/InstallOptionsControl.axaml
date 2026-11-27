@@ -476,6 +476,12 @@
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
+                            <TextBlock Text="{Binding PythonInterpreterHint}"
+                                       Margin="0,0,0,4"
+                                       FontSize="12"
+                                       Opacity="0.7"
+                                       TextWrapping="Wrap"/>
+
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                 <TextBlock x:Name="ManagedPythonLabelBlock" Text="{Binding ManagedPythonLabel}" VerticalAlignment="Center"/>
                                 <ComboBox Grid.Column="1"

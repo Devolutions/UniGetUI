@@ -3113,6 +3113,7 @@
   "Do not download Python interpreters": "Do not download Python interpreters",
   "uv-managed Python": "uv-managed Python",
   "system Python": "system Python",
+  "Default lets uv choose. An update with Default keeps the interpreter the tool already runs on.": "Default lets uv choose. An update with Default keeps the interpreter the tool already runs on.",
   "Hide license": "Hide license",
   "Show license": "Show license",
   "Open the full notices file": "Open the full notices file",

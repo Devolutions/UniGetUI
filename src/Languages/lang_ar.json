@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "إبقاء قائمة التنقل مختصرة",
   "Browse extensions": "استعراض الإضافات",
   "Uninstall casks Homebrew can no longer find": "ألغِ تثبيت حزم Homebrew التي لم يعد بإمكانه العثور عليها",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "لم يعد Homebrew قادرًا على العثور على {0}، لذا لا يمكنه تحديثها. ألغِ تثبيتها، ثم ثبّت ما لا تزال بحاجة إليه منها بأسمائها الجديدة."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "لم يعد Homebrew قادرًا على العثور على {0}، لذا لا يمكنه تحديثها. ألغِ تثبيتها، ثم ثبّت ما لا تزال بحاجة إليه منها بأسمائها الجديدة.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "كان هناك تثبيت آخر لا يزال قيد التنفيذ، لذا تعذّر تغيير {package}. انتظر حتى يكتمل، ثم حاول مرة أخرى",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "هناك تثبيت آخر قيد التنفيذ. جارٍ الانتظار حتى يكتمل قبل إعادة المحاولة...",
+  "Last incomplete listing: {0}": "آخر قائمة غير مكتملة: {0}",
+  "Incomplete": "غير مكتمل",
+  "{0} could only be listed partially: {1}": "تعذّر إدراج {0} إلا جزئيًا: {1}"
 }

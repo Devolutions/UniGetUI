@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Panatilihing maikli ang menu ng navigation",
   "Browse extensions": "Mag-browse ng mga extension",
   "Uninstall casks Homebrew can no longer find": "I-uninstall ang mga cask na hindi na mahanap ng Homebrew",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Hindi na mahanap ng Homebrew ang {0}, kaya hindi nito ma-update ang mga ito. I-uninstall ang mga iyon, pagkatapos ay i-install sa bagong pangalan ang alinman sa kailangan mo pa."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Hindi na mahanap ng Homebrew ang {0}, kaya hindi nito ma-update ang mga ito. I-uninstall ang mga iyon, pagkatapos ay i-install sa bagong pangalan ang alinman sa kailangan mo pa.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "May isa pang pag-install na isinasagawa pa, kaya hindi mabago ang {package}. Hintaying matapos ito, pagkatapos ay subukang muli",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "May isa pang pag-install na isinasagawa. Naghihintay na matapos ito bago muling subukan...",
+  "Last incomplete listing: {0}": "Huling hindi kumpletong paglilista: {0}",
+  "Incomplete": "Hindi kumpleto",
+  "{0} could only be listed partially: {1}": "Bahagya lamang nailista ang {0}: {1}"
 }

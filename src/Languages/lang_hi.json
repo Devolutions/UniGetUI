@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "नेविगेशन मेनू छोटा रखें",
   "Browse extensions": "एक्सटेंशन ब्राउज़ करें",
   "Uninstall casks Homebrew can no longer find": "उन Homebrew कास्क को अनइंस्टॉल करें जिन्हें Homebrew अब नहीं ढूँढ पा रहा",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew अब {0} को नहीं ढूँढ पा रहा, इसलिए उन्हें अपडेट नहीं कर सकता। उन्हें अनइंस्टॉल करें, फिर जिनकी आपको अभी भी ज़रूरत है उन्हें उनके नए नाम से इंस्टॉल करें।"
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew अब {0} को नहीं ढूँढ पा रहा, इसलिए उन्हें अपडेट नहीं कर सकता। उन्हें अनइंस्टॉल करें, फिर जिनकी आपको अभी भी ज़रूरत है उन्हें उनके नए नाम से इंस्टॉल करें।",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "एक अन्य इंस्टॉलेशन अभी भी जारी था, इसलिए {package} में बदलाव नहीं किया जा सका। इसके पूरा होने तक प्रतीक्षा करें, फिर दोबारा कोशिश करें",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "एक अन्य इंस्टॉलेशन जारी है। दोबारा कोशिश करने से पहले उसके पूरा होने की प्रतीक्षा की जा रही है...",
+  "Last incomplete listing: {0}": "पिछली अधूरी सूची: {0}",
+  "Incomplete": "अधूरा",
+  "{0} could only be listed partially: {1}": "{0} की केवल आंशिक सूची बनाई जा सकी: {1}"
 }

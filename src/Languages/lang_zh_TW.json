@@ -3133,5 +3133,10 @@
   "Keep the navigation menu short": "縮短導覽選單",
   "Browse extensions": "瀏覽擴充功能",
   "Uninstall casks Homebrew can no longer find": "解除安裝 Homebrew 已無法找到的 cask 項目",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew 已無法找到 {0}，因此無法更新。請先解除安裝，再以新名稱安裝仍需要的項目。"
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew 已無法找到 {0}，因此無法更新。請先解除安裝，再以新名稱安裝仍需要的項目。",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "另一項安裝作業仍在進行中，因此無法變更 {package}。請等候其完成後再試一次",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "另一項安裝作業正在進行中。請等待其完成後再重試...",
+  "Last incomplete listing: {0}": "上次未完成的清單：{0}",
+  "Incomplete": "不完整",
+  "{0} could only be listed partially: {1}": "{0} 僅能部分列出：{1}"
 }

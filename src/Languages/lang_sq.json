@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Mbaje të shkurtër menynë e navigimit",
   "Browse extensions": "Shfleto shtesat",
   "Uninstall casks Homebrew can no longer find": "Çinstalo cask-et që Homebrew nuk mund t'i gjejë më",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew nuk mund t'i gjejë më {0}, ndaj nuk mund t'i përditësojë. Çinstaloji, pastaj instalo me emrin e ri ato që të duhen ende."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew nuk mund t'i gjejë më {0}, ndaj nuk mund t'i përditësojë. Çinstaloji, pastaj instalo me emrin e ri ato që të duhen ende.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Një instalim tjetër ishte ende në vazhdim, prandaj {package} nuk mund të ndryshohej. Prit të përfundojë dhe provo sërish.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Një instalim tjetër është në vazhdim. Po pritet të përfundojë para se të provohet sërish...",
+  "Last incomplete listing: {0}": "Listimi i fundit i paplotë: {0}",
+  "Incomplete": "E paplotë",
+  "{0} could only be listed partially: {1}": "{0} mund të listohej vetëm pjesërisht: {1}"
 }

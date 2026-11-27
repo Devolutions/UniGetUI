@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "کوتاه نگه‌داشتن منوی ناوبری",
   "Browse extensions": "مرور افزونه‌ها",
   "Uninstall casks Homebrew can no longer find": "حذف caskهایی که Homebrew دیگر نمی‌تواند پیدا کند",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew دیگر نمی‌تواند {0} را پیدا کند، بنابراین نمی‌تواند آن‌ها را به‌روزرسانی کند. آن‌ها را حذف کنید و سپس هرکدام را که هنوز نیاز دارید با نام جدیدشان نصب کنید."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew دیگر نمی‌تواند {0} را پیدا کند، بنابراین نمی‌تواند آن‌ها را به‌روزرسانی کند. آن‌ها را حذف کنید و سپس هرکدام را که هنوز نیاز دارید با نام جدیدشان نصب کنید.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "نصب دیگری هنوز در حال انجام بود، بنابراین امکان تغییر {package} وجود نداشت. صبر کنید تا تمام شود، سپس دوباره تلاش کنید.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "نصب دیگری در حال انجام است. تا پایان آن منتظر می‌مانیم و سپس دوباره تلاش می‌کنیم...",
+  "Last incomplete listing: {0}": "آخرین فهرست ناقص: {0}",
+  "Incomplete": "ناقص",
+  "{0} could only be listed partially: {1}": "{0} فقط به‌صورت ناقص فهرست شد: {1}"
 }

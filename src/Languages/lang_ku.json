@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "پێڕستی ڕێدۆزەکان کورت بهێڵەوە",
   "Browse extensions": "درێژکراوەکان بگەڕێ",
   "Uninstall casks Homebrew can no longer find": "سڕینەوەی ئەو cask ـانەی Homebrew چیتر ناتوانێت بیان بدۆزێتەوە",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew چیتر ناتوانێت {0} بدۆزێتەوە، بۆیە ناتوانێت نوێیان بکاتەوە. بیان بسڕەوە، پاشان هەر یەکێکیان کە هێشتا پێویستتە بە ناوی نوێیانەوە دایبمەزرێنە."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew چیتر ناتوانێت {0} بدۆزێتەوە، بۆیە ناتوانێت نوێیان بکاتەوە. بیان بسڕەوە، پاشان هەر یەکێکیان کە هێشتا پێویستتە بە ناوی نوێیانەوە دایبمەزرێنە.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "دامەزراندنێکی تر هێشتا لە جێبەجێکردندابوو، بۆیە نەکرا {package} بگۆڕدرێت. چاوەڕێ بکە تەواو ببێت، پاشان دووبارە هەوڵ بدەوە",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "دامەزراندنێکی تر لە جێبەجێکردندایە. چاوەڕێ دەکرێت تەواو ببێت، پێش ئەوەی دووبارە هەوڵ بدرێتەوە...",
+  "Last incomplete listing: {0}": "دوایین لیستکردنی ناتەواو: {0}",
+  "Incomplete": "ناتەواو",
+  "{0} could only be listed partially: {1}": "{0} تەنها بەشێکی لیست کرا: {1}"
 }

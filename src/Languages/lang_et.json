@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Hoia navigeerimismenüü lühike",
   "Browse extensions": "Sirvi laiendusi",
   "Uninstall casks Homebrew can no longer find": "Eemalda caskid, mida Homebrew enam ei leia",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ei leia enam pakette {0}, mistõttu ei saa neid uuendada. Eemalda need ja paigalda need, mida endiselt vajad, nende uue nime all."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ei leia enam pakette {0}, mistõttu ei saa neid uuendada. Eemalda need ja paigalda need, mida endiselt vajad, nende uue nime all.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Teine paigaldus oli veel pooleli, seega ei saanud paketti {package} muuta. Oodake, kuni see lõpeb, ja proovige siis uuesti",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Teine paigaldus on käimas. Ootame selle lõppemist, enne kui uuesti proovime...",
+  "Last incomplete listing: {0}": "Viimane mittetäielik loend: {0}",
+  "Incomplete": "Mittetäielik",
+  "{0} could only be listed partially: {1}": "{0} loendit sai kuvada ainult osaliselt: {1}"
 }

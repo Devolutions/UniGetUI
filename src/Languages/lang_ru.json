@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Сделать меню навигации короче",
   "Browse extensions": "Обзор расширений",
   "Uninstall casks Homebrew can no longer find": "Удалить cask-пакеты, которые Homebrew больше не может найти",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew больше не может найти {0}, поэтому не может обновить их. Удалите их, а затем установите те, которые вам ещё нужны, под их новыми именами."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew больше не может найти {0}, поэтому не может обновить их. Удалите их, а затем установите те, которые вам ещё нужны, под их новыми именами.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Пока выполнялась другая установка, изменить {package} не удалось. Дождитесь её завершения и повторите попытку.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Выполняется другая установка. Ожидание её завершения перед повторной попыткой...",
+  "Last incomplete listing: {0}": "Последний неполный список: {0}",
+  "Incomplete": "Неполный",
+  "{0} could only be listed partially: {1}": "Список {0} удалось получить только частично: {1}"
 }

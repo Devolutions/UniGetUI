@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "Houd het navigatiemenu kort",
   "Browse extensions": "Extensies bekijken",
   "Uninstall casks Homebrew can no longer find": "Casks verwijderen die Homebrew niet meer kan vinden",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew kan {0} niet meer vinden en kan ze daarom niet bijwerken. Verwijder ze en installeer de casks die je nog nodig hebt onder hun nieuwe naam."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew kan {0} niet meer vinden en kan ze daarom niet bijwerken. Verwijder ze en installeer de casks die je nog nodig hebt onder hun nieuwe naam.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "Er was nog een andere installatie bezig, waardoor {package} niet kon worden gewijzigd. Wacht tot deze is voltooid en probeer het opnieuw.",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "Er is een andere installatie bezig. Wachten tot deze is voltooid voordat het opnieuw wordt geprobeerd...",
+  "Last incomplete listing: {0}": "Laatste onvolledige lijst: {0}",
+  "Incomplete": "Onvolledig",
+  "{0} could only be listed partially: {1}": "{0} kon slechts gedeeltelijk worden weergegeven: {1}"
 }

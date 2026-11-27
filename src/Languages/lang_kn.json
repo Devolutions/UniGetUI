@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "ನ್ಯಾವಿಗೇಶನ್ ಮೆನುವನ್ನು ಚಿಕ್ಕದಾಗಿ ಇರಿಸಿ",
   "Browse extensions": "ವಿಸ್ತರಣೆಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ",
   "Uninstall casks Homebrew can no longer find": "Homebrew ಇನ್ನು ಮುಂದೆ ಪತ್ತೆಹಚ್ಚಲಾಗದ casks ಅನ್ನು ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ಇನ್ನು ಮುಂದೆ {0} ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲಾಗುತ್ತಿಲ್ಲ, ಆದ್ದರಿಂದ ಅವುಗಳನ್ನು update ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ. ಅವುಗಳನ್ನು ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ, ನಂತರ ಇನ್ನೂ ಅಗತ್ಯವಿರುವವುಗಳನ್ನು ಅವುಗಳ ಹೊಸ ಹೆಸರಿನಲ್ಲಿ install ಮಾಡಿ."
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew ಇನ್ನು ಮುಂದೆ {0} ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲಾಗುತ್ತಿಲ್ಲ, ಆದ್ದರಿಂದ ಅವುಗಳನ್ನು update ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ. ಅವುಗಳನ್ನು ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ, ನಂತರ ಇನ್ನೂ ಅಗತ್ಯವಿರುವವುಗಳನ್ನು ಅವುಗಳ ಹೊಸ ಹೆಸರಿನಲ್ಲಿ install ಮಾಡಿ.",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "ಇನ್ನೊಂದು ಅನುಸ್ಥಾಪನೆ ಇನ್ನೂ ಪ್ರಗತಿಯಲ್ಲಿದ್ದುದರಿಂದ {package} ಅನ್ನು ಬದಲಾಯಿಸಲಾಗಲಿಲ್ಲ. ಅದು ಪೂರ್ಣಗೊಳ್ಳುವವರೆಗೆ ಕಾಯಿರಿ, ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "ಇನ್ನೊಂದು ಅನುಸ್ಥಾಪನೆ ಪ್ರಗತಿಯಲ್ಲಿದೆ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸುವ ಮೊದಲು ಅದು ಪೂರ್ಣಗೊಳ್ಳುವವರೆಗೆ ಕಾಯಲಾಗುತ್ತಿದೆ...",
+  "Last incomplete listing: {0}": "ಕೊನೆಯ ಅಪೂರ್ಣ ಪಟ್ಟಿ: {0}",
+  "Incomplete": "ಅಪೂರ್ಣ",
+  "{0} could only be listed partially: {1}": "{0} ಅನ್ನು ಭಾಗಶಃ ಮಾತ್ರ ಪಟ್ಟಿ ಮಾಡಲು ಸಾಧ್ಯವಾಯಿತು: {1}"
 }

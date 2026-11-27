@@ -3132,5 +3132,10 @@
   "Keep the navigation menu short": "संचरणसूचीं संक्षिप्तां स्थापयतु",
   "Browse extensions": "विस्तारान् अन्वेषयतु",
   "Uninstall casks Homebrew can no longer find": "Homebrew इदानीं अन्वेष्टुं न शक्नोति तानि casks विस्थापयतु",
-  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew इदानीं {0} अन्वेष्टुं न शक्नोति, अतः तानि अद्यतनयितुं न शक्नोति। तानि विस्थापयतु, ततः येषाम् अद्यापि आवश्यकता अस्ति तानि तेषां नूतननाम्ना स्थापयतु।"
+  "Homebrew can no longer find {0}, so it cannot update them. Uninstall them, then install any you still need under their new name.": "Homebrew इदानीं {0} अन्वेष्टुं न शक्नोति, अतः तानि अद्यतनयितुं न शक्नोति। तानि विस्थापयतु, ततः येषाम् अद्यापि आवश्यकता अस्ति तानि तेषां नूतननाम्ना स्थापयतु।",
+  "Another installation was still in progress, so {package} could not be changed. Wait for it to finish, then try again": "अन्यत् स्थापनं अद्यापि प्रचलितम् आसीत्, अतः {package} परिवर्तयितुं न शक्यते स्म। तत् समाप्तं यावत् प्रतीक्ष्य, ततः पुनः प्रयतताम्।",
+  "Another installation is in progress. Waiting for it to finish before trying again...": "अन्यत् स्थापनं प्रचलति। पुनः प्रयत्नात् पूर्वं तस्य समाप्तेः प्रतीक्षा क्रियते...",
+  "Last incomplete listing: {0}": "अन्तिमं अपूर्णं सूचीकरणम्: {0}",
+  "Incomplete": "अपूर्णम्",
+  "{0} could only be listed partially: {1}": "{0} केवलम् आंशिकरूपेण सूचीकर्तुं शक्यते स्म: {1}"
 }

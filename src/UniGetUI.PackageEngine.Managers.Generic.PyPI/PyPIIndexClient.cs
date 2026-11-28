@@ -19,6 +19,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
         public const int MaxSearchResults = 20;
 
         private const int CacheMaxAgeHours = 24;
+        private const string LegacyCacheFileName = "pip_simple_index.cache";
 
         // The index is close to a million names (tens of MB once loaded), so it is only kept
         // while searches are being made: it is dropped after MemoryCacheIdleLifetime without
@@ -28,10 +29,30 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
         private static readonly object _cacheLock = new();
         private static long _cacheUseStamp;
 
+        // Pip and uv both start by pre-warming the index, so two loads can overlap. They share
+        // one task instead of downloading and parsing the index twice and writing the cache
+        // file twice.
+        private static Task<string[]>? _inflight;
+
         internal static TimeSpan MemoryCacheIdleLifetime { get; set; } = TimeSpan.FromMinutes(2);
 
+        internal static string? TEST_CacheFilePathOverride { get; set; }
+
+        internal static Func<string[]>? TEST_IndexDownloadOverride { get; set; }
+
+        internal static void TEST_ResetState()
+        {
+            lock (_cacheLock)
+            {
+                _cachedNames = null;
+                _cacheTimestamp = DateTime.MinValue;
+                _inflight = null;
+            }
+        }
+
         internal static string GetCacheFilePath() =>
-            Path.Join(CoreData.UniGetUICacheDirectory_Data, "pypi_simple_index.cache");
+            TEST_CacheFilePathOverride
+            ?? Path.Join(CoreData.UniGetUICacheDirectory_Data, "pypi_simple_index.cache");
 
         private static bool IsIndexFileFresh(string cacheFile) =>
             File.Exists(cacheFile)
@@ -79,29 +100,72 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
 
         private static string[] GetProjectNamesCore(INativeTaskLogger? logger)
         {
+            Task<string[]> load;
             lock (_cacheLock)
             {
                 if (_cachedNames is not null && (DateTime.Now - _cacheTimestamp).TotalHours < CacheMaxAgeHours)
                     return _cachedNames;
-            }
 
-            logger?.Log("Loading PyPI index");
-
-            string cacheFile = GetCacheFilePath();
-
-            // Use file cache if fresh enough
-            if (IsIndexFileFresh(cacheFile))
-            {
-                logger?.Log($"Loading PyPI index from file cache ({File.GetLastWriteTime(cacheFile):g})");
-                string[] cached = File.ReadAllLines(cacheFile);
-                if (cached.Length > 0)
+                if (_inflight is null)
                 {
-                    lock (_cacheLock) { _cachedNames = cached; _cacheTimestamp = File.GetLastWriteTime(cacheFile); }
-                    return cached;
+                    _inflight = Task.Run(() => LoadProjectNames(logger));
                 }
-                LogError(logger, "PyPI index file cache was empty, re-downloading...");
+                else
+                {
+                    logger?.Log("Waiting for the PyPI index another manager is loading");
+                }
+                load = _inflight;
             }
 
+            return load.GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Reads the index from the file cache or downloads it, and leaves the in-flight slot
+        /// empty whether it succeeded or not, so a failed load is retried by the next search.
+        /// </summary>
+        private static string[] LoadProjectNames(INativeTaskLogger? logger)
+        {
+            try
+            {
+                logger?.Log("Loading PyPI index");
+
+                string cacheFile = GetCacheFilePath();
+                MigrateLegacyCache(cacheFile, logger);
+
+                // Use file cache if fresh enough
+                if (IsIndexFileFresh(cacheFile))
+                {
+                    logger?.Log($"Loading PyPI index from file cache ({File.GetLastWriteTime(cacheFile):g})");
+                    string[] cached = File.ReadAllLines(cacheFile);
+                    if (cached.Length > 0)
+                    {
+                        lock (_cacheLock) { _cachedNames = cached; _cacheTimestamp = File.GetLastWriteTime(cacheFile); }
+                        return cached;
+                    }
+                    LogError(logger, "PyPI index file cache was empty, re-downloading...");
+                }
+
+                string[] names = TEST_IndexDownloadOverride is { } download
+                    ? download()
+                    : DownloadProjectNames(logger);
+
+                logger?.Log($"Downloaded {names.Length} package names from PyPI");
+
+                lock (_cacheLock) { _cachedNames = names; _cacheTimestamp = DateTime.Now; }
+
+                WriteCacheFile(cacheFile, names, logger);
+
+                return names;
+            }
+            finally
+            {
+                lock (_cacheLock) { _inflight = null; }
+            }
+        }
+
+        private static string[] DownloadProjectNames(INativeTaskLogger? logger)
+        {
             logger?.Log("Downloading PyPI simple index (one-time ~38 MB download, cached for 24 h)...");
 
             using HttpClient client = new(CoreTools.GenericHttpClientParameters);
@@ -116,23 +180,71 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
             // Parsed straight from the response bytes: as a string plus a JSON document tree the
             // ~38 MB index transiently cost several hundred MB.
             byte[] json = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
-            string[] names = ParseSimpleIndexProjectNames(json);
+            return ParseSimpleIndexProjectNames(json);
+        }
 
-            logger?.Log($"Downloaded {names.Length} package names from PyPI");
+        /// <summary>
+        /// Pip used to keep the index under its own name. Moves a fresh one to the shared name
+        /// instead of downloading ~38 MB again, and removes a stale one.
+        /// </summary>
+        private static void MigrateLegacyCache(string cacheFile, INativeTaskLogger? logger)
+        {
+            string? directory = Path.GetDirectoryName(cacheFile);
+            if (directory is null)
+                return;
 
-            lock (_cacheLock) { _cachedNames = names; _cacheTimestamp = DateTime.Now; }
+            string legacyFile = Path.Join(directory, LegacyCacheFileName);
+            if (!File.Exists(legacyFile))
+                return;
 
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-                File.WriteAllLines(cacheFile, names);
+                if (IsIndexFileFresh(legacyFile) && !IsIndexFileFresh(cacheFile))
+                {
+                    Directory.CreateDirectory(directory);
+                    File.Move(legacyFile, cacheFile, overwrite: true);
+                    logger?.Log("Moved the PyPI index cache to its shared name");
+                }
+                else
+                {
+                    File.Delete(legacyFile);
+                }
+            }
+            catch (Exception e)
+            {
+                LogError(logger, $"Could not migrate the old PyPI index cache {legacyFile}: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Writes the cache through a temporary file, so a search reading it never sees a
+        /// half-written index, and a second process writing at the same time cannot corrupt it.
+        /// </summary>
+        private static void WriteCacheFile(string cacheFile, string[] names, INativeTaskLogger? logger)
+        {
+            string directory = Path.GetDirectoryName(cacheFile)!;
+            string temporary = Path.Join(
+                directory,
+                $"{Path.GetFileName(cacheFile)}.{Guid.NewGuid():N}.tmp"
+            );
+            try
+            {
+                Directory.CreateDirectory(directory);
+                File.WriteAllLines(temporary, names);
+                File.Move(temporary, cacheFile, overwrite: true);
             }
             catch (Exception e)
             {
                 LogError(logger, $"Could not write PyPI index file cache to {cacheFile}: {e.Message}");
+                try
+                {
+                    File.Delete(temporary);
+                }
+                catch
+                {
+                    // Nothing else to do: the index is in memory either way.
+                }
             }
-
-            return names;
         }
 
         /// <summary>

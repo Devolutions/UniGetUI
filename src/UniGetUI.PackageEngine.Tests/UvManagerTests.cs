@@ -162,7 +162,7 @@ public class UvManagerTests
     }
 
     [Fact]
-    public void ParseAvailableUpdatesSkipsPinnedAndDowngradeApps()
+    public void ParseAvailableUpdatesListsPinnedToolsAsReinstalls()
     {
         Uv manager = new();
         IReadOnlyList<UvTool> tools = UvToolListParser.Parse(
@@ -182,10 +182,22 @@ public class UvManagerTests
             manager
         );
 
-        Package update = Assert.Single(updates);
-        Assert.Equal("contosa", update.Id);
-        Assert.Equal("1.0.0", update.VersionString);
-        Assert.Equal("1.1.0", update.NewVersionString);
+        Assert.Equal(2, updates.Count);
+
+        Package pinned = updates[0];
+        Assert.Equal("ruff", pinned.Id);
+        Assert.Equal("0.5.0", pinned.VersionString);
+        Assert.Equal("0.17.4", pinned.NewVersionString);
+        Assert.True(pinned.RequiresReinstallToUpdate);
+        Assert.NotNull(pinned.ReinstallNotice);
+        Assert.Contains("exact version", pinned.ReinstallNotice);
+
+        Package plain = updates[1];
+        Assert.Equal("contosa", plain.Id);
+        Assert.Equal("1.0.0", plain.VersionString);
+        Assert.Equal("1.1.0", plain.NewVersionString);
+        Assert.False(plain.RequiresReinstallToUpdate);
+        Assert.Null(plain.ReinstallNotice);
     }
 
     [Fact]
@@ -398,6 +410,37 @@ public class UvManagerTests
         Assert.True(manager.Capabilities.SupportsPreRelease);
         Assert.Equal(ProxySupport.Yes, manager.Capabilities.SupportsProxy);
         Assert.True(manager.Capabilities.SupportsProxyAuth);
+    }
+
+    [Fact]
+    public void AReinstallUpdateInstallsThePinnedToolInsteadOfUpgradingIt()
+    {
+        Uv manager = new();
+        UvPkgOperationHelper helper = (UvPkgOperationHelper)manager.OperationHelper;
+        Package pinned = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("ruff")
+            .WithVersion("0.5.0")
+            .WithNewVersion("0.17.4")
+            .RequiringReinstallToUpdate()
+            .Build();
+
+        Assert.Equal(
+            ["install", "--upgrade", "ruff"],
+            helper.GetParameters(pinned, new InstallOptions(), OperationType.Update)
+        );
+        Assert.Equal(
+            ["install", "--upgrade", "\"ruff==0.5.0\""],
+            helper.GetParameters(
+                pinned,
+                new InstallOptions { Version = "0.5.0", VersionIsExplicit = true },
+                OperationType.Update
+            )
+        );
+        Assert.Equal(
+            ["install", "ruff"],
+            helper.GetParameters(pinned, new InstallOptions(), OperationType.Install)
+        );
     }
 
     [Fact]

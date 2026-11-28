@@ -3114,6 +3114,7 @@
   "uv-managed Python": "uv-managed Python",
   "system Python": "system Python",
   "Default lets uv choose. An update with Default keeps the interpreter the tool already runs on.": "Default lets uv choose. An update with Default keeps the interpreter the tool already runs on.",
+  "This tool was installed with an exact version, so uv cannot upgrade it in place. Updating it reinstalls the tool at the newest version and removes that version pin.": "This tool was installed with an exact version, so uv cannot upgrade it in place. Updating it reinstalls the tool at the newest version and removes that version pin.",
   "Hide license": "Hide license",
   "Show license": "Show license",
   "Open the full notices file": "Open the full notices file",

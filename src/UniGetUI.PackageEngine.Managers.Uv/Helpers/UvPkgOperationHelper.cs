@@ -23,16 +23,26 @@ internal sealed class UvPkgOperationHelper : BasePkgOperationHelper
         OperationType operation
     )
     {
+        // uv refuses to upgrade a tool installed with an exact version pin, so its update
+        // reinstalls the tool instead, which replaces the pin.
+        bool reinstallsTool =
+            operation is OperationType.Update && package.RequiresReinstallToUpdate;
+
         List<string> parameters =
         [
-            operation switch
-            {
-                OperationType.Install => Manager.Properties.InstallVerb,
-                OperationType.Update => Manager.Properties.UpdateVerb,
-                OperationType.Uninstall => Manager.Properties.UninstallVerb,
-                _ => throw new InvalidDataException("Invalid package operation"),
-            },
+            reinstallsTool
+                ? Manager.Properties.InstallVerb
+                : operation switch
+                {
+                    OperationType.Install => Manager.Properties.InstallVerb,
+                    OperationType.Update => Manager.Properties.UpdateVerb,
+                    OperationType.Uninstall => Manager.Properties.UninstallVerb,
+                    _ => throw new InvalidDataException("Invalid package operation"),
+                },
         ];
+
+        if (reinstallsTool)
+            parameters.Add("--upgrade");
 
         parameters.Add(
             options.Version.Any()

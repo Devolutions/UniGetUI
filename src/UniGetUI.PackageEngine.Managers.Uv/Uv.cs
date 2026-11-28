@@ -128,8 +128,8 @@ public sealed class Uv : PackageManager
             {
                 if (tool.LatestVersion is not null && tool.IsPinnedToExactVersion)
                     logger.Log(
-                        $"{tool.PackageId} {tool.Version} is pinned to {tool.VersionSpecifier}, "
-                            + $"reinstall it to move to {tool.LatestVersion}"
+                        $"{tool.PackageId} {tool.Version} is pinned to {tool.VersionSpecifier}; "
+                            + $"it is listed as an update that reinstalls the tool at {tool.LatestVersion}"
                     );
             }
 
@@ -159,12 +159,13 @@ public sealed class Uv : PackageManager
             if (tool.LatestVersion is null)
                 continue;
 
-            if (tool.IsPinnedToExactVersion)
-                continue;
-
             if (manager.CompareVersions(tool.Version, tool.LatestVersion) is null or >= 0)
                 continue;
 
+            // uv refuses to upgrade a tool installed with an exact version pin, so the update
+            // reinstalls the tool, which replaces the pin. Flagging it keeps bulk updates from
+            // replacing the user's choice on their own.
+            bool pinned = tool.IsPinnedToExactVersion;
             packages.Add(
                 new Package(
                     CoreTools.FormatAsName(tool.PackageId),
@@ -175,6 +176,14 @@ public sealed class Uv : PackageManager
                     manager,
                     new(PackageScope.Global)
                 )
+                {
+                    RequiresReinstallToUpdate = pinned,
+                    ReinstallNotice = pinned
+                        ? CoreTools.Translate(
+                            "This tool was installed with an exact version, so uv cannot upgrade it in place. Updating it reinstalls the tool at the newest version and removes that version pin."
+                        )
+                        : null,
+                }
             );
         }
 

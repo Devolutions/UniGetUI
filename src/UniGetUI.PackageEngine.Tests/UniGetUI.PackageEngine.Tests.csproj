@@ -28,6 +28,8 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Cargo\UniGetUI.PackageEngine.Managers.Cargo.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dotnet\UniGetUI.PackageEngine.Managers.Dotnet.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pip\UniGetUI.PackageEngine.Managers.Pip.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Uv\UniGetUI.PackageEngine.Managers.Uv.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Generic.PyPI\UniGetUI.PackageEngine.Managers.Generic.PyPI.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Npm\UniGetUI.PackageEngine.Managers.Npm.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Apt\UniGetUI.PackageEngine.Managers.Apt.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dnf\UniGetUI.PackageEngine.Managers.Dnf.csproj" />

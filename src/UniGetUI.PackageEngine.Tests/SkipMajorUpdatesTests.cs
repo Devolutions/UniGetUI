@@ -7,6 +7,7 @@ using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Managers.UvManager;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -618,6 +619,85 @@ public sealed class SkipMajorUpdatesTests : IDisposable
         using var operation = new UpdatePackageOperation(package, new InstallOptions(), IgnoreParallelInstalls: true);
 
         Assert.Equal("", operation.Options.Version);
+    }
+
+    [Fact]
+    public void NewestVersionWithinMajor_OffersTheStableReleaseNotThePreReleaseWithTheSameNumbers()
+    {
+        var manager = new Uv();
+        IPackage update = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("6.0.0")
+            .Build();
+
+        string? target = manager.NewestVersionWithinMajor(
+            update, ["5.10.0rc1", "5.10.0", "5.3.1"], includePreReleases: false);
+
+        Assert.Equal("5.10.0", target);
+
+        string? withPreReleases = manager.NewestVersionWithinMajor(
+            update, ["5.10.0rc1", "5.10.0", "5.3.1"], includePreReleases: true);
+
+        Assert.Equal("5.10.0", withPreReleases);
+    }
+
+    [Fact]
+    public void NewestVersionWithinMajor_TreatsATrailingNumericSuffixAsAPostRelease()
+    {
+        var manager = new Uv();
+        IPackage update = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("6.0.0")
+            .Build();
+
+        string[] feed = ["5.10.0", "5.10.0-1", "5.3.1"];
+
+        string? target = manager.NewestVersionWithinMajor(update, feed, includePreReleases: false);
+        Assert.Equal("5.10.0", target);
+
+        string? withPreReleases = manager.NewestVersionWithinMajor(update, feed, includePreReleases: true);
+        Assert.Equal("5.10.0-1", withPreReleases);
+    }
+
+    [Fact]
+    public void NewestVersionWithinMajor_IncludesPreReleasesWhenThePackageAllowsThem()
+    {
+        var manager = new Uv();
+        IPackage update = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("6.0.0")
+            .Build();
+
+        string[] feed = ["5.11.0rc1", "5.10.0", "5.3.1"];
+
+        string? target = manager.NewestVersionWithinMajor(update, feed, includePreReleases: true);
+        Assert.Equal("5.11.0rc1", target);
+
+        string? withoutPreReleases = manager.NewestVersionWithinMajor(update, feed, includePreReleases: false);
+        Assert.Equal("5.10.0", withoutPreReleases);
+    }
+
+    [Fact]
+    public void NewestVersionWithinMajor_ReturnsNothingWhenEveryCandidateIsOutsideTheInstalledMajor()
+    {
+        var manager = new Uv();
+        IPackage update = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Licensed")
+            .WithVersion("5.2.0")
+            .WithNewVersion("6.0.0")
+            .Build();
+
+        string[] feed = ["6.0.0", "6.1.0rc1"];
+
+        Assert.Null(manager.NewestVersionWithinMajor(update, feed, includePreReleases: false));
+        Assert.Null(manager.NewestVersionWithinMajor(update, feed, includePreReleases: true));
     }
 
     private static TestUpgradablePackagesLoader CreateLoaders(TestPackageManager manager)

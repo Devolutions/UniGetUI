@@ -25,6 +25,13 @@ namespace UniGetUI.PackageEngine.Interfaces
         public bool HasConcreteVersion { get; }
         public bool InstalledVersionIsUnverified { get; }
         public bool RequiresReinstallToUpdate { get; }
+
+        /// <summary>
+        /// Why updating this package replaces the installation instead of upgrading it in place,
+        /// when the manager can say more than the generic reinstall notice. Null leaves the
+        /// generic text in place.
+        /// </summary>
+        public string? ReinstallNotice => null;
         public CoreTools.Version NormalizedVersion { get; }
         public CoreTools.Version NormalizedNewVersion { get; }
         public IManagerSource Source { get; }

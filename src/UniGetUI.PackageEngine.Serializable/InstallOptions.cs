@@ -34,6 +34,16 @@ namespace UniGetUI.PackageEngine.Serializable
         private const string PRE_UNINST_CMD = "PreUninstallCommand";
         private const string POST_UNINST_CMD = "PostUninstallCommand";
 
+        // Uv_ManagedPython is a tri-state string: "" lets uv decide, "true"/"false" map to
+        // --managed-python/--no-managed-python.
+        // Uv_PythonOptionsChosen tells "the user explicitly picked Default" apart from "these
+        // options never chose an interpreter", which is what lets a saved explicit Default win
+        // over the interpreter uv was installed with.
+        private const string UV_PYTHON_REQUEST = "UvPythonRequest";
+        private const string UV_MANAGED_PYTHON = "UvManagedPython";
+        private const string UV_NO_PYTHON_DOWNLOADS = "UvNoPythonDownloads";
+        private const string UV_PYTHON_OPTIONS_CHOSEN = "UvPythonOptionsChosen";
+
         private const string INST_PARAMS = "CustomParameters_Install";
         private const string UPD_PARAMS = "CustomParameters_Update";
         private const string UNINST_PARAMS = "CustomParameters_Uninstall";
@@ -58,6 +68,8 @@ namespace UniGetUI.PackageEngine.Serializable
             { ABORT_PRE_UPD_FAIL, true },
             { ABORT_PRE_UNINST_FAIL, true },
             { AUTO_UPDATE_PACKAGE, false },
+            { UV_NO_PYTHON_DOWNLOADS, false },
+            { UV_PYTHON_OPTIONS_CHOSEN, false },
         };
 
         public readonly IReadOnlyList<string> _stringKeys =
@@ -73,6 +85,8 @@ namespace UniGetUI.PackageEngine.Serializable
             PRE_UNINST_CMD,
             POST_UNINST_CMD,
             SKIP_MINOR_LEVEL,
+            UV_PYTHON_REQUEST,
+            UV_MANAGED_PYTHON,
         ];
 
         public readonly IReadOnlyList<string> _listKeys =
@@ -216,6 +230,32 @@ namespace UniGetUI.PackageEngine.Serializable
         {
             get => _strVal[POST_UNINST_CMD];
             set => _strVal[POST_UNINST_CMD] = value;
+        }
+        public string Uv_PythonRequest
+        {
+            get => _strVal[UV_PYTHON_REQUEST];
+            set => _strVal[UV_PYTHON_REQUEST] = value ?? "";
+        }
+        public string Uv_ManagedPython
+        {
+            get => _strVal[UV_MANAGED_PYTHON];
+            set => _strVal[UV_MANAGED_PYTHON] = value ?? "";
+        }
+        public bool Uv_NoPythonDownloads
+        {
+            get => _boolVal[UV_NO_PYTHON_DOWNLOADS];
+            set => _boolVal[UV_NO_PYTHON_DOWNLOADS] = value;
+        }
+
+        /// <summary>
+        /// True when these options carry the interpreters the user chose in the uv Python
+        /// section, including an explicit Default. Without it, empty values mean "never chosen"
+        /// and the interpreter uv recorded at install time still applies.
+        /// </summary>
+        public bool Uv_PythonOptionsChosen
+        {
+            get => _boolVal[UV_PYTHON_OPTIONS_CHOSEN];
+            set => _boolVal[UV_PYTHON_OPTIONS_CHOSEN] = value;
         }
 
         public List<string> CustomParameters_Install

@@ -22,11 +22,11 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
     public async Task InstalledPage_ListsSeededPackages_FiltersAndShowsDetails()
     {
         await ResetAsync(TuiPageIds.Installed);
-        await WaitForTextAsync("Installed Packages", "Contoso Editor", "Woodgrove Vault", "16 packages  ·");
+        await WaitForTextAsync("Installed Packages", "Contoso Editor", "Woodgrove Vault", "18 packages  ·");
 
         await EnterPage();
         await FilterPackagesAsync("Woodgrove");
-        await WaitForTextAsync("1 of 16 shown");
+        await WaitForTextAsync("1 of 18 shown");
         await WaitForNoTextAsync("Contoso Editor");
 
         await Key(K.Enter);
@@ -43,14 +43,14 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await WaitForTextAsync("Software Updates", "Northwind Terminal", "1.20.1");
         await EnterPage();
         await FilterPackagesAsync("Northwind Terminal");
-        await WaitForTextAsync("1 of 13 shown");
+        await WaitForTextAsync("1 of 15 shown");
 
         await Type("u");
         await WaitForOperationsToFinishAsync();
 
         NAssert.That(InstalledVersion("Winget", "Northwind.Terminal"), Is.EqualTo("1.20.1"));
         await WaitUntilAsync(() => UpgradablePackagesLoader.Instance.Packages.All(p => p.Id != "Northwind.Terminal"), "update to leave the Updates list");
-        await WaitForTextAsync("of 12 shown");
+        await WaitForTextAsync("of 14 shown");
         var record = OperationHistoryStore.GetAll().Single(r => r.PackageId == "Northwind.Terminal");
         NAssert.That(record.Status, Is.EqualTo(OperationHistoryRecord.StatusSucceeded));
         NAssert.That(record.Kind, Is.EqualTo("update-package"));
@@ -71,7 +71,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         NAssert.That(InstalledVersion("Winget", "Contoso.PhotoStudio"), Is.EqualTo("2025.1"));
         await WaitUntilAsync(() => InstalledPackagesLoader.Instance.Packages.Any(p => p.Id == "Contoso.PhotoStudio"), "the package to appear as installed");
         await OnUi(() => Window.NavigateTo(TuiPageIds.Installed));
-        await WaitForTextAsync("Contoso Photo Studio", "17 packages  ·");
+        await WaitForTextAsync("Contoso Photo Studio", "19 packages  ·");
     }
 
     [Test]
@@ -109,7 +109,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await Key(K.Enter);
         await WaitForOperationsToFinishAsync();
         NAssert.That(InstalledVersion("Winget", "Woodgrove.Vault"), Is.Null);
-        await WaitForTextAsync("of 15 shown");
+        await WaitForTextAsync("of 17 shown");
     }
 
     [Test]
@@ -131,14 +131,14 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
     public async Task UpdatesPage_SelectionAndBulkUpdate()
     {
         await ResetAsync(TuiPageIds.Updates);
-        await WaitForTextAsync("·  13 selected");
+        await WaitForTextAsync("·  15 selected");
         await EnterPage();
         await Key(K.A, RawModifiers.Control);
         await WaitForTextAsync("·  0 selected");
 
         // Select two rows with Space, then update the selection.
         await FilterPackagesAsync("fabrikam-");
-        await WaitForTextAsync("2 of 13 shown");
+        await WaitForTextAsync("2 of 15 shown");
         await Key(K.Space);
         await Key(K.Down);
         await Key(K.Space);
@@ -446,7 +446,7 @@ internal sealed class PackagePagesE2ETests : TuiE2ETestBase
         await WaitUntilAsync(() => File.Exists(path), "the CSV file");
         string csv = File.ReadAllText(path);
         NAssert.That(csv, Does.StartWith("﻿Name,Id,Version,Source,Manager").Or.StartWith("Name,Id,Version,Source,Manager"));
-        NAssert.That(csv.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(17));
+        NAssert.That(csv.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(19));
         NAssert.That(csv, Does.Contain("Woodgrove Vault,Woodgrove.Vault,7.4.1"));
     }
 

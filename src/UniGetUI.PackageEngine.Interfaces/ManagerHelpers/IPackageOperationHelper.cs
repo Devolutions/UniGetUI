@@ -73,5 +73,20 @@ namespace UniGetUI.PackageEngine.Interfaces.ManagerProviders
         public string? GetReinstallRefusal(IPackage package, InstallOptions options);
 
         public bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode);
+
+        /// <summary>
+        /// Lets the dialog ask the manager's helper for the installed and downloadable Python
+        /// interpreters when the manager capability SupportsCustomPythonInterpreters is set.
+        /// Managers that do not offer the choice return an empty list.
+        /// </summary>
+        public IReadOnlyList<PythonInterpreterChoice> ListPythonInterpreters();
+
+        /// <summary>
+        /// Returns the Python interpreter options this manager used the last time it installed
+        /// or upgraded the package, or null when it keeps no record. The install-options dialog
+        /// starts from these when the saved options do not choose an interpreter, so saving
+        /// without touching the Python section keeps the interpreter the tool runs on.
+        /// </summary>
+        public PythonInterpreterOptions? GetLastUsedPythonOptions(IPackage package) => null;
     }
 }

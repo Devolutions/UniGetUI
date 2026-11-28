@@ -278,9 +278,10 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
             : package.VersionString;
         InstalledVersionTooltip = InstalledVersionNotice.BuildTooltip(package);
         ReinstallTooltip = package.RequiresReinstallToUpdate
-            ? CoreTools.Translate(
-                "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package."
-            )
+            ? package.ReinstallNotice
+                ?? CoreTools.Translate(
+                    "This version is installed differently from the one you have, so updating it uninstalls the current version first. Automatic updates and Update all leave it out unless \"Uninstall, then reinstall when updated\" is turned on for this package."
+                )
             : null;
 
         Package.PropertyChanged += Package_PropertyChanged;

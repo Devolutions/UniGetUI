@@ -183,4 +183,16 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
 
     public virtual bool UpdateWasRefusedByPublisher(IReadOnlyList<string> processOutput, int returnCode) =>
         false;
+
+    /// <summary>
+    /// Default implementation: no interpreter choice. Managers whose capability
+    /// SupportsCustomPythonInterpreters is set override this to list what they offer.
+    /// </summary>
+    public virtual IReadOnlyList<PythonInterpreterChoice> ListPythonInterpreters() => [];
+
+    /// <summary>
+    /// Default implementation: no record of the last interpreter used. Managers whose capability
+    /// SupportsCustomPythonInterpreters is set override this to return what they installed with.
+    /// </summary>
+    public virtual PythonInterpreterOptions? GetLastUsedPythonOptions(IPackage package) => null;
 }

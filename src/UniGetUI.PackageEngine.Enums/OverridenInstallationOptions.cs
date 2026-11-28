@@ -9,6 +9,9 @@ public struct OverridenInstallationOptions
     public bool PowerShell_UpdateThroughInstall = false;
     public bool? WinGet_SpecifyVersion = null;
     public bool Pip_BreakSystemPackages = false;
+    public string? Uv_PythonRequest = null;
+    public bool? Uv_ManagedPython = null;
+    public bool Uv_NoPythonDownloads = false;
     public bool WinGet_DropArchAndScope = false;
     public bool WinGet_UseLocalIdentifier = false;
     public bool PinUpdateToNewVersion = false;
@@ -21,6 +24,6 @@ public struct OverridenInstallationOptions
 
     public override string ToString()
     {
-        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter};PS_AllowClobber={PowerShell_AllowClobber};PS_UpdateThroughInstall={PowerShell_UpdateThroughInstall};Pip_BreakSystemPackages={Pip_BreakSystemPackages};WG_DropArchAndScope={WinGet_DropArchAndScope};WG_UseLocalId={WinGet_UseLocalIdentifier};PinUpdate={PinUpdateToNewVersion}>";
+        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter};PS_AllowClobber={PowerShell_AllowClobber};PS_UpdateThroughInstall={PowerShell_UpdateThroughInstall};Pip_BreakSystemPackages={Pip_BreakSystemPackages};Uv_PythonRequest={Uv_PythonRequest};Uv_ManagedPython={Uv_ManagedPython};Uv_NoPythonDownloads={Uv_NoPythonDownloads};WG_DropArchAndScope={WinGet_DropArchAndScope};WG_UseLocalId={WinGet_UseLocalIdentifier};PinUpdate={PinUpdateToNewVersion}>";
     }
 }

@@ -6,6 +6,7 @@ using UniGetUI.Core.Tools.Tests;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.Generic.PyPI;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
@@ -44,6 +45,7 @@ public sealed class PipManagerTests : IDisposable
         Settings.Set(Settings.K.EnableProxy, false);
         Settings.Set(Settings.K.EnableProxyAuth, false);
         Settings.SetValue(Settings.K.ProxyURL, "");
+        PyPIIndexClient.TEST_ResetState();
     }
 
     public void Dispose()
@@ -51,6 +53,9 @@ public sealed class PipManagerTests : IDisposable
         AllowCustomManagerPaths(false);
         SecureSettings.TEST_SecureSettingsRootOverride = null;
         Settings.ResetSettings();
+        PyPIIndexClient.TEST_CacheFilePathOverride = null;
+        PyPIIndexClient.TEST_IndexDownloadOverride = null;
+        PyPIIndexClient.TEST_ResetState();
         CoreData.TEST_DataDirectoryOverride = null;
         if (Directory.Exists(_testRoot))
         {
@@ -523,7 +528,7 @@ public sealed class PipManagerTests : IDisposable
             }
             """);
 
-        Assert.Equal(["requests", "café", "pytest"], Pip.ParseSimpleIndexProjectNames(json));
+        Assert.Equal(["requests", "café", "pytest"], PyPIIndexClient.ParseSimpleIndexProjectNames(json));
     }
 
     [Theory]
@@ -532,23 +537,96 @@ public sealed class PipManagerTests : IDisposable
     [InlineData("{\"projects\": {\"name\": \"x\"}}")]
     public void SimpleIndexParserRejectsAnIndexWithoutProjects(string json)
     {
-        Assert.Throws<InvalidDataException>(() => Pip.ParseSimpleIndexProjectNames(json));
+        Assert.Throws<InvalidDataException>(() => PyPIIndexClient.ParseSimpleIndexProjectNames(json));
     }
 
     [Fact]
     public void SearchHelpersParseSimpleIndexAndRankPrefixMatchesFirst()
     {
-        var names = Pip.ParseSimpleIndexProjectNames(
+        var names = PyPIIndexClient.ParseSimpleIndexProjectNames(
 
             PackageEngineFixtureFiles.ReadAllText(Path.Combine("Pip", "simple-index.json"))
         );
 
-        var matches = Pip.SelectSearchMatches("req", names);
+        var matches = PyPIIndexClient.SelectSearchMatches("req", names);
 
         Assert.Equal(
             ["req", "requests", "requestium", "requests-cache", "django-reqtools"],
             matches
         );
+    }
+
+    [Fact]
+    public void TheLegacyPipIndexCacheIsMovedToTheSharedNameInsteadOfDownloadedAgain()
+    {
+        string cacheDirectory = Path.Combine(_testRoot, "Cache");
+        string cacheFile = Path.Combine(cacheDirectory, "pypi_simple_index.cache");
+        string legacyFile = Path.Combine(cacheDirectory, "pip_simple_index.cache");
+        Directory.CreateDirectory(cacheDirectory);
+        File.WriteAllLines(legacyFile, ["requests", "pytest"]);
+
+        PyPIIndexClient.TEST_CacheFilePathOverride = cacheFile;
+        PyPIIndexClient.TEST_IndexDownloadOverride = () =>
+            throw new InvalidOperationException("The fresh legacy cache should have been used");
+
+        Assert.Equal(["requests", "pytest"], PyPIIndexClient.GetProjectNames());
+
+        Assert.False(File.Exists(legacyFile));
+        Assert.True(File.Exists(cacheFile));
+    }
+
+    [Fact]
+    public void AStaleLegacyIndexCacheIsDiscardedAndReplacedByAFreshDownload()
+    {
+        string cacheDirectory = Path.Combine(_testRoot, "Cache");
+        string cacheFile = Path.Combine(cacheDirectory, "pypi_simple_index.cache");
+        string legacyFile = Path.Combine(cacheDirectory, "pip_simple_index.cache");
+        Directory.CreateDirectory(cacheDirectory);
+        File.WriteAllLines(legacyFile, ["old"]);
+        File.SetLastWriteTime(legacyFile, DateTime.Now.AddDays(-2));
+
+        PyPIIndexClient.TEST_CacheFilePathOverride = cacheFile;
+        PyPIIndexClient.TEST_IndexDownloadOverride = () => ["requests"];
+
+        Assert.Equal(["requests"], PyPIIndexClient.GetProjectNames());
+
+        Assert.False(File.Exists(legacyFile));
+        Assert.Equal(["requests"], File.ReadAllLines(cacheFile));
+        Assert.Empty(Directory.GetFiles(cacheDirectory, "*.tmp"));
+    }
+
+    [Fact]
+    public void TwoSearchesStartedTogetherShareOneIndexDownload()
+    {
+        string cacheFile = Path.Combine(_testRoot, "Cache", "pypi_simple_index.cache");
+        PyPIIndexClient.TEST_CacheFilePathOverride = cacheFile;
+
+        int downloads = 0;
+        using ManualResetEventSlim release = new();
+        PyPIIndexClient.TEST_IndexDownloadOverride = () =>
+        {
+            Interlocked.Increment(ref downloads);
+            release.Wait(TimeSpan.FromSeconds(30));
+            return ["requests"];
+        };
+
+        Task<string[]> first = Task.Run(() => PyPIIndexClient.GetProjectNames());
+        Assert.True(
+            SpinWait.SpinUntil(() => Volatile.Read(ref downloads) == 1, TimeSpan.FromSeconds(10))
+        );
+
+        Task<string[]> second = Task.Run(() => PyPIIndexClient.GetProjectNames());
+
+        // A second download would be visible while the first is still held; single-flight
+        // leaves the second search waiting on the same task.
+        Assert.False(second.Wait(TimeSpan.FromMilliseconds(200)));
+        Assert.Equal(1, Volatile.Read(ref downloads));
+
+        release.Set();
+
+        Assert.Equal(["requests"], first.GetAwaiter().GetResult());
+        Assert.Equal(["requests"], second.GetAwaiter().GetResult());
+        Assert.Equal(1, downloads);
     }
 
     [Theory]

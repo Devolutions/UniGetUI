@@ -18,6 +18,8 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds\UniGetUI.PackageEngine.Managers.Generic.InstallerFeeds.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Npm\UniGetUI.PackageEngine.Managers.Npm.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pip\UniGetUI.PackageEngine.Managers.Pip.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Uv\UniGetUI.PackageEngine.Managers.Uv.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Generic.PyPI\UniGetUI.PackageEngine.Managers.Generic.PyPI.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.PowerShell7\UniGetUI.PackageEngine.Managers.PowerShell7.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Vcpkg\UniGetUI.PackageEngine.Managers.Vcpkg.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Operations\UniGetUI.PackageEngine.Operations.csproj" />

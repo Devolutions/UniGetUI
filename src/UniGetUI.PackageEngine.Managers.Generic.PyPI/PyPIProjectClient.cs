@@ -173,7 +173,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
                 return null;
 
             JsonObject? file = contents["url"] as JsonObject
-                ?? (contents["urls"] as JsonArray)?[0] as JsonObject;
+                ?? (contents["urls"] as JsonArray)?.FirstOrDefault() as JsonObject;
             if (file is null)
                 return null;
 
@@ -188,6 +188,82 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
                 InstallerType = installerUrl.ToString().Split('.')[^1].Replace("whl", "Wheel"),
                 UploadTime = ReadString(file, "upload_time"),
             };
+        }
+
+        /// <summary>
+        /// Copies the metadata and the installer a project describes onto the package details,
+        /// so every PyPI-backed manager shows the same fields, the same license and tags taken
+        /// from the classifiers, and the same dependency split.
+        /// </summary>
+        internal static void ApplyMetadata(IPackageDetails details, PyPIPackageMetadata metadata)
+        {
+            details.Version = metadata.Version;
+            details.Description = metadata.Summary;
+            details.Author = metadata.Author;
+            details.Publisher = metadata.Maintainer;
+            details.License = metadata.License;
+            details.HomepageUrl = metadata.Homepage;
+            details.ManifestUrl = metadata.PackageUrl;
+
+            List<string> tags = [];
+            foreach (string line in metadata.Classifiers)
+            {
+                if (line.Contains("License ::"))
+                {
+                    details.License = line.Split("::")[^1].Trim();
+                }
+                else if (line.Contains("Topic ::"))
+                {
+                    string tag = line.Split("::")[^1].Trim();
+                    if (!tags.Contains(tag))
+                        tags.Add(tag);
+                }
+            }
+            details.Tags = [.. tags];
+
+            details.Dependencies.Clear();
+            foreach (PyPIDependency dependency in ParseDependencies(metadata.RequiresDist))
+            {
+                details.Dependencies.Add(
+                    new()
+                    {
+                        Name = dependency.Name,
+                        Version = dependency.Version,
+                        Mandatory = true,
+                    }
+                );
+            }
+        }
+
+        internal static void ApplyInstaller(IPackageDetails details, PyPIInstallerInfo installer)
+        {
+            details.InstallerHash = installer.InstallerHash;
+            details.InstallerType = installer.InstallerType;
+            details.InstallerUrl = installer.InstallerUrl;
+            details.InstallerSize = CoreTools.GetFileSizeAsLong(installer.InstallerUrl);
+            details.UpdateDate = installer.UploadTime;
+        }
+
+        /// <summary>
+        /// Splits <c>requires_dist</c> entries into a name and the rest of the requirement, the
+        /// way both managers show them: environment markers are dropped, and every constraint
+        /// operator, including PEP 440's <c>~=</c>, ends the name.
+        /// </summary>
+        internal static IReadOnlyList<PyPIDependency> ParseDependencies(
+            IEnumerable<string> requiresDist
+        )
+        {
+            List<PyPIDependency> dependencies = [];
+            foreach (string rawDependency in requiresDist)
+            {
+                string line = rawDependency.Split(';')[0];
+                string name = line.Split(['>', '<', '=', '!', '~'])[0].Trim();
+                if (name.Length is 0)
+                    continue;
+
+                dependencies.Add(new(name, line[name.Length..].Trim()));
+            }
+            return dependencies;
         }
 
         private static string? ReadString(JsonObject owner, string property) =>
@@ -229,4 +305,6 @@ namespace UniGetUI.PackageEngine.Managers.Generic.PyPI
         public required string InstallerType { get; init; }
         public required string? UploadTime { get; init; }
     }
+
+    internal sealed record PyPIDependency(string Name, string Version);
 }

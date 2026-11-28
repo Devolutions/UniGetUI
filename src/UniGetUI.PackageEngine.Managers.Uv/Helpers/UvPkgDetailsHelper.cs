@@ -23,58 +23,11 @@ internal sealed class UvPkgDetailsHelper : BasePkgDetailsHelper
     {
         string json = PyPIProjectClient.FetchJson(details.Package.Id);
 
-        PyPIPackageMetadata? metadata = PyPIProjectClient.ParseMetadata(json);
-        if (metadata is { } meta)
-        {
-            details.Version = meta.Version;
-            details.Description = meta.Summary;
-            details.Author = meta.Author;
-            details.Publisher = meta.Maintainer;
-            details.License = meta.License;
-            details.HomepageUrl = meta.Homepage;
-            details.ManifestUrl = meta.PackageUrl;
+        if (PyPIProjectClient.ParseMetadata(json) is { } metadata)
+            PyPIProjectClient.ApplyMetadata(details, metadata);
 
-            List<string> tags = [];
-            foreach (string line in meta.Classifiers)
-            {
-                if (line.Contains("License ::"))
-                {
-                    details.License = line.Split("::")[^1].Trim();
-                }
-                else if (line.Contains("Topic ::"))
-                {
-                    string tag = line.Split("::")[^1].Trim();
-                    if (!tags.Contains(tag))
-                        tags.Add(tag);
-                }
-            }
-            details.Tags = [.. tags];
-
-            details.Dependencies.Clear();
-            foreach (string rawDependency in meta.RequiresDist)
-            {
-                string line = rawDependency.Split(';')[0];
-                string name = line.Split(['>', '<', '=', '!', '~'])[0];
-                details.Dependencies.Add(
-                    new()
-                    {
-                        Name = name,
-                        Version = line[name.Length..],
-                        Mandatory = true,
-                    }
-                );
-            }
-        }
-
-        PyPIInstallerInfo? installer = PyPIProjectClient.ParseInstaller(json);
-        if (installer is { } file)
-        {
-            details.InstallerHash = file.InstallerHash;
-            details.InstallerType = file.InstallerType;
-            details.InstallerUrl = file.InstallerUrl;
-            details.InstallerSize = CoreTools.GetFileSizeAsLong(file.InstallerUrl);
-            details.UpdateDate = file.UploadTime;
-        }
+        if (PyPIProjectClient.ParseInstaller(json) is { } installer)
+            PyPIProjectClient.ApplyInstaller(details, installer);
     }
 
     protected override CacheableIcon? GetIcon_UnSafe(IPackage package)

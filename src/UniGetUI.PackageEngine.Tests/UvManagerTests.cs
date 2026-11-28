@@ -267,6 +267,84 @@ public class UvManagerTests
     }
 
     [Fact]
+    public void ParseDependenciesSplitsEveryPep440OperatorIncludingCompatibleRelease()
+    {
+        IReadOnlyList<PyPIDependency> dependencies = PyPIProjectClient.ParseDependencies([
+            "ruff>=0.4",
+            "requests ~= 2.31",
+            "another; extra == 'all'",
+            "  ",
+        ]);
+
+        Assert.Equal(
+            [
+                new PyPIDependency("ruff", ">=0.4"),
+                new PyPIDependency("requests", "~= 2.31"),
+                new PyPIDependency("another", ""),
+            ],
+            dependencies
+        );
+    }
+
+    [Fact]
+    public void ParseInstallerReturnsNothingWhenTheProjectHasNoReleaseFiles()
+    {
+        const string json = """
+            {
+              "info": { "version": "1.0" },
+              "urls": []
+            }
+            """;
+
+        Assert.Null(PyPIProjectClient.ParseInstaller(json));
+    }
+
+    [Fact]
+    public void ApplyMetadataFillsTheDetailsBothPyPIManagersShow()
+    {
+        Package package = new PackageBuilder().WithId("uv").Build();
+        PackageDetails details = new(package);
+        const string json = """
+            {
+              "info": {
+                "version": "0.5.0",
+                "summary": "An extremely fast Python package manager",
+                "author": "Astral",
+                "maintainer": "Stargazers",
+                "license": "MIT",
+                "home_page": "https://astral.sh/uv",
+                "package_url": "https://pypi.org/project/uv/",
+                "classifiers": [
+                  "License :: OSI Approved :: Apache Software License",
+                  "Topic :: Software Development :: Build Tools"
+                ],
+                "requires_dist": ["ruff>=0.4", "requests ~= 2.31"]
+              },
+              "urls": [
+                {
+                  "url": "https://files.pythonhosted.org/uv-0.5.0-py3-none-any.whl",
+                  "digests": { "sha256": "deadbeef" },
+                  "upload_time": "2024-01-01T00:00:00"
+                }
+              ]
+            }
+            """;
+
+        PyPIPackageMetadata? metadata = PyPIProjectClient.ParseMetadata(json);
+        Assert.NotNull(metadata);
+        PyPIProjectClient.ApplyMetadata(details, metadata);
+
+        Assert.Equal("0.5.0", details.Version);
+        Assert.Equal("Apache Software License", details.License);
+        Assert.Equal(new[] { "Build Tools" }, details.Tags);
+        Assert.Equal(2, details.Dependencies.Count);
+        Assert.Equal("ruff", details.Dependencies[0].Name);
+        Assert.Equal(">=0.4", details.Dependencies[0].Version);
+        Assert.Equal("requests", details.Dependencies[1].Name);
+        Assert.Equal("~= 2.31", details.Dependencies[1].Version);
+    }
+
+    [Fact]
     public void OrdersPyPIVersionsNewestFirst()
     {
         const string json = """

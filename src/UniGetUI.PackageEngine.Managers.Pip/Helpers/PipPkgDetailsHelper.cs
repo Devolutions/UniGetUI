@@ -1,12 +1,10 @@
 using System.Diagnostics;
-using System.Text.Json.Nodes;
-using UniGetUI.Core.Data;
 using UniGetUI.Core.IconEngine;
-using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.Managers.Generic.PyPI;
 
 namespace UniGetUI.PackageEngine.Managers.PipManager
 {
@@ -21,104 +19,13 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 LoggableTaskType.LoadPackageDetails
             );
 
-            using HttpClient client = new(CoreTools.GenericHttpClientParameters);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                $"https://pypi.org/pypi/{details.Package.Id}/json"
-            );
-            using HttpResponseMessage response = client.Send(request);
-            response.EnsureSuccessStatusCode();
-            string JsonString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            string json = PyPIProjectClient.FetchJson(details.Package.Id);
 
-            JsonObject? contents = JsonNode.Parse(JsonString) as JsonObject;
+            if (PyPIProjectClient.ParseMetadata(json) is { } metadata)
+                PyPIProjectClient.ApplyMetadata(details, metadata);
 
-            if (contents?["info"] is JsonObject info)
-            {
-                details.Version = info["version"]?.ToString();
-                details.Description = info["summary"]?.ToString();
-                details.Author = info["author"]?.ToString();
-                details.Publisher = info["maintainer"]?.ToString();
-                details.License = info["license"]?.ToString();
-
-                if (
-                    Uri.TryCreate(
-                        info["home_page"]?.ToString(),
-                        UriKind.RelativeOrAbsolute,
-                        out var homepageUrl
-                    )
-                )
-                    details.HomepageUrl = homepageUrl;
-
-                if (
-                    Uri.TryCreate(
-                        info["package_url"]?.ToString(),
-                        UriKind.RelativeOrAbsolute,
-                        out var packageUrl
-                    )
-                )
-                    details.ManifestUrl = packageUrl;
-
-                if (info["classifiers"] is JsonArray classifiers)
-                {
-                    List<string> Tags = [];
-                    foreach (string? line in classifiers)
-                    {
-                        if (line?.Contains("License ::") ?? false)
-                        {
-                            details.License = line.Split("::")[^1].Trim();
-                        }
-                        else if (line?.Contains("Topic ::") ?? false)
-                        {
-                            if (!Tags.Contains(line.Split("::")[^1].Trim()))
-                                Tags.Add(line.Split("::")[^1].Trim());
-                        }
-                    }
-                    details.Tags = Tags.ToArray();
-                }
-
-                details.Dependencies.Clear();
-                foreach (var rawDep in (info?["requires_dist"]?.AsArray() ?? []))
-                {
-                    string line = rawDep?.GetValue<string>().Split(';')[0] ?? "";
-                    string name = line.Split(['>', '<', '=', '!'])[0];
-                    details.Dependencies.Add(
-                        new()
-                        {
-                            Name = name,
-                            Version = line[name.Length..],
-                            Mandatory = true,
-                        }
-                    );
-                }
-            }
-
-            JsonObject? url = contents?["url"] as JsonObject;
-            url ??= (contents?["urls"] as JsonArray)?[0] as JsonObject;
-
-            if (url is not null)
-            {
-                if (url["digests"] is JsonObject digests)
-                    details.InstallerHash = digests["sha256"]?.ToString();
-
-                if (
-                    Uri.TryCreate(
-                        url["url"]?.ToString(),
-                        UriKind.RelativeOrAbsolute,
-                        out var installerUrl
-                    )
-                )
-                {
-                    details.InstallerType = url["url"]
-                        ?.ToString()
-                        .Split('.')[^1]
-                        .Replace("whl", "Wheel");
-                    details.InstallerUrl = installerUrl;
-                    details.InstallerSize = CoreTools.GetFileSizeAsLong(installerUrl);
-                }
-
-                details.UpdateDate = url["upload_time"]?.ToString();
-            }
+            if (PyPIProjectClient.ParseInstaller(json) is { } installer)
+                PyPIProjectClient.ApplyInstaller(details, installer);
 
             logger.Close(0);
         }
